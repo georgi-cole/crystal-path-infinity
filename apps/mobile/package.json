@@ -1,0 +1,22 @@
+{
+  "name": "@crystal-path-infinity/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5174 --strictPort --mode development",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build": "npm run typecheck && vite build --mode development",
+    "build:staging": "npm run typecheck && vite build --mode staging",
+    "build:production": "npm run typecheck && vite build --mode production",
+    "preview": "vite preview --host 127.0.0.1 --port 4174 --strictPort"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.3",
+    "@capacitor/core": "8.5.3",
+    "@capacitor/ios": "8.5.3",
+    "react": "19.2.9",
+    "react-dom": "19.2.9"
+  }
+}
