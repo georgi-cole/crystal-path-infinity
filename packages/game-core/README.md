@@ -1,6 +1,6 @@
 # Crystal Path Infinity — чисто игрово ядро
 
-`@crystal-path-infinity/game-core` е независимо TypeScript ядро за един играч. CPI-005 извлича правилата и преходите; пакетът няма React, DOM, SDK, storage, backend или AI зависимости. Това още не е играем мобилен екран или проверена ranked услуга.
+`@crystal-path-infinity/game-core` е независимо TypeScript ядро за един играч. CPI-005 извлича правилата и преходите, а CPI-006 добавя собственик на текущото състояние и на callback-ите за вход. Пакетът няма React, DOM, SDK, storage, backend или AI зависимости. Това още не е играем мобилен екран или проверена ranked услуга.
 
 Основа: [`shatteredLogic.ts` и component handlers](https://github.com/georgi-cole/bbmobilenew-source/tree/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/minigames/crystalPathShattered) от фиксирания source commit `6ace929a60410e728928aa51eaf80ba9b5cf2262`, с приетите промени от [CPI-001](../../docs/decisions/CPI-001-product-contract.md). Оригиналът в The Big Eye не е редактиран.
 
@@ -47,6 +47,51 @@ const outcome = transitionRun(
 `RunState` е **частно авторитетно състояние**. То съдържа бъдещи безопасни страни и възстановими RNG cursors. `getCurrentRow` също разкрива безопасната страна и служи на авторитетната логика и тестовете. Тези обекти не трябва да се изпращат като ranked отговор към клиент. Безопасните клиентски projections, автентикацията, action ledger, SSV, темпото на действията и единственият активен lease се реализират в следващи задачи.
 
 Наличието на `grantId` не доказва гледана реклама. Core приема, че съответният доверен адаптер вече е проверил разрешението; практика не получава право да публикува официален резултат. Маркерът за pending награда не е пълна рекламна state machine, provider reconciliation или retention система.
+
+## Сесия и живот на callback-ите
+
+`createRunSession(initialState, rng)` държи последното състояние в един JavaScript контекст. Pure API `transitionRun` остава наличен; сесията е приложният собственик, който не позволява две доставяния да използват един и същ стар state. Правилата остават `infinity-v1`, а `RunState.schemaVersion` остава 1. CPI-006 не въвежда нова SP аритметика или промяна в баланса.
+
+```ts
+import { createRunSession, PRACTICE_RNG } from '@crystal-path-infinity/game-core';
+
+// initial е създаденото по-горе състояние или доверен възстановен checkpoint.
+const session = createRunSession(initial, PRACTICE_RNG);
+
+// Създаваме callback-а, когато показваме действието за текущия ред.
+const chooseLeft = session.bind({ type: 'choose', side: 'left' });
+const outcome = chooseLeft({ activeTimeMs: 420, achievedAt: 420 });
+const latest = session.getState(); // outcome.state вече е записан, дори при отказ с ефекти.
+
+// При премахване на този собственик запазваме последния checkpoint.
+const checkpoint = session.dispose();
+// dispose не приключва опита. При възстановяване използваме нов собственик:
+const recovered = createRunSession(checkpoint, PRACTICE_RNG);
+```
+
+Числата за времето в примера са само за новия `initial` от първия пример. За възстановен checkpoint хостът подава валидното натрупано активно време и текущия timestamp; сесията не чете или поправя часовника.
+
+| API | Поведение |
+| --- | --- |
+| `getState()` | Последното readonly `RunState`, достъпно и след disposal. Съдържа частните данни на ядрото и не е ranked response. |
+| `bind(command)` | Връща `BoundRunCommand`, който получава само `{ activeTimeMs, achievedAt }`. RNG е подаден при създаването на сесията. |
+| `dispose()` | Обезсилва всички callback-и на този собственик и връща checkpoint. Не изпраща `end`, `death` или финален резултат. |
+
+`SessionCommand` не приема `row` и `life` за `choose`, `hint` и `mystery`: те се запомнят при `bind`. Всички callback-и принадлежат на конкретната сесия и запомнят текущите life/status. Игровите действия запомнят и реда. `end` също е обвързан с реда и с отделна control-phase идентичност. След нов прогрес, смърт или revive старото потвърждение за край не може да приключи новото състояние; показваме ново потвърждение.
+
+Всеки callback освен `tick` доставя най-много един върнат core преход. След това повторение е `command-consumed`, освен ако по-ранната проверка вече го отчете като disposed/finished. Това важи и за core отказ: той може да съдържа дължими ефекти. `tick` е многократен и **не е обвързан с ред** — продължава да работи след движение, hint или mystery в същия живот. След смърт/revive старият tick callback е невалиден.
+
+Преди проверката на часовниците сесията проверява последователно `session-disposed`, `finished`, `command-consumed` и `stale-command`. Такива доставяния връщат текущия state и празни events, без да обработват време. Закъснял callback със стар timestamp не може да предизвика clock грешка след обезсилване. Валидните доставяния запазват нормалните core проверки; при хвърлена грешка state и еднократният callback остават непроменени за коректен повторен опит.
+
+Сесията **винаги записва върнатия state**, включително при `accepted: false`. Например фатален дължим drain преди hint връща `died-before-command`; сесията вече е `dead`, а подсказката не е изхарчена. Върнатите events се обработват веднъж. Няма вътрешен растящ event log, таймери или subscribers.
+
+За `end` control-phase идентичността се сменя при death/status, pending reward, grant или apply промяна. Стар callback остава невалиден и при цикъл pending → clear, дори status/row/life да се върнат до предишните стойности. Нов grant изисква ново изрично потвърждение за отказ от него. Core правилата за pending и `forfeitGrantedReward` продължават да важат; bound callback не доказва рекламна награда.
+
+`dispose` не изчиства pending награда и не превръща recoverable checkpoint във финален резултат. Нов или възстановен run получава нова сесия; при смяна на собственик обезсилваме старата. Не сериализираме сесията, функциите или control-phase идентичността — сериализира се `RunState`. Няма автоматичен in-place replace и стар callback не може да бъде пренасочен към новата сесия.
+
+Сесията трябва да живее през обикновените rerender-и; показваните действия получават нови bindings според текущия snapshot. Реалното React mount/unmount и development StrictMode поведение ще се свържат и проверят с renderer-а в CPI-008; тук няма непроверен hook пример. Native clock/lifecycle остава CPI-007, а durable persistence — CPI-009. Авторитетът за SDK/SSV награди има собствен подходящ живот: премахването на view не означава неуспешен reward и не отменя pending проверката. Контролерът не заменя server concurrency, leases или request ledger.
+
+Подробности и приемателен обхват: [CPI-006](../../docs/decisions/CPI-006-death-progress.md).
 
 ## Време и подреждане
 
@@ -97,4 +142,4 @@ npm run typecheck --workspace @crystal-path-infinity/game-core
 npm test --workspace @crystal-path-infinity/game-core
 ```
 
-Source baseline fixtures и тестовете за преходи/поток са в `test/`. Те разграничават историческите правила от приетите standalone промени и проверяват serialization, ефекти, големи индекси, bounded buffers и revive инварианти. Mobile gameplay интеграцията, native timing и повторен UI callback остават в последващите задачи.
+Source baseline fixtures и тестовете за преходи/поток са в `test/`. Те разграничават историческите правила от приетите standalone промени и проверяват serialization, ефекти, големи индекси, bounded buffers и revive инварианти. CPI-006 добавя сесийния контролер за повторени, закъснели и обезсилени callback-и; реалната му интеграция с мобилния renderer, React lifecycle и native timing остава в CPI-007/CPI-008. Точните изпълнени проверки, ревизия и ограничения се записват в issue/PR.
