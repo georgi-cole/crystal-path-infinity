@@ -1,0 +1,271 @@
+:root {
+  color-scheme: dark;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  color: #ecf7fc;
+  background: #080c1b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-width: 0;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  -webkit-text-size-adjust: 100%;
+}
+
+.launch-screen {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  min-height: 100svh;
+  gap: 1rem;
+  padding-top: calc(1.25rem + env(safe-area-inset-top, 0px));
+  padding-right: max(1.25rem, env(safe-area-inset-right, 0px));
+  padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+  padding-left: max(1.25rem, env(safe-area-inset-left, 0px));
+  background:
+    radial-gradient(ellipse at 50% 36%, rgb(31 81 109 / 18%), transparent 55%),
+    radial-gradient(ellipse at 100% 0%, rgb(65 48 116 / 13%), transparent 42%),
+    #080c1b;
+}
+
+.launch-screen::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background:
+    radial-gradient(circle at 16% 22%, rgb(160 207 231 / 28%) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 85% 30%, rgb(160 207 231 / 18%) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 11% 75%, rgb(160 207 231 / 18%) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 80% 69%, rgb(160 207 231 / 22%) 0 1px, transparent 1.5px);
+  content: '';
+  pointer-events: none;
+}
+
+.launch-header,
+.launch-content,
+.launch-footer {
+  width: 100%;
+  max-width: 28rem;
+}
+
+.launch-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .6rem 1rem;
+}
+
+.development-status {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin: 0;
+  color: #b3c6d5;
+  font-size: .75rem;
+  line-height: 1.5;
+}
+
+.status-dot {
+  width: .3rem;
+  height: .3rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #75d7e5;
+}
+
+.environment-badge {
+  padding: .3rem .55rem;
+  border: 1px solid rgb(117 215 229 / 18%);
+  border-radius: .35rem;
+  background: rgb(117 215 229 / 5%);
+  color: #a1d8e2;
+  font-size: .65rem;
+  line-height: 1.3;
+  letter-spacing: .03em;
+}
+
+.environment-badge--staging {
+  border-color: rgb(227 194 133 / 22%);
+  color: #e3c285;
+  background: rgb(227 194 133 / 5%);
+}
+
+.launch-content {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-block: clamp(.5rem, 3svh, 2rem);
+  text-align: center;
+}
+
+.crystal-artwork {
+  width: min(100%, 17.5rem);
+  height: clamp(9rem, 31svh, 18rem);
+  margin-bottom: 1.1rem;
+}
+
+.crystal-artwork svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+h1 {
+  max-width: 100%;
+  margin: 0;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
+.brand-name,
+.brand-edition {
+  display: block;
+}
+
+.brand-name {
+  padding-left: .24em;
+  color: #d3e5ed;
+  font-size: clamp(.9rem, 3.4vw, 1.05rem);
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: .24em;
+  text-transform: uppercase;
+}
+
+.brand-edition {
+  margin-top: .15rem;
+  color: #f0fafc;
+  font-size: clamp(2.25rem, calc(1rem + 13vw), 5.3rem);
+  font-weight: 350;
+  line-height: 1.1;
+  letter-spacing: -.045em;
+}
+
+.brand-divider {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  width: 5.75rem;
+  margin-top: 1.65rem;
+  color: #62bed5;
+}
+
+.brand-divider::before,
+.brand-divider::after {
+  height: 1px;
+  flex: 1;
+  background: rgb(117 215 229 / 22%);
+  content: '';
+}
+
+.brand-divider span {
+  width: .28rem;
+  height: .28rem;
+  background: currentColor;
+  transform: rotate(45deg);
+}
+
+.launch-message {
+  margin: 1.2rem 0 0;
+  color: #a9bece;
+  font-size: .95rem;
+  font-weight: 400;
+  line-height: 1.65;
+}
+
+.launch-footer {
+  text-align: center;
+}
+
+.build-details {
+  padding-top: .85rem;
+  border-top: 1px solid rgb(159 195 216 / 10%);
+  color: #91a7ba;
+  font-size: .7rem;
+  line-height: 1.6;
+}
+
+.build-summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: .2rem .5rem;
+  margin: 0;
+}
+
+.build-separator {
+  color: #557087;
+}
+
+.build-identifier {
+  margin: .2rem 0 0;
+  color: #829aad;
+  font-size: .65rem;
+  overflow-wrap: anywhere;
+}
+
+.quiet-signature {
+  color: #486779;
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-height: 600px) {
+  .launch-screen {
+    gap: .6rem;
+  }
+
+  .launch-content {
+    padding-block: .5rem;
+  }
+
+  .crystal-artwork {
+    height: clamp(7.5rem, 26svh, 10rem);
+    margin-bottom: .5rem;
+  }
+
+  .brand-divider {
+    margin-top: 1rem;
+  }
+
+  .launch-message {
+    margin-top: .8rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

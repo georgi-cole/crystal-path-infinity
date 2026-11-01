@@ -1,0 +1,248 @@
+name: Mobile app checks
+
+on:
+  pull_request:
+    paths: ['apps/mobile/**', 'package.json', 'package-lock.json', '.github/workflows/mobile-app.yml']
+  push:
+    branches: [main]
+    paths: ['apps/mobile/**', 'package.json', 'package-lock.json', '.github/workflows/mobile-app.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-app-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  web:
+    name: App configuration, tests, and three web environments
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.23.4'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install the clean workspace
+        run: npm ci --ignore-scripts
+      - name: Validate configuration and build all environments
+        run: |
+          mkdir -p apps/mobile/artifacts
+          npm ls --workspace @crystal-path-infinity/mobile --depth=0 --json > apps/mobile/artifacts/npm-dependencies.json
+          npm run typecheck 2>&1 | tee apps/mobile/artifacts/typecheck.log
+          npm test 2>&1 | tee apps/mobile/artifacts/tests.log
+          for environment in development staging production; do
+            case "$environment" in
+              development) build_script=build ;;
+              staging) build_script=build:staging ;;
+              production) build_script=build:production ;;
+            esac
+            npm run "$build_script" 2>&1 | tee "apps/mobile/artifacts/web-${environment}.log"
+            node --experimental-strip-types --input-type=module - "$environment" <<'JS'
+          import { readFileSync } from 'node:fs';
+          import { assertBuiltEnvironment, requireEnvironment } from './apps/mobile/config/environments.ts';
+          const manifest = JSON.parse(readFileSync('apps/mobile/package.json', 'utf8'));
+          const built = JSON.parse(readFileSync('apps/mobile/dist/build-info.json', 'utf8'));
+          assertBuiltEnvironment(built, requireEnvironment(process.argv[2]), manifest.version);
+          console.log(JSON.stringify(built));
+          JS
+            cp -R apps/mobile/dist "apps/mobile/artifacts/web-${environment}"
+          done
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: mobile-app-web-evidence
+          path: apps/mobile/artifacts/
+          retention-days: 7
+          if-no-files-found: warn
+
+  android:
+    name: Development Android build and emulator launch
+    needs: web
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.23.4'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install, build development assets, and generate Android
+        run: |
+          mkdir -p apps/mobile/artifacts
+          node --version | tee apps/mobile/artifacts/node-version.txt
+          java -version 2>&1 | tee apps/mobile/artifacts/java-version.txt
+          npm ci --ignore-scripts
+          npm ls --workspace @crystal-path-infinity/mobile --depth=0 --json > apps/mobile/artifacts/npm-dependencies.json
+          npm run build 2>&1 | tee apps/mobile/artifacts/web-build.log
+          npm run native:generate -- --platform android --environment development 2>&1 | tee apps/mobile/artifacts/android-generation.log
+          npm run native:generate -- --platform android --environment development --check
+      - name: Compile and verify the development APK
+        working-directory: apps/mobile
+        run: |
+          bash android/gradlew -p android --no-daemon --version 2>&1 | tee artifacts/gradle-version.txt
+          bash android/gradlew -p android --no-daemon --stacktrace :app:dependencies --configuration debugRuntimeClasspath 2>&1 | tee artifacts/android-dependencies.txt
+          bash android/gradlew -p android --no-daemon --stacktrace :app:assembleDebug 2>&1 | tee artifacts/android-build.log
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging android/app/build/outputs/apk/debug/app-debug.apk > artifacts/android-apk-badging.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, re, zipfile, xml.etree.ElementTree as ET
+          expected = json.loads(Path('dist/build-info.json').read_text())
+          badging = Path('artifacts/android-apk-badging.txt').read_text()
+          assert f"package: name='{expected['appId']}' versionCode='1' versionName='{expected['version']}'" in badging
+          system = 'android.permission.INTERNET'
+          internal = expected['appId'] + '.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION'
+          # AndroidX may add its app-scoped signature safeguard for receivers.
+          # It grants no user/device access; no other permission is accepted.
+          permissions = set(re.findall(r"uses-permission(?:-sdk-\d+)?: name='([^']+)'", badging))
+          assert system in permissions and permissions <= {system, internal}, permissions
+          manifests = list(Path('android/app/build/intermediates/merged_manifests').glob('debug/**/AndroidManifest.xml'))
+          assert manifests, 'Merged manifest missing'
+          ns = '{http://schemas.android.com/apk/res/android}'
+          for path in manifests:
+              root = ET.parse(path).getroot()
+              app = root.find('application')
+              assert app is not None and app.get(ns + 'usesCleartextTraffic') == 'false'
+              assert root.find('application/activity').get(ns + 'screenOrientation') == 'portrait'
+              declared = {p.get(ns + 'name'): p.get(ns + 'protectionLevel') for p in root.findall('permission')}
+              assert set(declared) <= {internal}
+              if internal in permissions:
+                  assert declared.get(internal) == 'signature'
+          with zipfile.ZipFile('android/app/build/outputs/apk/debug/app-debug.apk') as apk:
+              assert json.loads(apk.read('assets/public/build-info.json')) == expected
+          Path('artifacts/android-permissions.json').write_text(json.dumps({'systemPermissions': sorted(permissions - {internal}), 'internalSignaturePermissions': sorted(permissions & {internal})}, indent=2))
+          print('APK identity, version, embedded environment, portrait and permission checks passed')
+          PY
+      - name: Prepare the official Android emulator tools
+        timeout-minutes: 12
+        run: |
+          test -c /dev/kvm
+          sudo chown "$(id -u):$(id -g)" /dev/kvm
+          sudo chmod 660 /dev/kvm
+          sdkmanager --install "emulator" "system-images;android-36;google_apis;x86_64" </dev/null 2>&1 | tee apps/mobile/artifacts/android-system-image-install.log
+          printf 'no\n' | avdmanager create avd --force --name cpi003-development --package "system-images;android-36;google_apis;x86_64" --device pixel_7 2>&1 | tee apps/mobile/artifacts/android-avd-create.log
+          cp "$ANDROID_HOME/system-images/android-36/google_apis/x86_64/source.properties" apps/mobile/artifacts/android-system-image.properties
+      - name: Open the minimum screen on Android Emulator
+        timeout-minutes: 12
+        run: node apps/mobile/scripts/smoke-native.mjs --platform android
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: mobile-app-android-evidence
+          path: |
+            apps/mobile/artifacts/
+            apps/mobile/android/app/build/outputs/logs/
+            apps/mobile/android/app/build/intermediates/merged_manifests/debug/
+          retention-days: 7
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mobile-app-android-development
+          path: apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7
+          if-no-files-found: error
+
+  ios:
+    name: Development iOS build and simulator launch
+    needs: web
+    runs-on: macos-26
+    timeout-minutes: 45
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.23.4'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install, build development assets, and generate iOS
+        run: |
+          mkdir -p apps/mobile/artifacts
+          node --version | tee apps/mobile/artifacts/node-version.txt
+          xcodebuild -version | tee apps/mobile/artifacts/xcode-version.txt
+          xcrun swift --version | tee apps/mobile/artifacts/swift-version.txt
+          npm ci --ignore-scripts
+          npm ls --workspace @crystal-path-infinity/mobile --depth=0 --json > apps/mobile/artifacts/npm-dependencies.json
+          npm run build 2>&1 | tee apps/mobile/artifacts/web-build.log
+          npm run native:generate -- --platform ios --environment development 2>&1 | tee apps/mobile/artifacts/ios-generation.log
+          npm run native:generate -- --platform ios --environment development --check
+      - name: Resolve SPM and compile an unsigned simulator app
+        working-directory: apps/mobile
+        run: |
+          resolution_flags=()
+          if [[ -f native-locks/Package.resolved ]]; then
+            resolution_flags+=(-disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile)
+          fi
+          xcodebuild -resolvePackageDependencies -project ios/App/App.xcodeproj -scheme App "${resolution_flags[@]}" 2>&1 | tee artifacts/ios-dependencies.log
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          lock = json.loads(Path('ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved').read_text())
+          pins = {pin['identity']: pin['state'].get('version') for pin in lock['pins']}
+          assert pins == {'capacitor-swift-pm': '8.5.3'}, pins
+          print('Resolved SPM graph: Capacitor 8.5.3 only')
+          PY
+          xcodebuild build -project ios/App/App.xcodeproj -scheme App -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build/ios -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY= 2>&1 | tee artifacts/ios-build.log
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, plistlib
+          app = Path('build/ios/Build/Products/Debug-iphonesimulator/App.app')
+          info = plistlib.loads((app / 'Info.plist').read_bytes())
+          expected = json.loads(Path('dist/build-info.json').read_text())
+          assert info['CFBundleIdentifier'] == expected['appId']
+          assert info['CFBundleShortVersionString'] == expected['version']
+          assert info['CFBundleVersion'] == '1'
+          assert info['UIDeviceFamily'] == [1]
+          assert info['UISupportedInterfaceOrientations'] == ['UIInterfaceOrientationPortrait']
+          assert 'NSAppTransportSecurity' not in info
+          assert not any(key.endswith('UsageDescription') or key.startswith('GAD') for key in info)
+          assert json.loads((app / 'public/build-info.json').read_text()) == expected
+          Path('artifacts/ios-app-info.json').write_text(json.dumps({'buildInfo': expected, 'buildNumber': info['CFBundleVersion'], 'deviceFamily': info['UIDeviceFamily'], 'permissionPurposeStrings': []}, indent=2))
+          print('Simulator app identity, version, embedded environment, portrait and permission checks passed')
+          PY
+          tar -czf build/cpi003-ios-simulator.tar.gz -C build/ios/Build/Products/Debug-iphonesimulator App.app
+      - name: Open the minimum screen on iOS Simulator
+        timeout-minutes: 12
+        run: node apps/mobile/scripts/smoke-native.mjs --platform ios
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: mobile-app-ios-evidence
+          path: |
+            apps/mobile/artifacts/
+            apps/mobile/ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+            apps/mobile/ios/App/CapApp-SPM/Package.swift
+          retention-days: 7
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mobile-app-ios-development-simulator
+          path: apps/mobile/build/cpi003-ios-simulator.tar.gz
+          retention-days: 7
+          if-no-files-found: error
+
+# Commands: developer.android.com/tools/adb and tools/avdmanager;
+# developer.android.com/studio/run/emulator-commandline and emulator-acceleration;
+# Apple's installed `xcrun simctl help` and Xcode command-line tool reference.
+# Launch artifacts demonstrate a committed minimal screen on an emulator or
+# simulator, not physical-device/gameplay/ads/backend/store validation.

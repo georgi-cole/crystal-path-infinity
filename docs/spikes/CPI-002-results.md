@@ -1,6 +1,6 @@
 # CPI-002 — Mobile compatibility spike: evidence and remaining gates
 
-**Status: in progress, 2026-11-01.** The isolated lab is implemented and its web/server behavior is verified locally. Both Android debug and unsigned iOS Simulator compilation passed in GitHub Actions. Physical Android/iPhone behavior, actual Google SSV delivery, exact Families eligibility and a deployed backend cost/latency decision remain open. **CPI-002 is not complete and CPI-003 is not cleared by a browser result.**
+**Status: in progress, 2026-11-01.** The isolated lab is implemented and its web/server behavior is verified locally. Both Android debug and unsigned iOS Simulator compilation passed in GitHub Actions. Physical Android/iPhone behavior, actual Google SSV delivery, exact Families eligibility and a deployed backend cost/latency decision remain open. **CPI-002 is not complete.** After merging [PR #40](https://github.com/georgi-cole/crystal-path-infinity/pull/40), Georgi explicitly authorized [CPI-003 app foundation](../decisions/CPI-003-app-foundation.md) to proceed with this compiled stack. That sequencing decision does not turn the remaining checks into passes.
 
 The accepted product rules remain 300 starting SP, a 400 SP maximum, 200 SP for continuations 1–5 and 150 SP for 6–10. The tenth continuation remains playable; the next death ends that run. The lab is not the full endless game: it has a fixed diagnostic scene and 20 SP damage per wrong test step. Its results are never ranked. See the [accepted product contract](../decisions/CPI-001-product-contract.md), [lab instructions](../../spikes/mobile/README.md), [probe API contract](../../spikes/mobile/server/CONTRACT.md) and [native source audit](CPI-002-native-audit.md).
 
@@ -123,7 +123,7 @@ These are engineering targets for the device/deployed-server test, not a claimed
 - Immediate local pressed/waiting feedback should appear within 50 ms, without revealing or predicting the authoritative safe side. A request awaiting confirmation cannot permit a new choice.
 - Slow/offline: visible waiting state, exact-command retry or state reconciliation, no duplicated progress and no local promotion to a ranked result. The current HTTP timeout is 12 seconds; final retry UX must be assessed on phones.
 - Test 1,000 and 10,000 action histories against the selected persistent model, plus expected and peak concurrency. Keep bounded rendering/checkpoints and define retention/compaction without a product finish row.
-- If internet/device p95 cannot fit the play budget, change backend placement/transport/transaction design before CPI-003. Do not expose future path answers to hide the latency.
+- If internet/device p95 cannot fit the play budget, change backend placement/transport/transaction design before integrating ranked gameplay. CPI-003's minimal app foundation does not integrate that backend. Do not expose future path answers to hide the latency.
 
 ## 5. Remaining device and account evidence
 
@@ -148,3 +148,5 @@ The current lab uses a single child/unknown context, so adult/teen transitions, 
 ## 6. Current decision
 
 **Continue the successfully compiled Capacitor candidate through physical-device validation.** Published source supports the necessary SSV bridge, and the local application/server flow has no demonstrated blocker after the fixes above. **Hold the final CPI-002 go/no-go and keep the task open** until native/device/SSV and deployed latency/resource evidence is recorded. The server's volatile state and demo ad IDs are intentional diagnostic boundaries, not production choices.
+
+**Owner-authorized continuation:** the merged lab provides the version/toolchain basis for CPI-003. CPI-003 builds a separate minimal app without advertisements or the probe backend; it carries no claim that this spike's remaining gates have passed.

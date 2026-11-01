@@ -2,9 +2,20 @@
 
 Самостоятелна игра за Android и iOS, извлечена от Crystal Path: Infinity в The Big Eye.
 
-**CPI-001 е съгласуван. CPI-002 е в изпълнение: добавен е [изолиран Mobile Lab](spikes/mobile/README.md) с [отчет и оставащи проверки](docs/spikes/CPI-002-results.md).** Georgi прие основните игрови правила, класациите и регионалните записи: самостоятелната игра е действително безкрайна, достъпна за всички възрасти, а възрастовите данни служат за аналитика. Приетото рекламно възстановяване е **200 SP за успешни продължавания 1–5 и 150 SP за 6–10**. Балансът ще се прегледа след playtesting. Тук няма завършено мобилно приложение.
+**CPI-003 добавя самостоятелната [основа на мобилното приложение](apps/mobile/README.md): React/TypeScript/Capacitor, минимален екран и отделни development/staging/production идентичности.** [Резултатите и обхватът](docs/decisions/CPI-003-app-foundation.md) разграничават web, native build и реално отваряне. CPI-002 остава отворен за [проверките на физически устройства, реклами и backend](docs/spikes/CPI-002-results.md); Georgi изрично разреши продължаването след merge на PR #40. Georgi прие основните игрови правила, класациите и регионалните записи: самостоятелната игра е действително безкрайна, достъпна за всички възрасти, а възрастовите данни служат за аналитика. Приетото рекламно възстановяване е **200 SP за успешни продължавания 1–5 и 150 SP за 6–10**. Балансът ще се прегледа след playtesting. Gameplay и завършеното мобилно приложение предстоят.
 
-[38 задачи в GitHub](https://github.com/georgi-cole/crystal-path-infinity/issues) са създадени с критерии за приемане, приоритети, области и зависимости. [CPI-001](https://github.com/georgi-cole/crystal-path-infinity/issues/1) съдържа [съгласувания договор за правила, профил и класации](docs/decisions/CPI-001-product-contract.md). В изпълнение е [CPI-002 — техническият spike](https://github.com/georgi-cole/crystal-path-infinity/issues/2). Задачите за детски профили, аналитика и реклами уточняват конкретната реализация, без ново одобрение на възрастов обхват. Текущият статус на задачите и PR се поддържа в GitHub. Проверените административни настройки са описани в [статуса на хранилището](docs/REPOSITORY_SETUP.md).
+[38 задачи в GitHub](https://github.com/georgi-cole/crystal-path-infinity/issues) са създадени с критерии за приемане, приоритети, области и зависимости. [CPI-001](https://github.com/georgi-cole/crystal-path-infinity/issues/1) съдържа [съгласувания договор за правила, профил и класации](docs/decisions/CPI-001-product-contract.md). Текущата задача е [CPI-003 — основа на приложението](https://github.com/georgi-cole/crystal-path-infinity/issues/3), със запазени оставащи проверки в [CPI-002](https://github.com/georgi-cole/crystal-path-infinity/issues/2). Задачите за детски профили, аналитика и реклами уточняват конкретната реализация, без ново одобрение на възрастов обхват. Текущият статус на задачите и PR се поддържа в GitHub. Проверените административни настройки са описани в [статуса на хранилището](docs/REPOSITORY_SETUP.md).
+
+## Стартиране на приложението
+
+Node **22.23.4** е фиксиран в `.nvmrc` и CI. От корена на хранилището:
+
+```bash
+npm ci --ignore-scripts
+npm run dev
+```
+
+Отвори `http://127.0.0.1:5174`. Не са необходими backend, акаунт или ключове. `npm run build`, `npm run build:staging` и `npm run build:production` създават съответната web версия. Native generation, toolchain и артефактите са описани в [инструкциите на приложението](apps/mobile/README.md). Изолираният [CPI-002 Mobile Lab](spikes/mobile/README.md) запазва собствени зависимости и команди.
 
 ## Първа версия
 
@@ -24,6 +35,8 @@
 | [CPI-001 — продуктов договор](docs/decisions/CPI-001-product-contract.md) | Точни правила, приемателни сценарии и статус на решенията |
 | [CPI-002 — Mobile Lab](spikes/mobile/README.md) | Стартиране, тестови реклами, native build и ограничения |
 | [CPI-002 — резултати](docs/spikes/CPI-002-results.md) | Измервания, SDK audit, device gates и go/no-go |
+| [CPI-003 — приложение](apps/mobile/README.md) | Инсталация, команди, среди и native generation |
+| [CPI-003 — решения и резултати](docs/decisions/CPI-003-app-foundation.md) | Самостоятелна идентичност и проверими build/launch доказателства |
 | [Инспекция](docs/SOURCE_AUDIT.md) | Установено поведение, зависимости и проблеми |
 | [Backlog](docs/BACKLOG.md) | Задачи с зависимости и критерии |
 | [Архитектура](docs/ARCHITECTURE.md) | Клиент, сървър, профили и класации |
