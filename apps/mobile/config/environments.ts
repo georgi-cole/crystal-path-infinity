@@ -40,7 +40,7 @@ export function getBuildInfo(environment: AppEnvironment, version: string): Buil
     );
   }
 
-  return { schemaVersion: '1', environment: selected, ...identities[selected], version };
+  return { schemaVersion: 1, environment: selected, ...identities[selected], version };
 }
 
 /** Reject stale or differently identified web assets before a native copy/sync. */

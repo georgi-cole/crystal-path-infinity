@@ -5,15 +5,25 @@ import { assertBuiltEnvironment, getBuildInfo, requireEnvironment } from './conf
 
 // Capacitor 8.5.3 loads this TypeScript file through its CommonJS config loader.
 const environment = requireEnvironment(process.env.CPI_APP_ENV ?? 'development');
-const mobilePackage = JSON.parse(readFileSync(join(__dirname, 'package.json'), 'utf8')) as { version: string };
+const mobilePackage = JSON.parse(readFileSync(join(__dirname, 'package.json'), 'utf8')) as {
+  version: string;
+};
 const build = getBuildInfo(environment, mobilePackage.version);
 const metadataPath = join(__dirname, 'dist', 'build-info.json');
-const copiesAssets = process.argv.slice(2).some(argument => ['add', 'copy', 'sync', 'build', 'run'].includes(argument));
+const copiesAssets = process.argv
+  .slice(2)
+  .some((argument) => ['add', 'copy', 'sync', 'build', 'run'].includes(argument));
 
 if (existsSync(metadataPath)) {
-  assertBuiltEnvironment(JSON.parse(readFileSync(metadataPath, 'utf8')), environment, build.version);
+  assertBuiltEnvironment(
+    JSON.parse(readFileSync(metadataPath, 'utf8')),
+    environment,
+    build.version,
+  );
 } else if (copiesAssets) {
-  throw new Error(`Build apps/mobile for ${environment} first: dist/build-info.json is required before native asset copying.`);
+  throw new Error(
+    `Build apps/mobile for ${environment} first: dist/build-info.json is required before native asset copying.`,
+  );
 }
 
 const debugging = environment === 'development';
