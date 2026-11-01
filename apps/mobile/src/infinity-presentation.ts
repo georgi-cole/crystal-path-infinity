@@ -54,8 +54,17 @@ export function presentInfinityScene(state: RunState): PresentedScene {
     const offset = BigInt(row.index) - current;
     if (offset < -1n || offset > 3n) continue;
     const phase = offset < 0n ? 'past' : offset === 0n ? 'current' : 'future';
-    const decision = phase === 'past' ? resolved.get(row.index)?.lastChoice : phase === 'current' ? state.current.lastChoice : null;
-    const available = phase === 'current' && row.hasMystery && state.current.mysteryOutcome === null && state.status === 'playing';
+    const decision =
+      phase === 'past'
+        ? resolved.get(row.index)?.lastChoice
+        : phase === 'current'
+          ? state.current.lastChoice
+          : null;
+    const available =
+      phase === 'current' &&
+      row.hasMystery &&
+      state.current.mysteryOutcome === null &&
+      state.status === 'playing';
     rows.push({
       index: row.index,
       label: (BigInt(row.index) + 1n).toString(),

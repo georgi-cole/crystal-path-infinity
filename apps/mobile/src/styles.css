@@ -270,11 +270,25 @@ h1 {
 }
 
 .preview-play-button {
-  min-width: 13rem; min-height: 3.2rem; margin-top: 1.2rem;
-  border: 1px solid rgba(125,223,233,.5); border-radius: .7rem;
-  background: linear-gradient(125deg,rgba(44,169,205,.28),rgba(65,42,143,.35));
-  color:#ecfbff; font:inherit; font-weight:700; letter-spacing:.04em;
-  cursor:pointer; touch-action:manipulation;
+  min-width: 13rem;
+  min-height: 3.2rem;
+  margin-top: 1.2rem;
+  border: 1px solid rgba(125, 223, 233, 0.5);
+  border-radius: 0.7rem;
+  background: linear-gradient(125deg, rgba(44, 169, 205, 0.28), rgba(65, 42, 143, 0.35));
+  color: #ecfbff;
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  touch-action: manipulation;
 }
-.preview-play-button:focus-visible { outline:2px solid #d1ffff;outline-offset:3px; }
-.preview-note { font-size:.68rem; line-height:1.6; color:#a0bbcd; }
+.preview-play-button:focus-visible {
+  outline: 2px solid #d1ffff;
+  outline-offset: 3px;
+}
+.preview-note {
+  font-size: 0.68rem;
+  line-height: 1.6;
+  color: #a0bbcd;
+}

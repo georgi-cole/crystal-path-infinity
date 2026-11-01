@@ -127,7 +127,9 @@ export function App() {
           <span />
         </div>
         <p className="launch-message">The endless crystal bridge is taking shape.</p>
-        <button className="preview-play-button" type="button" onClick={() => setPlayPreview(true)}>Preview practice</button>
+        <button className="preview-play-button" type="button" onClick={() => setPlayPreview(true)}>
+          Preview practice
+        </button>
         <p className="preview-note">Local preview · Progress not yet saved · No ranked scores</p>
       </section>
 
