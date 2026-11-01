@@ -147,7 +147,21 @@ jobs:
           ldd "$ANDROID_HOME/emulator/qemu/linux-x86_64/qemu-system-x86_64" > apps/mobile/artifacts/android-emulator-libraries.txt || true
           "$ANDROID_HOME/emulator/emulator" -version 2>&1 | tee apps/mobile/artifacts/android-emulator-version.txt
           "$sdk_bin/sdkmanager" --install "system-images;android-36;google_apis;x86_64" </dev/null 2>&1 | tee apps/mobile/artifacts/android-system-image-install.log
-          printf 'no\n' | "$sdk_bin/avdmanager" create avd --force --name cpi003-development --package "system-images;android-36;google_apis;x86_64" --device pixel_7 2>&1 | tee apps/mobile/artifacts/android-avd-create.log
+          cpi_avd_home="$RUNNER_TEMP/cpi003-avd"
+          mkdir -p "$cpi_avd_home"
+          export ANDROID_AVD_HOME="$cpi_avd_home"
+          printf 'ANDROID_AVD_HOME=%s\n' "$cpi_avd_home" >> "$GITHUB_ENV"
+          printf 'no\n' | "$sdk_bin/avdmanager" create avd --force --name cpi003-development --path "$cpi_avd_home/cpi003-development.avd" --package "system-images;android-36;google_apis;x86_64" --device pixel_7 2>&1 | tee apps/mobile/artifacts/android-avd-create.log
+          "$sdk_bin/avdmanager" list avd 2>&1 | tee apps/mobile/artifacts/android-avd-manager-list.txt
+          test -f "$cpi_avd_home/cpi003-development.ini"
+          cp "$cpi_avd_home/cpi003-development.ini" apps/mobile/artifacts/android-avd.ini
+          cp "$cpi_avd_home/cpi003-development.avd/config.ini" apps/mobile/artifacts/android-avd-config.ini
+          "$ANDROID_HOME/emulator/emulator" -list-avds | tee apps/mobile/artifacts/android-emulator-avds.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          names = Path('apps/mobile/artifacts/android-emulator-avds.txt').read_text().splitlines()
+          assert 'cpi003-development' in names, names
+          PY
           cp "$ANDROID_HOME/system-images/android-36/google_apis/x86_64/source.properties" apps/mobile/artifacts/android-system-image.properties
       - name: Open the minimum screen on Android Emulator
         timeout-minutes: 12
