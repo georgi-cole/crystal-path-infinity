@@ -64,6 +64,12 @@ Native CI uses a development-only native navigation gate, released by a real ope
 
 The driver waits on observable native/page predicates, without fixed dwell sleeps. It checks gate ordering, no page before release, current-page readiness, foreground suspension and distinct recreated identities. App-scoped JavaScript exceptions and failed readiness remain failures. Gate controls are disabled in staging/production generation.
 
+### Fresh iOS simulator provisioning
+
+The [verification run on `84baa153`](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41348930277) compiled successfully but exposed two provisioning deadlines. Its first attempt emitted the expected native gate about 89 seconds after the launch command, beyond the 60-second allowance. One targeted retry then exhausted the 360-second boot allowance during Apple's CoreLocation data migration, before installing or launching the app. Both failed artifacts and command transcripts are retained; neither attempt provides a passing lifecycle result.
+
+The driver now allows up to 900 seconds for the fresh simulator's initial boot and 180 seconds for the first native process gate. The iOS smoke step has a 30-minute ceiling within the existing 45-minute job ceiling. Configured budgets are recorded in `ios-smoke-device.json`. These are bounded provisioning allowances, not fixed sleeps or additional retries; the driver proceeds immediately when each required predicate succeeds. Page readiness, identity, pause/resume, foreground-time and error assertions remain mandatory. More time does not prove that a stuck OS migration will recover: a deadline failure still fails CI and preserves its diagnostics.
+
 Executed counts, exact revision, workflow links and artifact digests are recorded in the issue/PR. Local generation is not native compile/launch evidence. Emulator/simulator results do not replace physical-device, real-ad, server, performance or long-session gates in CPI-002/CPI-034.
 
 ## Sources inspected

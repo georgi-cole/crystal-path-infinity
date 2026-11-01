@@ -557,6 +557,9 @@ async function android() {
 }
 
 async function ios() {
+  // Fresh iOS 26.5 migration exceeded 360s and native first launch took 89s in CI.
+  // Bound that provisioning work separately from the unchanged app/lifecycle checks.
+  const provisioningBudgetsMs = { coldBoot: 900_000, firstNativeProcess: 180_000 };
   const available = JSON.parse(text('xcrun', ['simctl', 'list', '--json', 'devices', 'available']));
   save('ios-simulators.json', JSON.stringify(available, null, 2));
   save('ios-runtimes.json', text('xcrun', ['simctl', 'list', '--json', 'runtimes']));
@@ -585,16 +588,27 @@ async function ios() {
   save(
     'ios-smoke-device.json',
     JSON.stringify(
-      { name: simulatorName, deviceType: device.deviceTypeIdentifier, udid, runtime },
+      {
+        name: simulatorName,
+        deviceType: device.deviceTypeIdentifier,
+        udid,
+        runtime,
+        provisioningBudgetsMs,
+      },
       null,
       2,
     ),
   );
   try {
     console.log(
-      `Booting fresh ${device.name} / iOS 26.5 simulator; progress is recorded in ios-boot.log`,
+      `Booting fresh ${device.name} / iOS 26.5 simulator (budget ${provisioningBudgetsMs.coldBoot / 1000}s); progress is recorded in ios-boot.log`,
     );
-    await runLogged('xcrun', ['simctl', 'bootstatus', udid, '-b'], 'ios-boot.log', 360_000);
+    await runLogged(
+      'xcrun',
+      ['simctl', 'bootstatus', udid, '-b'],
+      'ios-boot.log',
+      provisioningBudgetsMs.coldBoot,
+    );
     text(
       'xcrun',
       [
@@ -626,10 +640,14 @@ async function ios() {
         attempt > 1,
       );
       if (attempt === 1) {
-        await waitFor('iOS native prebridge navigation gate', 60_000, () => {
-          assertRunning(child, 'simctl attached launch');
-          return readAnalysis().prebridgeGates.some((gate) => gate.stage === 'waiting');
-        });
+        await waitFor(
+          'iOS native prebridge navigation gate',
+          provisioningBudgetsMs.firstNativeProcess,
+          () => {
+            assertRunning(child, 'simctl attached launch');
+            return readAnalysis().prebridgeGates.some((gate) => gate.stage === 'waiting');
+          },
+        );
         assert.equal(
           readAnalysis().diagnostics.length,
           0,
