@@ -1,12 +1,12 @@
 # CPI-004 — Code quality and required checks
 
-**Status: proposed in PR #42, 2026-11-01.** Georgi merged [PR #41](https://github.com/georgi-cole/crystal-path-infinity/pull/41) and requested the next task. The starting main revision is `c6e6185d3c9b40eb073d46436147e7ddff9d9fdd`; work is isolated on `cpi-004-quality-gates` in [PR #42](https://github.com/georgi-cole/crystal-path-infinity/pull/42). That PR and [Issue #4](https://github.com/georgi-cole/crystal-path-infinity/issues/4) record the exact final checked revision, CI results and current settings handoff.
+**Status: completed and merged in PR #42, 2026-11-01.** The starting main revision was `c6e6185d3c9b40eb073d46436147e7ddff9d9fdd`. Georgi merged [PR #42](https://github.com/georgi-cole/crystal-path-infinity/pull/42) as `1d013c48fa8e8b3dea18dc857a9d39790df60b89`; its tree is identical to tested head `28654fbca9520cd3053f6f994cf7a84b40c5f132`. The PR and [Issue #4](https://github.com/georgi-cole/crystal-path-infinity/issues/4) record the complete verification and artifact digests.
 
 ## Purpose and scope
 
 Every PR needs an application quality result that detects real defects and cannot pass merely because a dependent job was skipped. CPI-003 supplied independent builds and minimum-screen launch checks. CPI-004 adds lint/format checks, makes the application gate suitable for branch protection, and investigates the Android bridge exception observed during CPI-003.
 
-The current tests exercise the environment contract, native-check routing and startup evidence. The game engine and backend have not been implemented; their tests will join the same gate when the corresponding tasks introduce that code. This task does not claim gameplay or API coverage for nonexistent features. CPI-002's physical-device, real ad/SSV, Families and deployed-backend work remains open.
+At completion of CPI-004, tests exercised the environment contract, native-check routing and startup evidence. The game engine and backend were not yet implemented; CPI-005 subsequently adds the pure game-core workspace and its tests to the same gate. CPI-004 itself does not claim gameplay or API coverage. CPI-002's physical-device, real ad/SSV, Families and deployed-backend work remains open.
 
 ## Check structure
 
@@ -34,7 +34,7 @@ The commands are `npm run lint`, `npm run format:check` and `npm run format`. Th
 
 Before this task, the repository API confirmed Public visibility, squash-only merging, automatic deletion of merged branches, and default branch `main`. Ruleset `26312536` was Active, required a PR with zero independent approvals and resolved conversations, blocked force pushes/deletion, had no bypass actors, and required the strict `Planning manifest and bootstrap` check from GitHub Actions (`15368`).
 
-The intended additional required context is **`App required checks`**, also bound to GitHub Actions. Its quality and native dependencies remain visible as separate jobs. The existing planning requirement and protection settings are retained. The addition was prepared in the existing ruleset through GitHub's settings interface, but **Save changes opened GitHub's account re-verification dialog**. The API still reports only the existing planning requirement. The new requirement is therefore pending the owner's confirmation and a fresh API readback; configuration code or an unsaved settings form is not evidence of an active rule. The PR handoff will record the final verified state.
+The additional required context is **`App required checks`**, also bound to GitHub Actions. Its quality and native dependencies remain visible as separate jobs. Saving initially opened GitHub's account re-verification dialog. After the owner completed that step, independent API readback confirmed both `Planning manifest and bootstrap` and `App required checks`, integration `15368`, in the Active ruleset. Strict up-to-date checks, required PRs, resolved conversations, no bypass, and force-push/deletion restrictions remain intact. The account verification barrier is resolved; there is no pending CPI-004 protection setting.
 
 The controlled draft PR first introduced a real app metadata type mismatch at [commit `5ffcdc13`](https://github.com/georgi-cole/crystal-path-infinity/commit/5ffcdc13ae3f7ef70d1dc72a589d67e2d5612912): string `schemaVersion: '1'` where `BuildInfo` requires numeric literal `1`. In [run 41335551139](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41335551139), TypeScript rejected it with `TS2322`, **App quality failed**, both native jobs were skipped, and **App required checks failed**. The independent planning check passed. This demonstrates normal compiler enforcement and failure propagation without a fake failing test or bypass.
 
@@ -59,6 +59,12 @@ The first trace also shows delayed native pause delivery. In attempts 1 and 3, t
 The same run's iOS job passed: its [Simulator evidence](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41336328215/artifacts/13095328606), digest `6ad3db10c8922fe1351a36860535ffb9737b837a28b6171961612bd6bc499721`, records a matching startup marker, one page session, ordered pause/resume, both native bridge acknowledgements and no JavaScript/runtime exception. Both native screenshots were inspected. The aggregate still failed on Android's failed result, proving that successful quality and iOS cannot conceal a selected native failure.
 
 These checks send Home after startup bridge acknowledgement. They do not establish behavior when interruption happens before bridge creation, nor that JavaScript lifecycle callbacks arrive promptly enough to govern gameplay time. [CPI-007](https://github.com/georgi-cole/crystal-path-infinity/issues/7) explicitly carries early Home/lock interruption, process/WebView recreation and stale-event handling before gameplay/audio relies on lifecycle. CPI-002's physical-device checks remain separate. No SDK race fix is claimed from a non-reproduction.
+
+## Final corrected verification
+
+At head `28654fbca9520cd3053f6f994cf7a84b40c5f132`, [Mobile app run 41338065917](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41338065917) and [Planning run 41338065901](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41338065901) passed. All five check contexts reported success. Quality included 66 application tests, 9 routing/aggregate tests, types, lint, formatting and the three web environments.
+
+The final three Android cold starts and fresh iOS launch each recorded an observed pause before resume, successful startup/resumed native bridge acknowledgments, one page session, complete observation and zero runtime errors. Both native screenshots were inspected, and evidence ZIPs were SHA256-verified before their JSON/logs were checked. The earlier `triggerEvent` exception did not reproduce across the six instrumented Android starts in the two corrected runs; that remains a non-reproduction, not an SDK fix. CPI-007 and CPI-002 retain the follow-ups described above.
 
 ## References
 

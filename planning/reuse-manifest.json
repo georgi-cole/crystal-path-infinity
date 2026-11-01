@@ -2,19 +2,29 @@
   "source_repository": "georgi-cole/bbmobilenew-source",
   "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
   "inspected_on": "2026-11-01",
-  "status": "inventory_only_no_game_assets_copied",
+  "status": "single_player_rules_adapted_visual_assets_pending",
   "resources": [
     {
       "path": "src/minigames/crystalPathShattered/shatteredLogic.ts",
       "decision": "adapt",
-      "notes": "Adapt pure single-player rules for an endless standalone stream with bounded batches, absolute offsets, persisted RNG/mystery cursor and lossless progress. Preserve damage bands until separately measured; omit AI/350-finish logic from standalone only and version score/clock/restore rules. The source commit remains unchanged.",
-      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/minigames/crystalPathShattered/shatteredLogic.ts"
+      "notes": "CPI-005 adapts the single-player constants, weights, effect resolution and row draw order into pure versioned modules. The standalone stream is bounded, serializable and endless, with lossless absolute indices and mystery beyond350. AI, ranking and hidden350 finish are omitted. Independent fixtures retain immutable-source evidence; the original repository is unchanged.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/minigames/crystalPathShattered/shatteredLogic.ts",
+      "adapted_in": "CPI-005",
+      "targets": [
+        "packages/game-core/src/rules.ts",
+        "packages/game-core/src/effects.ts",
+        "packages/game-core/src/rows.ts"
+      ]
     },
     {
       "path": "src/minigames/crystalPathShattered/CrystalPathShatteredGame.tsx",
       "decision": "adapt",
-      "notes": "Preserve the React board; replace Redux/season/AI host and result callbacks. Bound row/resolved presentation buffers, support long progress values and explicit run end, and remove standalone 350-win UI without modifying the Big Eye source.",
-      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/minigames/crystalPathShattered/CrystalPathShatteredGame.tsx"
+      "notes": "CPI-005 extracts state transitions from choice, hint, mystery and periodic-effect handlers, with explicit standalone timing, fatal-progress and SP-cap rules. React board/menu extraction remains future work; the season/Redux/AI host and old result callbacks are not copied. Bound row/resolution buffers and exact absolute indices belong to the new core.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/minigames/crystalPathShattered/CrystalPathShatteredGame.tsx",
+      "partially_adapted_in": "CPI-005",
+      "targets": [
+        "packages/game-core/src/run.ts"
+      ]
     },
     {
       "path": "src/minigames/crystalPathShattered/crystalPathShattered.css",
@@ -97,14 +107,20 @@
     {
       "path": "tests/crystalPathShattered.logic.test.ts",
       "decision": "adapt",
-      "notes": "Retain source rule cases as historical fixtures; replace local ranking/350-finish expectations with endless progress, batch-equivalence, persisted RNG/mystery cadence, SP bounds and lossless large-counter cases.",
-      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/tests/crystalPathShattered.logic.test.ts"
+      "notes": "Independent literal source expectations and captured original route vectors verify constants, weights, effect priorities, expiry and consumed resources. Original ranking/350 finish are historical evidence; standalone changes are explicit. Separate stream/run tests cover bounded memory, save/resume and lossless progress.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/tests/crystalPathShattered.logic.test.ts",
+      "adapted_in": "CPI-005",
+      "targets": [
+        "packages/game-core/test/fixtures/source-baseline.ts",
+        "packages/game-core/test/baseline.test.ts"
+      ]
     },
     {
       "path": "tests/crystalPathShattered.asyncFlow.test.tsx",
       "decision": "adapt",
-      "notes": "Retain useful rendering/unmount cases without season state; add bounded long-run presentation, 350-to-351 continuation and interruption/recovery expectations.",
-      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/tests/crystalPathShattered.asyncFlow.test.tsx"
+      "notes": "CPI-005 references survived-wrong and historical fatal-progress behavior in pinned-source fixtures. No React async-flow suite is ported yet; rendering/unmount and gameplay integration remain subsequent tasks.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/tests/crystalPathShattered.asyncFlow.test.tsx",
+      "referenced_in": "CPI-005"
     },
     {
       "path": "tests/crystalPathShattered.styles.test.ts",
@@ -123,6 +139,13 @@
       "decision": "retain",
       "notes": "Proprietary copyright 2026 Georgi Kolev; asset-specific checks still required.",
       "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/LICENSE"
+    },
+    {
+      "path": "src/store/rng.ts",
+      "decision": "reference",
+      "referenced_in": "CPI-005",
+      "notes": "The immutable original mulberry32 implementation is used only to capture independent source route vectors. New practice RNG and injected route/reward cursors belong to the standalone core; the whole store is not copied.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/store/rng.ts"
     }
   ],
   "do_not_copy": [

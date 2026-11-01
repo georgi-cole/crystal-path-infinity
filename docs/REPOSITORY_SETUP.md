@@ -16,15 +16,15 @@ Georgi избра **Public по време на разработката**, за
 
 Продуктовият договор [CPI-001](https://github.com/georgi-cole/crystal-path-infinity/issues/1) е съгласуван в [PR #39](https://github.com/georgi-cole/crystal-path-infinity/pull/39), включително 200 SP за успешни продължавания 1–5 и 150 SP за 6–10. Балансът се преглежда отново след playtesting.
 
-## Текущо състояние — CPI-004, 1 ноември 2026 г.
+## Проверено състояние след CPI-004 — 1 ноември 2026 г.
 
-Georgi е слял [PR #41 / CPI-003](https://github.com/georgi-cole/crystal-path-infinity/pull/41). Началната `main` ревизия за CPI-004 е [commit `c6e6185d`](https://github.com/georgi-cole/crystal-path-infinity/commit/c6e6185d3c9b40eb073d46436147e7ddff9d9fdd). Самостоятелната app основа вече съществува; gameplay ядрото и backend още не са реализирани. Физическите устройства, реалният ad/SSV поток, Families проверките и deployed backend частта на CPI-002 остават отворени.
+Georgi е слял [PR #42 / CPI-004](https://github.com/georgi-cole/crystal-path-infinity/pull/42) в [commit `1d013c48`](https://github.com/georgi-cole/crystal-path-infinity/commit/1d013c48fa8e8b3dea18dc857a9d39790df60b89) и възложи CPI-005. Самостоятелната app основа и quality gates вече съществуват; gameplay ядрото се извлича в CPI-005. Backend, физическите устройства, реалният ad/SSV поток, Families проверките и deployed backend частта на CPI-002 остават отворени.
 
 [PR #42 / CPI-004](https://github.com/georgi-cole/crystal-path-infinity/pull/42) добавя application quality gates и проверява отказ при реален дефект. `App quality` включва typecheck, lint, format, application tests, три web builds и девет routing tests. Android/iOS build-and-launch jobs се избират за runtime промени. Винаги наличният aggregate `App required checks` проверява quality резултата и двата native резултата, когато те са избрани; не допуска неочаквано skipped изпълнение да прикрие провал.
 
 Контролираната отрицателна демонстрация на [commit `5ffcdc13`](https://github.com/georgi-cole/crystal-path-infinity/commit/5ffcdc13ae3f7ef70d1dc72a589d67e2d5612912) въведе реална TypeScript грешка в app metadata. В [run #41335551139](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41335551139) **`App quality` и `App required checks` се провалиха**, а native jobs бяха пропуснати. Ревизия `a72a5cd2` възстанови правилния metadata тип. В [run #41336328215](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41336328215) quality и iOS проверките преминаха; Android checker отчете отделен Google Play Services crash като app failure. Неговата process attribution и изчакването на реален pause са коригирани без SDK patch или скриване на JavaScript изключения. Точната финална проверена ревизия и резултатите са в PR #42; първоначалният неуспешен run не се представя като native pass.
 
-**Новото required изискване още не е записано в GitHub.** Добавянето на `App required checks` е подготвено в редактора на ruleset, но Save отвори **Confirm access** с GitHub Mobile, authenticator или email. Нужна е повторна проверка на достъпа от собственика, след това запис и API readback. Последният readback все още показва само `Planning manifest and bootstrap`. Това е конкретна незавършена настройка, а не вече активна защита за app CI. Подробният договор и последващите резултати са в [CPI-004 quality gates](decisions/CPI-004-quality-gates.md) и PR #42.
+**И двата required checks са записани и прочетени обратно през API.** След първоначалния **Confirm access** собственикът завърши повторната проверка и записа настройката. Active ruleset `26312536` съдържа `Planning manifest and bootstrap` и `App required checks`, и двата от GitHub Actions (`15368`), със strict up-to-date policy и непроменени останали защити. Няма оставаща ръчна CPI-004 настройка. Финалните [Mobile app checks](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41338065917) и [Planning checks](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41338065901) са успешни на `28654fbc`; squash merge има същия tree. Подробностите са в [CPI-004 quality gates](decisions/CPI-004-quality-gates.md) и PR #42.
 
 | Област | Проверено | Оставаща работа |
 | --- | --- | --- |
@@ -40,10 +40,10 @@ Georgi е слял [PR #41 / CPI-003](https://github.com/georgi-cole/crystal-pat
 | Auto-merge | Изключено | Съответства на плана |
 | Actions permissions | Предходно ръчно потвърждение от собственика; workflow файловете изрично задават `contents: read` | Repo-level permissions и fork approval не са независимо прочетени; workflow декларацията не доказва repository настройката |
 | App основа | CPI-003 е слята чрез PR #41 в `c6e6185d`; има самостоятелен shell и build/launch проверки | Gameplay и backend са бъдеща работа; отворената част на CPI-002 остава отделно |
-| CI в CPI-004 | PR #42 съдържа `App quality`, избираеми native jobs и винаги наличен `App required checks`; отказът при TypeScript и при native failure е проверен | Финалната проверена ревизия и CI evidence са в PR #42; review/merge и незаписаният required check са отделни стъпки |
-| Защита на `main` | Активен [Protect main / 26312536](https://github.com/georgi-cole/crystal-path-infinity/settings/rules/26312536): PR, 0 approvals, resolved conversations, strict `Planning manifest and bootstrap` от GitHub Actions (`15368`), без bypass/force push/delete | `App required checks` е подготвен, **но незаписан**: собственикът трябва да завърши Confirm access, да запише и да се провери readback |
+| CI в CPI-004 | PR #42 е слят; всичките пет checks преминаха, включително трите Android cold starts и iOS background/resume; реалният отказ при дефект също е проверен | Бъдещите gameplay/API тестове се добавят при реализацията им |
+| Защита на `main` | Активен [Protect main / 26312536](https://github.com/georgi-cole/crystal-path-infinity/settings/rules/26312536): PR, 0 approvals, resolved conversations, strict `Planning manifest and bootstrap` и `App required checks` от GitHub Actions (`15368`), без bypass/force push/delete | Няма оставаща CPI-004 промяна; двете изисквания са прочетени обратно през API |
 
-Наличният GitHub connector позволява repo/ruleset прочитане и работа с branches/PR/issues, но не предоставя admin mutations за тези настройки, native milestones и оформяне на labels. Таблицата различава API-провереното, предходното потвърждение на собственика и незаписаната промяна през интерфейса. Confirm access блокира записването на новия required check; не блокира локалната работа и CI проверките на CPI-004. Липсата на native milestones не прави backlog-а неизползваем.
+Наличният GitHub connector позволява repo/ruleset прочитане и работа с branches/PR/issues, но не предоставя admin mutations за тези настройки, native milestones и оформяне на labels. Таблицата различава API-провереното от предходното ръчно потвърждение. Първоначалната Confirm access пречка вече е разрешена. Липсата на native milestones не прави backlog-а неизползваем.
 
 ## Желани настройки
 
@@ -59,13 +59,13 @@ Georgi е слял [PR #41 / CPI-003](https://github.com/georgi-cole/crystal-pat
 | Actions | Минимални read-only permissions; без workflow approval на PR |
 | Начален planning CI | `Planning manifest and bootstrap`: manifest, bootstrap tests и dry-run |
 | Application CI | `App quality` плюс native jobs според runtime diff; винаги наличен aggregate `App required checks`. Gameplay/API тестове се добавят с реализацията на тези функции |
-| Main защита | Съществуващият Active ruleset запазва PR, planning check, resolved conversations и забраните; добавя се `App required checks` след owner re-verification, запис и readback |
+| Main защита | Съществуващият Active ruleset изисква PR, двата planning/app checks, resolved conversations и забраните; записът и readback са приключени |
 
 [Branch rulesets са налични за Public репота и с GitHub Free](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/creating-rulesets-for-a-repository). Поддръжката им за Private зависи от GitHub плана. При собственик без втори reviewer задаваме 0 required approvals, като запазваме задължителния PR и успешния CI. CODEOWNERS указва кой преглежда, но сам по себе си не е защита.
 
 ## Справочник за трите ръчни секции
 
-Следните стойности документират желаната конфигурация за проверка. Вече потвърдените настройки не се повтарят. Единствената описана по-долу промяна, подготвена за запис в CPI-004, е добавянето на `App required checks` към съществуващия ruleset; действителният статус е в таблицата по-горе.
+Следните стойности са справочник за конфигурацията. Вече потвърдените настройки не трябва да се въвеждат повторно. Добавянето на `App required checks` към съществуващия ruleset е завършено; действителният статус е в таблицата по-горе.
 
 ### 1. Settings → General → Pull Requests
 
@@ -106,14 +106,14 @@ Workflow файловете изрично задават `contents: read`. Repo
 | Require conversation resolution before merging | Включено |
 | Require status checks to pass before merging | Включено |
 | Съществуващ required check | **Planning manifest and bootstrap**, source GitHub Actions (`15368`) |
-| Допълнителен required check в CPI-004 | **App required checks**, source GitHub Actions; подготвен в UI, още не е записан |
+| Допълнителен required check в CPI-004 | **App required checks**, source GitHub Actions (`15368`); записан и API-проверен |
 | Require branches to be up to date before merging | Включено |
 | Block force pushes | Включено |
 | Restrict deletions | Включено |
 
 В списъка се запазва реалният job **Planning manifest and bootstrap**. **Planning checks** е името на целия workflow. Новият required контекст е aggregate job **App required checks**, който обобщава `App quality` и избраните native jobs. Не се изискват директно native job имената, защото при обоснована documentation-only промяна те могат да бъдат skipped. Required approvals = 0 запазва PR и CI изискванията, без да изисква одобрение от втори GitHub потребител. Не се включват code-owner approval, approval на последния push или Restrict updates; bypass list остава празен.
 
-При опита за **Save** GitHub поиска **Confirm access**. Добавката не е записана и не се счита за действаща. След повторната проверка на достъпа от собственика трябва да се завърши Save и ruleset API да покаже и двата required контекста, правилния GitHub Actions източник и непроменените останали защити. Дотогава API потвърждава единствено planning check. Работата продължава през branch → PR → успешни проверки → squash merge; не заобикаляме съществуващата защита и не добавяме дублираща classic защита.
+При първия **Save** GitHub поиска **Confirm access**. Собственикът завърши тази проверка; следващият ruleset API readback потвърди и двата required контекста, правилния GitHub Actions източник и непроменените останали защити. Работата продължава през branch → PR → успешни проверки → squash merge; не заобикаляме защитата и не добавяме дублираща classic защита.
 
 Документация: [създаване на ruleset](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/creating-rulesets-for-a-repository), [налични правила](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets).
 

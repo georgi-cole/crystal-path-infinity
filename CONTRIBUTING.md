@@ -25,7 +25,9 @@ npm run planning:check
 node --test .github/scripts/app-checks.test.mjs
 ```
 
-`npm run format` е изрично локално редактиране; CI използва само `format:check`. Новите тестове проверяват реални правила или поведение. Когато се добавят gameplay ядро и API, техните тестове се включват в test командата; празна suite или фиктивен успешен тест не покрива липсваща реализация. Native generation, нужните инструменти и launch evidence са описани в [app инструкциите](apps/mobile/README.md).
+`npm run format` е изрично локално редактиране; CI използва само `format:check`. Root `typecheck` и `test` изпълняват mobile и `packages/game-core`; lint/format също включват новото ядро. Новите тестове проверяват реални правила или поведение. Бъдещите API тестове ще се включат при реализацията; празна suite или фиктивен успешен тест не покрива липсваща функция. Native generation, нужните инструменти и launch evidence са описани в [app инструкциите](apps/mobile/README.md).
+
+Ядрото е чисто и не получава системен clock, browser/native или store зависимости. Source baseline fixtures сочат фиксиран commit; промяна в тях изисква изходно доказателство или изрична versioned промяна на standalone правилата. `RunState` съдържа тайния маршрут и RNG и не е ranked API response. Виж [CPI-005](docs/decisions/CPI-005-game-core.md).
 
 ## Проверки на PR и разход за native изпълнение
 
