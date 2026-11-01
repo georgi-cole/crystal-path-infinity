@@ -7,13 +7,13 @@
     {
       "path": "src/minigames/crystalPathShattered/shatteredLogic.ts",
       "decision": "adapt",
-      "notes": "Separate pure single-player rules; remove AI types; version score and clock contract.",
+      "notes": "Adapt pure single-player rules for an endless standalone stream with bounded batches, absolute offsets, persisted RNG/mystery cursor and lossless progress. Preserve damage bands until separately measured; omit AI/350-finish logic from standalone only and version score/clock/restore rules. The source commit remains unchanged.",
       "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/minigames/crystalPathShattered/shatteredLogic.ts"
     },
     {
       "path": "src/minigames/crystalPathShattered/CrystalPathShatteredGame.tsx",
       "decision": "adapt",
-      "notes": "Preserve React board; replace Redux/season/AI host and result callbacks.",
+      "notes": "Preserve the React board; replace Redux/season/AI host and result callbacks. Bound row/resolved presentation buffers, support long progress values and explicit run end, and remove standalone 350-win UI without modifying the Big Eye source.",
       "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/minigames/crystalPathShattered/CrystalPathShatteredGame.tsx"
     },
     {
@@ -43,7 +43,7 @@
     {
       "path": "public/assets/sounds/minigames/minigame_gb_winner.mp3",
       "decision": "reuse_after_rights_check",
-      "notes": "Finish/personal-best cue.",
+      "notes": "Potential personal-best/run-result cue after review; the standalone game has no fixed final-row victory.",
       "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/public/assets/sounds/minigames/minigame_gb_winner.mp3"
     },
     {
@@ -67,13 +67,13 @@
     {
       "path": "src/services/ads/admobBridge.ts",
       "decision": "reference",
-      "notes": "Reuse lifecycle/consent patterns; add standalone provider and SSV ledger.",
+      "notes": "Reference lifecycle/consent patterns only; add a standalone provider and SSV ledger. Re-evaluate all-ages child/unknown privacy, applicable parental/consent flows, exact Families SDK versions and closeability; do not inherit an adult-only policy.",
       "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/services/ads/admobBridge.ts"
     },
     {
       "path": "src/services/ads/admobConfig.ts",
       "decision": "adapt",
-      "notes": "Rewarded-only config and new app/ad-unit IDs; no interstitial requirement.",
+      "notes": "Rewarded-only config and new app/ad-unit IDs; no interstitial requirement. Apply the separately resolved privacyContext and permitted child/unknown settings before relevant data processing; optional age analytics never grants ad permission.",
       "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/services/ads/admobConfig.ts"
     },
     {
@@ -97,13 +97,13 @@
     {
       "path": "tests/crystalPathShattered.logic.test.ts",
       "decision": "adapt",
-      "notes": "Retain rule cases, replace old local ranking and add boundary cases.",
+      "notes": "Retain source rule cases as historical fixtures; replace local ranking/350-finish expectations with endless progress, batch-equivalence, persisted RNG/mystery cadence, SP bounds and lossless large-counter cases.",
       "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/tests/crystalPathShattered.logic.test.ts"
     },
     {
       "path": "tests/crystalPathShattered.asyncFlow.test.tsx",
       "decision": "adapt",
-      "notes": "Retain rendering/unmount cases without season state.",
+      "notes": "Retain useful rendering/unmount cases without season state; add bounded long-run presentation, 350-to-351 continuation and interruption/recovery expectations.",
       "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/tests/crystalPathShattered.asyncFlow.test.tsx"
     },
     {

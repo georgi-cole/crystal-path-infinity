@@ -2,7 +2,7 @@
   "schema_version": 1,
   "repository": "georgi-cole/crystal-path-infinity",
   "verified_at": "2026-11-01",
-  "import_status": "38 issues created and read back; all remain open in Backlog",
+  "import_status": "38 issues verified; CPI-001 in progress; live task status is maintained in GitHub. CPI-006 title synchronized for the accepted endless scope.",
   "issues": [
     {
       "id": "CPI-001",
@@ -38,7 +38,7 @@
       "id": "CPI-006",
       "number": 6,
       "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/6",
-      "title": "[CPI-006] Единни смърт, завършване на ред 350 и SP граници"
+      "title": "[CPI-006] Смърт, безкраен прогрес и единни SP граници"
     },
     {
       "id": "CPI-007",
