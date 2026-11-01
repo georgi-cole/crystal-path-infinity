@@ -1,0 +1,21 @@
+# Keep generated files, the separate laboratory, and historical documentation intact.
+**/node_modules/
+**/dist/
+**/android/
+**/ios/
+**/build/
+**/artifacts/
+**/coverage/
+**/test-results/
+**/playwright-report/
+**/native-locks/
+/spikes/
+/docs/
+/planning/
+/scripts/
+.github/workflows/
+.github/ISSUE_TEMPLATE/
+**/*.md
+package-lock.json
+.env*
+**/.env*

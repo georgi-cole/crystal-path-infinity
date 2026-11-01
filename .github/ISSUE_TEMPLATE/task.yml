@@ -1,6 +1,14 @@
 name: Implementation задача
 description: Конкретна промяна с проверим резултат
 body:
+  - type: input
+    id: cpi
+    attributes:
+      label: CPI задача
+      description: CPI ID и връзка към съществуващата задача или родителската задача.
+      placeholder: 'CPI-004 · #4'
+    validations:
+      required: true
   - type: textarea
     id: purpose
     attributes:
