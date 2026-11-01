@@ -10,7 +10,9 @@
 
 CPI-005 добавя [чистото игрово ядро](packages/game-core/README.md) като отделен TypeScript workspace: безкраен маршрут с ограничен буфер, сериализируеми преходи и приетите SP/mystery/revive правила. То още не е свързано с играемия мобилен интерфейс. [Решенията за timing, RNG и точни индекси](docs/decisions/CPI-005-game-core.md) разграничават запазените правила от standalone промените; root `typecheck`, `lint` и `test` включват и ядрото.
 
-[CPI-006](docs/decisions/CPI-006-death-progress.md) добавя `createRunSession`: входовете се обвързват с показания ред/живот и се изпълняват върху актуалния state. Повторен или остарял callback не добавя действие; cleanup запазва checkpoint без неявен край. CPI-007/008 свързват този договор с реалните lifecycle и renderer.
+[CPI-006](docs/decisions/CPI-006-death-progress.md) добавя `createRunSession`: входовете се обвързват с показания ред/живот и се изпълняват върху актуалния state. Повторен или остарял callback не добавя действие; cleanup запазва checkpoint без неявен край.
+
+[CPI-007](docs/decisions/CPI-007-clock-lifecycle.md) добавя един активен часовник, независими pause leases и native foreground clock с идентичност на текущите page/bridge. Мобилният runtime изчаква потвърден native sample преди tick/input, прекратява callbacks и playback при cleanup и не начислява време от OS suspend. Native CI включва прекъсвания преди първия JavaScript и пресъздаване на process/WebView. Играемият renderer и реалните React/audio връзки предстоят в CPI-008.
 
 Node **22.23.4** е фиксиран в `.nvmrc` и CI. От корена на хранилището:
 
@@ -44,6 +46,7 @@ npm run dev
 | [CPI-004 — quality gates](docs/decisions/CPI-004-quality-gates.md) | Lint/format, задължителни проверки и native lifecycle диагностика |
 | [CPI-005 — игрово ядро](docs/decisions/CPI-005-game-core.md) | Pure transitions, точен endless прогрес, RNG/checkpoint и ефекти/продължавания |
 | [CPI-006 — смърт и прогрес](docs/decisions/CPI-006-death-progress.md) | Callback ownership, еднократни действия, cleanup/recovery и граници 349/350/351 |
+| [CPI-007 — часовник и lifecycle](docs/decisions/CPI-007-clock-lifecycle.md) | Активно време, независими паузи, native foreground snapshots и ранни OS прекъсвания |
 | [Инспекция](docs/SOURCE_AUDIT.md) | Установено поведение, зависимости и проблеми |
 | [Backlog](docs/BACKLOG.md) | Задачи с зависимости и критерии |
 | [Архитектура](docs/ARCHITECTURE.md) | Клиент, сървър, профили и класации |

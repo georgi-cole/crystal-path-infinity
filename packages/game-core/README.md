@@ -1,6 +1,6 @@
 # Crystal Path Infinity — чисто игрово ядро
 
-`@crystal-path-infinity/game-core` е независимо TypeScript ядро за един играч. CPI-005 извлича правилата и преходите, а CPI-006 добавя собственик на текущото състояние и на callback-ите за вход. Пакетът няма React, DOM, SDK, storage, backend или AI зависимости. Това още не е играем мобилен екран или проверена ranked услуга.
+`@crystal-path-infinity/game-core` е независимо TypeScript ядро за един играч. CPI-005 извлича правилата и преходите, CPI-006 добавя собственик на текущото състояние и callback-ите, а CPI-007 добавя общ активен часовник с независими pause собственици. Пакетът няма React, DOM, SDK, storage, backend или AI зависимости. Това още не е играем мобилен екран или проверена ranked услуга.
 
 Основа: [`shatteredLogic.ts` и component handlers](https://github.com/georgi-cole/bbmobilenew-source/tree/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/minigames/crystalPathShattered) от фиксирания source commit `6ace929a60410e728928aa51eaf80ba9b5cf2262`, с приетите промени от [CPI-001](../../docs/decisions/CPI-001-product-contract.md). Оригиналът в The Big Eye не е редактиран.
 
@@ -74,7 +74,7 @@ const recovered = createRunSession(checkpoint, PRACTICE_RNG);
 | API | Поведение |
 | --- | --- |
 | `getState()` | Последното readonly `RunState`, достъпно и след disposal. Съдържа частните данни на ядрото и не е ranked response. |
-| `bind(command)` | Връща `BoundRunCommand`, който получава само `{ activeTimeMs, achievedAt }`. RNG е подаден при създаването на сесията. |
+| `bind(command)` | Връща `BoundRunCommand`, който получава `{ activeTimeMs, achievedAt }` или функция, връщаща тези стойности. Lazy функцията се извиква след callback проверките. RNG е подаден при създаването на сесията. |
 | `dispose()` | Обезсилва всички callback-и на този собственик и връща checkpoint. Не изпраща `end`, `death` или финален резултат. |
 
 `SessionCommand` не приема `row` и `life` за `choose`, `hint` и `mystery`: те се запомнят при `bind`. Всички callback-и принадлежат на конкретната сесия и запомнят текущите life/status. Игровите действия запомнят и реда. `end` също е обвързан с реда и с отделна control-phase идентичност. След нов прогрес, смърт или revive старото потвърждение за край не може да приключи новото състояние; показваме ново потвърждение.
@@ -89,9 +89,36 @@ const recovered = createRunSession(checkpoint, PRACTICE_RNG);
 
 `dispose` не изчиства pending награда и не превръща recoverable checkpoint във финален резултат. Нов или възстановен run получава нова сесия; при смяна на собственик обезсилваме старата. Не сериализираме сесията, функциите или control-phase идентичността — сериализира се `RunState`. Няма автоматичен in-place replace и стар callback не може да бъде пренасочен към новата сесия.
 
-Сесията трябва да живее през обикновените rerender-и; показваните действия получават нови bindings според текущия snapshot. Реалното React mount/unmount и development StrictMode поведение ще се свържат и проверят с renderer-а в CPI-008; тук няма непроверен hook пример. Native clock/lifecycle остава CPI-007, а durable persistence — CPI-009. Авторитетът за SDK/SSV награди има собствен подходящ живот: премахването на view не означава неуспешен reward и не отменя pending проверката. Контролерът не заменя server concurrency, leases или request ledger.
+Сесията трябва да живее през обикновените rerender-и; показваните действия получават нови bindings според текущия snapshot. Реалното React mount/unmount и development StrictMode поведение ще се свържат и проверят с renderer-а в CPI-008; тук няма непроверен hook пример. CPI-007 предоставя времевия собственик по-долу; native lifecycle остава отговорност на мобилния адаптер, а durable persistence — на CPI-009. Авторитетът за SDK/SSV награди има собствен подходящ живот: премахването на view не означава неуспешен reward и не отменя pending проверката. Контролерът не заменя server concurrency, leases или request ledger.
 
 Подробности и приемателен обхват: [CPI-006](../../docs/decisions/CPI-006-death-progress.md).
+
+## Един активен часовник — CPI-007
+
+`createTimedRunSession(initialState, rng, source)` обвива сесията с един часовник за hint, избор, mystery и tick. `source.monotonicNow()` връща потвърдено време от хоста в милисекунди. Последователните стойности може да са равни или дробни; отрицателни, неограничени, неточно представими или върнати назад стойности се отхвърлят. Дробните остатъци се запазват между frames и паузи, така че чести малки интервали не губят игрово време.
+
+| API | Поведение |
+| --- | --- |
+| `getState()` | Последният приложен checkpoint. Самото прочитане не урежда време. |
+| `bind(command)` | Връща callback без времеви аргументи. Валидната доставка получава време от общия source; невалидната не го чете. |
+| `tick()` | Прилага потвърденото активно време. Не създава таймер и не дава прогрес. |
+| `hold(reason)` | Урежда дължимите ефекти преди паузата и връща `{ result, release }`. Обработваме `result.events` веднъж, включително евентуална смърт. |
+| `lease.release()` | Освобождава само този pause собственик. Повторното извикване няма ефект. Не tick-ва и не наваксва паузата. |
+| `releaseRecovery()` | Освобождава еднократната начална recovery пауза след проверка на текущата lifecycle идентичност. |
+| `isRunning()`, `getPauseReasons()` | Синхронно състояние за scheduler-а. Смъртта/финалът също спират активното време, независимо от pause списъка. |
+| `dispose()` | Обезсилва callback-ите и връща последния checkpoint, без clock read, tick, финализиране или изчистване на pending reward. |
+
+Всяка нова сесия започва с `recovery` hold. При дълго зареждане или възстановяване часовникът не изразходва ефекти. Хостът първо проверява актуалното foreground/readiness състояние, после освобождава този hold. При смяна на процеса новият monotonic origin се свързва с вече натрупаното `RunState.activeTimeMs`; времето извън процеса не се добавя.
+
+Pause причините са `user`, `background`, `ad`, `verification`, `recovery`, `lifecycle` и `visibility`. Два hold-а със същата причина са различни собственици. Например приключването на реклама не освобождава нито pause менюто, нито background hold. Смъртта и окончателният край замразяват времето автоматично. Нормалните анимации не придобиват hold.
+
+Игрови входове и tick не се изпълняват по време на hold (`clock-paused`). Вход или стар tick, свързан преди pause промяна, остава невалиден и след resume (`stale-pause`). Показваните контроли получават нови bindings. Reward командите запазват death/grant проверките и могат да се обработват докато часовникът е спрял; ново изрично End действие също е възможно, с обичайните pending/forfeiture ограничения.
+
+Върнатото активно време от core е окончателно за прехода. Ако sample на 900 ms открие фатален drain на 500 ms, checkpoint-ът остава на 500; останалите 400 ms не се прехвърлят след revive. Нефатален normal resume запазва оставащите ефекти, а успешният revive ги изчиства по съществуващото правило.
+
+Calendar timestamp-ът е отделен: `source.observedAt` задава начален anchor, по подразбиране `lastObservedAt` от checkpoint-а, и след това използва monotonic разликата. Хостът може да подаде отделна `observationNow()`, когато foreground часовникът не включва background, а timestamp-ът трябва да го включва. Тази функция връща безопасни цели epoch милисекунди без връщане назад. Нито един calendar source не определя SP, expiry или активно време; пакетът не чете `Date.now()`.
+
+При проверимо напускане хостът може първо да вземе `hold('recovery')`, да обработи граничните events, и после да извика `dispose()`. Самият cleanup не създава implicit End. Scheduler, audio stop, native snapshots, process/page идентичност и трайно съхранение са извън този пакет. Мобилен адаптер не трябва да изчислява OS suspend само от закъснял JavaScript pause callback; native foreground време трябва да бъде потвърдено преди доставка. Сървърният адаптер подава собствен авторитетен source; клиентски elapsed стойности не доказват ranked време.
 
 ## Време и подреждане
 
@@ -142,4 +169,4 @@ npm run typecheck --workspace @crystal-path-infinity/game-core
 npm test --workspace @crystal-path-infinity/game-core
 ```
 
-Source baseline fixtures и тестовете за преходи/поток са в `test/`. Те разграничават историческите правила от приетите standalone промени и проверяват serialization, ефекти, големи индекси, bounded buffers и revive инварианти. CPI-006 добавя сесийния контролер за повторени, закъснели и обезсилени callback-и; реалната му интеграция с мобилния renderer, React lifecycle и native timing остава в CPI-007/CPI-008. Точните изпълнени проверки, ревизия и ограничения се записват в issue/PR.
+Source baseline fixtures и тестовете за преходи/поток са в `test/`. Те разграничават историческите правила от приетите standalone промени и проверяват serialization, ефекти, големи индекси, bounded buffers и revive инварианти. CPI-006 покрива повторени, закъснели и обезсилени callback-и; CPI-007 добавя точните времеви граници, припокриващи се паузи, recovery, дробни интервали, clock/RNG откази и спиране на фаталния pulse. Реалният renderer и React gameplay lifecycle са CPI-008. Точните изпълнени проверки, ревизия и ограничения се записват в issue/PR.

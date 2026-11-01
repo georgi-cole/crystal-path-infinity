@@ -1,8 +1,16 @@
 # Mobile app foundation — CPI-003
 
-This React 19 / Capacitor 8 app currently displays a minimal branded screen. Gameplay extraction, the designed splash screen, and final app icons belong to later tasks; the native launcher icons are template placeholders. The app has no imported game engine, ad SDK, native feature plugins, tracking, location, or billing integration. Android declares network access; iOS requests no permission purpose strings.
+This React 19 / Capacitor 8 app currently displays a minimal branded screen. The designed splash screen, playable renderer and final app icons belong to later tasks; native launcher icons are template placeholders. CPI-007 adds the internal game-core dependency for a tested practice runtime and a local `CpiLifecycle` native plugin. There is no ad SDK, tracking, location or billing integration. Android declares network access; iOS requests no permission purpose strings and declares the in-app elapsed-time API purpose in its privacy manifest.
 
 Capacitor's bundled `SystemBars` uses light icons on the dark Android shell and native safe-area handling. The screen consumes `env(safe-area-inset-*)`; no separate system-bar dependency or injected CSS-variable fallback is needed. iOS uses its existing dark appearance setting.
+
+## CPI-007 clock and lifecycle
+
+The page starts `getGameplayLifecycle()` before React mounts. Its current-page handshake and increasing native snapshots drive confirmed foreground time. `createPracticeRuntime` in `src/practice-runtime.ts` connects that source to a timed core session, serialized inputs, independent pause leases, one cancellable scheduler and an injected playback cleanup capability. No run or audio starts automatically; CPI-008 will mount the actual gameplay owner. See the [clock/lifecycle decision](../../docs/decisions/CPI-007-clock-lifecycle.md) for integration, error handling and verification boundaries.
+
+Generation owns the local Java/Swift templates. Android uses a generated copy of the pinned Capacitor library with a SHA256-guarded readiness patch; installed npm files are unchanged. A dependency upgrade changing that source requires review. `native:generate --check` verifies the templates and patch. No extra external native plugin package is installed.
+
+Native smoke exercises Home and lock/wake before the first JavaScript page on Android, and an early Settings interruption on iOS Simulator. It verifies current page/bridge identity across three Android and two iOS process/WebView starts. The development-only navigation gate uses real OS transitions and observable predicates, with no fixed dwell sleeps or JavaScript error suppression. iOS lock testing and physical devices remain separate gates.
 
 ## Start from a clean checkout
 
@@ -90,6 +98,8 @@ node --experimental-strip-types apps/mobile/scripts/smoke-native.mjs --platform 
 ```
 
 The script does not compile. Android needs the dedicated accelerated `cpi003-development` AVD with the API 36 Google APIs x86_64 image and emulator port 5554 available; the script wipes that AVD's data. iOS needs an available iPhone device type with the iOS 26.5 runtime; the script creates a fresh named simulator and deletes only that simulator afterward. The workflow contains the setup commands.
+
+Fresh iOS provisioning has a 900-second boot deadline and a 180-second first native process gate deadline, recorded in `ios-smoke-device.json`. The driver advances as soon as the required observation arrives. These limits accommodate cold OS migration and launch overhead; they add no retries and do not relax lifecycle or runtime-error assertions. The iOS smoke step is capped at 30 minutes. The [CPI-007 decision](../../docs/decisions/CPI-007-clock-lifecycle.md#fresh-ios-simulator-provisioning) records the failed CI evidence that motivated these allowances.
 
 Both checks require the React commit marker, page readiness, a real read-only native bridge call, and document pause/resume delivery followed by another native bridge call. Android performs three cold process starts in one emulator, each with Home followed by resuming the same activity. iOS opens Settings then resumes the existing app. Both drivers wait for the actual pause observation before requesting resume. The development-only observer records timestamps and session/sequence information without suppressing errors; staging and production omit that observer. Unexpected JavaScript exceptions and app/unattributed runtime errors fail the check, including errors before the React marker and later in the observation window. Android runtime crashes conclusively attributed to another process remain in the raw logs and a separate diagnostics field; app, WebView, malformed or ambiguous process evidence is never treated as unrelated.
 

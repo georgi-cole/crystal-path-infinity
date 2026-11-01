@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { getBuildInfo } from './environments';
-import { analyzeNativeLog, lifecycleBoundary, nativeLaunchProblems } from './native-smoke';
+import {
+  analyzeNativeLog,
+  lifecycleBoundary,
+  nativeLaunchProblems,
+  nativeLifecycleProblems,
+} from './native-smoke';
 import { diagnosticPrefix } from './startup-diagnostic-contract';
 import type { DiagnosticEvent, StartupDiagnostic } from './startup-diagnostic-contract';
 
@@ -9,6 +14,81 @@ const android = (message: string, level = 'I') =>
   `1793555763.737000 2070 2070 ${level} Capacitor/Console: File: https://localhost/ - Line 1 - Msg: ${message}`;
 const ios = (message: string, level = 'info') =>
   `2026-11-01T17:56:03.737Z ⚡️  [${level}] - ${message}`;
+
+function clockEvidence() {
+  const native = (stage: string) =>
+    `1793555763.000000 2070 2070 I Capacitor: CPI_NATIVE_GATE ${JSON.stringify({ stage, gateId: 'native-gate' })}`;
+  const snapshot = (
+    sequence: number,
+    isActive: boolean,
+    nativeTimeMs: number,
+    foregroundTimeMs: number,
+  ) => ({
+    pageId: 'page-one',
+    bridgeId: 'bridge-one',
+    sequence,
+    isActive,
+    nativeTimeMs,
+    foregroundTimeMs,
+  });
+  return [
+    native('waiting'),
+    native('paused'),
+    native('released'),
+    android(diagnostic(1, 'page-start')),
+    android(
+      diagnostic(2, 'bridge-ready', { reason: 'startup', lifecycle: snapshot(1, true, 100, 10) }),
+    ),
+    android(diagnostic(3, 'native-state', { lifecycle: snapshot(2, false, 200, 110) })),
+    android(diagnostic(4, 'pause')),
+    android(diagnostic(5, 'native-state', { lifecycle: snapshot(3, true, 60_200, 110) })),
+    android(diagnostic(6, 'resume')),
+    android(
+      diagnostic(7, 'bridge-ready', {
+        reason: 'resume',
+        lifecycle: snapshot(4, true, 60_210, 120),
+      }),
+    ),
+  ].join('\n');
+}
+
+describe('native foreground and prebridge evidence', () => {
+  it('accepts real boundary evidence with a frozen native foreground accumulator', () => {
+    expect(nativeLifecycleProblems(analyzeNativeLog(clockEvidence(), build), true)).toEqual([]);
+  });
+  it('rejects missing or reordered prebridge boundaries', () => {
+    const log = clockEvidence().replace('"stage":"paused"', '"stage":"released"');
+    expect(nativeLifecycleProblems(analyzeNativeLog(log, build), true)).toContain(
+      'Missing ordered native interruption before first page/bridge',
+    );
+  });
+  it('rejects pre-page pause/resume replay into a new page', () => {
+    const log = clockEvidence().replace(
+      android(diagnostic(1, 'page-start')),
+      android(diagnostic(1, 'page-start')) + '\n' + android(diagnostic(1, 'resume')),
+    );
+    expect(nativeLifecycleProblems(analyzeNativeLog(log, build), true)).toContain(
+      'Pre-page pause/resume was replayed into the new page',
+    );
+  });
+  it('rejects wrong page identity and a replaced native bridge', () => {
+    const log = clockEvidence()
+      .replace('"pageId":"page-one"', '"pageId":"old-page"')
+      .replace('"bridgeId":"bridge-one"', '"bridgeId":"old-bridge"');
+    const problems = nativeLifecycleProblems(analyzeNativeLog(log, build), true);
+    expect(problems).toContain('Invalid native page/bridge/clock snapshot');
+    expect(problems).toContain('Native bridge identity changed within one page');
+  });
+  it('rejects offscreen accrual and regressed native values', () => {
+    const log = clockEvidence().replace(
+      '"nativeTimeMs":60200,"foregroundTimeMs":110',
+      '"nativeTimeMs":60200,"foregroundTimeMs":60110',
+    );
+    const problems = nativeLifecycleProblems(analyzeNativeLog(log, build), true);
+    expect(problems).toContain('Native foreground clock included the background interval');
+    expect(problems).toContain('Native sequence or monotonic clock regressed');
+  });
+});
 function diagnostic(
   sequence: number,
   event: DiagnosticEvent,

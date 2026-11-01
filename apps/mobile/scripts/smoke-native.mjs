@@ -22,6 +22,7 @@ import {
   analyzeNativeLog,
   lifecycleBoundary,
   nativeLaunchProblems,
+  nativeLifecycleProblems,
   startupSession,
 } from '../config/native-smoke.ts';
 
@@ -94,10 +95,10 @@ function text(command, commandArgs, options) {
 function save(name, contents) {
   writeFileSync(join(evidenceRoot, name), contents);
 }
-function detachedLog(command, commandArgs, file, timestampLines = false) {
+function detachedLog(command, commandArgs, file, timestampLines = false, append = false) {
   const entry = { command, args: commandArgs, startedAt: new Date().toISOString() };
   transcript.push(entry);
-  const fd = openSync(join(evidenceRoot, file), 'w');
+  const fd = openSync(join(evidenceRoot, file), append ? 'a' : 'w');
   const child = spawn(command, commandArgs, {
     cwd: appRoot,
     stdio: timestampLines ? ['ignore', 'pipe', 'pipe'] : ['ignore', fd, fd],
@@ -199,13 +200,18 @@ function recordLifecycleAction(action, details = {}) {
 }
 function saveAttempt(boundary, observationComplete = false) {
   const analysis = readAnalysis();
+  const prebridge = platform === 'android' ? attempt <= 2 : attempt === 1;
   const report = {
     attempt,
     observedAt: new Date().toISOString(),
     observationComplete,
+    prebridge,
     boundary,
     ...analysis,
-    problems: nativeLaunchProblems(analysis, platform, boundary),
+    problems: [
+      ...nativeLaunchProblems(analysis, platform, boundary),
+      ...nativeLifecycleProblems(analysis, prebridge),
+    ],
   };
   const existing = diagnosticReports.findIndex((item) => item.attempt === attempt);
   if (existing >= 0) diagnosticReports[existing] = report;
@@ -226,7 +232,10 @@ function saveDiagnostics() {
     );
     const analysis = analyzeNativeLog(captured, buildInfo, { attributionLog: fullLog });
     Object.assign(attemptReport, analysis, {
-      problems: nativeLaunchProblems(analysis, platform, attemptReport.boundary),
+      problems: [
+        ...nativeLaunchProblems(analysis, platform, attemptReport.boundary),
+        ...nativeLifecycleProblems(analysis, attemptReport.prebridge),
+      ],
     });
     save(
       `${platform}-attempt-${attemptReport.attempt}-diagnostics.json`,
@@ -264,6 +273,21 @@ function assertHealthyLaunch() {
   const problems = diagnosticReports.flatMap((item) =>
     item.problems.map((problem) => `Attempt ${item.attempt}: ${problem}`),
   );
+  const owners = diagnosticReports.map(
+    (item) =>
+      item.diagnostics.find(
+        (event) => event.event === 'bridge-ready' && event.details?.reason === 'startup',
+      )?.details?.lifecycle,
+  );
+  if (
+    owners.some((owner) => !owner) ||
+    new Set(owners.map((owner) => owner?.bridgeId)).size !== diagnosticReports.length ||
+    new Set(owners.map((owner) => owner?.pageId)).size !== diagnosticReports.length
+  ) {
+    problems.push(
+      'Cold process/WebView recreation did not create distinct native bridge and page identities',
+    );
+  }
   if (report.allObservedErrors.length)
     problems.push(
       `${report.allObservedErrors.length} JavaScript/native runtime error log entries observed across the full capture`,
@@ -381,16 +405,60 @@ async function android() {
       if (attempt > 1) {
         recordLifecycleAction('force-stop-between-cold-starts');
         text(adb, adbArgs('shell', 'am', 'force-stop', buildInfo.appId));
-        await delay(500);
+        await waitFor(
+          'Android process termination',
+          30_000,
+          () => !text(adb, adbArgs('shell', 'pidof', buildInfo.appId), { allowFailure: true }),
+        );
       }
       logOffset = appLog().length;
       recordLifecycleAction('cold-launch');
       const launch = text(
         adb,
-        adbArgs('shell', 'am', 'start', '-W', '-n', `${buildInfo.appId}/.MainActivity`),
+        adbArgs(
+          'shell',
+          'am',
+          'start',
+          '-W',
+          '-n',
+          `${buildInfo.appId}/.MainActivity`,
+          '--ez',
+          'cpi_prebridge_gate',
+          String(attempt <= 2),
+        ),
       );
       save(`android-attempt-${attempt}-launch.txt`, launch);
       if (attempt === 1) save('android-launch.txt', launch);
+      if (attempt <= 2) {
+        await waitFor('Android native prebridge navigation gate', 30_000, () =>
+          readAnalysis().prebridgeGates.some((gate) => gate.stage === 'waiting'),
+        );
+        assert.equal(
+          readAnalysis().diagnostics.length,
+          0,
+          'Page unexpectedly ran before the native prebridge interruption',
+        );
+        recordLifecycleAction(attempt === 1 ? 'prebridge-home' : 'prebridge-lock');
+        text(
+          adb,
+          adbArgs('shell', 'input', 'keyevent', attempt === 1 ? 'KEYCODE_HOME' : 'KEYCODE_SLEEP'),
+        );
+        await waitFor('Android real pause before the page exists', 30_000, () =>
+          readAnalysis().prebridgeGates.some((gate) => gate.stage === 'paused'),
+        );
+        assert.equal(
+          readAnalysis().diagnostics.length,
+          0,
+          'Prebridge native pause unexpectedly initialized a page',
+        );
+        recordLifecycleAction('prebridge-native-pause-observed');
+        if (attempt === 2) {
+          save('android-prebridge-lock-power.txt', text(adb, adbArgs('shell', 'dumpsys', 'power')));
+          text(adb, adbArgs('shell', 'input', 'keyevent', 'KEYCODE_WAKEUP'));
+          text(adb, adbArgs('shell', 'wm', 'dismiss-keyguard'));
+        }
+        text(adb, adbArgs('shell', 'am', 'start', '-W', '-n', `${buildInfo.appId}/.MainActivity`));
+      }
       await waitFor('Android React, page-load, and native bridge readiness', 90_000, () => {
         assertRunning(child, 'Android emulator');
         assertRunning(logcat, 'Android lifecycle log capture');
@@ -408,8 +476,6 @@ async function android() {
         );
       });
       recordLifecycleAction('native-pause-observed');
-      // Dwell starts after the OS pause is observed, not after sending Home.
-      await delay(2000);
       save(
         `android-attempt-${attempt}-background-activity.txt`,
         text(adb, adbArgs('shell', 'dumpsys', 'activity', 'activities')),
@@ -423,7 +489,6 @@ async function android() {
         assertRunning(logcat, 'Android lifecycle log capture');
         return hasResumeEvidence(boundary);
       });
-      await delay(3000);
       const pid = text(adb, adbArgs('shell', 'pidof', buildInfo.appId));
       assert.match(pid, /^\d+(?:\s+\d+)*$/, 'App process is not running');
       assert.equal(pid, initialPid, 'Home/resume unexpectedly replaced the app process');
@@ -450,7 +515,8 @@ async function android() {
         pid,
         screenshot: 'android-launch.png',
         coldStartAttempts: 3,
-        lifecycleAction: 'Home followed by resuming the existing activity, on each attempt',
+        lifecycleAction:
+          'Home and lock before the first JS page; three recreated processes/WebViews; Home/resume after readiness on every attempt',
       };
     }
     attempt = 3;
@@ -491,6 +557,9 @@ async function android() {
 }
 
 async function ios() {
+  // Fresh iOS 26.5 migration exceeded 360s and native first launch took 89s in CI.
+  // Bound that provisioning work separately from the unchanged app/lifecycle checks.
+  const provisioningBudgetsMs = { coldBoot: 900_000, firstNativeProcess: 180_000 };
   const available = JSON.parse(text('xcrun', ['simctl', 'list', '--json', 'devices', 'available']));
   save('ios-simulators.json', JSON.stringify(available, null, 2));
   save('ios-runtimes.json', text('xcrun', ['simctl', 'list', '--json', 'runtimes']));
@@ -519,16 +588,27 @@ async function ios() {
   save(
     'ios-smoke-device.json',
     JSON.stringify(
-      { name: simulatorName, deviceType: device.deviceTypeIdentifier, udid, runtime },
+      {
+        name: simulatorName,
+        deviceType: device.deviceTypeIdentifier,
+        udid,
+        runtime,
+        provisioningBudgetsMs,
+      },
       null,
       2,
     ),
   );
   try {
     console.log(
-      `Booting fresh ${device.name} / iOS 26.5 simulator; progress is recorded in ios-boot.log`,
+      `Booting fresh ${device.name} / iOS 26.5 simulator (budget ${provisioningBudgetsMs.coldBoot / 1000}s); progress is recorded in ios-boot.log`,
     );
-    await runLogged('xcrun', ['simctl', 'bootstatus', udid, '-b'], 'ios-boot.log', 360_000);
+    await runLogged(
+      'xcrun',
+      ['simctl', 'bootstatus', udid, '-b'],
+      'ios-boot.log',
+      provisioningBudgetsMs.coldBoot,
+    );
     text(
       'xcrun',
       [
@@ -539,51 +619,94 @@ async function ios() {
       ],
       { timeout: 120_000 },
     );
-    recordLifecycleAction('cold-launch');
-    child = detachedLog(
-      'xcrun',
-      ['simctl', 'launch', '--console-pty', '--terminate-running-process', udid, buildInfo.appId],
-      'ios-app.log',
-      true,
-    );
-    await waitFor('iOS React, page-load, and native bridge readiness', 120_000, () => {
-      assertRunning(child, 'simctl attached launch');
-      return hasStartupEvidence();
-    });
-    boundary = lifecycleBoundary(readAnalysis());
-    // simctl exposes app launching, not a portable Home-button command. Opening
-    // Settings and returning exercises actual iOS background/resume without edits.
-    recordLifecycleAction('background-via-settings', { boundary });
-    save(
-      'ios-background-launch.txt',
-      text('xcrun', ['simctl', 'launch', udid, 'com.apple.Preferences']),
-    );
-    await waitFor('iOS document pause after opening Settings', 30_000, () => {
-      assertRunning(child, 'simctl attached launch');
-      return readAnalysis().diagnostics.some(
-        (event) =>
-          event.sessionId === boundary.sessionId &&
-          event.sequence > boundary.sequenceBeforeBackground &&
-          event.event === 'pause',
+    for (attempt = 1; attempt <= 2; attempt += 1) {
+      boundary = undefined;
+      observationComplete = false;
+      logOffset = appLog().length;
+      recordLifecycleAction('cold-launch');
+      child = detachedLog(
+        'xcrun',
+        [
+          'simctl',
+          'launch',
+          '--console-pty',
+          '--terminate-running-process',
+          udid,
+          buildInfo.appId,
+          ...(attempt === 1 ? ['--cpi-prebridge-gate'] : []),
+        ],
+        'ios-app.log',
+        true,
+        attempt > 1,
       );
-    });
-    recordLifecycleAction('document-pause-observed');
-    // Dwell begins after the current page receives the real OS pause event.
-    await delay(2000);
-    recordLifecycleAction('resume-existing-app');
-    save('ios-resume.txt', text('xcrun', ['simctl', 'launch', udid, buildInfo.appId]));
-    await waitFor('iOS bridge round-trip after app background/resume', 30_000, () => {
+      if (attempt === 1) {
+        await waitFor(
+          'iOS native prebridge navigation gate',
+          provisioningBudgetsMs.firstNativeProcess,
+          () => {
+            assertRunning(child, 'simctl attached launch');
+            return readAnalysis().prebridgeGates.some((gate) => gate.stage === 'waiting');
+          },
+        );
+        assert.equal(
+          readAnalysis().diagnostics.length,
+          0,
+          'iOS page ran before the native interruption',
+        );
+        recordLifecycleAction('prebridge-background-via-settings');
+        text('xcrun', ['simctl', 'launch', udid, 'com.apple.Preferences']);
+        await waitFor('iOS real background before page creation', 30_000, () =>
+          readAnalysis().prebridgeGates.some((gate) => gate.stage === 'paused'),
+        );
+        assert.equal(
+          readAnalysis().diagnostics.length,
+          0,
+          'iOS prebridge background unexpectedly initialized a page',
+        );
+        recordLifecycleAction('prebridge-native-pause-observed');
+        text('xcrun', ['simctl', 'launch', udid, buildInfo.appId]);
+      }
+      await waitFor('iOS React, page-load, and native bridge readiness', 120_000, () => {
+        assertRunning(child, 'simctl attached launch');
+        return hasStartupEvidence();
+      });
+      boundary = lifecycleBoundary(readAnalysis());
+      // simctl exposes app launching, not a portable Home-button command. Opening
+      // Settings and returning exercises actual iOS background/resume without edits.
+      recordLifecycleAction('background-via-settings', { boundary });
+      save(
+        'ios-background-launch.txt',
+        text('xcrun', ['simctl', 'launch', udid, 'com.apple.Preferences']),
+      );
+      await waitFor('iOS document pause after opening Settings', 30_000, () => {
+        assertRunning(child, 'simctl attached launch');
+        return readAnalysis().diagnostics.some(
+          (event) =>
+            event.sessionId === boundary.sessionId &&
+            event.sequence > boundary.sequenceBeforeBackground &&
+            event.event === 'pause',
+        );
+      });
+      recordLifecycleAction('document-pause-observed');
+      recordLifecycleAction('resume-existing-app');
+      save('ios-resume.txt', text('xcrun', ['simctl', 'launch', udid, buildInfo.appId]));
+      await waitFor('iOS bridge round-trip after app background/resume', 30_000, () => {
+        assertRunning(child, 'simctl attached launch');
+        return hasResumeEvidence(boundary);
+      });
       assertRunning(child, 'simctl attached launch');
-      return hasResumeEvidence(boundary);
-    });
-    await delay(3000);
-    assertRunning(child, 'simctl attached launch');
-    const screenshot = join(evidenceRoot, 'ios-launch.png');
-    text('xcrun', ['simctl', 'io', udid, 'screenshot', screenshot]);
-    assertPng(screenshot);
-    recordLifecycleAction('observation-complete');
-    observationComplete = true;
-    saveAttempt(boundary, true);
+      const screenshot = join(evidenceRoot, 'ios-launch.png');
+      text('xcrun', ['simctl', 'io', udid, 'screenshot', screenshot]);
+      assertPng(screenshot);
+      recordLifecycleAction('observation-complete');
+      observationComplete = true;
+      saveAttempt(boundary, true);
+      recordLifecycleAction('terminate-for-process-webview-recreation');
+      text('xcrun', ['simctl', 'terminate', udid, buildInfo.appId]);
+      await stopLog(child);
+      saveAttempt(boundary, true);
+    }
+    attempt = 2;
     return {
       kind: 'iOS Simulator',
       name: device.name,
@@ -592,7 +715,9 @@ async function ios() {
       udid,
       runtime,
       screenshot: 'ios-launch.png',
-      lifecycleAction: 'Open Settings, then resume the existing app',
+      coldStartAttempts: 2,
+      lifecycleAction:
+        'Settings interruption before first page; two recreated processes/WebViews; Settings/resume after readiness on both attempts',
     };
   } catch (error) {
     run(

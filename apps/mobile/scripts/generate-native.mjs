@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import {
   copyFileSync,
+  cpSync,
   existsSync,
   lstatSync,
   mkdirSync,
@@ -20,6 +21,7 @@ import {
   getBuildInfo,
   requireEnvironment,
 } from '../config/environments.ts';
+import { patchAndroidLifecycle } from '../config/native-lifecycle-patch.ts';
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repositoryRoot = resolve(appRoot, '../..');
@@ -109,7 +111,7 @@ function verifyPackages() {
         name.startsWith('@capacitor-community/') ||
         (name.startsWith('@capacitor/') && !nativePackages.includes(name)),
     ),
-    'CPI-003 includes no native feature/ad plugins',
+    'No external native plugin packages are expected; CpiLifecycle is local source',
   );
   return manifest;
 }
@@ -135,6 +137,40 @@ function runCap(environment, ...args) {
   assert.equal(result.status, 0, `Capacitor ${args.join(' ')} failed`);
 }
 function configureAndroid(info) {
+  // A disposable copy pins the upstream source and keeps node_modules pristine.
+  const capacitorPackage = dirname(appRequire.resolve('@capacitor/android/package.json'));
+  cpSync(capacitorPackage, join(appRoot, 'android/cpi-capacitor'), { recursive: true });
+  write(
+    'android/cpi-capacitor/capacitor/src/main/java/com/getcapacitor/CpiLifecycleGate.java',
+    read('native-templates/android/CpiLifecycleGate.java'),
+  );
+  const lifecycleSource =
+    'android/cpi-capacitor/capacitor/src/main/java/com/getcapacitor/cordova/MockCordovaWebViewImpl.java';
+  write(lifecycleSource, patchAndroidLifecycle(read(lifecycleSource)));
+  write(
+    'android/capacitor.settings.gradle',
+    replaceOnce(
+      read('android/capacitor.settings.gradle'),
+      "new File('../../../node_modules/@capacitor/android/capacitor')",
+      "new File(settingsDir, 'cpi-capacitor/capacitor')",
+      'Pinned Android lifecycle source copy',
+    ),
+  );
+  const javaPath = `android/app/src/main/java/${info.appId.replaceAll('.', '/')}`;
+  for (const name of ['MainActivity.java', 'CpiLifecycle.java', 'CpiWebView.java']) {
+    write(
+      `${javaPath}/${name}`,
+      read(`native-templates/android/${name}`)
+        .replaceAll('__PACKAGE__', info.appId)
+        .replaceAll('__DEVELOPMENT__', String(info.environment === 'development')),
+    );
+  }
+  write(
+    'android/app/src/main/res/layout/capacitor_bridge_layout_main.xml',
+    read(
+      'android/cpi-capacitor/capacitor/src/main/res/layout/capacitor_bridge_layout_main.xml',
+    ).replaceAll('com.getcapacitor.CapacitorWebView', `${info.appId}.CpiWebView`),
+  );
   let manifest = read('android/app/src/main/AndroidManifest.xml');
   // Template permissions are deliberately limited to network access. Dependency
   // manifest permissions are checked again on the compiled artifact in CI.
@@ -211,6 +247,33 @@ function configureAndroid(info) {
   );
 }
 function configureIOS(info) {
+  write(
+    'ios/App/App/AppDelegate.swift',
+    read('ios/App/App/AppDelegate.swift') +
+      '\n' +
+      read('native-templates/ios/CpiLifecycle.swift').replaceAll(
+        '__DEVELOPMENT__',
+        String(info.environment === 'development'),
+      ),
+  );
+  write(
+    'ios/App/App/SceneDelegate.swift',
+    replaceOnce(
+      read('ios/App/App/SceneDelegate.swift'),
+      'CAPBridgeViewController()',
+      'CpiBridgeViewController()',
+      'iOS lifecycle controller',
+    ),
+  );
+  write(
+    'ios/App/App/Base.lproj/Main.storyboard',
+    replaceOnce(
+      read('ios/App/App/Base.lproj/Main.storyboard'),
+      'customClass="CAPBridgeViewController" customModule="Capacitor"',
+      'customClass="CpiBridgeViewController" customModule="App"',
+      'iOS storyboard lifecycle controller',
+    ),
+  );
   const plist = cliRequire()('plist');
   const config = plist.parse(read('ios/App/App/Info.plist'));
   config.UISupportedInterfaceOrientations = ['UIInterfaceOrientationPortrait'];
@@ -224,6 +287,31 @@ function configureIOS(info) {
   write('ios/App/App/Info.plist', `${plist.build(config)}\n`);
 
   let project = read('ios/App/App.xcodeproj/project.pbxproj');
+  write('ios/App/App/PrivacyInfo.xcprivacy', read('native-templates/ios/PrivacyInfo.xcprivacy'));
+  project = replaceOnce(
+    project,
+    '/* Begin PBXBuildFile section */',
+    '/* Begin PBXBuildFile section */\n\t\tC00700000000000000000001 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C00700000000000000000002 /* PrivacyInfo.xcprivacy */; };',
+    'privacy build resource',
+  );
+  project = replaceOnce(
+    project,
+    '/* Begin PBXFileReference section */',
+    '/* Begin PBXFileReference section */\n\t\tC00700000000000000000002 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };',
+    'privacy file reference',
+  );
+  project = replaceOnce(
+    project,
+    '\t\t\t\t504EC3131FED79650016851F /* Info.plist */,',
+    '\t\t\t\t504EC3131FED79650016851F /* Info.plist */,\n\t\t\t\tC00700000000000000000002 /* PrivacyInfo.xcprivacy */,',
+    'privacy app group',
+  );
+  project = replaceOnce(
+    project,
+    '\t\t\t\t504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */,',
+    '\t\t\t\t504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */,\n\t\t\t\tC00700000000000000000001 /* PrivacyInfo.xcprivacy in Resources */,',
+    'privacy resources phase',
+  );
   assert.equal(project.match(/TARGETED_DEVICE_FAMILY = "1,2";/g)?.length, 2);
   assert.equal(project.match(/MARKETING_VERSION = 1\.0;/g)?.length, 2);
   assert.equal(project.match(/CURRENT_PROJECT_VERSION = 1;/g)?.length, 2);
@@ -275,7 +363,7 @@ function verifyNative(platform, info) {
     {
       SystemBars: { style: 'DARK', insetsHandling: 'native', initialViewportFitValueHint: 'cover' },
     },
-    'Only the bundled SystemBars presentation settings belong in CPI-003',
+    'Only the bundled SystemBars presentation settings need Capacitor configuration',
   );
   const copiedBuildInfo =
     platform === 'android'
@@ -302,9 +390,45 @@ function verifyNative(platform, info) {
     assert.deepEqual(
       json('android/app/src/main/assets/capacitor.plugins.json'),
       [],
-      'Feature plugins must not enter the scaffold',
+      'No external native plugins; local CpiLifecycle is registered directly in source',
     );
     assert.ok(read('android/app/src/main/res/values/cpi_colors.xml').includes(background));
+    assert.equal(
+      read(
+        'android/cpi-capacitor/capacitor/src/main/java/com/getcapacitor/cordova/MockCordovaWebViewImpl.java',
+      ),
+      patchAndroidLifecycle(
+        readFileSync(
+          join(
+            dirname(appRequire.resolve('@capacitor/android/package.json')),
+            'capacitor/src/main/java/com/getcapacitor/cordova/MockCordovaWebViewImpl.java',
+          ),
+          'utf8',
+        ),
+      ),
+    );
+    assert.ok(
+      read('android/capacitor.settings.gradle').includes(
+        "new File(settingsDir, 'cpi-capacitor/capacitor')",
+      ),
+    );
+    assert.equal(
+      read('android/cpi-capacitor/capacitor/src/main/java/com/getcapacitor/CpiLifecycleGate.java'),
+      read('native-templates/android/CpiLifecycleGate.java'),
+    );
+    assert.ok(
+      read(
+        `android/app/src/main/java/${info.appId.replaceAll('.', '/')}/MainActivity.java`,
+      ).includes('registerPlugin(CpiLifecycle.class)'),
+    );
+    for (const name of ['MainActivity.java', 'CpiLifecycle.java', 'CpiWebView.java']) {
+      assert.equal(
+        read(`android/app/src/main/java/${info.appId.replaceAll('.', '/')}/${name}`),
+        read(`native-templates/android/${name}`)
+          .replaceAll('__PACKAGE__', info.appId)
+          .replaceAll('__DEVELOPMENT__', String(info.environment === 'development')),
+      );
+    }
   } else {
     const plist = cliRequire()('plist').parse(read('ios/App/App/Info.plist'));
     assert.equal(plist.CFBundleDisplayName, info.appName);
@@ -333,6 +457,23 @@ function verifyNative(platform, info) {
       'Only Capacitor may be an app SPM dependency',
     );
     assert.ok(!/AdMob|GoogleMobileAds|GoogleUserMessagingPlatform|CapacitorApp/.test(swift));
+    assert.ok(
+      read('ios/App/App/AppDelegate.swift').includes('registerPluginInstance(CpiLifecycle())'),
+    );
+    assert.ok(read('ios/App/App/SceneDelegate.swift').includes('CpiBridgeViewController()'));
+    assert.ok(
+      read('ios/App/App/AppDelegate.swift').endsWith(
+        read('native-templates/ios/CpiLifecycle.swift').replaceAll(
+          '__DEVELOPMENT__',
+          String(info.environment === 'development'),
+        ),
+      ),
+    );
+    assert.equal(
+      read('ios/App/App/PrivacyInfo.xcprivacy'),
+      read('native-templates/ios/PrivacyInfo.xcprivacy'),
+    );
+    assert.equal(project.match(/PrivacyInfo.xcprivacy in Resources/g)?.length, 2);
   }
   const report = {
     schemaVersion: 1,
@@ -341,7 +482,7 @@ function verifyNative(platform, info) {
     buildNumber,
     capacitorVersion,
     background,
-    nativeFeaturePlugins: [],
+    nativeFeaturePlugins: ['CpiLifecycle (local, no device permissions)'],
     bundledSystemBars: config.plugins.SystemBars,
     productionSigningConfigured: false,
     configuredOnly: true,

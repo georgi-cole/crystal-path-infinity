@@ -2,6 +2,8 @@ import { Capacitor, WebView } from '@capacitor/core';
 import type { BuildInfo } from '../config/environments';
 import { diagnosticPrefix } from '../config/startup-diagnostic-contract';
 import type { DiagnosticEvent, StartupDiagnostic } from '../config/startup-diagnostic-contract';
+import { getNativePageId, nativeLifecycleEvent, nativeLifecycleSnapshot } from './native-lifecycle';
+import type { NativeLifecycleSnapshot } from './native-lifecycle';
 
 interface DiagnosticOptions {
   buildInfo: BuildInfo;
@@ -73,8 +75,17 @@ export function createStartupDiagnostics(options: DiagnosticOptions) {
       ) {
         throw new Error('Native WebView.getServerBasePath returned an invalid response');
       }
+      const lifecycle =
+        'lifecycle' in result ? (result.lifecycle as NativeLifecycleSnapshot) : undefined;
+      if (lifecycle && lifecycle.pageId !== options.sessionId) {
+        throw new Error('Native lifecycle snapshot belongs to another page');
+      }
       // Keep the local path private; the evidence records only call success.
-      emit('bridge-ready', { reason, durationMs: options.performanceClock() - startedAt });
+      emit('bridge-ready', {
+        reason,
+        durationMs: options.performanceClock() - startedAt,
+        ...(lifecycle ? { lifecycle } : {}),
+      });
     } catch (error) {
       emit('bridge-error', { reason, message: messageOf(error) });
     } finally {
@@ -97,6 +108,10 @@ export function createStartupDiagnostics(options: DiagnosticOptions) {
     void checkBridge('resume');
   });
   listen(options.documentEvents, 'visibilitychange', () => emit('visibility'));
+  listen(options.documentEvents, nativeLifecycleEvent, (event) => {
+    if ('detail' in event)
+      emit('native-state', { lifecycle: event.detail as NativeLifecycleSnapshot });
+  });
   emit('page-start');
   if (options.documentState().readyState === 'loading') {
     listen(options.documentEvents, 'DOMContentLoaded', () => emit('dom-ready'));
@@ -128,9 +143,7 @@ export function startStartupDiagnostics() {
     return;
   diagnostics = createStartupDiagnostics({
     buildInfo: __CPI_BUILD_INFO__,
-    sessionId: Array.from(crypto.getRandomValues(new Uint32Array(4)), (value) =>
-      value.toString(16).padStart(8, '0'),
-    ).join(''),
+    sessionId: getNativePageId(),
     windowEvents: window,
     documentEvents: document,
     documentState: () => ({
@@ -141,7 +154,13 @@ export function startStartupDiagnostics() {
       const nativeWindow = window as Window & { Capacitor?: { triggerEvent?: unknown } };
       return typeof nativeWindow.Capacitor?.triggerEvent === 'function';
     },
-    nativeRoundTrip: () => WebView.getServerBasePath(),
+    nativeRoundTrip: async () => {
+      const [path, lifecycle] = await Promise.all([
+        WebView.getServerBasePath(),
+        nativeLifecycleSnapshot(getNativePageId()),
+      ]);
+      return { ...path, lifecycle };
+    },
     clock: Date.now,
     performanceClock: () => performance.now(),
     log: (message, error) => {

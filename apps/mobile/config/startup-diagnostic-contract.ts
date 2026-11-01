@@ -1,4 +1,5 @@
 import type { BuildInfo } from './environments';
+import type { NativeLifecycleSnapshot } from '../src/native-lifecycle';
 
 export const diagnosticPrefix = 'CPI_NATIVE_DIAGNOSTIC ';
 export type DiagnosticEvent =
@@ -12,6 +13,7 @@ export type DiagnosticEvent =
   | 'pause'
   | 'resume'
   | 'visibility'
+  | 'native-state'
   | 'js-error'
   | 'unhandled-rejection';
 
@@ -30,5 +32,6 @@ export interface StartupDiagnostic {
     reason?: 'startup' | 'resume';
     durationMs?: number;
     message?: string;
+    lifecycle?: NativeLifecycleSnapshot;
   };
 }

@@ -257,12 +257,17 @@ jobs:
           assert 'NSAppTransportSecurity' not in info
           assert not any(key.endswith('UsageDescription') or key.startswith('GAD') for key in info)
           assert json.loads((app / 'public/build-info.json').read_text()) == expected
+          privacy = plistlib.loads((app / 'PrivacyInfo.xcprivacy').read_bytes())
+          assert privacy['NSPrivacyAccessedAPITypes'] == [{'NSPrivacyAccessedAPIType': 'NSPrivacyAccessedAPICategorySystemBootTime', 'NSPrivacyAccessedAPITypeReasons': ['35F9.1']}]
+          assert privacy['NSPrivacyTracking'] is False
+          assert privacy['NSPrivacyTrackingDomains'] == [] and privacy['NSPrivacyCollectedDataTypes'] == []
           Path('artifacts/ios-app-info.json').write_text(json.dumps({'buildInfo': expected, 'buildNumber': info['CFBundleVersion'], 'deviceFamily': info['UIDeviceFamily'], 'permissionPurposeStrings': []}, indent=2))
           print('Simulator app identity, version, embedded environment, portrait and permission checks passed')
           PY
           tar -czf build/cpi003-ios-simulator.tar.gz -C build/ios/Build/Products/Debug-iphonesimulator App.app
       - name: Open the minimum screen on iOS Simulator
-        timeout-minutes: 12
+        # Allow bounded first-boot migration and process startup on a fresh simulator.
+        timeout-minutes: 30
         run: node --experimental-strip-types apps/mobile/scripts/smoke-native.mjs --platform ios
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
