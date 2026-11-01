@@ -133,13 +133,20 @@ jobs:
       - name: Prepare the official Android emulator tools
         timeout-minutes: 12
         run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends libpulse0 libglu1-mesa
           test -c /dev/kvm
           sudo chown "$(id -u):$(id -g)" /dev/kvm
           sudo chmod 660 /dev/kvm
           sdk_bin="$ANDROID_HOME/cmdline-tools/latest/bin"
           test -x "$sdk_bin/sdkmanager"
           test -x "$sdk_bin/avdmanager"
-          "$sdk_bin/sdkmanager" --install "emulator" "system-images;android-36;google_apis;x86_64" </dev/null 2>&1 | tee apps/mobile/artifacts/android-system-image-install.log
+          "$sdk_bin/sdkmanager" --install "emulator" </dev/null 2>&1 | tee apps/mobile/artifacts/android-emulator-install.log
+          # ldd alone bypasses the launcher's bundled-library search paths.
+          # Keep it diagnostic; the normal executable must pass its preflight.
+          ldd "$ANDROID_HOME/emulator/qemu/linux-x86_64/qemu-system-x86_64" > apps/mobile/artifacts/android-emulator-libraries.txt || true
+          "$ANDROID_HOME/emulator/emulator" -version 2>&1 | tee apps/mobile/artifacts/android-emulator-version.txt
+          "$sdk_bin/sdkmanager" --install "system-images;android-36;google_apis;x86_64" </dev/null 2>&1 | tee apps/mobile/artifacts/android-system-image-install.log
           printf 'no\n' | "$sdk_bin/avdmanager" create avd --force --name cpi003-development --package "system-images;android-36;google_apis;x86_64" --device pixel_7 2>&1 | tee apps/mobile/artifacts/android-avd-create.log
           cp "$ANDROID_HOME/system-images/android-36/google_apis/x86_64/source.properties" apps/mobile/artifacts/android-system-image.properties
       - name: Open the minimum screen on Android Emulator

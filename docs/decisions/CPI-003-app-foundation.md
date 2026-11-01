@@ -1,6 +1,6 @@
 # CPI-003 — Standalone app foundation
 
-**Status: implemented; native compilation passed, launch verification in progress, 2026-11-01.** This task provides the independent application workspace, minimal screen, three environment identities, generated native projects, and build/launch checks. The acceptance criteria are in [issue #3](https://github.com/georgi-cole/crystal-path-infinity/issues/3). This document records actual results separately from checks that have only been configured.
+**Status: implemented; native compilation and iOS launch passed, Android launch verification in progress, 2026-11-01.** This task provides the independent application workspace, minimal screen, three environment identities, generated native projects, and build/launch checks. The acceptance criteria are in [issue #3](https://github.com/georgi-cole/crystal-path-infinity/issues/3). This document records actual results separately from checks that have only been configured.
 
 Georgi merged [PR #40](https://github.com/georgi-cole/crystal-path-infinity/pull/40) and explicitly requested CPI-003. We use the successfully compiled CPI-002 toolchain while leaving its physical-device, real SSV, Families eligibility, and deployed-backend evidence open in [issue #2](https://github.com/georgi-cole/crystal-path-infinity/issues/2). The [CPI-001 contract](CPI-001-product-contract.md), including endless progression and 200/150 SP revives, remains authoritative.
 
@@ -64,9 +64,9 @@ Local execution uses Node 24.22.1 / npm 11.9.0 on Linux; the repeatable CI pin i
 | Browser errors / requests | No uncaught or console errors; no external requests observed in the tested screen |
 | Built staging / production UI | Passed at 390×844: staging showed its exact metadata; production hid diagnostics and emitted no ready log |
 | Android debug compilation | Passed in the first app CI run, including compiled identity and permission checks |
-| Android emulator launch | First run stopped at emulator setup because `sdkmanager` was not on PATH; explicit SDK paths added for retry |
+| Android emulator launch | Explicit SDK paths fixed setup; retry exposed a missing runner `libpulse.so.0`; host libraries and normal-executable preflight added for the next run |
 | iOS Simulator compilation | Passed in the first app CI run, including compiled identity, permission and SPM checks |
-| iOS Simulator launch | First run timed out at simulator boot, before app installation; fresh owned simulator and captured boot diagnostics added for retry |
+| iOS Simulator launch | Passed on a fresh iPhone 17 / iOS 26.5 Simulator, with exact React ready metadata and an inspected screenshot |
 | Planning validation | Passed; 38-issue manifest valid and all 13 bootstrap tests passed |
 
 The enlarged-text check found heading overflow and led to a responsive typography fix. The repeated check showed no horizontal overflow in all four cases. Narrow or short screens can scroll vertically; text and build metadata remain reachable. Reduced-motion preference was enabled for these checks, and the minimal screen has no required animation.
@@ -91,7 +91,11 @@ Artifacts expire after seven days. Failed jobs may upload diagnostics; an upload
 
 The [initial app run](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41327823941) at commit `4980ada6aeadf4247c051558cab181962f9161f3` passed web checks and both native compilations. Android emulator setup failed because the shell did not include the command-line tools directory; the workflow now uses the explicit SDK tool paths. iOS timed out while booting the runner's precreated iPhone 17, before the app was installed. The retry creates its own simulator and captures `ios-boot.log`; this is a setup change to evaluate, not a claimed explanation for the timeout.
 
-[`native-locks/Package.resolved`](../../apps/mobile/native-locks/Package.resolved) was copied from that run's [iOS evidence artifact](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41327823941/artifacts/13091934441), whose ZIP SHA-256 was verified before extraction. The resolved graph contains only `capacitor-swift-pm` **8.5.3**, revision `4c7f346d16196e21fbe23d4a7a6fc7af62af6742`. It is the app's own lock, with no laboratory advertising dependencies. Subsequent generation restores it and CI requires locked resolution; its first locked-build result is still pending.
+[`native-locks/Package.resolved`](../../apps/mobile/native-locks/Package.resolved) was copied from that run's [iOS evidence artifact](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41327823941/artifacts/13091934441), whose ZIP SHA-256 was verified before extraction. The resolved graph contains only `capacitor-swift-pm` **8.5.3**, revision `4c7f346d16196e21fbe23d4a7a6fc7af62af6742`. It is the app's own lock, with no laboratory advertising dependencies. Subsequent generation restores it and CI requires locked resolution.
+
+The [second run](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41328968665) at commit `a52489216b0ba07f5b417eef731ccdf897be1cbb` passed the locked iOS build and launch. The [iOS evidence](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41328968665/artifacts/13092353860) contains a matching ready marker, launch JSON and screenshot, which was inspected after verifying the archive SHA-256. Boot took 3 minutes 55 seconds and the recorded delay was OS data migration, including CoreLocation's system migrator; the app has no location permission or feature. No claim is made that a cache defect caused the earlier timeout, and no cache workaround was added. The [unsigned Simulator app](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41328968665/artifacts/13092533346) is available for reproduction.
+
+That run's Android emulator stopped before boot because its Linux loader could not find `libpulse.so.0`. The workflow installs `libpulse0` and the small OpenGL support package `libglu1-mesa`, then executes the normal emulator launcher before downloading its system image. Raw `ldd` output is kept as a diagnostic because the launcher supplies additional bundled-library paths. These are CI host prerequisites, not application dependencies.
 
 ## 5. Scope and next step
 
