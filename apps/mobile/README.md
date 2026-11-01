@@ -71,6 +71,8 @@ npm run native:generate -- --platform ios --environment production --check
 
 **iOS:** compilation requires a Mac. CI selects **Xcode 26.6** and an **iOS 26.5** iPhone Simulator, matching the toolchain observed in [CPI-002](../../docs/spikes/CPI-002-results.md). The generator chooses manual signing with signing disabled and an empty identity; CI builds an unsigned Simulator app. Running on a physical iPhone requires explicit local Xcode signing configuration, including an appropriate team/provisioning setup. Keep signing credentials and provisioning profiles out of the repository; regeneration replaces local project settings.
 
+The generator restores the app-specific [Swift Package Manager lock](native-locks/Package.resolved), captured from CPI-003's first successful iOS compilation. Its sole package is Capacitor 8.5.3. CI then requires the recorded package versions instead of silently updating resolution.
+
 ## Native smoke checks and CI evidence
 
 [The app workflow](../../.github/workflows/mobile-app.yml) defines clean installs, all three web builds, development native compilation, identity/permission checks, and emulator/Simulator launch checks. It is separate from the CPI-002 spike workflow.
@@ -82,7 +84,7 @@ node apps/mobile/scripts/smoke-native.mjs --platform android
 node apps/mobile/scripts/smoke-native.mjs --platform ios
 ```
 
-The script does not compile. Android needs the dedicated accelerated `cpi003-development` AVD with the API 36 Google APIs x86_64 image and emulator port 5554 available; the script wipes that AVD's data. iOS needs an available iPhone Simulator with the iOS 26.5 runtime. The workflow contains the setup commands. Both checks install and launch the development app, wait for its React commit marker to match the build metadata, and capture logs, a screenshot, and a JSON result in `apps/mobile/artifacts`. They stop the selected runtime afterward. Their scope is the minimal screen, with physical-device, gameplay, ads, backend, and store checks tracked separately.
+The script does not compile. Android needs the dedicated accelerated `cpi003-development` AVD with the API 36 Google APIs x86_64 image and emulator port 5554 available; the script wipes that AVD's data. iOS needs an available iPhone device type with the iOS 26.5 runtime; the script creates a fresh named simulator and deletes only that simulator afterward. The workflow contains the setup commands. Both checks install and launch the development app, wait for its React commit marker to match the build metadata, and capture logs, a screenshot, and a JSON result in `apps/mobile/artifacts`. Boot progress is captured in `ios-boot.log`. Their scope is the minimal screen, with physical-device, gameplay, ads, backend, and store checks tracked separately.
 
 | CI artifact | Contents |
 | --- | --- |

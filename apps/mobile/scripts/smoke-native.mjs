@@ -13,14 +13,14 @@ const evidenceRoot = join(appRoot, 'artifacts');
 const args = process.argv.slice(2);
 assert.ok(args.length === 2 && args[0] === '--platform' && ['android', 'ios'].includes(args[1]), 'Usage: node scripts/smoke-native.mjs --platform android|ios');
 const platform = args[1];
-const buildInfo = JSON.parse(readFileSync(join(appRoot, 'dist/build-info.json'), 'utf8'));
-assert.equal(buildInfo.environment, 'development', 'Launch smoke accepts only the development app');
-assert.equal(buildInfo.appId, 'com.georgicole.crystalpath.infinity.dev');
 mkdirSync(evidenceRoot, { recursive: true });
 // A failed repeat must never leave a previous invocation's success evidence.
 for (const suffix of ['launch-result.json', 'launch-failure.json', 'launch.png', 'launch-failed.png']) {
   rmSync(join(evidenceRoot, `${platform}-${suffix}`), { force: true });
 }
+const buildInfo = JSON.parse(readFileSync(join(appRoot, 'dist/build-info.json'), 'utf8'));
+assert.equal(buildInfo.environment, 'development', 'Launch smoke accepts only the development app');
+assert.equal(buildInfo.appId, 'com.georgicole.crystalpath.infinity.dev');
 const transcript = [];
 
 function run(command, commandArgs, { timeout = 60_000, allowFailure = false, binary = false } = {}) {
@@ -56,6 +56,19 @@ async function waitFor(description, milliseconds, probe) {
     await delay(1000);
   }
   throw new Error(`Timed out waiting for ${description} (${milliseconds / 1000}s)`);
+}
+async function runLogged(command, commandArgs, file, timeout) {
+  const child = detachedLog(command, commandArgs, file);
+  try {
+    await waitFor(`${command} completion; diagnostics in ${file}`, timeout, () => {
+      if (child.smokeError) throw child.smokeError;
+      assert.equal(child.signalCode, null, `${command} was terminated; see ${file}`);
+      return child.exitCode !== null;
+    });
+    assert.equal(child.exitCode, 0, `${command} failed; see ${file}`);
+  } finally {
+    if (child.exitCode === null) child.kill('SIGKILL');
+  }
 }
 function hasReadyMarker(log) {
   for (const line of log.split('\n')) {
@@ -131,16 +144,24 @@ async function android() {
 async function ios() {
   const available = JSON.parse(text('xcrun', ['simctl', 'list', '--json', 'devices', 'available']));
   save('ios-simulators.json', JSON.stringify(available, null, 2));
+  save('ios-runtimes.json', text('xcrun', ['simctl', 'list', '--json', 'runtimes']));
   const runtime = 'com.apple.CoreSimulator.SimRuntime.iOS-26-5';
   const devices = available.devices[runtime] ?? [];
   const device = devices.find(item => item.name === 'iPhone 17' && item.isAvailable)
     ?? devices.find(item => item.name.startsWith('iPhone') && item.isAvailable);
   assert.ok(device, 'The Xcode 26.6 smoke requires an installed iPhone / iOS 26.5 simulator');
-  const udid = device.udid;
+  assert.ok(device.deviceTypeIdentifier, 'Simulator device type is missing');
+  // Own a fresh device so the check neither depends on nor changes a precreated
+  // runner/personal simulator's saved state. Only this UDID is cleaned up.
+  const simulatorName = `CPI003-${Date.now()}`;
+  const udid = text('xcrun', ['simctl', 'create', simulatorName, device.deviceTypeIdentifier, runtime]);
+  assert.match(udid, /^[0-9A-F-]{36}$/i, 'simctl did not return a simulator UUID');
   let child;
   save('ios-simctl-launch-help.txt', text('xcrun', ['simctl', 'help', 'launch']));
+  save('ios-smoke-device.json', JSON.stringify({ name: simulatorName, deviceType: device.deviceTypeIdentifier, udid, runtime }, null, 2));
   try {
-    text('xcrun', ['simctl', 'bootstatus', udid, '-b'], { timeout: 360_000 });
+    console.log(`Booting fresh ${device.name} / iOS 26.5 simulator; progress is recorded in ios-boot.log`);
+    await runLogged('xcrun', ['simctl', 'bootstatus', udid, '-b'], 'ios-boot.log', 360_000);
     text('xcrun', ['simctl', 'install', udid, join(appRoot, 'build/ios/Build/Products/Debug-iphonesimulator/App.app')], { timeout: 120_000 });
     child = detachedLog('xcrun', ['simctl', 'launch', '--console-pty', '--terminate-running-process', udid, buildInfo.appId], 'ios-app.log');
     await waitFor('iOS React ready marker', 120_000, () => {
@@ -154,7 +175,7 @@ async function ios() {
     const screenshot = join(evidenceRoot, 'ios-launch.png');
     text('xcrun', ['simctl', 'io', udid, 'screenshot', screenshot]);
     assertPng(screenshot);
-    return { kind: 'iOS Simulator', name: device.name, udid, runtime, screenshot: 'ios-launch.png' };
+    return { kind: 'iOS Simulator', name: device.name, simulatorName, freshDevice: true, udid, runtime, screenshot: 'ios-launch.png' };
   } catch (error) {
     run('xcrun', ['simctl', 'io', udid, 'screenshot', join(evidenceRoot, 'ios-launch-failed.png')], { timeout: 10_000, allowFailure: true });
     throw error;
@@ -162,6 +183,7 @@ async function ios() {
     run('xcrun', ['simctl', 'terminate', udid, buildInfo.appId], { timeout: 10_000, allowFailure: true });
     if (child?.exitCode === null) child.kill('SIGKILL');
     run('xcrun', ['simctl', 'shutdown', udid], { timeout: 30_000, allowFailure: true });
+    run('xcrun', ['simctl', 'delete', udid], { timeout: 30_000, allowFailure: true });
   }
 }
 

@@ -136,8 +136,11 @@ jobs:
           test -c /dev/kvm
           sudo chown "$(id -u):$(id -g)" /dev/kvm
           sudo chmod 660 /dev/kvm
-          sdkmanager --install "emulator" "system-images;android-36;google_apis;x86_64" </dev/null 2>&1 | tee apps/mobile/artifacts/android-system-image-install.log
-          printf 'no\n' | avdmanager create avd --force --name cpi003-development --package "system-images;android-36;google_apis;x86_64" --device pixel_7 2>&1 | tee apps/mobile/artifacts/android-avd-create.log
+          sdk_bin="$ANDROID_HOME/cmdline-tools/latest/bin"
+          test -x "$sdk_bin/sdkmanager"
+          test -x "$sdk_bin/avdmanager"
+          "$sdk_bin/sdkmanager" --install "emulator" "system-images;android-36;google_apis;x86_64" </dev/null 2>&1 | tee apps/mobile/artifacts/android-system-image-install.log
+          printf 'no\n' | "$sdk_bin/avdmanager" create avd --force --name cpi003-development --package "system-images;android-36;google_apis;x86_64" --device pixel_7 2>&1 | tee apps/mobile/artifacts/android-avd-create.log
           cp "$ANDROID_HOME/system-images/android-36/google_apis/x86_64/source.properties" apps/mobile/artifacts/android-system-image.properties
       - name: Open the minimum screen on Android Emulator
         timeout-minutes: 12
