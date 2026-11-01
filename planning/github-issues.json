@@ -2,7 +2,7 @@
   "schema_version": 1,
   "repository": "georgi-cole/crystal-path-infinity",
   "verified_at": "2026-11-01",
-  "import_status": "38 issues verified; CPI-001 in progress; live task status is maintained in GitHub. CPI-006 title synchronized for the accepted endless scope.",
+  "import_status": "38 issues verified; live task status is maintained in GitHub. CPI-001 product contract accepted on 2026-11-01; CPI-006 title synchronized for the accepted endless scope.",
   "issues": [
     {
       "id": "CPI-001",
