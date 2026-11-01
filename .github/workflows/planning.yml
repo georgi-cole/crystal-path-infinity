@@ -1,0 +1,25 @@
+name: Planning checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  planning:
+    name: Planning manifest and bootstrap
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7 verified 2026-11-01
+        with:
+          persist-credentials: false
+      - name: Validate backlog
+        run: python3 scripts/validate_plan.py
+      - name: Test bootstrap guards
+        run: python3 -m unittest discover -s scripts -p 'test_*.py'
+      - name: Review upload plan without network mutations
+        run: python3 scripts/bootstrap_github.py

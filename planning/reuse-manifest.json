@@ -1,0 +1,137 @@
+{
+  "source_repository": "georgi-cole/bbmobilenew-source",
+  "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+  "inspected_on": "2026-11-01",
+  "status": "inventory_only_no_game_assets_copied",
+  "resources": [
+    {
+      "path": "src/minigames/crystalPathShattered/shatteredLogic.ts",
+      "decision": "adapt",
+      "notes": "Separate pure single-player rules; remove AI types; version score and clock contract.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/minigames/crystalPathShattered/shatteredLogic.ts"
+    },
+    {
+      "path": "src/minigames/crystalPathShattered/CrystalPathShatteredGame.tsx",
+      "decision": "adapt",
+      "notes": "Preserve React board; replace Redux/season/AI host and result callbacks.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/minigames/crystalPathShattered/CrystalPathShatteredGame.tsx"
+    },
+    {
+      "path": "src/minigames/crystalPathShattered/crystalPathShattered.css",
+      "decision": "adapt",
+      "notes": "Keep current Infinity visuals; consolidate historical overrides and profile mobile cost.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/minigames/crystalPathShattered/crystalPathShattered.css"
+    },
+    {
+      "path": "src/minigames/crystalPathShattered/infinity-black-hole-bg.png",
+      "decision": "reuse_after_rights_check",
+      "notes": "Source size 1896459 bytes; optimize after visual comparison; not copied yet.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/minigames/crystalPathShattered/infinity-black-hole-bg.png"
+    },
+    {
+      "path": "public/assets/sounds/minigames/minigame_gb_safe_step.mp3",
+      "decision": "reuse_after_rights_check",
+      "notes": "Safe-step audio.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/public/assets/sounds/minigames/minigame_gb_safe_step.mp3"
+    },
+    {
+      "path": "public/assets/sounds/minigames/minigame_gb_death.mp3",
+      "decision": "reuse_after_rights_check",
+      "notes": "Death audio.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/public/assets/sounds/minigames/minigame_gb_death.mp3"
+    },
+    {
+      "path": "public/assets/sounds/minigames/minigame_gb_winner.mp3",
+      "decision": "reuse_after_rights_check",
+      "notes": "Finish/personal-best cue.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/public/assets/sounds/minigames/minigame_gb_winner.mp3"
+    },
+    {
+      "path": "public/assets/sounds/minigames/minigame_gb_new_turn.mp3",
+      "decision": "reuse_after_rights_check",
+      "notes": "Optional start/resume cue; no season turn loop.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/public/assets/sounds/minigames/minigame_gb_new_turn.mp3"
+    },
+    {
+      "path": "public/assets/music/glass_bridge.mp3",
+      "decision": "reuse_after_rights_check",
+      "notes": "New shell owns music playback and interruption behavior.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/public/assets/music/glass_bridge.mp3"
+    },
+    {
+      "path": "src/hooks/useGlassBridgeAudio.ts",
+      "decision": "adapt",
+      "notes": "Four SFX only; old global sound service is broader than needed.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/hooks/useGlassBridgeAudio.ts"
+    },
+    {
+      "path": "src/services/ads/admobBridge.ts",
+      "decision": "reference",
+      "notes": "Reuse lifecycle/consent patterns; add standalone provider and SSV ledger.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/services/ads/admobBridge.ts"
+    },
+    {
+      "path": "src/services/ads/admobConfig.ts",
+      "decision": "adapt",
+      "notes": "Rewarded-only config and new app/ad-unit IDs; no interstitial requirement.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/services/ads/admobConfig.ts"
+    },
+    {
+      "path": "capacitor.config.ts",
+      "decision": "reference",
+      "notes": "Fresh app identity; copy only needed safe-area/platform patterns.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/capacitor.config.ts"
+    },
+    {
+      "path": "ios/App/App/MainViewController.swift",
+      "decision": "reference",
+      "notes": "Review safe-area/idle-timer patterns without story icon plugin.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/ios/App/App/MainViewController.swift"
+    },
+    {
+      "path": "src/services/backend/supabaseTransport.ts",
+      "decision": "reference",
+      "notes": "Timeout/session patterns only; replace anonymous install-bound identity.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/services/backend/supabaseTransport.ts"
+    },
+    {
+      "path": "tests/crystalPathShattered.logic.test.ts",
+      "decision": "adapt",
+      "notes": "Retain rule cases, replace old local ranking and add boundary cases.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/tests/crystalPathShattered.logic.test.ts"
+    },
+    {
+      "path": "tests/crystalPathShattered.asyncFlow.test.tsx",
+      "decision": "adapt",
+      "notes": "Retain rendering/unmount cases without season state.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/tests/crystalPathShattered.asyncFlow.test.tsx"
+    },
+    {
+      "path": "tests/crystalPathShattered.styles.test.ts",
+      "decision": "review",
+      "notes": "Keep only useful presentation invariants.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/tests/crystalPathShattered.styles.test.ts"
+    },
+    {
+      "path": "tests/integration/minigame.crystalPathShattered.integration.test.ts",
+      "decision": "replace",
+      "notes": "Replace host wiring with standalone lifecycle and backend tests.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/tests/integration/minigame.crystalPathShattered.integration.test.ts"
+    },
+    {
+      "path": "LICENSE",
+      "decision": "retain",
+      "notes": "Proprietary copyright 2026 Georgi Kolev; asset-specific checks still required.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/LICENSE"
+    }
+  ],
+  "do_not_copy": [
+    "Production secrets or signing material",
+    "Existing app IDs, live ad units, backend project data",
+    "The Big Eye season Redux/LOH/POS/AI fake live feed",
+    "Unneeded billing, geolocation, rotating story icon permissions",
+    "Old privacy disclosures as if they described the new app",
+    "pr1509-preview duplicate tree",
+    "Whole source repository or its complete dependency list"
+  ]
+}

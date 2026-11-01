@@ -1,0 +1,236 @@
+{
+  "schema_version": 1,
+  "repository": "georgi-cole/crystal-path-infinity",
+  "verified_at": "2026-11-01",
+  "import_status": "38 issues created and read back; all remain open in Backlog",
+  "issues": [
+    {
+      "id": "CPI-001",
+      "number": 1,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/1",
+      "title": "[CPI-001] Фиксиране на правилата, резултата, аудиторията и възрастовите данни"
+    },
+    {
+      "id": "CPI-002",
+      "number": 2,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/2",
+      "title": "[CPI-002] Мобилен spike: Capacitor, реклами, SSV, latency и разход на сървъра"
+    },
+    {
+      "id": "CPI-003",
+      "number": 3,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/3",
+      "title": "[CPI-003] Минимален React/TypeScript/Capacitor проект с отделна идентичност"
+    },
+    {
+      "id": "CPI-004",
+      "number": 4,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/4",
+      "title": "[CPI-004] CI за кода и проверими правила за main"
+    },
+    {
+      "id": "CPI-005",
+      "number": 5,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/5",
+      "title": "[CPI-005] Извличане на чистото ядро за един играч"
+    },
+    {
+      "id": "CPI-006",
+      "number": 6,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/6",
+      "title": "[CPI-006] Единни смърт, завършване на ред 350 и SP граници"
+    },
+    {
+      "id": "CPI-007",
+      "number": 7,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/7",
+      "title": "[CPI-007] Един игрови часовник и pause/background договор"
+    },
+    {
+      "id": "CPI-008",
+      "number": 8,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/8",
+      "title": "[CPI-008] Извличане на текущата Infinity сцена за мобилен екран"
+    },
+    {
+      "id": "CPI-009",
+      "number": 9,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/9",
+      "title": "[CPI-009] Локална практика и надеждно запазване на незавършен опит"
+    },
+    {
+      "id": "CPI-010",
+      "number": 10,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/10",
+      "title": "[CPI-010] Самостоятелен звук, музика и haptics"
+    },
+    {
+      "id": "CPI-011",
+      "number": 11,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/11",
+      "title": "[CPI-011] Визуална идентичност и проследим набор от ресурси"
+    },
+    {
+      "id": "CPI-012",
+      "number": 12,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/12",
+      "title": "[CPI-012] Икони, native splash и плавен старт на приложението"
+    },
+    {
+      "id": "CPI-013",
+      "number": 13,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/13",
+      "title": "[CPI-013] Начално меню, bootstrap и навигация"
+    },
+    {
+      "id": "CPI-014",
+      "number": 14,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/14",
+      "title": "[CPI-014] Кратък интерактивен tutorial за мост, hints и mystery"
+    },
+    {
+      "id": "CPI-015",
+      "number": 15,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/15",
+      "title": "[CPI-015] HUD, пауза, смърт и резултат на един опит"
+    },
+    {
+      "id": "CPI-016",
+      "number": 16,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/16",
+      "title": "[CPI-016] Настройки, достъпност и български/английски интерфейс"
+    },
+    {
+      "id": "CPI-017",
+      "number": 17,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/17",
+      "title": "[CPI-017] Отделни backend среди, схема и права върху данните"
+    },
+    {
+      "id": "CPI-018",
+      "number": 18,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/18",
+      "title": "[CPI-018] Възстановим акаунт и преминаване от гост към ranked"
+    },
+    {
+      "id": "CPI-019",
+      "number": 19,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/19",
+      "title": "[CPI-019] Профил с username и непублични възрастови данни"
+    },
+    {
+      "id": "CPI-020",
+      "number": 20,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/20",
+      "title": "[CPI-020] Държави, континенти и история на регионалната принадлежност"
+    },
+    {
+      "id": "CPI-021",
+      "number": 21,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/21",
+      "title": "[CPI-021] Сървърно управляван ranked опит със скрит бъдещ маршрут"
+    },
+    {
+      "id": "CPI-022",
+      "number": 22,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/22",
+      "title": "[CPI-022] Възстановяване при загуба на връзка и конкурентни устройства"
+    },
+    {
+      "id": "CPI-023",
+      "number": 23,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/23",
+      "title": "[CPI-023] Проверени лични рекорди и World/Continent/Country read model"
+    },
+    {
+      "id": "CPI-024",
+      "number": 24,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/24",
+      "title": "[CPI-024] Екран Top 100 с лично място и регионални филтри"
+    },
+    {
+      "id": "CPI-025",
+      "number": 25,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/25",
+      "title": "[CPI-025] Докладване на имена и административен контрол на класацията"
+    },
+    {
+      "id": "CPI-026",
+      "number": 26,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/26",
+      "title": "[CPI-026] Consent, възрастова допустимост и privacy настройки за реклами"
+    },
+    {
+      "id": "CPI-027",
+      "number": 27,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/27",
+      "title": "[CPI-027] Самостоятелен native rewarded-ad provider"
+    },
+    {
+      "id": "CPI-028",
+      "number": 28,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/28",
+      "title": "[CPI-028] SSV проверка и атомарен регистър на рекламните награди"
+    },
+    {
+      "id": "CPI-029",
+      "number": 29,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/29",
+      "title": "[CPI-029] Revive state machine с максимум 10 успешни продължавания"
+    },
+    {
+      "id": "CPI-030",
+      "number": 30,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/30",
+      "title": "[CPI-030] Възстановяване и конкурентни ad сценарии от край до край"
+    },
+    {
+      "id": "CPI-031",
+      "number": 31,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/31",
+      "title": "[CPI-031] Изтриване и експорт на акаунт с in-app и web път"
+    },
+    {
+      "id": "CPI-032",
+      "number": 32,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/32",
+      "title": "[CPI-032] Минимална диагностика, gameplay метрики и контрол на разходите"
+    },
+    {
+      "id": "CPI-033",
+      "number": 33,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/33",
+      "title": "[CPI-033] Регресии на правилата и adversarial API проверки"
+    },
+    {
+      "id": "CPI-034",
+      "number": 34,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/34",
+      "title": "[CPI-034] Реални устройства: дълги опити, 10 реклами и performance"
+    },
+    {
+      "id": "CPI-035",
+      "number": 35,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/35",
+      "title": "[CPI-035] Подписани Android и iOS beta пакети"
+    },
+    {
+      "id": "CPI-036",
+      "number": 36,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/36",
+      "title": "[CPI-036] Store пакет: screenshots, описание, възрастова оценка и privacy форми"
+    },
+    {
+      "id": "CPI-037",
+      "number": 37,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/37",
+      "title": "[CPI-037] Поддръжка, оперативни аларми и контрол при проблем"
+    },
+    {
+      "id": "CPI-038",
+      "number": 38,
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/issues/38",
+      "title": "[CPI-038] Release readiness и контролирано публично пускане"
+    }
+  ]
+}

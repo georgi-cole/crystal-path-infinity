@@ -1,0 +1,881 @@
+{
+  "schema_version": 1,
+  "source": {
+    "repository": "georgi-cole/bbmobilenew-source",
+    "commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262"
+  },
+  "repository": {
+    "owner": "georgi-cole",
+    "name": "crystal-path-infinity",
+    "private": true,
+    "description": "Standalone mobile Crystal Path: Infinity with verified regional leaderboards and rewarded revives."
+  },
+  "milestones": [
+    {
+      "id": "M0",
+      "title": "M0 — Решения и техническа основа",
+      "description": "Съгласувани правила и аудитория, реален мобилен spike, отделен scaffold и проверим CI."
+    },
+    {
+      "id": "M1",
+      "title": "M1 — Самостоятелна игра",
+      "description": "Извлечено ядро и React/CSS сцена, последователни терминални състояния, часовник, практика и звук."
+    },
+    {
+      "id": "M2",
+      "title": "M2 — Завършено мобилно преживяване",
+      "description": "Визуална идентичност, икони, splash, меню, tutorial, HUD, резултати и достъпни настройки."
+    },
+    {
+      "id": "M3",
+      "title": "M3 — Профили и реални класации",
+      "description": "Възстановими акаунти, защитен backend, сървърни опити и World/Continent/Country Top 100."
+    },
+    {
+      "id": "M4",
+      "title": "M4 — До 10 рекламни продължавания",
+      "description": "Consent, native rewarded ads, проверени SSV награди и възстановим revive flow."
+    },
+    {
+      "id": "M5",
+      "title": "M5 — Проверка и подготовка за пускане",
+      "description": "Изтриване на акаунт, диагностика, adversarial/device QA, beta, store пакет и release gates."
+    }
+  ],
+  "labels": [
+    {
+      "name": "priority:P0",
+      "color": "B60205",
+      "description": "Блокира основните правила, сигурността или готовността за пускане."
+    },
+    {
+      "name": "priority:P1",
+      "color": "D93F0B",
+      "description": "Необходима функция или качество за първата публична версия."
+    },
+    {
+      "name": "priority:P2",
+      "color": "FBCA04",
+      "description": "Подобрение след основните критерии; само ако е изрично включено."
+    },
+    {
+      "name": "type:task",
+      "color": "1D76DB",
+      "description": "Конкретна задача с критерии за приемане и проверка."
+    },
+    {
+      "name": "status:backlog",
+      "color": "EDEDED",
+      "description": "Планирана задача; започва след преглед и изпълнени зависимости."
+    },
+    {
+      "name": "area:foundation",
+      "color": "5319E7",
+      "description": "Решения, scaffold и инструменти."
+    },
+    {
+      "name": "area:core",
+      "color": "5319E7",
+      "description": "Игрови правила, lifecycle и renderer."
+    },
+    {
+      "name": "area:ux",
+      "color": "5319E7",
+      "description": "Екрани, визия, звук и достъпност."
+    },
+    {
+      "name": "area:backend",
+      "color": "5319E7",
+      "description": "Сървърни данни, API и права."
+    },
+    {
+      "name": "area:profile",
+      "color": "5319E7",
+      "description": "Акаунти, профили и държави."
+    },
+    {
+      "name": "area:leaderboard",
+      "color": "5319E7",
+      "description": "Проверени резултати и класации."
+    },
+    {
+      "name": "area:ads",
+      "color": "5319E7",
+      "description": "Рекламни награди и продължавания."
+    },
+    {
+      "name": "area:privacy",
+      "color": "5319E7",
+      "description": "Лични данни, consent и изтриване."
+    },
+    {
+      "name": "area:quality",
+      "color": "5319E7",
+      "description": "Автоматични и реални проверки."
+    },
+    {
+      "name": "area:release",
+      "color": "5319E7",
+      "description": "Beta, магазини и експлоатация."
+    }
+  ],
+  "issues": [
+    {
+      "id": "CPI-001",
+      "title": "Фиксиране на правилата, резултата, аудиторията и възрастовите данни",
+      "priority": "P0",
+      "area": "foundation",
+      "milestone": "M0",
+      "depends_on": [],
+      "size": "M",
+      "body": "## Цел\n\nПреди реализацията да има един продуктово съгласуван договор за новата игра.\n\n## Обхват\n\nDecision record върху SOURCE_AUDIT: запазваме 300 SP, 2 hints, mystery механиката и скрития край 350. Не въвеждаме недоказан 160-секунден лимит.\n\n## Критерии за приемане\n\n- [ ] Записани са приетите и отложените решения; предложенията не се представят като вече одобрени.\n- [ ] Прегледано е предложението за lastClearedRow без фаталния ред и tie: по-малко revives, по-ранно сървърно достигане, стабилен ID.\n- [ ] Решени са единният SP таван (предложение 400) и revive договорът: 300 SP, непроменени hints, изчистени всички ефекти, запазена консумирана mystery плочка и повторение на същия неуспешен ред.\n- [ ] Потвърдено е: десетата успешна реклама дава продължаване; следващата смърт е окончателна. Няма 11-а награда.\n- [ ] Възрастта остава заявено, непублично поле; документирани са целта, точни години или производна група, аудиторията, допустимостта и retention. Не се приема автоматично 13+ или старото 18+.\n- [ ] Фиксирани са входът за ranked, офлайн practice, country snapshot и предложението за 30-дневен country cooldown; липсващи решения имат собственик и блокирани функции.\n\n## Проверка и демонстрация\n\nПреглед с Georgi на кратка таблица с конкретни сценарии: fatal row, ред 350, 10-та реклама, непълнолетен профил и смяна на държава. Done изисква записано решение, не само чернова.",
+      "labels": [
+        "priority:P0",
+        "area:foundation",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-002",
+      "title": "Мобилен spike: Capacitor, реклами, SSV, latency и разход на сървъра",
+      "priority": "P0",
+      "area": "foundation",
+      "milestone": "M0",
+      "depends_on": [
+        "CPI-001"
+      ],
+      "size": "L",
+      "body": "## Цел\n\nДа проверим най-рисковите технически предположения преди избор на окончателна конфигурация.\n\n## Обхват\n\nМалка сцена с текущия React/CSS подход и тестова rewarded реклама на реални Android и iPhone. Това е техническо доказателство, не публична игра.\n\n## Критерии за приемане\n\n- [ ] Документирана е работеща комбинация Node, Capacitor, AdMob plugin, Google Mobile Ads/UMP, Android tools и Xcode/iOS SDK; версиите не са избрани само по latest.\n- [ ] Тестова реклама показва reward, dismiss, app background/return и cleanup на двете платформи; проверено е предаването на SSV custom data.\n- [ ] Проверени са портретният layout, safe areas, input и звук на по-слаб Android и iPhone; записани са наблюденията и ограниченията.\n- [ ] Измерени са round-trip времена за една сървърно проверена стъпка и реакцията при бавна/липсваща връзка; определен е приемлив UX бюджет.\n- [ ] Има разчет по измерени заявки/опит, а не обещание за безплатен backend; фиксирани са ограничители и ориентировъчни натоварвания за следващия тест.\n\n## Проверка и демонстрация\n\nКратък запис от двете устройства и таблица с точните версии, измервания и go/no-go. Несъвместим SSV bridge или неприемлива latency водят до конкретна корекция на архитектурата.",
+      "labels": [
+        "priority:P0",
+        "area:foundation",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-003",
+      "title": "Минимален React/TypeScript/Capacitor проект с отделна идентичност",
+      "priority": "P0",
+      "area": "foundation",
+      "milestone": "M0",
+      "depends_on": [
+        "CPI-002"
+      ],
+      "size": "M",
+      "body": "## Цел\n\nНовата игра да се компилира независимо от The Big Eye.\n\n## Обхват\n\nМалък проект с web development mode и отделни Android/iOS wrappers; окончателни app IDs се фиксират преди store регистрация.\n\n## Критерии за приемане\n\n- [ ] Чист checkout се инсталира с lockfile и стартира документирaно; няма зависимост от целия bbmobilenew-source.\n- [ ] Android applicationId, iOS bundle ID, app name и dev/staging/production настройки са отделни от The Big Eye.\n- [ ] Няма ненужни Pixi/Three/Remotion, season store, billing или location permissions.\n- [ ] Env примерите съдържат placeholders; няма чужди production identifiers, service-role ключове, signing материали или пароли.\n- [ ] Web build и native debug build са изпълнени с избраната в CPI-002 конфигурация.\n\n## Проверка и демонстрация\n\nВъзпроизводим clean build и отваряне на минималния екран на Android/iOS. Документират се нужните локални инструменти и платформени ограничения.",
+      "labels": [
+        "priority:P0",
+        "area:foundation",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-004",
+      "title": "CI за кода и проверими правила за main",
+      "priority": "P0",
+      "area": "foundation",
+      "milestone": "M0",
+      "depends_on": [
+        "CPI-003"
+      ],
+      "size": "M",
+      "body": "## Цел\n\nВсяка следваща задача да има полезна проверка преди вливане.\n\n## Обхват\n\nЗаменяме planning-only CI с typecheck, formatting/lint, core tests и web build; добавяме подходящи native checks според наличните runners.\n\n## Критерии за приемане\n\n- [ ] PR проверките работят от чист checkout, без production credentials; workflow token има минимални права.\n- [ ] Избрани са устойчиви имена на required checks и реално съществуващите native build jobs; скъпите подписани build-ове са отделени.\n- [ ] Main има подходящ branch protection/ruleset само ако планът и правата го поддържат; настройката е прочетена обратно и статусът е честно документиран.\n- [ ] Squash merge и изтриване на merged branches са настроени; issue/PR шаблоните сочат CPI ID и приемателните критерии.\n- [ ] При неподдържана protection настройка има видим pending item, а не твърдение за защитен branch.\n\n## Проверка и демонстрация\n\nКонтролиран PR с реална грешка блокира съответната проверка; след поправката тя минава. Не се добавят фиктивни тестове за зелено CI.",
+      "labels": [
+        "priority:P0",
+        "area:foundation",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-005",
+      "title": "Извличане на чистото ядро за един играч",
+      "priority": "P0",
+      "area": "core",
+      "milestone": "M1",
+      "depends_on": [
+        "CPI-001",
+        "CPI-003",
+        "CPI-004"
+      ],
+      "size": "L",
+      "body": "## Цел\n\nИгровите правила да се използват еднакво от practice и проверения server run.\n\n## Обхват\n\nИзвличане от shatteredLogic и component handlers в детерминистични state transitions с подадени clock/RNG и versioned rules.\n\n## Критерии за приемане\n\n- [ ] Ядрото не импортира React, Redux, browser API, AI profile, season host или LOH/POS награди.\n- [ ] Запазени са приетите damage bands, 12 mystery weights, hints, mystery консумация и ефекти; fixtures сочат изходния commit.\n- [ ] Един immutable RunState и събития описват избор, hint, mystery, tick, death, finish и разрешено revive.\n- [ ] RunResult различава completed progress, fatal row, finish и използвани revives според CPI-001.\n- [ ] Всеки опит носи rulesetVersion; идентични входове и clock дават идентичен резултат.\n\n## Проверка и демонстрация\n\nFocused тестове за damage границите 10/11/25/26, effect priority, expiry и mystery cadence; сравнение с запазени baseline fixtures и изрично описани поправки.",
+      "labels": [
+        "priority:P0",
+        "area:core",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-006",
+      "title": "Единни смърт, завършване на ред 350 и SP граници",
+      "priority": "P0",
+      "area": "core",
+      "milestone": "M1",
+      "depends_on": [
+        "CPI-005"
+      ],
+      "size": "M",
+      "body": "## Цел\n\nДа отстраним установените статично несъгласувани терминални преходи преди рекламните продължавания.\n\n## Обхват\n\nПроверка и поправка на wrong-step finish, drain death, максимален SP и повтарящи се input/completion събития.\n\n## Критерии за приемане\n\n- [ ] Wrong, mystery и drain damage до 0 SP отключват един death event и спират input.\n- [ ] Правилна, shielded wrong, damaging wrong и healing wrong стъпка на ред 350 завършват точно веднъж, ако са преживени.\n- [ ] Фаталната последна стъпка не печели играта; при разрешено revive последният ред следва договора от CPI-001.\n- [ ] Всички health mutation пътища спазват един приет минимум/максимум; няма скрит различен heal cap.\n- [ ] Rapid double tap, закъснял callback и unmount не създават втори progress, death или finish.\n\n## Проверка и демонстрация\n\nПърво focused тестове възпроизвеждат наличните разминавания, после доказват поправката. Статичната находка се отбелязва като потвърдена само след възпроизводим резултат.",
+      "labels": [
+        "priority:P0",
+        "area:core",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-007",
+      "title": "Един игрови часовник и pause/background договор",
+      "priority": "P0",
+      "area": "core",
+      "milestone": "M1",
+      "depends_on": [
+        "CPI-006"
+      ],
+      "size": "L",
+      "body": "## Цел\n\nЕфектите и прогресът да не се променят случайно при реклама, пауза или заключване на телефона.\n\n## Обхват\n\nЯсен active-time модел, native lifecycle adapter и разделяне на анимационно време от авторитетно gameplay време.\n\n## Критерии за приемане\n\n- [ ] Hints, 5-секундни ефекти и regen/drain използват един игрови clock; няма независими Date.now решения в renderer-а.\n- [ ] Pause, ad, background и recovery спират или възстановяват времето според записаната политика; app resume не дублира ticks.\n- [ ] Дълго OS suspend и промяна на часовника на устройството не създават SP, безкрайни buff-ове или безплатен progress.\n- [ ] Моделът поддържа server-owned clock за ranked; клиентско elapsed/time поле не е доказателство за валидно време.\n- [ ] Cleanup при напускане прекратява callbacks и звука; няма късно презаписване на друг опит.\n\n## Проверка и демонстрация\n\nКонтролирани clock тестове на границите 0/499/500/5000 ms и device сценарии lock/unlock, app switch и return. В ranked API се интегрира в CPI-021.",
+      "labels": [
+        "priority:P0",
+        "area:core",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-008",
+      "title": "Извличане на текущата Infinity сцена за мобилен екран",
+      "priority": "P1",
+      "area": "core",
+      "milestone": "M1",
+      "depends_on": [
+        "CPI-006",
+        "CPI-007"
+      ],
+      "size": "L",
+      "body": "## Цел\n\nДа запазим разпознаваемото преживяване без тежка промяна на renderer-а.\n\n## Обхват\n\nReact/CSS bridge, current premium atmosphere, black-hole background и ограничени ефекти; standalone event interface.\n\n## Критерии за приемане\n\n- [ ] Ляво/дясно, mystery и hint са достъпни с една ръка; safe areas не закриват контролите.\n- [ ] Запазени са crack, collapse и step feedback, но няма сезонен prize текст, AI feed, VIP unlock или фиктивни онлайн съперници.\n- [ ] DOM прозорецът на редовете остава ограничен; дълъг опит не трупа неограничени nodes/timers.\n- [ ] Екранът е използваем в тесен портрет и при динамични системни bars; текста и touch targets не се режат.\n- [ ] Няма Pixi/WebGL пренаписване; renderer-ът не получава бъдещи тайни за ranked.\n\n## Проверка и демонстрация\n\nСравнение с избрани кадри на текущата Infinity визия и интерактивен walkthrough на тесен Android/iPhone viewport. Performance оценката се завършва в CPI-034.",
+      "labels": [
+        "priority:P1",
+        "area:core",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-009",
+      "title": "Локална практика и надеждно запазване на незавършен опит",
+      "priority": "P1",
+      "area": "core",
+      "milestone": "M1",
+      "depends_on": [
+        "CPI-007",
+        "CPI-008"
+      ],
+      "size": "M",
+      "body": "## Цел\n\nИграчът да може да опита играта без акаунт и да възстанови прекъсната практика.\n\n## Обхват\n\nVersioned local persistence за practice, настройки и checkpoint; това не е канал за качване на офлайн резултати в Top 100.\n\n## Критерии за приемане\n\n- [ ] Practice работи офлайн и е ясно обозначена; няма бутон, който представя нейния резултат като verified ranked.\n- [ ] App restart възстановява последния атомарен checkpoint, SP, hints, консумирана mystery и clock state без повторна награда.\n- [ ] Повреден или несъвместим save има обяснение и безопасен нов опит; не crash-ва bootstrap.\n- [ ] Стар save не може да нулира revive count на официален опит; ranked state ще се чете от сървъра.\n- [ ] Нов опит и продължаване на стар са различни действия с ясни предупреждения за загуба на незаписан напредък.\n\n## Проверка и демонстрация\n\nKill/relaunch по време на safe step, mystery, pause и save; corruption/version fixture. Проверка, че practice няма достъп до official score mutation.",
+      "labels": [
+        "priority:P1",
+        "area:core",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-010",
+      "title": "Самостоятелен звук, музика и haptics",
+      "priority": "P1",
+      "area": "ux",
+      "milestone": "M1",
+      "depends_on": [
+        "CPI-007",
+        "CPI-008"
+      ],
+      "size": "M",
+      "body": "## Цел\n\nДа запазим звуковата атмосфера без зависимост от глобалния SoundManager на The Big Eye.\n\n## Обхват\n\nИзбраните four SFX и glass_bridge music, малък audio adapter, haptic feedback и lifecycle.\n\n## Критерии за приемане\n\n- [ ] Преизползваните файлове и права са в reuse manifest; няма целия стар audio catalog.\n- [ ] Music и SFX имат отделни настройки; muted състоянието се пази след restart.\n- [ ] Реклама, phone interruption и background спират/намаляват звука правилно; return не стартира два music loop-а.\n- [ ] Haptics са незадължителни, изключваеми и различими за стъпка, щета и край; липсваща native поддръжка не блокира играта.\n- [ ] Winner/death cue се изпълняват веднъж и не се наслагват със следващ опит.\n\n## Проверка и демонстрация\n\nУстройствен walkthrough с mute, headphones/silent mode, ad interruption и повторно стартиране; проверка за освобождаване на audio ресурси.",
+      "labels": [
+        "priority:P1",
+        "area:ux",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-011",
+      "title": "Визуална идентичност и проследим набор от ресурси",
+      "priority": "P1",
+      "area": "ux",
+      "milestone": "M2",
+      "depends_on": [
+        "CPI-001",
+        "CPI-008"
+      ],
+      "size": "M",
+      "body": "## Цел\n\nСамостоятелният продукт да има своя марка, като запази познатата Infinity атмосфера.\n\n## Обхват\n\nWordmark, app-icon концепция, цветове/типография и минимален asset brief; текущата premium визия става базова според продуктовото решение.\n\n## Критерии за приемане\n\n- [ ] Има избран визуален вариант за Crystal Path: Infinity, четим на малък мобилен екран.\n- [ ] Фон, кристали, fog/glow и типография са съгласувани с менюто и HUD, без чужди The Big Eye/LOH/POS текстове.\n- [ ] За всеки копиран ресурс са записани source path, commit, право за употреба и необходима оптимизация; proprietary правата са запазени.\n- [ ] Генеративни изображения, ако се ползват, са само за одобрени липсващи assets; точните UI надписи остават реален текст.\n- [ ] Избрани са размери, формат и fallback за фон/икона; native exports се изпълняват в CPI-012.\n\n## Проверка и демонстрация\n\nПреглед на icon preview, menu/HUD пример и asset inventory с Georgi; няма нужда от пълен нов art pack преди приемане на посоката.",
+      "labels": [
+        "priority:P1",
+        "area:ux",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-012",
+      "title": "Икони, native splash и плавен старт на приложението",
+      "priority": "P1",
+      "area": "ux",
+      "milestone": "M2",
+      "depends_on": [
+        "CPI-003",
+        "CPI-011"
+      ],
+      "size": "M",
+      "body": "## Цел\n\nИграта да изглежда самостоятелна още при стартиране и да достига надеждно до менюто.\n\n## Обхват\n\nAndroid adaptive icon, iOS icon exports, platform launch screen и отделна кратка in-app loading/intro фаза.\n\n## Критерии за приемане\n\n- [ ] Новите икони са четими и правилно изрязани на Android/iOS; няма останали story-icon aliases.\n- [ ] Android 12+ splash използва платформения icon/background модел; не се обещава произволен fullscreen OS splash.\n- [ ] Native splash и първият React кадър имат съгласуван тъмен фон без бяла светкавица.\n- [ ] App bootstrap няма изкуствена дълга пауза; показва retry/offline път при loading failure.\n- [ ] Launch screen не блокира потребителя безкрайно за ad, analytics или недостъпна класация.\n\n## Проверка и демонстрация\n\nCold/warm start, offline start и забавен bootstrap на двете платформи; визуален преглед на всички изисквани icon variants.",
+      "labels": [
+        "priority:P1",
+        "area:ux",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-013",
+      "title": "Начално меню, bootstrap и навигация",
+      "priority": "P1",
+      "area": "ux",
+      "milestone": "M2",
+      "depends_on": [
+        "CPI-009",
+        "CPI-012"
+      ],
+      "size": "M",
+      "body": "## Цел\n\nИграчът бързо да разбира как да започне, да види рекорда си и да стигне до класациите.\n\n## Обхват\n\nМеню с Play, Practice, Rankings, Profile и Settings; възстановяване на незавършен опит и auth/network състояния.\n\n## Критерии за приемане\n\n- [ ] Основният Play бутон е доминиращ; personal best и статусът на акаунта са ясни.\n- [ ] За guest ranked действието води към обяснен login, а practice остава достъпна.\n- [ ] Незавършен опит предлага Resume или изрично нов опит; навигацията не стартира дублирана сесия.\n- [ ] Android Back, модални екрани и deep-link return имат предвидимо поведение.\n- [ ] Loading, offline, maintenance и retry състояния не изглеждат като празно/блокирано меню.\n\n## Проверка и демонстрация\n\nWalkthrough от fresh install до practice и обратно, restart с активен save и навигация с Back. Server/auth части се свързват след съответните backend задачи.",
+      "labels": [
+        "priority:P1",
+        "area:ux",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-014",
+      "title": "Кратък интерактивен tutorial за мост, hints и mystery",
+      "priority": "P1",
+      "area": "ux",
+      "milestone": "M2",
+      "depends_on": [
+        "CPI-008",
+        "CPI-013"
+      ],
+      "size": "M",
+      "body": "## Цел\n\nНов играч да разбере правилата чрез няколко действия, без дълъг задължителен текст.\n\n## Обхват\n\nКратък локален учебен маршрут с едно safe/wrong действие, hint и доброволен mystery пример.\n\n## Критерии за приемане\n\n- [ ] Tutorial обяснява SP, че преживяна грешка не е моментална смърт, и какво измерва прогресът.\n- [ ] Играчът използва hint и вижда, че mystery е доброволна и може да навреди.\n- [ ] Учебните резултати не влизат в класации и не показват production реклами.\n- [ ] Може да се прескочи и да се отвори отново от Settings; completion се запазва.\n- [ ] Фокусът/инструкциите не покриват текущите touch targets и не разчитат само на цвят.\n\n## Проверка и демонстрация\n\nНаблюдаван първи опит с човек, който не познава минииграта; проверка, че може да обясни SP, hint, mystery и края на опита.",
+      "labels": [
+        "priority:P1",
+        "area:ux",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-015",
+      "title": "HUD, пауза, смърт и резултат на един опит",
+      "priority": "P1",
+      "area": "ux",
+      "milestone": "M2",
+      "depends_on": [
+        "CPI-006",
+        "CPI-007",
+        "CPI-013"
+      ],
+      "size": "L",
+      "body": "## Цел\n\nВсяко състояние на опита да е разбираемо и да оставя ясен следващ ход.\n\n## Обхват\n\nSP/progress/hints/effect HUD, pause, death offer, резултат/личен рекорд и специален 350-row finish.\n\n## Критерии за приемане\n\n- [ ] HUD показва текущ SP, преминати редове, hints, ефекти и използвани revives от 10 според приетите правила.\n- [ ] При death input спира и има ясен End run; мястото за доброволния rewarded choice се свързва в CPI-029.\n- [ ] Резултатът различава достигнат/преминат ред, fatal row и verified/pending/practice; не обявява непотвърден world record.\n- [ ] Pause не начислява време/щета; Resume не дублира анимации или gameplay действия.\n- [ ] Победа на ред 350 има собствен завършен екран без обещания за season immunity; Next run и Rankings са достъпни.\n\n## Проверка и демонстрация\n\nДемонстрация на нормален край, mystery/drain death, pause, личен рекорд и ред 350 в тесен портрет; повторен tap не създава нов опит два пъти.",
+      "labels": [
+        "priority:P1",
+        "area:ux",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-016",
+      "title": "Настройки, достъпност и български/английски интерфейс",
+      "priority": "P1",
+      "area": "ux",
+      "milestone": "M2",
+      "depends_on": [
+        "CPI-010",
+        "CPI-013",
+        "CPI-015"
+      ],
+      "size": "M",
+      "body": "## Цел\n\nИграчът да контролира основните настройки, а важната информация да остава четима и достъпна.\n\n## Обхват\n\nMusic/SFX/haptics, reduced motion, език, tutorial, privacy/account/support връзки и accessibility на основните екрани.\n\n## Критерии за приемане\n\n- [ ] BG/EN текстовете са централизирани; няма останал сезонен copy или недефинирани translation keys.\n- [ ] Reduced motion ограничава flashes, shake и ambient движение без да скрива резултата от действие.\n- [ ] SP danger и tile feedback не разчитат само на цвят; контролите имат имена, подходящ touch target и четим контраст.\n- [ ] Системен по-голям текст не отрязва Play, End run, ad choice и критичните privacy действия.\n- [ ] Privacy, delete account и support имат постоянни места; действията се активират с реалните услуги, без фалшиво успешни placeholders.\n\n## Проверка и демонстрация\n\nVoiceOver/TalkBack smoke, по-голям текст, reduced motion и двата езика; проверка на всички критични действия в най-тесния поддържан екран.",
+      "labels": [
+        "priority:P1",
+        "area:ux",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-017",
+      "title": "Отделни backend среди, схема и права върху данните",
+      "priority": "P0",
+      "area": "backend",
+      "milestone": "M3",
+      "depends_on": [
+        "CPI-001",
+        "CPI-003",
+        "CPI-004"
+      ],
+      "size": "L",
+      "body": "## Цел\n\nНовият продукт да има изолирани данни и достъп според действителната роля на клиента.\n\n## Обхват\n\nSupabase Auth/Postgres/RLS и сървърни endpoints като избрана след spike основа; dev/staging/production конфигурация и migrations.\n\n## Критерии за приемане\n\n- [ ] Схемата разделя public profile fields от private age/eligibility/consent и auth данни; няма публичен join, който разкрива възраст или email.\n- [ ] Run/action/reward/score таблиците се променят само през оторизирани server операции; клиентът не може директно да задава SP, score или revives.\n- [ ] RLS/grants са изрични за всички exposed таблици; read models не заобикалят privacy границите.\n- [ ] Production secrets остават на сървъра, не във VITE_ variables, приложенията, git или logs.\n- [ ] Migrations, индекси, backup/restore подход и environment разделението са документирани; не се използва старият The Big Eye production project.\n\n## Проверка и демонстрация\n\nНегативни API/RLS тестове: guest, account A и account B не четат/променят чужди private данни; mobile public key не може да записва score. Schema се създава от нулата чрез migrations.",
+      "labels": [
+        "priority:P0",
+        "area:backend",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-018",
+      "title": "Възстановим акаунт и преминаване от гост към ranked",
+      "priority": "P0",
+      "area": "profile",
+      "milestone": "M3",
+      "depends_on": [
+        "CPI-017"
+      ],
+      "size": "L",
+      "body": "## Цел\n\nРекордите да принадлежат на човек с възстановим акаунт, а не само на конкретна инсталация.\n\n## Обхват\n\nПредложен MVP вход с email OTP, session refresh/logout, безопасно native token storage и guest practice upgrade.\n\n## Критерии за приемане\n\n- [ ] Един и същ акаунт възстановява профила и официалните рекорди на друго устройство.\n- [ ] Guest може да играе practice; входът не преобразува непроверен local score във verified.\n- [ ] OTP expiry, resend rate limit, invalid code, offline и cancelled login имат ясни състояния без изтичане на account existence.\n- [ ] Tokens не се появяват в logs/URLs; избраният native storage и deep-link/auth redirect са изпитани.\n- [ ] Logout/revocation спира чужди cached mutations; account linking не слива автоматично различни хора или непотвърдени резултати.\n\n## Проверка и демонстрация\n\nРегистрация, вход, app restart, изтекла сесия и второ устройство; тест за достъп след logout. Социален login остава извън MVP, освен ако CPI-001 не го замени изрично.",
+      "labels": [
+        "priority:P0",
+        "area:profile",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-019",
+      "title": "Профил с username и непублични възрастови данни",
+      "priority": "P0",
+      "area": "profile",
+      "milestone": "M3",
+      "depends_on": [
+        "CPI-001",
+        "CPI-018"
+      ],
+      "size": "M",
+      "body": "## Цел\n\nДа изпълним заявения профилен модел с ясно разграничение между публични и лични данни.\n\n## Обхват\n\nProfile onboarding/edit за username и възраст според CPI-001; country selector се завършва в CPI-020.\n\n## Критерии за приемане\n\n- [ ] Username има server-side normalization, ограничение на дължина, reserved names и уникалност/ясен discriminator според избрания договор.\n- [ ] Възрастовото поле е налично; съхраняваната точност и основание отговарят на CPI-001, а не на наследено 18+ правило.\n- [ ] Публичният профил/класацията не връщат възраст, email, birthdate или consent история.\n- [ ] Промяна на eligibility данни се обработва по изрични правила и не може произволно да отключи ad/online достъп.\n- [ ] Validation errors са разбираеми, профилът се записва атомарно и resume onboarding не създава втори акаунт.\n\n## Проверка и демонстрация\n\nДва едновременни опита за еднакво normalized име; празни/дълги/невалидни стойности; проверка на public API payload и privacy настройки.",
+      "labels": [
+        "priority:P0",
+        "area:profile",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-020",
+      "title": "Държави, континенти и история на регионалната принадлежност",
+      "priority": "P0",
+      "area": "profile",
+      "milestone": "M3",
+      "depends_on": [
+        "CPI-017",
+        "CPI-019"
+      ],
+      "size": "M",
+      "body": "## Цел\n\nЕдин резултат да има стабилна и разбираема принадлежност към държава и континент.\n\n## Обхват\n\nДеклариран ISO country selector, версия на country-to-continent mapping и snapshot при старт на ranked run.\n\n## Критерии за приемане\n\n- [ ] Europe не е EU; изрично са решени територии и трансконтинентални държави, с versioned mapping и fixtures.\n- [ ] Не се иска GPS permission и не се представя декларираната страна като проверено гражданство/местоположение.\n- [ ] Държавата се snapshot-ва върху новия опит; смяна на профила не премества стари рекорди в нова държава.\n- [ ] Приетият country-change cooldown (работно предложение 30 дни) се налага от сървъра; текущ опит не сменя региона си.\n- [ ] Липсваща/неподдържана страна има определено поведение; не се извежда измислен регион от IP или език.\n\n## Проверка и демонстрация\n\nFixtures за България→Европа, държава извън ЕС в Европа, територия и сменена страна; same-score run преди/след промяна остава в правилните scopes.",
+      "labels": [
+        "priority:P0",
+        "area:profile",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-021",
+      "title": "Сървърно управляван ranked опит със скрит бъдещ маршрут",
+      "priority": "P0",
+      "area": "backend",
+      "milestone": "M3",
+      "depends_on": [
+        "CPI-005",
+        "CPI-006",
+        "CPI-007",
+        "CPI-017",
+        "CPI-019",
+        "CPI-020"
+      ],
+      "size": "L",
+      "body": "## Цел\n\nTop 100 да приема проверен напредък вместо число, изпратено от клиента.\n\n## Обхват\n\nStart/action/hint/mystery/finish API, сървърно RNG/clock и versioned run state; един активен ranked run на акаунт.\n\n## Критерии за приемане\n\n- [ ] Бъдещите safeSide стойности и възстановимият seed не се изпращат към клиента; hint разкрива само разрешената текуща информация.\n- [ ] Всяко действие носи run ID, sequence и idempotency key; дубликатите се връщат безопасно, а разместване/чужд run се отхвърля.\n- [ ] Сървърът проверява input eligibility, SP, hints, mystery консумация, death/finish и темпо; не вярва на client clock или score.\n- [ ] Промяната на състоянието и събитийният запис са атомарни; няма два напредъка от един tap или два активни runs при race.\n- [ ] Клиентът показва pending действие без да начислява предварително официален резултат; latency поведението следва CPI-002.\n- [ ] RulesetVersion и регионален snapshot са неизменни за опита; mock/practice събития не са валидни ranked команди.\n\n## Проверка и демонстрация\n\nКонтролиран run с altered payload, повторен sequence, два parallel requests, предсказан seed и forged finish. Проверка на всички API responses за изтичане на бъдещи отговори.",
+      "labels": [
+        "priority:P0",
+        "area:backend",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-022",
+      "title": "Възстановяване при загуба на връзка и конкурентни устройства",
+      "priority": "P0",
+      "area": "backend",
+      "milestone": "M3",
+      "depends_on": [
+        "CPI-009",
+        "CPI-021"
+      ],
+      "size": "L",
+      "body": "## Цел\n\nЧестният играч да не губи опита при прекъсване, без recovery да позволява дублиране на прогрес.\n\n## Обхват\n\nServer checkpoint, lease/session ownership, повторно свързване и ясни timeout/resume правила.\n\n## Критерии за приемане\n\n- [ ] Загубата на връзка спира нови ranked действия и показва състояние за възстановяване, не локално продължаващ official run.\n- [ ] Повторно изпратена непотвърдена команда връща същия резултат; client checkpoint не презаписва server state.\n- [ ] Две устройства не управляват един опит едновременно; takeover/lease expiry е изрично и видимо.\n- [ ] App kill, token refresh и сървърен retry възстановяват SP, hints, clock, country и revive state без нулиране.\n- [ ] Изтекъл/несъвместим опит има безопасно terminal/pending handling според договора; няма вечен spinner.\n\n## Проверка и демонстрация\n\nПрекъсване преди request, след server commit преди response и по време на resume; два телефона с един акаунт и повторна offline queue.",
+      "labels": [
+        "priority:P0",
+        "area:backend",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-023",
+      "title": "Проверени лични рекорди и World/Continent/Country read model",
+      "priority": "P0",
+      "area": "leaderboard",
+      "milestone": "M3",
+      "depends_on": [
+        "CPI-020",
+        "CPI-021",
+        "CPI-022"
+      ],
+      "size": "L",
+      "body": "## Цел\n\nВсички класации да използват един прозрачен и устойчив критерий.\n\n## Обхват\n\nFinalize/personal best projection, ranking queries, индекси и разумно кеширане за конкретен ruleset.\n\n## Критерии за приемане\n\n- [ ] Редът е съгласуваният в CPI-001: progress, revives, serverReachedAt и стабилен ID; клиентски timestamp не решава равенство.\n- [ ] Един акаунт има максимум един ред във всяка scope/version класация; best selection е атомарен при едновременни финализирания.\n- [ ] World избира най-добрия допустим резултат; regional scopes използват snapshot-а на конкретния run, без ретроактивно преместване.\n- [ ] Practice, rejected, unverified reward и несъвместим ruleset не влизат в официалните резултати.\n- [ ] API връща Top 100, own rank и съседни позиции, count и updated-at; има ясни empty/cached състояния.\n- [ ] Pending/reopened run след закъсняла награда заменя собствената си projection правилно, без втори leaderboard entry.\n\n## Проверка и демонстрация\n\nFixtures за равенства, 101+ потребители, няколко runs на човек, смяна на страна, ban/delete, нов ruleset и конкурентен best update.",
+      "labels": [
+        "priority:P0",
+        "area:leaderboard",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-024",
+      "title": "Екран Top 100 с лично място и регионални филтри",
+      "priority": "P1",
+      "area": "leaderboard",
+      "milestone": "M3",
+      "depends_on": [
+        "CPI-013",
+        "CPI-019",
+        "CPI-023"
+      ],
+      "size": "M",
+      "body": "## Цел\n\nСъстезанието да е полезно и за играч, който още не е в стоте най-добри.\n\n## Обхват\n\nWorld, Continent и Country views с бързо превключване и достъп от меню/резултат.\n\n## Критерии за приемане\n\n- [ ] Показани са ранг, username, страна, progress и revives; няма възраст или login данни.\n- [ ] Собственото място и близки позиции са видими и извън Top 100; текущият филтър е недвусмислен.\n- [ ] Loading, empty, offline cached, error и pending personal result са различими и имат подходящ retry.\n- [ ] Обяснението за tie-break и правилата на текущата класация е кратко и достъпно.\n- [ ] Промяна на филтъра не размества грешен кеш в друг scope; updates не прескачат неочаквано scroll позицията.\n\n## Проверка и демонстрация\n\nUI demo с Top 3, rank 100, rank 101 и извън първите 1000, без резултат и с празна държава; проверка на реалната API pagination/response.",
+      "labels": [
+        "priority:P1",
+        "area:leaderboard",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-025",
+      "title": "Докладване на имена и административен контрол на класацията",
+      "priority": "P1",
+      "area": "leaderboard",
+      "milestone": "M3",
+      "depends_on": [
+        "CPI-019",
+        "CPI-023",
+        "CPI-024"
+      ],
+      "size": "M",
+      "body": "## Цел\n\nПубличната класация да има реален механизъм за неприемливи имена и потвърдени невалидни резултати.\n\n## Обхват\n\nReport flow, ограничена административна роля и audit trail за hide/name reset/disqualification.\n\n## Критерии за приемане\n\n- [ ] Report съдържа минималните данни, причина и rate limit; не показва private профила на докладвания.\n- [ ] Административни операции са недостъпни с обикновен mobile user token; критичните промени имат audit trail.\n- [ ] Скриване/дисквалификация премахва записа от всички приложими read models и кешове последователно.\n- [ ] Грешна административна промяна може да се прегледа/коригира по документиран ред; клиентът не се самообявява за banned/unbanned.\n- [ ] Няма автоматичен ban само за висок резултат; suspicious signals изискват определена проверка.\n\n## Проверка и демонстрация\n\nAccount A докладва име; само администратор го обработва. Негативен permission test и проверка за съгласувани World/Country резултати след disqualification.",
+      "labels": [
+        "priority:P1",
+        "area:leaderboard",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-026",
+      "title": "Consent, възрастова допустимост и privacy настройки за реклами",
+      "priority": "P0",
+      "area": "privacy",
+      "milestone": "M4",
+      "depends_on": [
+        "CPI-001",
+        "CPI-018",
+        "CPI-019"
+      ],
+      "size": "L",
+      "body": "## Цел\n\nРекламите да се инициализират само при валидни настройки за конкретната аудитория и платформа.\n\n## Обхват\n\nUMP flow, privacy-options entry point, целева възрастова политика и ATT само ако избраната конфигурация извършва tracking.\n\n## Критерии за приемане\n\n- [ ] Eligibility идва от решението в CPI-001; старото adult-only правило не се копира мълчаливо.\n- [ ] Consent information се обновява по SDK изискванията; canRequestAds се проверява преди заявка и няма двойна инициализация.\n- [ ] Privacy options са достъпни от Settings, когато са изискуеми; промяната обезсилва висящи неподходящи ad requests.\n- [ ] Изборът за гледане на конкретна реклама е отделен от consent/ATT; отказът от optional analytics не се смесва с тях.\n- [ ] Child/unknown-age обработката и одобрените SDK настройки, ако са приложими, са проверени; неподдържана eligibility води до ясно недостъпно ad действие.\n- [ ] Обикновена нова игра остава достъпна при отказ/липса на реклама; не се обещава reward без изпълним допустим ad flow.\n\n## Проверка и демонстрация\n\nSandbox тестове на consent required/not required, отказ, withdrawal, restart и приетите възрастови групи на Android/iOS; сверка с действителните SDK payload-и.",
+      "labels": [
+        "priority:P0",
+        "area:privacy",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-027",
+      "title": "Самостоятелен native rewarded-ad provider",
+      "priority": "P0",
+      "area": "ads",
+      "milestone": "M4",
+      "depends_on": [
+        "CPI-002",
+        "CPI-026"
+      ],
+      "size": "M",
+      "body": "## Цел\n\nДа имаме една предвидима интеграция за run_revive, без season/VIP зависимости.\n\n## Обхват\n\nNative AdMob adapter със start/load/show/reward/dismiss/error lifecycle и изолиран fake provider за разработка.\n\n## Критерии за приемане\n\n- [ ] Една fullscreen реклама максимум; rapid taps не зареждат/показват две паралелни реклами.\n- [ ] Reward, dismiss и error са различни събития; SDK callback order не се предполага еднакъв на всички платформи.\n- [ ] Всеки показан ad носи server-issued opaque intent в custom data; username, age и email не се използват като custom payload.\n- [ ] Test ads/mock provider работят само в разрешени среди; production ranked endpoint отхвърля simulated grants.\n- [ ] No-fill, preload failure, skip и return от ad имат cleanup без висящи listeners; не се изисква неизползван interstitial ID.\n\n## Проверка и демонстрация\n\nReal test ad на двете платформи плюс fake-provider сценарии за reward-before-dismiss, dismiss-before-late-reward, duplicate callback и init failure.",
+      "labels": [
+        "priority:P0",
+        "area:ads",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-028",
+      "title": "SSV проверка и атомарен регистър на рекламните награди",
+      "priority": "P0",
+      "area": "ads",
+      "milestone": "M4",
+      "depends_on": [
+        "CPI-017",
+        "CPI-021",
+        "CPI-027"
+      ],
+      "size": "L",
+      "body": "## Цел\n\nОфициално продължаване да се печели веднъж от истинска, обвързана с опита награда.\n\n## Обхват\n\nReward intents, Google SSV callback verification и транзакционен ledger; SSV удостоверява ad reward, не самия gameplay.\n\n## Критерии за приемане\n\n- [ ] Intent е обвързан с account/run/death sequence/revive index и nonce; произволна стойност от клиента не разрешава награда.\n- [ ] Проверяват се signature/key, очакван ad unit, reward данни, timestamp и уникален transaction ID според официалния протокол.\n- [ ] Една транзакция/смърт дава максимум едно продължаване; increment и grant са атомарни и cap 10 е сървърен.\n- [ ] Повторен, подменен, чужд или неправилно подписан callback не променя state; невалидният timestamp се различава от легитимно забавена награда, която остава възстановима. Ключовете се обновяват безопасно.\n- [ ] Закъсняла валидна награда остава възстановима за същия опит; не се прехвърля към произволен нов run и не се губи при app kill.\n- [ ] Има redacted audit events и recovery lookup; private данни/подписи/дълги callback URLs не се изсипват в клиентски logs.\n\n## Проверка и демонстрация\n\nПодписани тестови callback fixtures, replay/duplicate/concurrency/altered query, неправилен ad unit и ключова ротация. Тестът потвърждава една grant транзакция, не само HTTP 200.",
+      "labels": [
+        "priority:P0",
+        "area:ads",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-029",
+      "title": "Revive state machine с максимум 10 успешни продължавания",
+      "priority": "P0",
+      "area": "ads",
+      "milestone": "M4",
+      "depends_on": [
+        "CPI-006",
+        "CPI-007",
+        "CPI-015",
+        "CPI-028"
+      ],
+      "size": "L",
+      "body": "## Цел\n\nДа реализираме точно заявения цикъл death → доброволна реклама → продължаване.\n\n## Обхват\n\nЕдин orchestrator за offer/loading/showing/pending/reviving/playing/final, използван от всички видове death.\n\n## Критерии за приемане\n\n- [ ] При 0–9 вече използвани revives има избор Watch ad/End run; никоя реклама не стартира автоматично.\n- [ ] Десетата потвърдена награда дава десето продължаване; следващият death е окончателен и няма 11-а реклама.\n- [ ] Skip, no-fill, load failure или непотвърден callback не изразходват лимита; UI не обещава потвърдена награда преди server grant.\n- [ ] Restore следва CPI-001: предложени 300 SP, същият checkpoint/неуспешен ред, запазени hints и mystery консумация, изчистени ефекти; вече разкритата информация се запазва.\n- [ ] Таймерите/звукът са паузирани през ad/pending; input се включва след валиден restore, не преди затваряне на fullscreen ad.\n- [ ] Restart на същия run запазва брояча; само нов run започва от 0/10. Finish на 350 не предлага ненужно revive.\n\n## Проверка и демонстрация\n\nДетерминистичен walkthrough от първата смърт през всичките 10 grants до окончателния край; повторения с wrong, mystery и drain death, както и no-fill между успешни награди.",
+      "labels": [
+        "priority:P0",
+        "area:ads",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-030",
+      "title": "Възстановяване и конкурентни ad сценарии от край до край",
+      "priority": "P0",
+      "area": "quality",
+      "milestone": "M4",
+      "depends_on": [
+        "CPI-022",
+        "CPI-029"
+      ],
+      "size": "L",
+      "body": "## Цел\n\nРеално спечелена награда да не се губи, а прекъсванията да не създават безплатни животи.\n\n## Обхват\n\nИнтеграционна матрица mobile SDK ↔ intent/SSV ↔ run recovery ↔ leaderboard finalization.\n\n## Критерии за приемане\n\n- [ ] App kill по време на ad или след reward се възстановява от сървъра; няма reset или двойна награда.\n- [ ] Забавено SSV има ограничено чакане с ясно save/retry/resume действие, не безкраен spinner и не фалшиво verified продължаване.\n- [ ] End run/new run при висящ intent има конкретна политика за provisional finalization и reclaim/reopen на оригиналния опит; спечеленият reward не се изхвърля.\n- [ ] Повторно отворен run премахва/заменя старата provisional projection атомарно; няма два leaderboard реда.\n- [ ] Две устройства, duplicate callbacks, закъснял privacy change и network retry не надвишават една награда за death или общо 10.\n- [ ] Потребителят може да започне нов нормален опит при липсваща реклама; no-fill не се представя като негово нарушение.\n\n## Проверка и демонстрация\n\nУстройствен recording и автоматизиран server test за всяка опасна граница: преди show, след earned, преди close, преди SSV, след grant преди response и след explicit end.",
+      "labels": [
+        "priority:P0",
+        "area:quality",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-031",
+      "title": "Изтриване и експорт на акаунт с in-app и web път",
+      "priority": "P0",
+      "area": "privacy",
+      "milestone": "M5",
+      "depends_on": [
+        "CPI-017",
+        "CPI-018",
+        "CPI-019",
+        "CPI-023"
+      ],
+      "size": "L",
+      "body": "## Цел\n\nПотребителят да може да упражни контрол над профила и публичните си резултати.\n\n## Обхват\n\nSettings flow за account deletion/export, външен web request route и documented retention/cleanup.\n\n## Критерии за приемане\n\n- [ ] Delete account е откриваемо в приложението и има действителен web resource за заявка; не е само деактивация или неработещ mailto.\n- [ ] Изисква се подходяща повторна автентикация/потвърждение; чужд user ID не позволява изтриване.\n- [ ] Профил, private age данни, сесии и leaderboard projections се премахват/обработват според описаната retention политика; кешовете се инвалидизират.\n- [ ] Минималните законово/технически оправдани записи, ако се запазват, са описани с цел и срок; не остава скрит публичен рекорд.\n- [ ] Експортът съдържа само данните на заявителя и не разкрива server secrets, чужди users или бъдещи маршрути.\n- [ ] Pending runs/reward intents имат определено terminal handling при изтриване; app показва реалния статус и не възстановява автоматично изтрития профил.\n\n## Проверка и демонстрация\n\nEnd-to-end deletion на staging account с run/reward/leaderboard данни, проверка от втори акаунт и web route; повторна заявка е безопасна. Сверка с текущите Apple/Google изисквания преди submission.",
+      "labels": [
+        "priority:P0",
+        "area:privacy",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-032",
+      "title": "Минимална диагностика, gameplay метрики и контрол на разходите",
+      "priority": "P1",
+      "area": "quality",
+      "milestone": "M5",
+      "depends_on": [
+        "CPI-017",
+        "CPI-022",
+        "CPI-026",
+        "CPI-029",
+        "CPI-031"
+      ],
+      "size": "M",
+      "body": "## Цел\n\nДа разбираме дали играта е стабилна и дали рекламният модел работи, без излишно събиране на лични данни.\n\n## Обхват\n\nCrash/error telemetry, минимални gameplay/ad events, consent разделение и инфраструктурни метрики.\n\n## Критерии за приемане\n\n- [ ] Има event dictionary с цел, полета и retention; не се събират точна локация, age в gameplay events, email, OTP или свободен личен текст.\n- [ ] Optional analytics следва избора на потребителя; основната игра не е блокирана от analytics outage/отказ.\n- [ ] Измерват се run starts/completions, lastClearedRow distribution, достигане на 350, revives 0–10, ad no-fill/skip/error и verification latency.\n- [ ] Crash и server logs са redacted; account deletion обработва свързаните данни според CPI-031.\n- [ ] Оперативният отчет показва request volume, latency, storage и разходни аларми с договорени прагове.\n\n## Проверка и демонстрация\n\nПроверка на реалните event payload-и, withdrawal/deletion и симулирани errors. Разчетът използва измерена честота на действията, не предполагаем ad revenue.",
+      "labels": [
+        "priority:P1",
+        "area:quality",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-033",
+      "title": "Регресии на правилата и adversarial API проверки",
+      "priority": "P0",
+      "area": "quality",
+      "milestone": "M5",
+      "depends_on": [
+        "CPI-004",
+        "CPI-021",
+        "CPI-022",
+        "CPI-023",
+        "CPI-025",
+        "CPI-028",
+        "CPI-029",
+        "CPI-031"
+      ],
+      "size": "L",
+      "body": "## Цел\n\nДа докажем, че основните конкурентни резултати не зависят от честен клиент.\n\n## Обхват\n\nFocused regression suite върху core, auth/RLS, ordered inputs, reward ledger, rankings и deletion.\n\n## Критерии за приемане\n\n- [ ] Покрити са damage boundaries, всички death paths, wrong final row, max SP, 10-revive cap и ruleset isolation.\n- [ ] Forged score/SP/hints/time/revive и чужд run/account се отхвърлят без странични записи.\n- [ ] Replay, concurrent requests, out-of-order actions и duplicate SSV не дават допълнителен progress/reward.\n- [ ] Public payloads не издават future answers, secrets, age или email; private data permissions се тестват с различни роли.\n- [ ] Best-per-player, regional snapshots, bans/deletes и late-grant reopen остават съгласувани.\n- [ ] Suite има assertions върху състоянието и транзакциите, не само успешен HTTP status или implementation snapshots.\n\n## Проверка и демонстрация\n\nCI report с възпроизводими fixtures и тестови accounts. Ограниченията, например bot automation, се описват честно; не се обещава абсолютна защита.",
+      "labels": [
+        "priority:P0",
+        "area:quality",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-034",
+      "title": "Реални устройства: дълги опити, 10 реклами и performance",
+      "priority": "P0",
+      "area": "quality",
+      "milestone": "M5",
+      "depends_on": [
+        "CPI-008",
+        "CPI-010",
+        "CPI-012",
+        "CPI-014",
+        "CPI-016",
+        "CPI-024",
+        "CPI-030",
+        "CPI-033"
+      ],
+      "size": "L",
+      "body": "## Цел\n\nДа проверим цялото преживяване при реални мобилни условия.\n\n## Обхват\n\nAndroid/iOS device matrix, слаб Android, тесен екран, системни прекъсвания и дълги runs.\n\n## Критерии за приемане\n\n- [ ] Опит до ред 350 и опит с 10 rewarded revives преминават без необработен crash, загубен checkpoint или дублирана награда.\n- [ ] Измерени са memory, frame pacing, startup и network latency спрямо CPI-002; няма растящи timers/DOM/audio leaks след многократен retry.\n- [ ] Input/HUD/ad return са проверени при safe areas, системни bars, lock/unlock, phone interruption и слаб сигнал.\n- [ ] VoiceOver/TalkBack, по-голям текст и reduced motion остават използваеми за критичните действия.\n- [ ] Всеки блокиращ дефект е поправен и повторно проверен; резултатите сочат точен build/version и устройство.\n\n## Проверка и демонстрация\n\nМатрица с реално изпълнени сценарии и кратки recordings. Emulator/browser тест не се представя като физическо device доказателство.",
+      "labels": [
+        "priority:P0",
+        "area:quality",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-035",
+      "title": "Подписани Android и iOS beta пакети",
+      "priority": "P0",
+      "area": "release",
+      "milestone": "M5",
+      "depends_on": [
+        "CPI-004",
+        "CPI-026",
+        "CPI-030",
+        "CPI-031",
+        "CPI-032",
+        "CPI-034"
+      ],
+      "size": "M",
+      "body": "## Цел\n\nТестерите да инсталират точно определена версия по нормален мобилен канал.\n\n## Обхват\n\nAndroid internal/closed testing и iOS TestFlight с отделни app записи, signing и release configuration.\n\n## Критерии за приемане\n\n- [ ] Bundle/application IDs са на новия продукт; не презаписват The Big Eye store listing или installed app.\n- [ ] Signing keys/certificates са в подходящ secret store; build logs и artifacts не съдържат private ключове.\n- [ ] Beta build използва правилните среди и допустими test ad настройки; няма dev reward bypass към ranked.\n- [ ] Version/build numbers са уникални, source commit е записан и crash symbol/mapping uploads са налични според платформата.\n- [ ] Акаунт-специфичните Play testing prerequisites са проверени; upload не се представя като production approval.\n\n## Проверка и демонстрация\n\nИнсталация през beta канала на външно тестово устройство, login/run/ad/recovery smoke. Платени регистрации или нови договори се обработват отделно от подготовката.",
+      "labels": [
+        "priority:P0",
+        "area:release",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-036",
+      "title": "Store пакет: screenshots, описание, възрастова оценка и privacy форми",
+      "priority": "P1",
+      "area": "release",
+      "milestone": "M5",
+      "depends_on": [
+        "CPI-011",
+        "CPI-012",
+        "CPI-016",
+        "CPI-024",
+        "CPI-025",
+        "CPI-031",
+        "CPI-034"
+      ],
+      "size": "M",
+      "body": "## Цел\n\nStore представянето да описва реалната версия и действителната обработка на данни.\n\n## Обхват\n\nApp icon/screenshots, BG/EN store copy, support/privacy/deletion URLs, age rating, Google Data Safety и Apple disclosures.\n\n## Критерии за приемане\n\n- [ ] Screenshots са от работещ build и показват мост, SP, класации и rewarded choice без непостигнати функции.\n- [ ] Описанието казва, че реклами дават доброволни продължавания до 10 на опит; не обещава истински безкраен мост при cap 350.\n- [ ] Age rating/target audience и privacy forms съответстват на CPI-001 и реалните SDK версии/настройки.\n- [ ] Support/privacy/deletion страниците са достъпни и за новата игра; старите location/Big Eye декларации не се копират.\n- [ ] Reviewer instructions позволяват проверка на account, ranked и ads flow без лични production credentials.\n\n## Проверка и демонстрация\n\nСверка между подписания binary, SDK inventory, network behavior и privacy декларациите; визуален преглед на store exports в изискваните формати.",
+      "labels": [
+        "priority:P1",
+        "area:release",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-037",
+      "title": "Поддръжка, оперативни аларми и контрол при проблем",
+      "priority": "P1",
+      "area": "release",
+      "milestone": "M5",
+      "depends_on": [
+        "CPI-025",
+        "CPI-031",
+        "CPI-032",
+        "CPI-035"
+      ],
+      "size": "M",
+      "body": "## Цел\n\nСлед пускане да можем да реагираме на повредена класация, backend outage или проблем с рекламите.\n\n## Обхват\n\nSupport route, runbook, monitoring, ranked/ad controls и rollback/compatibility процедура.\n\n## Критерии за приемане\n\n- [ ] Определени са публичен support контакт и частен security/report маршрут без непотвърдени адреси.\n- [ ] Алармите имат собственик и прагове за error/SSV delay/latency/cost; има процедура за първа реакция.\n- [ ] Server control може да спре нови ranked/ad starts, без да нулира потвърдени резултати или да губи вече спечелени награди.\n- [ ] Минимално поддържана client/ruleset версия, maintenance message и recovery са определени; несъвместими резултати не се смесват.\n- [ ] Документирани са backup restore, migration rollback/forward fix и ограничението, че store binary rollback не е мигновен.\n\n## Проверка и демонстрация\n\nStaging упражнение с backend outage, SSV закъснение и погрешен ruleset deployment. Проверка за ясно съобщение и запазени earned rewards.",
+      "labels": [
+        "priority:P1",
+        "area:release",
+        "type:task",
+        "status:backlog"
+      ]
+    },
+    {
+      "id": "CPI-038",
+      "title": "Release readiness и контролирано публично пускане",
+      "priority": "P0",
+      "area": "release",
+      "milestone": "M5",
+      "depends_on": [
+        "CPI-035",
+        "CPI-036",
+        "CPI-037"
+      ],
+      "size": "M",
+      "body": "## Цел\n\nПървата публична версия да излезе с доказани основни функции и управляем риск.\n\n## Обхват\n\nФинален review на критерии, beta feedback, account prerequisites, production конфигурация и rollout план.\n\n## Критерии за приемане\n\n- [ ] Всички P0 са приети; няма blocker-и за death, 10-revive cap, score validation, account deletion или native stability.\n- [ ] Beta feedback и performance/latency/SSV данните са прегледани; критерии за продължаване/спиране на rollout са числово фиксирани.\n- [ ] Production endpoints, ad app/units, signing, privacy URLs и audience settings са проверени по точния подписан build.\n- [ ] Submission, staged rollout и monitoring имат собственик и график; публично publishing не е страничен ефект от planning пакета.\n- [ ] Първият operational review проверява разпределението до 350, ad no-fill по региони, средни revives и разходи; бъдещи промени имат нов versioned backlog.\n\n## Проверка и демонстрация\n\nGo/no-go запис с build IDs, изпълнени тестове и ограничения. Изпращането към магазините е отделна изрично започната release работа, когато пакетът е готов.",
+      "labels": [
+        "priority:P0",
+        "area:release",
+        "type:task",
+        "status:backlog"
+      ]
+    }
+  ]
+}

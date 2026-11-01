@@ -1,0 +1,25 @@
+name: Implementation задача
+description: Конкретна промяна с проверим резултат
+body:
+  - type: textarea
+    id: purpose
+    attributes:
+      label: Проблем и цел
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Обхват и критерии за приемане
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Как ще се провери?
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Зависимости

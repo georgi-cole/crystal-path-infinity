@@ -1,0 +1,22 @@
+name: Проблем в играта
+description: Възпроизводим проблем с игра, профил, класация или реклама
+title: "[Bug] "
+body:
+  - type: textarea
+    id: observed
+    attributes:
+      label: Какво се случи и какво очакваше?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Стъпки за възпроизвеждане
+      description: Включи версия, устройство, OS, game mode, ред и използвани продължавания. Без email, age, tokens или лични данни.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Доказателства
+      description: Screenshot или sanitised run/reference ID, ако е наличен.
