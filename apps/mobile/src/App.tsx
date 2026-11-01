@@ -1,4 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import type { RunState } from '@crystal-path-infinity/game-core';
+import {
+  clearPracticeCheckpoint,
+  readPracticeCheckpoint,
+  writePracticeCheckpoint,
+} from './practice-save';
+import type { PracticeLoad } from './practice-save';
 import { InfinityPractice } from './infinity-scene';
 import { Capacitor } from '@capacitor/core';
 import { markDiagnosticReactReady } from './startup-diagnostics';
@@ -91,8 +98,44 @@ function BuildDetails() {
   );
 }
 
+function loadLocalPractice(): PracticeLoad {
+  if (typeof window === 'undefined') return { status: 'empty' };
+  try {
+    return readPracticeCheckpoint(window.localStorage);
+  } catch {
+    return { status: 'corrupt', message: 'Local storage is unavailable. Practice is still playable, but progress may not be saved.' };
+  }
+}
+
 export function App() {
-  const [playPreview, setPlayPreview] = useState(false);
+  const [game, setGame] = useState<{ initial: RunState | null } | null>(null);
+  const [saved, setSaved] = useState<PracticeLoad>(loadLocalPractice);
+  const [storageWarning, setStorageWarning] = useState<string | null>(null);
+  const onCheckpoint = useCallback((state: RunState) => {
+    try {
+      writePracticeCheckpoint(window.localStorage, state);
+      setStorageWarning(null);
+    } catch {
+      setStorageWarning('Local storage could not save this checkpoint. You can keep playing, but progress might not survive an app restart.');
+    }
+  }, []);
+  function newPractice() {
+    if (saved.status === 'ready' && saved.state.status !== 'finished' &&
+      !window.confirm('Start a new practice? This permanently replaces the saved attempt and its progress.')) return;
+    if (saved.status === 'corrupt' &&
+      !window.confirm('Discard the damaged practice save and begin a new attempt?')) return;
+    try {
+      clearPracticeCheckpoint(window.localStorage);
+      setStorageWarning(null);
+    } catch {
+      setStorageWarning('Local storage is unavailable. The new attempt can be played but might not be saved.');
+    }
+    setGame({ initial: null });
+  }
+  function closePractice() {
+    setGame(null);
+    setSaved(loadLocalPractice());
+  }
   useEffect(() => {
     // Post-commit smoke signal: public build metadata only, outside production.
     if (showBuildDetails) console.info('CPI_APP_READY ' + JSON.stringify(__CPI_BUILD_INFO__));
@@ -101,7 +144,12 @@ export function App() {
     }
   }, []);
 
-  if (playPreview) return <InfinityPractice onExit={() => setPlayPreview(false)} />;
+  if (game) return (
+    <>
+      <InfinityPractice onExit={closePractice} initialState={game.initial} onCheckpoint={onCheckpoint} />
+      {storageWarning && <div role="alert" className="cpi-storage-warning">{storageWarning}</div>}
+    </>
+  );
 
   return (
     <main className="launch-screen" data-testid="app-ready" aria-labelledby="brand-title">
@@ -127,10 +175,17 @@ export function App() {
           <span />
         </div>
         <p className="launch-message">The endless crystal bridge is taking shape.</p>
-        <button className="preview-play-button" type="button" onClick={() => setPlayPreview(true)}>
-          Preview practice
+        {saved.status === 'ready' && (
+          <button className="preview-play-button" type="button" onClick={() => setGame({ initial: saved.state })}>
+            Continue practice · Row {saved.state.currentRow}
+          </button>
+        )}
+        {saved.status === 'corrupt' && <p className="preview-note" role="alert">{saved.message}</p>}
+        <button className="preview-play-button" type="button" onClick={newPractice}>
+          {saved.status === 'corrupt' ? 'Discard save and start new' : 'New practice'}
         </button>
-        <p className="preview-note">Local preview · Progress not yet saved · No ranked scores</p>
+        {storageWarning && <p className="preview-note" role="alert">{storageWarning}</p>}
+        <p className="preview-note">Offline practice · No account needed · Results are not ranked</p>
       </section>
 
       <footer className="launch-footer">
