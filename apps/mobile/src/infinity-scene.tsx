@@ -84,6 +84,7 @@ export function InfinitySceneView({
   onRetry,
 }: InfinitySceneViewProps) {
   const presented = presentInfinityScene(state);
+  const catastrophic = state.death?.cause === 'wrong_tile' && state.status !== 'playing';
   const current = presented.rows.find((row) => row.phase === 'current');
   const interactive = ready && !busy && !paused && !error && state.status === 'playing';
   const spClass = state.sp <= 60 ? 'is-danger' : state.sp <= 140 ? 'is-warn' : 'is-safe';
@@ -106,7 +107,7 @@ export function InfinitySceneView({
 
   return (
     <main
-      className={`cps-shell ${INFINITY_SCENE_SKIN.shell} cpi-infinity-scene`}
+      className={`cps-shell ${INFINITY_SCENE_SKIN.shell} cpi-infinity-scene${catastrophic ? ' is-catastrophe' : ''}`}
       data-testid="infinity-scene"
       aria-label={INFINITY_SCENE_SKIN.title}
     >

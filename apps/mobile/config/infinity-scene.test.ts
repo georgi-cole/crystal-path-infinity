@@ -57,7 +57,7 @@ describe('CPI-008 standalone scene', () => {
   it('keeps native safe-area, short viewport and reduced-motion rules', () => {
     const css = readFileSync(new URL('../src/infinity-scene.css', import.meta.url), 'utf8');
     expect(css).toContain('env(safe-area-inset-top');
-    expect(css).toContain('max-height:650px');
+    expect(css).toMatch(/max-height:\s*650px/);
     expect(css).toContain('prefers-reduced-motion');
     expect(css).not.toContain("url('./infinity-black-hole-bg.png')");
   });

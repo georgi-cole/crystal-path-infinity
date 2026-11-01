@@ -2408,3 +2408,18 @@
     transition: none !important;
   }
 }
+
+.cpi-infinity-scene.is-catastrophe .cpi-overlay {
+  animation: cpi-scene-result-delay 1.4s both;
+}
+@keyframes cpi-scene-result-delay {
+  0%,
+  75% {
+    opacity: 0;
+    visibility: hidden;
+  }
+  100% {
+    opacity: 1;
+    visibility: visible;
+  }
+}
