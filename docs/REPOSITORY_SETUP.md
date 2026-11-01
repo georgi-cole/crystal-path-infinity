@@ -4,7 +4,7 @@
 
 ## Проверено състояние — 1 ноември 2026 г.
 
-[Репото `georgi-cole/crystal-path-infinity`](https://github.com/georgi-cole/crystal-path-infinity) е създадено от собственика. Качен е първоначален README в `main` с commit `a2c06f227661a56ee54644b3e209ae4d2ba57075`. Създадени и проверени са **38 GitHub issues** със стабилни CPI ID и **14 използвани labels**. Това е моментна снимка след създаването на backlog-а; не удостоверява последващи качвания или CI runs.
+[Репото `georgi-cole/crystal-path-infinity`](https://github.com/georgi-cole/crystal-path-infinity) е създадено от собственика. Основният пакет от **26 файла** е качен в `main` с [commit `235f3379`](https://github.com/georgi-cole/crystal-path-infinity/commit/235f3379c74ddd37bf7febec69ad28be23b75f35); Git blob хешовете на всички файлове са прочетени обратно и съвпадат с подготвения пакет. Създадени и проверени са **38 GitHub issues** със стабилни CPI ID и **14 използвани labels**. [Planning checks run #41311788955](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41311788955) е приключил успешно за този commit. Това удостоверява подготовката на плана и backlog-а; мобилното приложение още не е реализирано.
 
 | Област | Проверено | Оставаща работа |
 | --- | --- | --- |
@@ -19,7 +19,7 @@
 | Изтриване на merged branches | Изключено | Да се включи |
 | Auto-merge | Изключено | Съответства на плана |
 | Actions permissions | Не са проверени/настроени през admin API | Да се приложат и проверят read-only permissions и забрана workflows да одобряват PR |
-| CI | Няма проверен успешен run за този пакет | След качването да се изпълни и провери planning workflow; не твърдим green CI |
+| CI | **Planning checks: success** за commit `235f3379` — manifest, bootstrap tests и dry-run | Мобилните build/test проверки се добавят след scaffold в CPI-004 |
 | Защита на `main` | Rulesets API върна празен списък; classic branch protection не е проверена | Да се проверят и двата механизма; няма потвърдена защита |
 
 Наличният GitHub connector не предостави операции за admin settings, native milestones и оформяне на labels. Наличният браузър няма завършен GitHub вход. Затова тези настройки са оставени явно като неприключени, вместо да се отчитат като изпълнени. Подготовката на кода може да започне по съществуващите issues; липсата на native milestones не прави backlog-а неизползваем.
@@ -49,7 +49,7 @@
 3. **Actions → General:** read-only workflow permissions; изключено разрешението workflows да създават и одобряват pull requests. Да се провери ефективната настройка след запис.
 4. **Labels:** актуализиране на цветовете и описанията на съществуващите labels по `planning/backlog.json`. Не се създават дублиращи labels с различен правопис.
 5. **Milestones:** създаване на липсващите шест native milestones по manifest и присвояване на всяко issue според неговото поле `milestone`. CPI ID и зависимостите остават същите. Това може да се довърши след началото на работата.
-6. **CI и `main`:** изпълнение на началния planning workflow и проверка на резултата. След това се проверяват rulesets и classic branch protection и се настройват PR, изискваните действителни CI checks, resolved conversations и забрана за force push/delete, ако планът ги поддържа. Празният rulesets отговор сам по себе си не доказва липса или наличие на classic protection.
+6. **Защита на `main`:** началният planning workflow вече е минал успешно. Остава да се проверят rulesets и classic branch protection и да се настроят PR, изискваният реален check `Planning manifest and bootstrap`, resolved conversations и забрана за force push/delete, ако планът ги поддържа. Празният rulesets отговор сам по себе си не доказва липса или наличие на classic protection. Имената на required checks се преглеждат отново при промяната на CI в CPI-004.
 
 ## Проверка и допълване чрез bootstrap
 
