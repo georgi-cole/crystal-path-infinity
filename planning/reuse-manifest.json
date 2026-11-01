@@ -2,7 +2,7 @@
   "source_repository": "georgi-cole/bbmobilenew-source",
   "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
   "inspected_on": "2026-11-01",
-  "status": "single_player_rules_adapted_visual_assets_pending",
+  "status": "single_player_rules_and_css_scene_adapted_binary_assets_pending",
   "resources": [
     {
       "path": "src/minigames/crystalPathShattered/shatteredLogic.ts",
@@ -29,13 +29,17 @@
     {
       "path": "src/minigames/crystalPathShattered/crystalPathShattered.css",
       "decision": "adapt",
-      "notes": "Keep current Infinity visuals; consolidate historical overrides and profile mobile cost.",
-      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/minigames/crystalPathShattered/crystalPathShattered.css"
+      "notes": "CPI-008 reuses the pinned glass bridge, perspective, lighting and tile-state CSS with a narrow-portrait/safe-area overlay. The old AI/season React runtime and its feed/standings are not mounted.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/minigames/crystalPathShattered/crystalPathShattered.css",
+      "adapted_in": "CPI-008",
+      "targets": [
+        "apps/mobile/src/infinity-scene.css"
+      ]
     },
     {
       "path": "src/minigames/crystalPathShattered/infinity-black-hole-bg.png",
       "decision": "reuse_after_rights_check",
-      "notes": "Source size 1896459 bytes; optimize after visual comparison; not copied yet.",
+      "notes": "Original bitmap provenance/rights remain separately tracked; it is not silently copied. CPI-008 supplies a bundled CSS-rendered black-hole atmosphere and rings, available offline without a network request. Exact bitmap comparison/replacement remains an asset review.",
       "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/minigames/crystalPathShattered/infinity-black-hole-bg.png"
     },
     {

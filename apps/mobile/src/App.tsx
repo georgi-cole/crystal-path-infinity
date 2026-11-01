@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { InfinityPractice } from './infinity-scene';
 import { Capacitor } from '@capacitor/core';
 import { markDiagnosticReactReady } from './startup-diagnostics';
 
@@ -91,6 +92,7 @@ function BuildDetails() {
 }
 
 export function App() {
+  const [playPreview, setPlayPreview] = useState(false);
   useEffect(() => {
     // Post-commit smoke signal: public build metadata only, outside production.
     if (showBuildDetails) console.info('CPI_APP_READY ' + JSON.stringify(__CPI_BUILD_INFO__));
@@ -98,6 +100,8 @@ export function App() {
       markDiagnosticReactReady();
     }
   }, []);
+
+  if (playPreview) return <InfinityPractice onExit={() => setPlayPreview(false)} />;
 
   return (
     <main className="launch-screen" data-testid="app-ready" aria-labelledby="brand-title">
@@ -122,7 +126,11 @@ export function App() {
         <div className="brand-divider" aria-hidden="true">
           <span />
         </div>
-        <p className="launch-message">The path is taking shape.</p>
+        <p className="launch-message">The endless crystal bridge is taking shape.</p>
+        <button className="preview-play-button" type="button" onClick={() => setPlayPreview(true)}>
+          Preview practice
+        </button>
+        <p className="preview-note">Local preview · Progress not yet saved · No ranked scores</p>
       </section>
 
       <footer className="launch-footer">
