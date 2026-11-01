@@ -2,7 +2,7 @@
 
 Изолиран технически прототип за React + Capacitor, server round trips, lifecycle/audio и rewarded callbacks. **Това още не е пълната игра.** Всички опити са `official: false`, без класации, профили или реални награди. Bridge сцената няма mystery система и използва опростени 20 SP щета при всяка грешна стъпка.
 
-Локална проверка към 2026-11-01: **30 автоматизирани теста, typecheck, production web build и генериране/проверка на Android и iOS проектите преминават**. Това не доказва native compilation, работа на устройство, показана реклама или доставен Google SSV callback. Измерванията и оставащите проверки са в [CPI-002 results](../../docs/spikes/CPI-002-results.md); ограниченията на SDK са в [native audit](../../docs/spikes/CPI-002-native-audit.md).
+Локална проверка към 2026-11-01: **30 автоматизирани теста, typecheck, production web build и генериране/проверка на Android и iOS проектите преминават**. След това [GitHub Actions](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41322334324) компилира успешно Android debug APK и unsigned iOS Simulator app с проверените native версии. Това не доказва работа на физическо устройство, показана реклама или доставен Google SSV callback. Измерванията и оставащите проверки са в [CPI-002 results](../../docs/spikes/CPI-002-results.md); ограниченията на SDK са в [native audit](../../docs/spikes/CPI-002-native-audit.md).
 
 ## 1. Инсталиране и автоматизирани проверки
 
@@ -126,7 +126,7 @@ xcodebuild build -project ios/App/App.xcodeproj -scheme App \
 
 Това създава simulator `.app`, без App Store credentials. То не е IPA за физически iPhone. За UI можеш да отвориш `ios/App/App.xcodeproj` в Xcode и да избереш наличен iPhone Simulator. Ако probe-ът работи на същия Mac, използвай `http://localhost:8787/v1/probe`; за remote endpoint — HTTPS. iOS настройката е само `NSAllowsLocalNetworking`, без broad ATS exceptions.
 
-SPM използва Capacitor **8.5.3**, GMA **13.11.0** и app-level exact UMP **3.1.0**. Ако има проверен `native-locks/Package.resolved`, generator-ът го копира в `ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`. Първото CI resolution трябва да върне действителния lock като artifact за преглед. Simulator compilation/presentation не заменя тест на физическо устройство за ads, audio, background и recovery.
+SPM използва Capacitor **8.5.3**, GMA **13.11.0** и app-level exact UMP **3.1.0**. Ако има проверен `native-locks/Package.resolved`, generator-ът го копира в `ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`. Действителният lock от успешното първо CI resolution вече е записан в `native-locks/Package.resolved`; следващите builds го използват със забранено автоматично resolution. Simulator compilation/presentation не заменя тест на физическо устройство за ads, audio, background и recovery.
 
 ## 6. Native callbacks и бъдещ SSV тест
 

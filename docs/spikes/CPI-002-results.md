@@ -1,6 +1,6 @@
 # CPI-002 — Mobile compatibility spike: evidence and remaining gates
 
-**Status: in progress, 2026-11-01.** The isolated lab is implemented and its web/server behavior is verified locally. Native compilation is queued for CI. Physical Android/iPhone behavior, actual Google SSV delivery, exact Families eligibility and a deployed backend cost/latency decision remain open. **CPI-002 is not complete and CPI-003 is not cleared by a browser result.**
+**Status: in progress, 2026-11-01.** The isolated lab is implemented and its web/server behavior is verified locally. Both Android debug and unsigned iOS Simulator compilation passed in GitHub Actions. Physical Android/iPhone behavior, actual Google SSV delivery, exact Families eligibility and a deployed backend cost/latency decision remain open. **CPI-002 is not complete and CPI-003 is not cleared by a browser result.**
 
 The accepted product rules remain 300 starting SP, a 400 SP maximum, 200 SP for continuations 1–5 and 150 SP for 6–10. The tenth continuation remains playable; the next death ends that run. The lab is not the full endless game: it has a fixed diagnostic scene and 20 SP damage per wrong test step. Its results are never ranked. See the [accepted product contract](../decisions/CPI-001-product-contract.md), [lab instructions](../../spikes/mobile/README.md), [probe API contract](../../spikes/mobile/server/CONTRACT.md) and [native source audit](CPI-002-native-audit.md).
 
@@ -17,7 +17,7 @@ The scene uses the source game's two-choice bridge/HUD approach and visual palet
 
 ## 2. Version record
 
-These are pinned candidates and locally verified package/configuration values. Native resolution and compilation must be recorded separately below. The [native audit](CPI-002-native-audit.md) gives immutable source references and the plugin's known callback/privacy behavior.
+These are the pinned candidates. Package/configuration checks and the native resolutions listed below have passed; device validation is still required. The [native audit](CPI-002-native-audit.md) gives immutable source references and the plugin's known callback/privacy behavior.
 
 | Component | Candidate / observed version |
 | --- | --- |
@@ -28,9 +28,9 @@ These are pinned candidates and locally verified package/configuration values. N
 | Capacitor core/CLI/Android/iOS | 8.5.3 |
 | Capacitor App / community AdMob | 8.1.2 / 8.2.1 |
 | Android native SDKs | GMA 25.4.0; UMP 4.0.0; no external mediation adapters |
-| Android tools | JDK 21 in CI; Gradle 8.14.3; AGP 8.13.0; Kotlin 2.2.20; compile/target API 36; minimum API 24 |
+| Android tools | Temurin 21.0.13+9; Gradle 8.14.3 (embedded Kotlin 2.0.21); AGP 8.13.0; application Kotlin 2.2.20; compile/target API 36; minimum API 24 |
 | iOS native SDKs | GMA 13.11.0; UMP exact 3.1.0; Capacitor SPM 8.5.3 |
-| iOS tools | macOS 26 / Xcode 26.6 CI candidate; minimum iOS 15; iPhone target |
+| iOS tools | macOS 26 / Xcode 26.6 (17F113); Swift 6.3.3; observed iPhone Simulator SDK 26.5; minimum iOS 15; iPhone target |
 | Lab app ID | `com.georgicole.crystalpath.spike` |
 | Privacy test context | Fixed child/unknown; separate UMP/GMA flags, G rating, non-personalized request, Android AD_ID removed |
 
@@ -43,9 +43,11 @@ The original plugin's Android GMA dependency is dynamic. The lab overrides it wi
 | Generate Android/iOS from actual built web bundle | PASS locally; both generated projects passed `--check` |
 | Parse generated Android XML and iOS plist | PASS locally |
 | Third-party native manifests unchanged by generation | PASS locally; fingerprint checks enforced |
-| Android debug compilation / resolved dependencies / merged AD_ID permission | Pending CI |
-| iOS Simulator compilation / resolved SPM versions and lockfile | Pending CI |
+| Android debug compilation / resolved dependencies / merged AD_ID permission | PASS: GMA 25.4.0 / UMP 4.0.0 resolved; APK produced; merged AD_ID absent |
+| iOS Simulator compilation / resolved SPM versions and lockfile | PASS: Capacitor 8.5.3 / GMA 13.11.0 / UMP 3.1.0 resolved; unsigned Simulator app produced |
 | Real phone installation / display of test ads | Not executed |
+
+First native build: [Actions run 41322334324](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41322334324), source head `26a4bfafe988ff61e51cc31ee61c11bc25f13e76`; [compact evidence record](evidence/CPI-002-native-build.json). All three mobile jobs and the separate planning check passed. The actual [SPM lock](../../spikes/mobile/native-locks/Package.resolved) is captured from the iOS evidence artifact and is reused with automatic package resolution disabled. [PR #40](https://github.com/georgi-cole/crystal-path-infinity/pull/40) shows current-head checks, including the subsequent locked rebuild.
 
 Build artifacts are retained for seven days. The CI build proves compilation, not phone behavior or ad delivery. The Simulator archive is not an installable physical-iPhone IPA.
 
@@ -145,4 +147,4 @@ The current lab uses a single child/unknown context, so adult/teen transitions, 
 
 ## 6. Current decision
 
-**Continue the Capacitor candidate through native compilation and physical-device validation.** Published source supports the necessary SSV bridge, and the local application/server flow has no demonstrated blocker after the fixes above. **Hold the final CPI-002 go/no-go and keep the task open** until native/device/SSV and deployed latency/resource evidence is recorded. The server's volatile state and demo ad IDs are intentional diagnostic boundaries, not production choices.
+**Continue the successfully compiled Capacitor candidate through physical-device validation.** Published source supports the necessary SSV bridge, and the local application/server flow has no demonstrated blocker after the fixes above. **Hold the final CPI-002 go/no-go and keep the task open** until native/device/SSV and deployed latency/resource evidence is recorded. The server's volatile state and demo ad IDs are intentional diagnostic boundaries, not production choices.
