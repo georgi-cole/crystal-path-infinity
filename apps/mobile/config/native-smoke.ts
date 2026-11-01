@@ -20,6 +20,7 @@ export interface NativeLogAnalysis {
   }[];
   nativeEvents: { line: number; event: string; raw: string }[];
   engineMessages: { line: number; raw: string }[];
+  prebridgeGates: { line: number; stage: 'waiting' | 'paused' | 'released'; gateId: string }[];
 }
 export interface LifecycleBoundary {
   sessionId: string;
@@ -37,6 +38,7 @@ const diagnosticEvents = new Set<DiagnosticEvent>([
   'pause',
   'resume',
   'visibility',
+  'native-state',
   'js-error',
   'unhandled-rejection',
 ]);
@@ -225,10 +227,36 @@ export function analyzeNativeLog(
     externalRuntimeErrors: [],
     nativeEvents: [],
     engineMessages: [],
+    prebridgeGates: [],
   };
   for (const [index, raw] of lines.entries()) {
     const line = index + 1;
     const entry = consoleMessage(raw);
+    const gatePayload = raw.match(/CPI_NATIVE_GATE (\{.*\})$/)?.[1];
+    if (gatePayload) {
+      try {
+        const gate: unknown = JSON.parse(gatePayload);
+        if (
+          !isRecord(gate) ||
+          !['waiting', 'paused', 'released'].includes(String(gate.stage)) ||
+          typeof gate.gateId !== 'string' ||
+          !gate.gateId
+        ) {
+          throw new Error('Invalid prebridge gate');
+        }
+        result.prebridgeGates.push({
+          line,
+          stage: gate.stage as 'waiting' | 'paused' | 'released',
+          gateId: gate.gateId,
+        });
+      } catch {
+        result.errors.push({
+          line,
+          kind: 'native-gate-protocol',
+          message: 'Malformed prebridge native gate',
+        });
+      }
+    }
     const android = androidLogRecord(raw);
     const isAndroidRuntime = android
       ? android.tag === 'AndroidRuntime' && ['E', 'F'].includes(android.level)
@@ -396,6 +424,100 @@ export function nativeLaunchProblems(
       if (!nativePause || !nativeResume)
         problems.push('Missing ordered Android native pause/resume observations');
     }
+  }
+  return problems;
+}
+
+/** Additional CPI-007 evidence; never substitute synthetic native events for this gate. */
+export function nativeLifecycleProblems(analysis: NativeLogAnalysis, prebridge: boolean): string[] {
+  const problems: string[] = [];
+  for (const reason of ['startup', 'resume']) {
+    if (
+      !analysis.diagnostics.some(
+        (event) =>
+          event.event === 'bridge-ready' &&
+          event.details?.reason === reason &&
+          event.details.lifecycle,
+      )
+    ) {
+      problems.push(`Missing ${reason} native page/bridge handshake`);
+    }
+  }
+  const snapshots = analysis.diagnostics
+    .filter((event) => event.details?.lifecycle)
+    .map((event) => ({ event, value: event.details!.lifecycle! }));
+  if (!snapshots.length)
+    return [...problems, 'Missing current-page native foreground clock snapshots'];
+  for (const { event, value } of snapshots) {
+    if (
+      value.pageId !== event.sessionId ||
+      typeof value.bridgeId !== 'string' ||
+      !value.bridgeId ||
+      !Number.isSafeInteger(value.sequence) ||
+      value.sequence < 1 ||
+      typeof value.isActive !== 'boolean' ||
+      !Number.isFinite(value.nativeTimeMs) ||
+      value.nativeTimeMs < 0 ||
+      !Number.isFinite(value.foregroundTimeMs) ||
+      value.foregroundTimeMs < 0
+    ) {
+      problems.push('Invalid native page/bridge/clock snapshot');
+    }
+  }
+  if (new Set(snapshots.map(({ value }) => value.bridgeId)).size !== 1)
+    problems.push('Native bridge identity changed within one page');
+  const ordered = [...snapshots].sort((a, b) => a.value.sequence - b.value.sequence);
+  for (let i = 1; i < ordered.length; i++) {
+    const prior = ordered[i - 1].value;
+    const current = ordered[i].value;
+    if (
+      current.sequence === prior.sequence ||
+      current.nativeTimeMs < prior.nativeTimeMs ||
+      current.foregroundTimeMs < prior.foregroundTimeMs
+    )
+      problems.push('Native sequence or monotonic clock regressed');
+  }
+  const inactive = ordered.find(({ value }) => !value.isActive);
+  const resumed = ordered.find(
+    ({ value }) => inactive && value.sequence > inactive.value.sequence && value.isActive,
+  );
+  if (!inactive || !resumed) problems.push('Missing native inactive/active clock boundary');
+  else {
+    const elapsed = resumed.value.nativeTimeMs - inactive.value.nativeTimeMs;
+    const foreground = resumed.value.foregroundTimeMs - inactive.value.foregroundTimeMs;
+    if (elapsed <= 0 || foreground > 250 || foreground >= elapsed)
+      problems.push('Native foreground clock included the background interval');
+  }
+  if (prebridge) {
+    const gates = analysis.prebridgeGates;
+    const waiting = gates.find((gate) => gate.stage === 'waiting');
+    const paused = gates.find(
+      (gate) =>
+        gate.stage === 'paused' &&
+        waiting &&
+        gate.gateId === waiting.gateId &&
+        gate.line > waiting.line,
+    );
+    const released = gates.find(
+      (gate) =>
+        gate.stage === 'released' &&
+        paused &&
+        gate.gateId === paused.gateId &&
+        gate.line > paused.line,
+    );
+    const page = analysis.diagnostics.find((event) => event.event === 'page-start');
+    if (!waiting || !paused || !released || !page || page.line <= released.line)
+      problems.push('Missing ordered native interruption before first page/bridge');
+    const firstHandshake = analysis.diagnostics.find(
+      (event) => event.event === 'bridge-ready' && event.details?.reason === 'startup',
+    );
+    if (
+      firstHandshake &&
+      analysis.diagnostics.some(
+        (event) => ['pause', 'resume'].includes(event.event) && event.line < firstHandshake.line,
+      )
+    )
+      problems.push('Pre-page pause/resume was replayed into the new page');
   }
   return problems;
 }

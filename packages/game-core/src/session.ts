@@ -24,7 +24,8 @@ export interface SessionTransitionResult extends Omit<TransitionResult, 'reason'
   readonly reason: SessionRejectionReason | null;
 }
 
-export type BoundRunCommand = (time: SessionTime) => SessionTransitionResult;
+/** Lazy time is evaluated only after obsolete/consumed callback guards. */
+export type BoundRunCommand = (time: SessionTime | (() => SessionTime)) => SessionTransitionResult;
 
 export interface RunSession {
   readonly getState: () => RunState;
@@ -82,7 +83,10 @@ export function createRunSession(initialState: RunState, rng: RandomSource): Run
           return reject('stale-command');
         }
 
-        const next = transitionRun(state, command, { ...time, rng });
+        const next = transitionRun(state, command, {
+          ...(typeof time === 'function' ? time() : time),
+          rng,
+        });
         // A rejected input can still carry due effects/death. Always commit its state.
         // A thrown transition leaves both the owned checkpoint and binding untouched.
         if (
