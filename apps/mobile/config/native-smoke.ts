@@ -12,6 +12,12 @@ export interface NativeLogAnalysis {
   readyMarkerLines: number[];
   diagnostics: ParsedDiagnostic[];
   errors: { line: number; kind: string; message: string }[];
+  externalRuntimeErrors: {
+    line: number;
+    pid: number;
+    processName: string;
+    message: string;
+  }[];
   nativeEvents: { line: number; event: string; raw: string }[];
   engineMessages: { line: number; raw: string }[];
 }
@@ -74,31 +80,204 @@ function consoleMessage(line: string): { level: string; message: string } | unde
   if (ios) return { level: ios[1], message: ios[2] };
   return undefined;
 }
-export function analyzeNativeLog(log: string, build: BuildInfo): NativeLogAnalysis {
+interface AndroidLogRecord {
+  pid: number;
+  level: string;
+  tag: string;
+  message: string;
+}
+interface AndroidProcessClaims {
+  runtimeNames: Set<string>;
+  observedNames: Set<string>;
+  crashStarts: Set<string>;
+  declarations: Set<string>;
+  processStarts: Set<string>;
+  runtimeAfterDeath: Set<string>;
+  dead: boolean;
+  invalid: boolean;
+  appAssociated: boolean;
+}
+function validPid(value: string): number | undefined {
+  const pid = Number(value);
+  return /^[1-9]\d*$/.test(value) && Number.isSafeInteger(pid) && pid <= 2_147_483_647
+    ? pid
+    : undefined;
+}
+function androidLogRecord(raw: string): AndroidLogRecord | undefined {
+  // The driver captures epoch format; brief format covers retained older evidence.
+  const epoch = raw.match(/^\s*\d+\.\d+\s+(\d+)\s+\d+\s+([VDIWEF])\s+([^\s:]+)\s*:\s?(.*)$/);
+  const brief = epoch ? undefined : raw.match(/^([VDIWEF])\/([^\s(]+)\(\s*(\d+)\s*\)\s*:\s?(.*)$/);
+  const value = epoch?.[1] ?? brief?.[3];
+  const pid = value === undefined ? undefined : validPid(value);
+  if (pid === undefined) return undefined;
+  return epoch
+    ? { pid, level: epoch[2], tag: epoch[3], message: epoch[4] }
+    : { pid, level: brief![1], tag: brief![2], message: brief![4] };
+}
+function logLines(log: string): string[] {
   const lines = stripVTControlCharacters(log).split(/\r?\n/);
   if (lines.at(-1) === '') lines.pop();
+  return lines;
+}
+function androidProcessClaims(
+  lines: string[],
+  build: BuildInfo,
+): Map<number, AndroidProcessClaims> {
+  const claims = new Map<number, AndroidProcessClaims>();
+  const forPid = (pid: number) => {
+    let value = claims.get(pid);
+    if (!value) {
+      value = {
+        runtimeNames: new Set(),
+        observedNames: new Set(),
+        crashStarts: new Set(),
+        declarations: new Set(),
+        processStarts: new Set(),
+        runtimeAfterDeath: new Set(),
+        dead: false,
+        invalid: false,
+        appAssociated: false,
+      };
+      claims.set(pid, value);
+    }
+    return value;
+  };
+  const belongsToApp = (name: string) => name === build.appId || name.startsWith(`${build.appId}:`);
+  for (const raw of lines) {
+    const record = androidLogRecord(raw);
+    if (!record) continue;
+    const current = forPid(record.pid);
+    if (record.tag === 'AndroidRuntime' && ['E', 'F'].includes(record.level)) {
+      if (current.dead) current.runtimeAfterDeath.add(raw);
+      if (record.message.startsWith('FATAL EXCEPTION:')) current.crashStarts.add(raw);
+      if (/^Process\b/.test(record.message)) {
+        const declaration = record.message.match(
+          /^Process: ([A-Za-z0-9_.$:-]{1,200}), PID: ([1-9]\d*)\s*$/,
+        );
+        const declaredPid = declaration ? validPid(declaration[2]) : undefined;
+        if (!declaration || declaredPid !== record.pid) {
+          current.invalid = true;
+          if (declaredPid !== undefined) forPid(declaredPid).invalid = true;
+        } else {
+          current.declarations.add(raw);
+          current.runtimeNames.add(declaration[1]);
+          current.observedNames.add(declaration[1]);
+          if (belongsToApp(declaration[1])) current.appAssociated = true;
+        }
+      }
+    }
+    if (record.tag === 'ActivityManager') {
+      const died = record.message.match(/\bProcess ([^\s()]{1,200}) \(pid ([1-9]\d*)\) has died\b/);
+      const deadPid = died ? validPid(died[2]) : undefined;
+      if (died && deadPid !== undefined) {
+        const process = forPid(deadPid);
+        process.observedNames.add(died[1]);
+        process.dead = true;
+        if (belongsToApp(died[1])) process.appAssociated = true;
+      }
+      const started = record.message.match(/\bStart proc ([1-9]\d*):([^/\s]{1,200})\//);
+      const startedPid = started ? validPid(started[1]) : undefined;
+      if (started && startedPid !== undefined) {
+        const process = forPid(startedPid);
+        process.processStarts.add(raw);
+        process.observedNames.add(started[2]);
+        const componentOwner = record.message.match(/\{([^/\s{}]+)\//)?.[1];
+        if (belongsToApp(started[2]) || (componentOwner && belongsToApp(componentOwner))) {
+          // Includes an app's sandboxed WebView process, whose name belongs to WebView.
+          process.appAssociated = true;
+        }
+      }
+    }
+    const message = consoleMessage(raw)?.message;
+    if (message?.startsWith('CPI_APP_READY ') || message?.startsWith(diagnosticPrefix)) {
+      current.appAssociated = true;
+    }
+  }
+  return claims;
+}
+export function analyzeNativeLog(
+  log: string,
+  build: BuildInfo,
+  options: { attributionLog?: string } = {},
+): NativeLogAnalysis {
+  const lines = logLines(log);
+  // A complete capture can disprove attribution in an earlier attempt (PID reuse).
+  // A Process declaration alone never overrides conflicting names or app markers.
+  const attributionLines =
+    options.attributionLog === undefined ? lines : logLines(options.attributionLog);
+  if (options.attributionLog !== undefined) {
+    // Scoped lines already present in the complete capture must not be replayed
+    // after a recorded death. Retain extra evidence conservatively at the end.
+    const included = new Set(attributionLines);
+    for (const raw of lines) {
+      if (!included.has(raw)) {
+        attributionLines.push(raw);
+        included.add(raw);
+      }
+    }
+  }
+  const claims = androidProcessClaims(attributionLines, build);
   const result: NativeLogAnalysis = {
     lineCount: lines.length,
     readyMarkerLines: [],
     diagnostics: [],
     errors: [],
+    externalRuntimeErrors: [],
     nativeEvents: [],
     engineMessages: [],
   };
   for (const [index, raw] of lines.entries()) {
     const line = index + 1;
     const entry = consoleMessage(raw);
+    const android = androidLogRecord(raw);
+    const isAndroidRuntime = android
+      ? android.tag === 'AndroidRuntime' && ['E', 'F'].includes(android.level)
+      : /(?:\b[EF]\s+AndroidRuntime\s*:|^\s*[EF]\/AndroidRuntime\()/.test(raw);
     if (entry && ['E', 'F', 'error'].includes(entry.level)) {
       result.errors.push({ line, kind: 'javascript-console', message: entry.message });
     } else if (
+      android &&
+      ['E', 'F'].includes(android.level) &&
+      (android.tag === 'Capacitor' || android.tag.startsWith('Capacitor/'))
+    ) {
+      result.errors.push({ line, kind: 'capacitor-error', message: raw });
+    } else if (
+      !isAndroidRuntime &&
       /\bUncaught (?:\(in promise\) )?(?:\w*Error|exception)|Unhandled (?:Promise|promise) [Rr]ejection|⚡️\s*JS Eval error|Terminating app due to uncaught exception|\bEXC_BAD_ACCESS\b|\bFatal error:/.test(
         raw,
       )
     ) {
       result.errors.push({ line, kind: 'runtime-exception', message: raw });
     }
-    if (/(?:\b[EF]\s+AndroidRuntime\s*:|^[EF]\/AndroidRuntime\()/.test(raw)) {
-      result.errors.push({ line, kind: 'android-runtime', message: raw });
+    if (isAndroidRuntime) {
+      const process = android && claims.get(android.pid);
+      if (
+        android &&
+        process &&
+        !process.invalid &&
+        !process.appAssociated &&
+        !process.runtimeAfterDeath.has(raw) &&
+        process.runtimeNames.size === 1 &&
+        // Shared renderer identities do not establish the owning application.
+        ![...process.runtimeNames].some((name) =>
+          /webview|renderer|sandboxed_process|sandboxedprocessservice|privileged_process|privilegedprocessservice/i.test(
+            name,
+          ),
+        ) &&
+        process.observedNames.size === 1 &&
+        process.crashStarts.size === 1 &&
+        process.declarations.size === 1 &&
+        process.processStarts.size <= 1
+      ) {
+        result.externalRuntimeErrors.push({
+          line,
+          pid: android.pid,
+          processName: [...process.runtimeNames][0],
+          message: raw,
+        });
+      } else {
+        result.errors.push({ line, kind: 'android-runtime', message: raw });
+      }
     }
     if (/(?:\b[EF]\s+chromium\s*:|^[EF]\/chromium\()/.test(raw)) {
       result.engineMessages.push({ line, raw });

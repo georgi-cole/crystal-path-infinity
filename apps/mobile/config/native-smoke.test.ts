@@ -172,3 +172,219 @@ describe('native launch evidence gates', () => {
     expect(analysis.errors[0]?.kind).toBe('diagnostic-protocol');
   });
 });
+
+const runtime = (pid: number, message: string, timestamp = '1793557721.997') =>
+  `         ${timestamp}  ${pid}  3210 E AndroidRuntime: ${message}`;
+const crash = (pid: number, processName: string) => [
+  runtime(pid, 'FATAL EXCEPTION: main'),
+  runtime(pid, `Process: ${processName}, PID: ${pid}`),
+  runtime(pid, 'java.lang.IllegalStateException: Uncaught failure in a background worker'),
+];
+const started = (pid: number, processName: string, componentOwner = processName) =>
+  `1793557720.000 646 687 I ActivityManager: Start proc ${pid}:${processName}/u0a123 for service {${componentOwner}/.Service}`;
+
+describe('Android runtime process attribution', () => {
+  it('retains a confirmed foreign crash separately without a package allowlist', () => {
+    const lines = crash(1365, 'com.example.external:worker');
+    const analysis = analyzeNativeLog(lines.join('\n'), build);
+    expect(analysis.errors).toEqual([]);
+    expect(analysis.externalRuntimeErrors).toHaveLength(3);
+    expect(analysis.externalRuntimeErrors.map((error) => error.message)).toEqual(lines);
+    expect(
+      analysis.externalRuntimeErrors.every(
+        (error) => error.pid === 1365 && error.processName === 'com.example.external:worker',
+      ),
+    ).toBe(true);
+  });
+
+  it.each([build.appId, `${build.appId}:worker`])('fails a crash of %s', (name) => {
+    const analysis = analyzeNativeLog(crash(2070, name).join('\n'), build);
+    expect(analysis.errors).toHaveLength(3);
+    expect(analysis.externalRuntimeErrors).toEqual([]);
+  });
+
+  it('does not mistake a longer package prefix for an app child process', () => {
+    const analysis = analyzeNativeLog(crash(1365, `${build.appId}.unrelated`).join('\n'), build);
+    expect(analysis.errors).toEqual([]);
+    expect(analysis.externalRuntimeErrors).toHaveLength(3);
+  });
+
+  it.each([
+    ['missing declaration', runtime(1365, 'FATAL EXCEPTION: main')],
+    ['missing crash header', runtime(1365, 'Process: com.example.external, PID: 1365')],
+    [
+      'malformed declaration',
+      [
+        runtime(1365, 'FATAL EXCEPTION: main'),
+        runtime(1365, 'Process: com.example.external PID=1365'),
+      ].join('\n'),
+    ],
+    [
+      'mismatched declaration PID',
+      [
+        runtime(1365, 'FATAL EXCEPTION: main'),
+        runtime(1365, 'Process: com.example.external, PID: 2070'),
+      ].join('\n'),
+    ],
+    ['malformed log PID', '1793557721.997 unknown 3210 E AndroidRuntime: FATAL EXCEPTION: main'],
+  ])('fails closed for %s', (_label, log) => {
+    const analysis = analyzeNativeLog(log, build);
+    expect(analysis.errors.length).toBeGreaterThan(0);
+    expect(analysis.externalRuntimeErrors).toEqual([]);
+  });
+
+  it('keeps interleaved process crashes and an undeclared PID separate', () => {
+    const foreign = crash(1365, 'com.example.external');
+    const app = crash(2070, build.appId);
+    const log = [
+      foreign[0],
+      app[0],
+      foreign[1],
+      app[1],
+      foreign[2],
+      app[2],
+      runtime(9000, 'FATAL EXCEPTION: unknown'),
+    ].join('\n');
+    const analysis = analyzeNativeLog(log, build);
+    expect(analysis.externalRuntimeErrors.map((error) => error.pid)).toEqual([1365, 1365, 1365]);
+    expect(analysis.errors).toHaveLength(4);
+  });
+
+  it('rejects conflicting process names for one PID', () => {
+    const log = [
+      ...crash(1365, 'com.example.external'),
+      runtime(1365, 'Process: com.example.other, PID: 1365'),
+    ].join('\n');
+    const analysis = analyzeNativeLog(log, build);
+    expect(analysis.errors).toHaveLength(4);
+    expect(analysis.externalRuntimeErrors).toEqual([]);
+  });
+
+  it('does not borrow an old foreign declaration for a later crash of the same PID', () => {
+    const log = [
+      ...crash(1365, 'com.example.external'),
+      runtime(1365, 'FATAL EXCEPTION: later', '1793557799.001'),
+    ].join('\n');
+    const analysis = analyzeNativeLog(log, build);
+    expect(analysis.errors).toHaveLength(4);
+    expect(analysis.externalRuntimeErrors).toEqual([]);
+  });
+
+  it('treats PID reuse as ambiguous even when the reported process name is unchanged', () => {
+    const processStart = started(1365, 'com.example.external');
+    const log = [
+      processStart,
+      ...crash(1365, 'com.example.external'),
+      processStart.replace('1793557720.000', '1793557799.001'),
+    ].join('\n');
+    const analysis = analyzeNativeLog(log, build);
+    expect(analysis.errors).toHaveLength(3);
+    expect(analysis.externalRuntimeErrors).toEqual([]);
+  });
+
+  it.each([
+    'com.google.android.webview:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0',
+    'com.android.chrome:sandboxed_process0',
+    'com.example.host:renderer',
+  ])('keeps renderer ownership unknown for %s without owner evidence', (name) => {
+    const analysis = analyzeNativeLog(crash(2395, name).join('\n'), build);
+    expect(analysis.errors).toHaveLength(3);
+    expect(analysis.externalRuntimeErrors).toEqual([]);
+  });
+
+  it('does not borrow a dead process identity for a later same-PID runtime exception', () => {
+    const before = crash(1365, 'com.example.external');
+    const death =
+      '1793557723.681 646 754 I ActivityManager: Process com.example.external (pid 1365) has died: fg BTOP';
+    const later = runtime(
+      1365,
+      'java.lang.IllegalStateException: unknown actor after death',
+      '1793557730.000',
+    );
+    const full = [...before, death, later].join('\n');
+    const analysis = analyzeNativeLog(full, build);
+    expect(analysis.errors.map((error) => error.message)).toEqual([later]);
+    expect(analysis.externalRuntimeErrors.map((error) => error.message)).toEqual(before);
+    const scoped = analyzeNativeLog(later, build, { attributionLog: full });
+    expect(scoped.errors).toHaveLength(1);
+    expect(scoped.externalRuntimeErrors).toEqual([]);
+  });
+
+  it('preserves a confirmed earlier crash after ordinary death without replaying scoped lines', () => {
+    const before = crash(1365, 'com.example.external').join('\n');
+    const full =
+      before +
+      '\n1793557723.681 646 754 I ActivityManager: Process com.example.external (pid 1365) has died: fg BTOP\n';
+    for (const log of [full, before]) {
+      const analysis = analyzeNativeLog(log, build, { attributionLog: full });
+      expect(analysis.errors).toEqual([]);
+      expect(analysis.externalRuntimeErrors).toHaveLength(3);
+    }
+  });
+
+  it.each([
+    ['app process start', started(1365, build.appId)],
+    ['app-owned renderer', started(1365, 'com.android.webview:sandboxed_process0', build.appId)],
+    [
+      'matching app ready marker',
+      android('CPI_APP_READY ' + JSON.stringify(build)).replaceAll('2070', '1365'),
+    ],
+    ['app diagnostic', android(diagnostic(1, 'page-start')).replaceAll('2070', '1365')],
+  ])('never excludes an app-associated PID identified by %s', (_label, evidence) => {
+    const analysis = analyzeNativeLog(
+      [...crash(1365, 'com.example.external'), evidence].join('\n'),
+      build,
+    );
+    expect(analysis.errors).toHaveLength(3);
+    expect(analysis.externalRuntimeErrors).toEqual([]);
+  });
+
+  it('uses complete capture evidence for partial attempts and later PID conflicts', () => {
+    const lines = crash(1365, 'com.example.external');
+    const scope = lines[2];
+    const full = lines.join('\n');
+    expect(analyzeNativeLog(scope, build).errors).toHaveLength(1);
+    const confirmed = analyzeNativeLog(scope, build, { attributionLog: full });
+    expect(confirmed.errors).toEqual([]);
+    expect(confirmed.externalRuntimeErrors).toHaveLength(1);
+    const reused = analyzeNativeLog(scope, build, {
+      attributionLog: full + '\n' + started(1365, build.appId),
+    });
+    expect(reused.errors).toHaveLength(1);
+    expect(reused.externalRuntimeErrors).toEqual([]);
+  });
+
+  it('does not let an incomplete context override app claims in the scoped log', () => {
+    const analysis = analyzeNativeLog(crash(1365, build.appId).join('\n'), build, {
+      attributionLog: crash(1365, 'com.example.external').join('\n'),
+    });
+    expect(analysis.errors).toHaveLength(3);
+    expect(analysis.externalRuntimeErrors).toEqual([]);
+  });
+
+  it('keeps JavaScript and Capacitor errors blocking even on a confirmed foreign PID', () => {
+    const log = [
+      ...crash(1365, 'com.example.external'),
+      android(
+        "Uncaught TypeError: Cannot read properties of undefined (reading 'triggerEvent')",
+        'E',
+      ).replaceAll('2070', '1365'),
+      '1793557722.000 1365 1365 E Capacitor/Plugin: native callback failed',
+    ].join('\n');
+    const analysis = analyzeNativeLog(log, build);
+    expect(analysis.errors.map((error) => error.kind)).toEqual([
+      'javascript-console',
+      'capacitor-error',
+    ]);
+    expect(analysis.externalRuntimeErrors).toHaveLength(3);
+  });
+
+  it('supports PID attribution for retained brief-format Android logs', () => {
+    const lines = crash(1365, 'com.example.external').map((line) =>
+      line.replace(/^.* E AndroidRuntime:/, 'E/AndroidRuntime( 1365):'),
+    );
+    const analysis = analyzeNativeLog(lines.join('\n'), build);
+    expect(analysis.errors).toEqual([]);
+    expect(analysis.externalRuntimeErrors).toHaveLength(3);
+  });
+});

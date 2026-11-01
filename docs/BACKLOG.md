@@ -268,10 +268,13 @@ Focused тестове за drain/mystery/wrong смърт, преживяни �
 - [ ] Дълго OS suspend и промяна на часовника на устройството не създават SP, безкрайни buff-ове или безплатен progress.
 - [ ] Моделът поддържа server-owned clock за ranked; клиентско elapsed/time поле не е доказателство за валидно време.
 - [ ] Cleanup при напускане прекратява callbacks и звука; няма късно презаписване на друг опит. Не се добавят idle-kill или принудителен move timer; неподвижният играч не получава напредък.
+- [ ] Преди gameplay/audio да разчитат на lifecycle, реални native сценарии прекъсват с Home/lock преди JS bridge readiness и пресъздават process/WebView; доказват native readiness и правилната текуща page/session/bridge идентичност, без replay на остарели pre-page pause/resume като игрови събития. Всяко JavaScript изключение проваля проверката; без timer sleeps, bridge stubs или suppression.
 
 ### Проверка и демонстрация
 
 Контролирани clock тестове на границите 0/499/500/5000 ms и device сценарии lock/unlock, app switch и return. В ranked API се интегрира в CPI-021.
+
+Следа от [CPI-004 / #4](https://github.com/georgi-cole/crystal-path-infinity/issues/4) и [PR #42](https://github.com/georgi-cole/crystal-path-infinity/pull/42): CPI-003 наблюдава pre-React `window.Capacitor.triggerEvent` изключение. [Run #41336328215](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41336328215) на [commit `a72a5cd2`](https://github.com/georgi-cole/crystal-path-infinity/commit/a72a5cd29d38042761ffab892f86dd786e71f950) отчита три Android cold-start + Home/resume цикъла с правилни page/session/bridge/lifecycle и без повторение. Това не възпроизвежда или поправя предишното ранно прекъсване; проверките на физически устройства по [CPI-002 / #2](https://github.com/georgi-cole/crystal-path-infinity/issues/2) остават отделни.
 
 ## [CPI-008](https://github.com/georgi-cole/crystal-path-infinity/issues/8) — Извличане на текущата Infinity сцена за мобилен екран
 

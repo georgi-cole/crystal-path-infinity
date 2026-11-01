@@ -169,7 +169,8 @@ function appLog() {
   return existsSync(path) ? readFileSync(path, 'utf8') : '';
 }
 function readAnalysis() {
-  return analyzeNativeLog(appLog().slice(logOffset), buildInfo);
+  const fullLog = appLog();
+  return analyzeNativeLog(fullLog.slice(logOffset), buildInfo, { attributionLog: fullLog });
 }
 function hasStartupEvidence() {
   const analysis = readAnalysis();
@@ -214,7 +215,24 @@ function saveAttempt(boundary, observationComplete = false) {
   return report;
 }
 function saveDiagnostics() {
-  const full = analyzeNativeLog(appLog(), buildInfo);
+  const fullLog = appLog();
+  const full = analyzeNativeLog(fullLog, buildInfo);
+  // Later process evidence can invalidate an earlier foreign-PID classification.
+  // Re-evaluate each preserved attempt against the final complete capture.
+  for (const attemptReport of diagnosticReports) {
+    const captured = readFileSync(
+      join(evidenceRoot, `${platform}-attempt-${attemptReport.attempt}-app.log`),
+      'utf8',
+    );
+    const analysis = analyzeNativeLog(captured, buildInfo, { attributionLog: fullLog });
+    Object.assign(attemptReport, analysis, {
+      problems: nativeLaunchProblems(analysis, platform, attemptReport.boundary),
+    });
+    save(
+      `${platform}-attempt-${attemptReport.attempt}-diagnostics.json`,
+      `${JSON.stringify(attemptReport, null, 2)}\n`,
+    );
+  }
   const report = {
     schemaVersion: 1,
     platform,
@@ -223,6 +241,7 @@ function saveDiagnostics() {
     lifecycleActions,
     attempts: diagnosticReports,
     allObservedErrors: full.errors,
+    externalRuntimeErrors: full.externalRuntimeErrors,
     engineMessages: full.engineMessages,
   };
   save(`${platform}-startup-diagnostics.json`, `${JSON.stringify(report, null, 2)}\n`);
@@ -234,6 +253,14 @@ function saveDiagnostics() {
 }
 function assertHealthyLaunch() {
   const report = saveDiagnostics();
+  const externalProcesses = new Set(
+    report.externalRuntimeErrors.map((error) => `${error.pid}:${error.processName}`),
+  );
+  console.log(
+    `Native diagnostics: ${report.allObservedErrors.length} blocking errors; ` +
+      `${report.externalRuntimeErrors.length} runtime log entries from ` +
+      `${externalProcesses.size} confirmed external processes retained in evidence.`,
+  );
   const problems = diagnosticReports.flatMap((item) =>
     item.problems.map((problem) => `Attempt ${item.attempt}: ${problem}`),
   );
@@ -246,6 +273,7 @@ function assertHealthyLaunch() {
     [],
     `Native startup/lifecycle gate failed:\n${problems.slice(0, 8).join('\n')}`,
   );
+  return report;
 }
 async function stopLog(child) {
   if (!child || child.smokeClosed) return;
@@ -372,6 +400,15 @@ async function android() {
       boundary = lifecycleBoundary(readAnalysis());
       recordLifecycleAction('home', { boundary });
       text(adb, adbArgs('shell', 'input', 'keyevent', 'KEYCODE_HOME'));
+      await waitFor('Android native pause after Home', 30_000, () => {
+        assertRunning(child, 'Android emulator');
+        assertRunning(logcat, 'Android lifecycle log capture');
+        return readAnalysis().nativeEvents.some(
+          (event) => event.line > boundary.lineBeforeBackground && event.event === 'App paused',
+        );
+      });
+      recordLifecycleAction('native-pause-observed');
+      // Dwell starts after the OS pause is observed, not after sending Home.
       await delay(2000);
       save(
         `android-attempt-${attempt}-background-activity.txt`,
@@ -521,6 +558,17 @@ async function ios() {
       'ios-background-launch.txt',
       text('xcrun', ['simctl', 'launch', udid, 'com.apple.Preferences']),
     );
+    await waitFor('iOS document pause after opening Settings', 30_000, () => {
+      assertRunning(child, 'simctl attached launch');
+      return readAnalysis().diagnostics.some(
+        (event) =>
+          event.sessionId === boundary.sessionId &&
+          event.sequence > boundary.sequenceBeforeBackground &&
+          event.event === 'pause',
+      );
+    });
+    recordLifecycleAction('document-pause-observed');
+    // Dwell begins after the current page receives the real OS pause event.
     await delay(2000);
     recordLifecycleAction('resume-existing-app');
     save('ios-resume.txt', text('xcrun', ['simctl', 'launch', udid, buildInfo.appId]));
@@ -568,7 +616,7 @@ async function ios() {
 
 try {
   const device = platform === 'android' ? await android() : await ios();
-  assertHealthyLaunch();
+  const diagnostics = assertHealthyLaunch();
   const report = {
     schemaVersion: 1,
     platform,
@@ -581,6 +629,7 @@ try {
     resumedNativeRoundTripObserved: true,
     documentPauseResumeObserved: true,
     unexpectedJavaScriptOrRuntimeErrors: 0,
+    confirmedExternalRuntimeErrorEntries: diagnostics.externalRuntimeErrors.length,
     scope:
       'Development launch, native bridge, and OS background/resume; no gameplay, ads, backend or store validation.',
   };
