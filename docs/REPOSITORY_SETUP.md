@@ -12,23 +12,25 @@ Georgi избра **Public по време на разработката**, за
 
 [Репото `georgi-cole/crystal-path-infinity`](https://github.com/georgi-cole/crystal-path-infinity) е създадено от собственика. Основният пакет от **26 файла** е качен в `main` с [commit `235f3379`](https://github.com/georgi-cole/crystal-path-infinity/commit/235f3379c74ddd37bf7febec69ad28be23b75f35); Git blob хешовете на всички файлове са прочетени обратно и съвпадат с подготвения пакет. Създадени и проверени са **38 GitHub issues** със стабилни CPI ID и **14 използвани labels**. [Planning checks run #41311788955](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41311788955) е приключил успешно за този commit. Това удостоверява подготовката на плана и backlog-а; мобилното приложение още не е реализирано.
 
+След потвърждението „done“ от собственика настройките са прочетени повторно при старта на CPI-001. `main` е на [commit `583c851c`](https://github.com/georgi-cole/crystal-path-infinity/commit/583c851cf1385d4038b4347e9bc9e2e1efcbc611) с [успешен CI #41312774366](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41312774366). Repo API потвърждава squash-only и изтриване на merged branches; ruleset API потвърждава активния **Protect main** и всички описани задължителни правила. CPI-001 е започната в отделен branch `cpi-001-product-contract` и има label `status:in-progress`.
+
 | Област | Проверено | Оставаща работа |
 | --- | --- | --- |
 | Видимост | **Public**, изрично избрано от собственика за разработката | Private е отложено до приключване на разработката |
 | Основен branch | `main` | Няма оставаща промяна по името |
 | Issues | Включени; 38 задачи са налични | Backlog-ът може да се използва веднага |
-| Labels | 14: `priority:P0`, `priority:P1`, `type:task`, `status:backlog` и 10 `area:*` labels | Цветовете са `ededed`, описанията са празни; да се оформят по manifest |
+| Labels | Първоначалните 14 и `status:in-progress` за CPI-001 | Оформянето на цветове/описания по manifest остава незадължителна организация |
 | Неизползван label | `priority:P2` не е създаден | Не блокира backlog-а; добавя се при нужда или чрез bootstrap |
 | Milestones | По issues няма зададени native GitHub milestones | Шестте фази са описани в manifest; да се проверят/създадат native milestones и да се присвоят на задачите |
-| Wiki | Включено | Да се изключи; документацията се поддържа в git |
-| Merge методи | Squash, merge commit и rebase са включени | Да остане squash; другите два метода да се изключат |
-| Изтриване на merged branches | Изключено | Да се включи |
+| Wiki | Включено | Може да се изключи; не блокира работата, документацията е в git |
+| Merge методи | Само squash; merge commit и rebase са изключени | Проверено, няма оставаща промяна |
+| Изтриване на merged branches | Включено | Проверено, няма оставаща промяна |
 | Auto-merge | Изключено | Съответства на плана |
-| Actions permissions | Не са проверени/настроени през admin API | Да се приложат и проверят read-only permissions и забрана workflows да одобряват PR |
-| CI | **Planning checks: success** за commit `235f3379` — manifest, bootstrap tests и dry-run | Мобилните build/test проверки се добавят след scaffold в CPI-004 |
-| Защита на `main` | Branch API върна `protected: false`; rulesets списъкът е празен | Да се създаде и активира описаният по-долу branch ruleset |
+| Actions permissions | Собственикът потвърди ръчната настройка; workflow изрично има `contents: read` | Repo-level permissions и fork approval не са независимо прочетени през ограничения connector |
+| CI | **Planning checks: success** за commit `583c851c` — manifest, bootstrap tests и dry-run | Мобилните build/test проверки се добавят след scaffold в CPI-004 |
+| Защита на `main` | Активен [Protect main / 26312536](https://github.com/georgi-cole/crystal-path-infinity/settings/rules/26312536): PR, 0 approvals, resolved conversations, strict required check, без bypass/force push/delete | Проверено; работата продължава през branch и PR |
 
-Наличният GitHub connector не предостави операции за admin settings, native milestones и оформяне на labels. Наличният браузър няма завършен GitHub вход. Затова тези настройки са оставени явно като неприключени, вместо да се отчитат като изпълнени. Подготовката на кода може да започне по съществуващите issues; липсата на native milestones не прави backlog-а неизползваем.
+Наличният GitHub connector позволява repo/ruleset прочитане и работа с branches/PR/issues, но не предоставя admin mutations за тези настройки, native milestones и оформяне на labels. Ръчните промени са извършени от собственика; таблицата различава API-провереното от неговото потвърждение. Не е необходим нов browser login, за да продължим по CPI-001. Липсата на native milestones не прави backlog-а неизползваем.
 
 ## Желани настройки
 
@@ -48,9 +50,9 @@ Georgi избра **Public по време на разработката**, за
 
 [Branch rulesets са налични за Public репота и с GitHub Free](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/creating-rulesets-for-a-repository). Поддръжката им за Private зависи от GitHub плана. При собственик без втори reviewer задаваме 0 required approvals, като запазваме задължителния PR и успешния CI. CODEOWNERS указва кой преглежда, но сам по себе си не е защита.
 
-## Три секции за ръчна настройка преди разработката
+## Справочник за трите ръчни секции
 
-Следните стойности са инструкции към собственика, а не отчет за вече извършени промени.
+Следните стойности документират желаната конфигурация за бъдеща проверка. Не е необходимо собственикът да ги изпълнява отново; действителният статус и начинът на проверка са в таблицата по-горе.
 
 ### 1. Settings → General → Pull Requests
 
