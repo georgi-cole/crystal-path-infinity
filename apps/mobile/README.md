@@ -2,6 +2,8 @@
 
 This React 19 / Capacitor 8 app currently displays a minimal branded screen. Gameplay extraction, the designed splash screen, and final app icons belong to later tasks; the native launcher icons are template placeholders. The app has no imported game engine, ad SDK, native feature plugins, tracking, location, or billing integration. Android declares network access; iOS requests no permission purpose strings.
 
+Capacitor's bundled `SystemBars` uses light icons on the dark Android shell and native safe-area handling. The screen consumes `env(safe-area-inset-*)`; no separate system-bar dependency or injected CSS-variable fallback is needed. iOS uses its existing dark appearance setting.
+
 ## Start from a clean checkout
 
 Use Node **22.23.4** (the root `.nvmrc` and CI version) and its npm. Run all commands below from the **repository root**:

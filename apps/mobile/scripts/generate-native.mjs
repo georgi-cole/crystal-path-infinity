@@ -158,7 +158,9 @@ function verifyNative(platform, info) {
   assert.notEqual(config.server?.cleartext, true);
   assert.notEqual(config.server?.androidScheme, 'http');
   assert.notEqual(config.android?.allowMixedContent, true);
-  assert.deepEqual(Object.keys(config.plugins ?? {}), [], 'No plugin configuration belongs in CPI-003');
+  assert.deepEqual(config.plugins, {
+    SystemBars: { style: 'DARK', insetsHandling: 'native', initialViewportFitValueHint: 'cover' },
+  }, 'Only the bundled SystemBars presentation settings belong in CPI-003');
   const copiedBuildInfo = platform === 'android' ? 'android/app/src/main/assets/public/build-info.json' : 'ios/App/App/public/build-info.json';
   assertBuiltEnvironment(json(copiedBuildInfo), info.environment, info.version);
   if (platform === 'android') {
@@ -194,7 +196,8 @@ function verifyNative(platform, info) {
     assert.ok(!/AdMob|GoogleMobileAds|GoogleUserMessagingPlatform|CapacitorApp/.test(swift));
   }
   const report = { schemaVersion: 1, platform, buildInfo: info, buildNumber, capacitorVersion, background,
-    nativeFeaturePlugins: [], productionSigningConfigured: false, configuredOnly: true,
+    nativeFeaturePlugins: [], bundledSystemBars: config.plugins.SystemBars,
+    productionSigningConfigured: false, configuredOnly: true,
     scope: 'Generated configuration; compilation and emulator/simulator launch have separate evidence.' };
   write(`artifacts/native-config-${platform}.json`, `${JSON.stringify(report, null, 2)}\n`);
   console.log(JSON.stringify(report, null, 2));

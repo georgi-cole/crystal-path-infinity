@@ -23,6 +23,15 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   backgroundColor: '#080c1b',
   server: { cleartext: false },
+  // SystemBars ships with Capacitor core. Keep light icons on this dark shell
+  // and use native insets; the CSS already consumes env(safe-area-inset-*).
+  plugins: {
+    SystemBars: {
+      style: 'DARK',
+      insetsHandling: 'native',
+      initialViewportFitValueHint: 'cover',
+    },
+  },
   android: {
     backgroundColor: '#080c1b',
     allowMixedContent: false,
