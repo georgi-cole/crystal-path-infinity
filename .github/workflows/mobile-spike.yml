@@ -1,0 +1,193 @@
+name: Mobile spike checks
+
+on:
+  pull_request:
+    paths: ['spikes/mobile/**', '.github/workflows/mobile-spike.yml']
+  push:
+    branches: [main]
+    paths: ['spikes/mobile/**', '.github/workflows/mobile-spike.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-spike-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+    working-directory: spikes/mobile
+
+jobs:
+  web:
+    name: Lab web tests and build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.23.4'
+          cache: npm
+          cache-dependency-path: spikes/mobile/package-lock.json
+      - name: Install locked dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+      - name: Typecheck, test, and build
+        run: |
+          mkdir -p artifacts
+          npm ls --depth=0 --json > artifacts/npm-dependencies.json
+          npm run typecheck 2>&1 | tee artifacts/typecheck.log
+          npm test 2>&1 | tee artifacts/tests.log
+          npm run build 2>&1 | tee artifacts/web-build.log
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: mobile-spike-web-evidence
+          path: spikes/mobile/artifacts/
+          retention-days: 7
+          if-no-files-found: warn
+
+  android:
+    name: Android debug compilation
+    needs: web
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.23.4'
+          cache: npm
+          cache-dependency-path: spikes/mobile/package-lock.json
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install, build web assets, and generate Android
+        run: |
+          mkdir -p artifacts
+          node --version | tee artifacts/node-version.txt
+          java -version 2>&1 | tee artifacts/java-version.txt
+          npm ci --ignore-scripts
+          npm ls --depth=0 --json > artifacts/npm-dependencies.json
+          npm run build 2>&1 | tee artifacts/web-build.log
+          npm run native:generate -- --platform android 2>&1 | tee artifacts/native-generation.log
+          npm run native:generate -- --platform android --check
+      - name: Resolve dependencies and compile a debug APK
+        run: |
+          bash android/gradlew -p android --no-daemon --version 2>&1 | tee artifacts/gradle-version.txt
+          bash android/gradlew -p android --no-daemon --stacktrace :app:dependencies --configuration debugRuntimeClasspath 2>&1 | tee artifacts/android-dependencies.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          report = Path('artifacts/android-dependencies.txt').read_text()
+          expected = {'com.google.android.gms:play-services-ads': '25.4.0', 'com.google.android.ump:user-messaging-platform': '4.0.0'}
+          for module, version in expected.items():
+              matches = re.findall(re.escape(module) + r':([^\s]+)(?: -> ([^\s]+))?', report)
+              resolved = {selected or requested for requested, selected in matches}
+              assert resolved == {version}, f'{module}: expected {version}, resolved {resolved}'
+              print(f'Verified resolved SDK: {module}:{version}')
+          PY
+          bash android/gradlew -p android --no-daemon --stacktrace :app:assembleDebug 2>&1 | tee artifacts/android-build.log
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          manifests = list(Path('android/app/build/intermediates/merged_manifests').glob('debug/**/AndroidManifest.xml'))
+          assert manifests, 'Merged debug manifest was not produced'
+          android = '{http://schemas.android.com/apk/res/android}'
+          for manifest in manifests:
+              root = ET.parse(manifest).getroot()
+              assert not any(p.get(android + 'name') == 'com.google.android.gms.permission.AD_ID' for p in root.findall('uses-permission')), 'AD_ID survived manifest merging'
+          print('Verified merged debug manifests: no AD_ID permission')
+          PY
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: mobile-spike-android-evidence
+          path: |
+            spikes/mobile/artifacts/
+            spikes/mobile/android/app/build/outputs/logs/
+            spikes/mobile/android/app/build/intermediates/merged_manifests/debug/
+          retention-days: 7
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mobile-spike-android-debug
+          path: spikes/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7
+          if-no-files-found: error
+
+  ios:
+    name: iOS simulator compilation
+    needs: web
+    runs-on: macos-26
+    timeout-minutes: 40
+    env:
+      # GMA 13.11.0 requires Xcode 26.2 or later. Pin the installed image toolchain.
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.23.4'
+          cache: npm
+          cache-dependency-path: spikes/mobile/package-lock.json
+      - name: Install, build web assets, and generate iOS with SPM
+        run: |
+          mkdir -p artifacts
+          node --version | tee artifacts/node-version.txt
+          xcodebuild -version | tee artifacts/xcode-version.txt
+          xcrun swift --version | tee artifacts/swift-version.txt
+          npm ci --ignore-scripts
+          npm ls --depth=0 --json > artifacts/npm-dependencies.json
+          npm run build 2>&1 | tee artifacts/web-build.log
+          npm run native:generate -- --platform ios 2>&1 | tee artifacts/native-generation.log
+          npm run native:generate -- --platform ios --check
+      - name: Resolve SPM and compile an unsigned simulator app
+        run: |
+          resolution_flags=()
+          if [[ -f native-locks/Package.resolved ]]; then
+            resolution_flags+=(-disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile)
+          fi
+          xcodebuild -resolvePackageDependencies -project ios/App/App.xcodeproj -scheme App "${resolution_flags[@]}" 2>&1 | tee artifacts/ios-dependencies.log
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          lock = json.loads(Path('ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved').read_text())
+          pins = {pin['identity']: pin['state'].get('version') for pin in lock['pins']}
+          expected = {'capacitor-swift-pm': '8.5.3', 'swift-package-manager-google-mobile-ads': '13.11.0', 'swift-package-manager-google-user-messaging-platform': '3.1.0'}
+          for identity, version in expected.items():
+              assert pins.get(identity) == version, f'{identity}: expected {version}, resolved {pins.get(identity)}'
+              print(f'Verified resolved SPM package: {identity}@{version}')
+          PY
+          resolution_flags=(-disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile)
+          xcodebuild build -project ios/App/App.xcodeproj -scheme App -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build/ios "${resolution_flags[@]}" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY= 2>&1 | tee artifacts/ios-build.log
+          tar -czf build/cpi002-ios-simulator.tar.gz -C build/ios/Build/Products/Debug-iphonesimulator App.app
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: mobile-spike-ios-evidence
+          path: |
+            spikes/mobile/artifacts/
+            spikes/mobile/ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+            spikes/mobile/ios/App/CapApp-SPM/Package.swift
+          retention-days: 7
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mobile-spike-ios-simulator
+          path: spikes/mobile/build/cpi002-ios-simulator.tar.gz
+          retention-days: 7
+          if-no-files-found: error
+
+# Successful jobs prove compilation and the listed automated checks. Emulator,
+# physical-device, consent/ads delivery, audio, and background recovery need the
+# separate CPI-002 device matrix; no App Store credentials or live ads are used.

@@ -1,0 +1,101 @@
+{
+  "recordedOn": "2026-11-01",
+  "repository": "georgi-cole/crystal-path-infinity",
+  "pullRequest": 40,
+  "testedHead": "26a4bfafe988ff61e51cc31ee61c11bc25f13e76",
+  "mobileWorkflow": {
+    "id": 41322334324,
+    "url": "https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41322334324"
+  },
+  "planningWorkflow": {
+    "id": 41322334062,
+    "url": "https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41322334062",
+    "conclusion": "success"
+  },
+  "jobs": [
+    {
+      "id": 124895007181,
+      "name": "Lab web tests and build",
+      "conclusion": "success"
+    },
+    {
+      "id": 124895091817,
+      "name": "Android debug compilation",
+      "conclusion": "success"
+    },
+    {
+      "id": 124895091968,
+      "name": "iOS simulator compilation",
+      "conclusion": "success"
+    }
+  ],
+  "android": {
+    "jdk": "Temurin 21.0.13+9",
+    "gradle": "8.14.3",
+    "gradleEmbeddedKotlin": "2.0.21",
+    "applicationKotlin": "2.2.20",
+    "googleMobileAds": "25.4.0",
+    "userMessagingPlatform": "4.0.0",
+    "mergedAdIdPermissionAbsent": true,
+    "debugApkProduced": true
+  },
+  "ios": {
+    "xcode": "26.6",
+    "xcodeBuild": "17F113",
+    "swift": "6.3.3",
+    "simulatorSdk": "26.5",
+    "capacitor": "8.5.3",
+    "googleMobileAds": "13.11.0",
+    "userMessagingPlatform": "3.1.0",
+    "unsignedSimulatorAppProduced": true,
+    "packageLockSourceArtifact": 13089552903
+  },
+  "artifacts": [
+    {
+      "id": 13090470005,
+      "name": "mobile-spike-android-evidence",
+      "sizeInBytes": 20604,
+      "digestReportedByGitHub": "sha256:9b306c61e987c9d39ffb6db18a6dd50ff5752b2027e266b60dd53971bcfbd6c9",
+      "expiresAt": "2026-11-08T15:42:33Z",
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41322334324/artifacts/13090470005"
+    },
+    {
+      "id": 13089628725,
+      "name": "mobile-spike-web-evidence",
+      "sizeInBytes": 1718,
+      "digestReportedByGitHub": "sha256:932c405cfe0ba934df13537809085c1962c9b0275860fd633d4928abfbd5ad2f",
+      "expiresAt": "2026-11-08T15:39:50Z",
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41322334324/artifacts/13089628725"
+    },
+    {
+      "id": 13089552903,
+      "name": "mobile-spike-ios-evidence",
+      "sizeInBytes": 36175,
+      "digestReportedByGitHub": "sha256:f10a337fb938678e7beaf7de153e7451b0f424a4bfc8c97aa3952139390cc662",
+      "expiresAt": "2026-11-08T15:41:50Z",
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41322334324/artifacts/13089552903"
+    },
+    {
+      "id": 13089549623,
+      "name": "mobile-spike-android-debug",
+      "sizeInBytes": 8377777,
+      "digestReportedByGitHub": "sha256:afbe6ae45a1c463e39a4ce96b142e9f7421f7ce4e1f17524c2110357eedb481e",
+      "expiresAt": "2026-11-08T15:42:34Z",
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41322334324/artifacts/13089549623"
+    },
+    {
+      "id": 13088824770,
+      "name": "mobile-spike-ios-simulator",
+      "sizeInBytes": 4695375,
+      "digestReportedByGitHub": "sha256:7e7680d5f2c0b75875632a695af917613baa1f53fe5029f1a881b84ce4f7e566",
+      "expiresAt": "2026-11-08T15:41:52Z",
+      "url": "https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41322334324/artifacts/13088824770"
+    }
+  ],
+  "limitations": [
+    "Compilation only; no physical Android/iPhone launch or ad presentation observed.",
+    "No account-owned Google SSV callback observed.",
+    "No deployed/cloud latency, DB cost, production persistence or app-kill recovery proven.",
+    "Families exact-version eligibility remains independently unverified."
+  ]
+}
