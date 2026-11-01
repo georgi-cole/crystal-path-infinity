@@ -7,7 +7,7 @@
   "repository": {
     "owner": "georgi-cole",
     "name": "crystal-path-infinity",
-    "private": true,
+    "private": false,
     "description": "Standalone mobile Crystal Path: Infinity with verified regional leaderboards and rewarded revives."
   },
   "milestones": [

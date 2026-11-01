@@ -19,7 +19,7 @@ def example_plan() -> dict:
     return {
         "schema_version": 1,
         "source": {"repository": "georgi-cole/bbmobilenew-source", "commit": "a" * 40},
-        "repository": {"owner": "georgi-cole", "name": "crystal-path-infinity", "private": True,
+        "repository": {"owner": "georgi-cole", "name": "crystal-path-infinity", "private": False,
                        "description": "Standalone mobile planning repository."},
         "milestones": [{"id": "M0", "title": "Foundation", "description": "Validated product contract."}],
         "labels": [{"name": "priority:P0", "color": "B60205", "description": "Required before release."}],
@@ -45,30 +45,101 @@ class PlanTests(unittest.TestCase):
         with self.assertRaisesRegex(PlanError, "earlier"):
             validate_plan(plan)
 
-    def test_private_exact_target_is_required(self):
-        for field, value in (("private", False), ("owner", "someone-else"), ("name", "other-game")):
+    def test_exact_target_is_required(self):
+        for field, value in (("owner", "someone-else"), ("name", "other-game")):
             plan = example_plan()
             plan["repository"][field] = value
             with self.assertRaises(PlanError):
                 validate_plan(plan)
+
+    def test_visibility_requires_a_real_boolean(self):
+        for invalid in (None, 0, 1, "true", "false", []):
+            with self.subTest(private=invalid):
+                plan = example_plan()
+                plan["repository"]["private"] = invalid
+                with self.assertRaisesRegex(PlanError, "explicit boolean"):
+                    validate_plan(plan)
 
     def test_default_dry_run_never_calls_gh(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "planning").mkdir()
             (root / "README.md").write_text("# Planning\n", encoding="utf-8")
-            (root / "planning/backlog.json").write_text(json.dumps(example_plan()), encoding="utf-8")
-            with patch.object(bootstrap, "ROOT", root), patch.object(bootstrap.subprocess, "run") as run:
-                output = io.StringIO()
-                with redirect_stdout(output):
-                    self.assertEqual(bootstrap.main([]), 0)
-                run.assert_not_called()
-                receipt = json.loads(output.getvalue())
-                self.assertEqual(receipt["network_calls"], 0)
-                self.assertEqual(receipt["mode"], "dry_run")
+            for private in (False, True):
+                with self.subTest(private=private):
+                    plan = example_plan()
+                    plan["repository"]["private"] = private
+                    (root / "planning/backlog.json").write_text(json.dumps(plan), encoding="utf-8")
+                    with patch.object(bootstrap, "ROOT", root), patch.object(bootstrap.subprocess, "run") as run:
+                        output = io.StringIO()
+                        with redirect_stdout(output):
+                            self.assertEqual(bootstrap.main([]), 0)
+                        run.assert_not_called()
+                        receipt = json.loads(output.getvalue())
+                        self.assertEqual(receipt["network_calls"], 0)
+                        self.assertEqual(receipt["mode"], "dry_run")
+                        self.assertEqual(receipt["visibility"], "private" if private else "public")
 
 
 class BootstrapGuards(unittest.TestCase):
+    def test_actual_visibility_matches_explicit_plan(self):
+        for private in (False, True):
+            with self.subTest(private=private):
+                repo = {"full_name": bootstrap.REPO, "owner": {"login": "georgi-cole"},
+                        "private": private, "fork": False, "archived": False}
+                bootstrap.verify_repository(repo, private)
+
+    def test_wrong_actual_visibility_stops_before_remote_mutations(self):
+        class FakeApi:
+            def __init__(self, actual_private):
+                self.actual_private = actual_private
+                self.calls = []
+
+            def call(self, path, method="GET", data=None):
+                self.calls.append((path, method))
+                if path == "user":
+                    return {"login": "georgi-cole"}
+                if path == bootstrap.API_BASE:
+                    return {"full_name": bootstrap.REPO, "owner": {"login": "georgi-cole"},
+                            "private": self.actual_private, "fork": False, "archived": False}
+                raise AssertionError(path)
+
+        for private in (False, True):
+            with self.subTest(private=private), tempfile.TemporaryDirectory() as directory:
+                plan = example_plan()
+                plan["repository"]["private"] = private
+                api = FakeApi(not private)
+                with self.assertRaisesRegex(bootstrap.BootstrapError, "visibility must match"):
+                    bootstrap.apply_setup(Path(directory), plan, {}, api=api)
+                self.assertTrue(all(method == "GET" for _, method in api.calls))
+
+    def test_new_repository_creation_uses_planned_visibility(self):
+        class FakeApi:
+            def __init__(self):
+                self.creation = None
+
+            def call(self, path, method="GET", data=None):
+                if path == "user":
+                    return {"login": "georgi-cole"}
+                if path == bootstrap.API_BASE and method == "GET":
+                    raise bootstrap.ApiError(method, path, 404)
+                if path == "user/repos" and method == "POST":
+                    self.creation = data
+                    return {"id": 1, "full_name": bootstrap.REPO, "owner": {"login": "georgi-cole"},
+                            "private": data["private"], "fork": False, "archived": False,
+                            "default_branch": "main"}
+                raise AssertionError(path)
+
+        for private in (False, True):
+            with self.subTest(private=private), tempfile.TemporaryDirectory() as directory:
+                plan = example_plan()
+                plan["repository"]["private"] = private
+                api = FakeApi()
+                with patch.object(bootstrap, "head_and_tree", side_effect=bootstrap.BootstrapError("Stop after creation")):
+                    with self.assertRaisesRegex(bootstrap.BootstrapError, "Stop after creation"):
+                        bootstrap.apply_setup(Path(directory), plan, {}, api=api)
+                self.assertIs(api.creation["private"], private)
+
     def test_duplicate_issue_identity_is_rejected(self):
         body = bootstrap.issue_marker("CPI-001")
         issues = [{"number": 1, "title": "First", "body": body},

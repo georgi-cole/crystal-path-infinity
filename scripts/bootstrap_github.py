@@ -4,6 +4,7 @@
 Default: local dry run, no network. With --apply, use the existing authenticated
 GitHub CLI session; credentials are never requested, read or printed by this code.
 No app implementation, store deployment, collaborator grants or billing changes.
+Existing repository visibility is verified against the plan and never changed.
 """
 
 from __future__ import annotations
@@ -138,10 +139,16 @@ def read_state(root: Path) -> dict[str, Any]:
         raise BootstrapError("Local bootstrap state is unreadable; inspect it before resuming.") from error
 
 
-def verify_repository(repo: dict[str, Any]) -> None:
+def verify_repository(repo: dict[str, Any], expected_private: bool) -> None:
+    if type(expected_private) is not bool:
+        raise BootstrapError("Expected repository visibility must be an explicit boolean.")
     if (repo.get("full_name") != REPO or repo.get("owner", {}).get("login") != TARGET_OWNER
-            or repo.get("private") is not True or repo.get("fork") or repo.get("archived")):
-        raise BootstrapError("Target must be the private, unarchived, non-fork repository " + REPO + ".")
+            or repo.get("fork") or repo.get("archived")):
+        raise BootstrapError("Target must be the unarchived, non-fork repository " + REPO + ".")
+    if repo.get("private") is not expected_private:
+        visibility = "private" if expected_private else "public"
+        raise BootstrapError(f"Target visibility must match the explicit plan: {visibility}. "
+                             "This script never changes existing repository visibility.")
 
 
 def head_and_tree(api: GitHub, branch: str) -> tuple[str, str, dict[str, dict[str, Any]]]:
@@ -271,13 +278,14 @@ def apply_setup(root: Path, plan: dict[str, Any], files: dict[str, str], *, adop
             # a conflicting existing name will be rejected rather than overwritten.
             repo = api.call("user/repos", "POST", {
                 "name": TARGET_REPOSITORY, "description": plan["repository"]["description"],
-                "private": True, "auto_init": True, "has_issues": True, "has_wiki": False,
+                "private": plan["repository"]["private"], "auto_init": True,
+                "has_issues": True, "has_wiki": False,
             })
             created = True
             receipt["created"].append("repository")
             state = {"repository": REPO, "repository_id": repo["id"], "created_by_bootstrap": True}
             write_local_json(root, STATE_FILE, state)
-        verify_repository(repo)
+        verify_repository(repo, plan["repository"]["private"])
         branch = repo["default_branch"]
         try:
             head, tree_sha, entries = head_and_tree(api, branch)
@@ -311,7 +319,7 @@ def apply_setup(root: Path, plan: dict[str, Any], files: dict[str, str], *, adop
         # Only routine settings for this verified planning repository are changed.
         api.call(API_BASE, "PATCH", SETTINGS)
         actual = api.call(API_BASE)
-        verify_repository(actual)
+        verify_repository(actual, plan["repository"]["private"])
         if actual.get("default_branch") != "main" or any(actual.get(key) != value for key, value in SETTINGS.items()):
             raise BootstrapError("One or more requested repository settings did not verify.")
         receipt["verified"].append("repository_settings")
@@ -384,14 +392,15 @@ def apply_setup(root: Path, plan: dict[str, Any], files: dict[str, str], *, adop
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apply", action="store_true", help="Perform the reviewed GitHub mutations using gh.")
-    parser.add_argument("--adopt-initial", action="store_true", help="Allow only a private target containing the standard initial README.")
+    parser.add_argument("--adopt-initial", action="store_true", help="Allow only the target matching the manifest visibility and containing the standard initial README.")
     args = parser.parse_args(argv)
     try:
         plan = load_plan(ROOT / MARKER_FILE)
         files = collect_files(ROOT)
         if not args.apply:
             print(json.dumps({
-                "mode": "dry_run", "network_calls": 0, "repository": REPO, "visibility": "private",
+                "mode": "dry_run", "network_calls": 0, "repository": REPO,
+                "visibility": "private" if plan["repository"]["private"] else "public",
                 "files": sorted(files), "milestones": [item["id"] for item in plan["milestones"]],
                 "labels": [item["name"] for item in plan["labels"]],
                 "issues": [item["id"] for item in plan["issues"]], "settings": SETTINGS,

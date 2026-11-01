@@ -2,13 +2,19 @@
 
 Този документ отделя провереното състояние от желаните настройки. Файл, workflow definition или dry-run не означава изпълнена GitHub операция или успешен CI. `.bootstrap-receipt.json` е отчет само за операции, извършени чрез bootstrap скрипта; промени през GitHub интеграцията или интерфейса се проверяват отделно.
 
+## Прието решение за видимостта — 1 ноември 2026 г.
+
+Georgi избра **Public по време на разработката**, за да използва безплатните стандартни GitHub-hosted runners. След приключване на разработката собственикът ще направи репото **Private**. Public е текущото желано състояние и не е неприключена настройка. `planning/backlog.json` записва `repository.private: false`; bootstrap проверява този изричен избор и не сменя автоматично видимостта на съществуващо репо.
+
+Според [GitHub Actions billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions), стандартните runners са безплатни за публични репота; larger runners се таксуват и там. Текущият workflow използва `ubuntu-latest`. При бъдещото преминаване към Private се преглеждат отново Actions квотата и поддръжката на branch rules според плана. [Съществуващите публични forks остават публични](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/managing-repository-settings/setting-repository-visibility).
+
 ## Проверено състояние — 1 ноември 2026 г.
 
 [Репото `georgi-cole/crystal-path-infinity`](https://github.com/georgi-cole/crystal-path-infinity) е създадено от собственика. Основният пакет от **26 файла** е качен в `main` с [commit `235f3379`](https://github.com/georgi-cole/crystal-path-infinity/commit/235f3379c74ddd37bf7febec69ad28be23b75f35); Git blob хешовете на всички файлове са прочетени обратно и съвпадат с подготвения пакет. Създадени и проверени са **38 GitHub issues** със стабилни CPI ID и **14 използвани labels**. [Planning checks run #41311788955](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41311788955) е приключил успешно за този commit. Това удостоверява подготовката на плана и backlog-а; мобилното приложение още не е реализирано.
 
 | Област | Проверено | Оставаща работа |
 | --- | --- | --- |
-| Видимост | **Public** | **Private** остава препоръчаната и планирана настройка; още не е приложена |
+| Видимост | **Public**, изрично избрано от собственика за разработката | Private е отложено до приключване на разработката |
 | Основен branch | `main` | Няма оставаща промяна по името |
 | Issues | Включени; 38 задачи са налични | Backlog-ът може да се използва веднага |
 | Labels | 14: `priority:P0`, `priority:P1`, `type:task`, `status:backlog` и 10 `area:*` labels | Цветовете са `ededed`, описанията са празни; да се оформят по manifest |
@@ -20,7 +26,7 @@
 | Auto-merge | Изключено | Съответства на плана |
 | Actions permissions | Не са проверени/настроени през admin API | Да се приложат и проверят read-only permissions и забрана workflows да одобряват PR |
 | CI | **Planning checks: success** за commit `235f3379` — manifest, bootstrap tests и dry-run | Мобилните build/test проверки се добавят след scaffold в CPI-004 |
-| Защита на `main` | Rulesets API върна празен списък; classic branch protection не е проверена | Да се проверят и двата механизма; няма потвърдена защита |
+| Защита на `main` | Branch API върна `protected: false`; rulesets списъкът е празен | Да се създаде и активира описаният по-долу branch ruleset |
 
 Наличният GitHub connector не предостави операции за admin settings, native milestones и оформяне на labels. Наличният браузър няма завършен GitHub вход. Затова тези настройки са оставени явно като неприключени, вместо да се отчитат като изпълнени. Подготовката на кода може да започне по съществуващите issues; липсата на native milestones не прави backlog-а неизползваем.
 
@@ -29,7 +35,7 @@
 | Настройка | Стойност |
 | --- | --- |
 | Owner / име | georgi-cole / crystal-path-infinity |
-| Видимост | Private |
+| Видимост | Public по време на разработката; Private след приключване, по действие на собственика |
 | Основен branch | main |
 | Лиценз | Proprietary, Georgi Kolev; не MIT |
 | Issues | Включени; 38 задачи със стабилни CPI ID, присвоени към 6 native milestones, с labels |
@@ -40,16 +46,64 @@
 | CI след scaffold | Lint, typecheck, core/API tests, web build; native проверки според milestone |
 | Main защита | Проверява се и се включва след първия работещ CI; PR, green checks, resolved conversations, без force push/delete |
 
-Поддръжката на private branch protection зависи от GitHub плана и достъпа. Ако не е налична, това остава явно ограничение; не твърдим, че branch е защитен. При собственик без втори reviewer не изискваме невъзможно self-approval. CODEOWNERS указва кой преглежда, но сам по себе си не е защита.
+[Branch rulesets са налични за Public репота и с GitHub Free](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/creating-rulesets-for-a-repository). Поддръжката им за Private зависи от GitHub плана. При собственик без втори reviewer задаваме 0 required approvals, като запазваме задължителния PR и успешния CI. CODEOWNERS указва кой преглежда, но сам по себе си не е защита.
 
-## Конкретни оставащи GitHub настройки
+## Три секции за ръчна настройка преди разработката
 
-1. **Видимост:** собственикът да прегледа Public → Private в Settings → General. Докато това не е извършено и проверено, репото остава публично; препоръката в документа не променя достъпа.
-2. **General:** изключване на Wiki; включен само squash merge; включено автоматично изтриване на merged branches. Auto-merge остава изключено.
-3. **Actions → General:** read-only workflow permissions; изключено разрешението workflows да създават и одобряват pull requests. Да се провери ефективната настройка след запис.
-4. **Labels:** актуализиране на цветовете и описанията на съществуващите labels по `planning/backlog.json`. Не се създават дублиращи labels с различен правопис.
-5. **Milestones:** създаване на липсващите шест native milestones по manifest и присвояване на всяко issue според неговото поле `milestone`. CPI ID и зависимостите остават същите. Това може да се довърши след началото на работата.
-6. **Защита на `main`:** началният planning workflow вече е минал успешно. Остава да се проверят rulesets и classic branch protection и да се настроят PR, изискваният реален check `Planning manifest and bootstrap`, resolved conversations и забрана за force push/delete, ако планът ги поддържа. Празният rulesets отговор сам по себе си не доказва липса или наличие на classic protection. Имената на required checks се преглеждат отново при промяната на CI в CPI-004.
+Следните стойности са инструкции към собственика, а не отчет за вече извършени промени.
+
+### 1. Settings → General → Pull Requests
+
+| Опция | Стойност |
+| --- | --- |
+| Allow squash merging | Включено |
+| Allow merge commits | Изключено |
+| Allow rebase merging | Изключено |
+| Automatically delete head branches | Включено |
+| Allow auto-merge | Изключено засега |
+
+Така всеки завършен PR се влива като един commit, а приключилите работни branches се почистват. В Features запазваме Issues включени; Wiki може да се изключи, защото документацията е в `docs/`. Видимостта остава Public, а default branch остава `main`.
+
+Документация: [squash merge](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/configuring-commit-squashing-for-pull-requests), [изтриване на head branches](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-the-automatic-deletion-of-branches).
+
+### 2. Settings → Actions → General
+
+В **Workflow permissions**:
+
+- Избира се **Read repository contents and packages permissions**.
+- **Allow GitHub Actions to create and approve pull requests** остава изключено.
+- Натиска се Save за секцията.
+
+В **Approval for running fork pull request workflows from contributors** се избира **Require approval for all external contributors** и се записва. Това се отнася до външни fork PR-и, а не до нормалните ни branches в репото.
+
+Текущият workflow вече работи и изрично задава `contents: read`. Repository настройките по-горе се проверяват от собственика. GitHub connector-ът е отделен от `GITHUB_TOKEN` на workflow-а; тази отметка не управлява възможността да създаваме PR-и през интеграцията.
+
+Документация: [GitHub Actions settings](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository).
+
+### 3. Settings → Rules / Rulesets → New ruleset → New branch ruleset
+
+Име: **Protect main**. Enforcement: **Active**. В Target branches → Add a target се избира default branch (`main`). Bypass list остава празен.
+
+| Правило | Стойност |
+| --- | --- |
+| Require a pull request before merging | Включено |
+| Required approvals | **0** за текущата работа без втори независим reviewer |
+| Require conversation resolution before merging | Включено |
+| Require status checks to pass before merging | Включено |
+| Required check | **Planning manifest and bootstrap**; GitHub Actions като източник, ако се предлага |
+| Require branches to be up to date before merging | Включено |
+| Block force pushes | Включено |
+| Restrict deletions | Включено |
+
+В списъка с required checks се добавя реалният job **Planning manifest and bootstrap**, който вече е изпълняван успешно. **Planning checks** е името на целия workflow. Required approvals = 0 запазва PR и CI изискванията, без да изисква одобрение от втори GitHub потребител. Не се включват изискване за code-owner approval, approval на последния push или Restrict updates. Последното би ограничило обновяванията до actors с bypass права, а bypass list е празен.
+
+Натиска се Create. След активирането работата минава през branch → PR → успешни проверки → squash merge. При промяната на CI в CPI-004 актуализираме required checks към действителните им имена. Използваме един branch ruleset за `main`; не е нужна дублираща classic защита със същите правила.
+
+Документация: [създаване на ruleset](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/creating-rulesets-for-a-repository), [налични правила](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets).
+
+### Настройки, които могат да изчакат
+
+Шестте native milestones, цветовете/описанията на labels и евентуален Projects board не блокират CPI-001. 38-те issues вече имат етап, приоритет и зависимости. При оформяне на labels се използва `planning/backlog.json`; при milestones задачите се групират M0: #1–#4, M1: #5–#10, M2: #11–#16, M3: #17–#25, M4: #26–#30, M5: #31–#38. Service configuration и signing са част от по-късните задачи.
 
 ## Проверка и допълване чрез bootstrap
 
@@ -59,9 +113,9 @@ python3 -m unittest discover -s scripts -p 'test_*.py'
 python3 scripts/bootstrap_github.py
 ```
 
-Третата команда е dry-run, без мрежови заявки. **`--apply` отказва текущото Public репо по дизайн.** Скриптът не сменя видимостта автоматично и защитата му не трябва да се заобикаля.
+Третата команда е dry-run, без мрежови заявки. Видимостта се чете от `planning/backlog.json` — в момента **Public**. `--apply` сверява действителната видимост с изрично записаната в manifest и отказва несъответствие; не променя видимостта на съществуващо репо.
 
-След като собственикът е направил репото Private, пълният planning пакет е качен и е взет **fresh checkout на актуалното `main`**, може да се използва GitHub CLI автентикация за `georgi-cole`:
+След **fresh checkout на актуалното `main`**, при необходимост може да се използва GitHub CLI автентикация за `georgi-cole`:
 
 ```bash
 python3 scripts/bootstrap_github.py --apply
@@ -69,7 +123,7 @@ python3 scripts/bootstrap_github.py --apply
 
 Съществуващият `planning/backlog.json` служи като маркер за правилния продукт и source commit. Fresh checkout избягва конфликт между стар локален пакет и по-нови remote файлове. Скриптът отказва чуждо/несвързано съдържание и различаващи се remote файлове; при такъв отказ се прави преглед, а не destructive reset. Не поставяй token в командата или файловете.
 
-`--apply --adopt-initial` е само за private репо с недокоснат стандартен initial README. Не е вариант за заобикаляне на проверките в текущото вече попълнено репо.
+`--apply --adopt-initial` е само за точното репо с видимост, съответстваща на manifest, и недокоснат стандартен initial README. Не е вариант за заобикаляне на проверките в текущото вече попълнено репо. При бъдещо преминаване към Private актуализираме manifest чрез прегледана промяна, така че той и реалното репо да са съгласувани.
 
 Скриптът допълва липсващи planning файлове, settings, labels, milestones и issues, когато проверките позволяват това. При повторение **пази съществуващите marked issues**, техните тела и статуси; не създава втори комплект от 38 задачи. Зависимостите на новосъздадени issues се превръщат във връзки към реалните GitHub номера. Partial failure се записва локално.
 

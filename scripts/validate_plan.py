@@ -34,7 +34,7 @@ def validate_plan(plan: Any) -> dict[str, Any]:
     require(isinstance(repo, dict), "repository must be an object.")
     require(repo.get("owner") == TARGET_OWNER, "Unexpected repository owner.")
     require(repo.get("name") == TARGET_REPOSITORY, "Unexpected repository name.")
-    require(repo.get("private") is True, "The new repository must remain private.")
+    require(type(repo.get("private")) is bool, "repository.private must be an explicit boolean.")
     require(nonblank(repo.get("description")), "Repository description is required.")
     source = plan.get("source", {})
     require(isinstance(source, dict), "source must be an object.")
