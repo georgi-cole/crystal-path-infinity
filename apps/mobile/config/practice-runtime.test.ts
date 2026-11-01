@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createRun } from '@crystal-path-infinity/game-core';
 import type { RandomSource, RunState, TimedSessionResult } from '@crystal-path-infinity/game-core';
 import { createGameplayLifecycle } from '../src/gameplay-lifecycle';
+import type { GameplayLifecycle } from '../src/gameplay-lifecycle';
 import { nativeLifecycleEvent } from '../src/native-lifecycle';
 import type { NativeLifecycleSnapshot } from '../src/native-lifecycle';
 import { createPracticeRuntime } from '../src/practice-runtime';
@@ -72,7 +73,7 @@ function scheduler() {
   };
 }
 
-function setup(state = fresh(), firstRead?: Promise<NativeLifecycleSnapshot>) {
+function setupNative(firstRead?: Promise<NativeLifecycleSnapshot>) {
   const host = { foreground: 100, native: 10_000, active: true, visible: true, sequence: 0 };
   const documentEvents = new EventTarget();
   const windowEvents = new EventTarget();
@@ -98,6 +99,22 @@ function setup(state = fresh(), firstRead?: Promise<NativeLifecycleSnapshot>) {
     observedAt: 1_000_000,
     nativeSnapshot: read,
   });
+  return {
+    host,
+    read,
+    snapshot,
+    lifecycle,
+    event() {
+      documentEvents.dispatchEvent(new CustomEvent(nativeLifecycleEvent, { detail: snapshot() }));
+    },
+    visibility(visible: boolean) {
+      host.visible = visible;
+      documentEvents.dispatchEvent(new Event('visibilitychange'));
+    },
+  };
+}
+
+function attachRuntime(lifecycle: GameplayLifecycle, state = fresh()) {
   const wakeups = scheduler();
   const transitions: TimedSessionResult[] = [];
   const onTransition = vi.fn((result: TimedSessionResult) => {
@@ -115,23 +132,12 @@ function setup(state = fresh(), firstRead?: Promise<NativeLifecycleSnapshot>) {
     playback,
   });
   return {
-    host,
-    read,
-    snapshot,
-    lifecycle,
     runtime,
     wakeups,
     transitions,
     onTransition,
     onError,
     playback,
-    event() {
-      documentEvents.dispatchEvent(new CustomEvent(nativeLifecycleEvent, { detail: snapshot() }));
-    },
-    visibility(visible: boolean) {
-      host.visible = visible;
-      documentEvents.dispatchEvent(new Event('visibilitychange'));
-    },
     dispose() {
       runtime.dispose();
       lifecycle.dispose();
@@ -139,7 +145,45 @@ function setup(state = fresh(), firstRead?: Promise<NativeLifecycleSnapshot>) {
   };
 }
 
+function setup(state = fresh(), firstRead?: Promise<NativeLifecycleSnapshot>) {
+  const host = setupNative(firstRead);
+  return { ...host, ...attachRuntime(host.lifecycle, state) };
+}
+
 describe('practice runtime and acknowledged native time', () => {
+  it('refreshes an old ready snapshot before releasing recovery so menu time is never charged to a new run', async () => {
+    const f = setupNative();
+    await f.lifecycle.ready;
+    expect(f.lifecycle.getSnapshot()?.monotonicMs).toBe(100);
+    f.host.foreground = 60_100;
+    f.host.native = 70_000;
+    const r = attachRuntime(f.lifecycle, { ...fresh(), lastObservedAt: 1_060_000 });
+    await r.runtime.ready;
+    expect(r.runtime.getState()).toMatchObject({ activeTimeMs: 0, sp: 300 });
+    f.host.foreground += 499;
+    f.host.native += 499;
+    r.wakeups.fire();
+    await flushMicrotasks();
+    expect(r.runtime.getState()).toMatchObject({
+      activeTimeMs: 499,
+      sp: 300,
+      lastObservedAt: 1_060_499,
+    });
+    f.host.foreground += 1;
+    f.host.native += 1;
+    r.wakeups.fire();
+    await flushMicrotasks();
+    expect(r.runtime.getState()).toMatchObject({
+      activeTimeMs: 500,
+      sp: 302,
+      lastObservedAt: 1_060_500,
+    });
+    expect(
+      r.transitions.flatMap(({ events }) => events).filter(({ type }) => type === 'effects-ticked'),
+    ).toHaveLength(1);
+    r.dispose();
+  });
+
   it('does not schedule gameplay or sound before current-page readiness, including a background start', async () => {
     const initial = deferred<NativeLifecycleSnapshot>();
     const f = setup(fresh(), initial.promise);
@@ -357,6 +401,28 @@ describe('practice runtime and acknowledged native time', () => {
 });
 
 describe('practice runtime failures and cleanup', () => {
+  it('does not create resources or events after disposal during the fresh startup native sample', async () => {
+    const f = setupNative();
+    await f.lifecycle.ready;
+    const startup = deferred<NativeLifecycleSnapshot>();
+    f.read.mockReturnValueOnce(startup.promise);
+    const r = attachRuntime(f.lifecycle);
+    await flushMicrotasks();
+    expect(f.read).toHaveBeenCalledTimes(2);
+    expect(r.runtime.isRunning()).toBe(false);
+    const checkpoint = r.runtime.dispose();
+    f.host.foreground = 60_100;
+    f.host.native = 70_000;
+    startup.resolve(f.snapshot());
+    await r.runtime.ready;
+    expect(r.runtime.getState()).toBe(checkpoint);
+    expect(r.transitions).toEqual([]);
+    expect(r.wakeups.schedule).not.toHaveBeenCalled();
+    expect(r.playback.setActive.mock.calls).toEqual([[false], [false]]);
+    expect(r.playback.dispose).toHaveBeenCalledTimes(1);
+    f.lifecycle.dispose();
+  });
+
   it('latches a wakeup failure, stops sound, and requires explicit refresh after native service recovers', async () => {
     const f = setup();
     await f.runtime.ready;

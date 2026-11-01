@@ -8,6 +8,8 @@ Issue: [#7](https://github.com/georgi-cole/crystal-path-infinity/issues/7). Base
 
 The initial recovery hold excludes time spent constructing the owner and reconciling its page. Independent leases cover user pause, ads, verification and recovery; releasing one cannot release another. Ordinary animations do not acquire a hold. Dead and finished states freeze active time automatically.
 
+A new/recovered practice runtime requests a fresh native sample before releasing that initial hold. The page's original readiness promise may have resolved long before the player starts a run. Reusing its cached sample would charge menu time to the first gameplay tick; observation offsets must also be anchored against the fresh sample to avoid counting that interval twice. Disposal during this startup request leaves the checkpoint and resources untouched.
+
 `hold(reason)` settles the current active interval and returns its transition events. Its lease's `release()` rebases the source while still paused, without ticking. The host handles each returned transition once. Fractional milliseconds carry across samples and pauses. Invalid, backward and overflowing clocks throw; intervals are not shortened with arbitrary delta limits.
 
 A 900 ms sample can discover lethal drain at 500 ms. The returned checkpoint commits **500 ms** and discards the unplayed tail before revival. A normal pause preserves remaining effect durations; revive clears them through the existing reducer. The 5000 ms expiry boundary excludes a tenth periodic pulse.

@@ -39,13 +39,13 @@ export interface PracticeRuntime {
 /** Local practice only. Ranked actions/time go through the future server authority. */
 export function createPracticeRuntime(options: PracticeRuntimeOptions): PracticeRuntime {
   let current = options.lifecycle.getSnapshot();
-  let observationOffset = current
-    ? Math.max(0, options.state.lastObservedAt - current.observedAt)
-    : undefined;
+  let observationOffset: number | undefined;
   const session = createTimedRunSession(options.state, options.rng, {
     monotonicNow: () => current?.monotonicMs ?? 0,
     observationNow: () =>
-      current ? current.observedAt + (observationOffset ?? 0) : options.state.lastObservedAt,
+      current
+        ? Math.max(options.state.lastObservedAt, current.observedAt + (observationOffset ?? 0))
+        : options.state.lastObservedAt,
   });
   let disposed = false;
   let initialized = false;
@@ -124,7 +124,6 @@ export function createPracticeRuntime(options: PracticeRuntimeOptions): Practice
     if (disposed) return;
     if (current?.active !== snapshot.active) lifecycleEpoch = {};
     current = snapshot;
-    observationOffset ??= Math.max(0, options.state.lastObservedAt - snapshot.observedAt);
     if (!initialized) return;
     // Source time already excludes background. Settle its confirmed native
     // boundary even if visibility arrived first with an older sample. A second
@@ -156,7 +155,16 @@ export function createPracticeRuntime(options: PracticeRuntimeOptions): Practice
     const snapshot = await options.lifecycle.ready;
     if (disposed) return;
     if (!snapshot) throw new Error('The gameplay lifecycle is disposed.');
-    accept(options.lifecycle.getSnapshot() ?? snapshot);
+    // The page may have waited on a menu long after its original ready promise.
+    // Start from a fresh native boundary, never from that cached page snapshot.
+    await read();
+    if (disposed) return;
+    finishRecovery();
+  }
+  function finishRecovery(): void {
+    if (initialized) return;
+    if (!current) throw new Error('The gameplay lifecycle is not ready.');
+    observationOffset = Math.max(0, options.state.lastObservedAt - current.observedAt);
     initialized = true;
     emit(session.releaseRecovery());
     syncResources();
@@ -215,10 +223,7 @@ export function createPracticeRuntime(options: PracticeRuntimeOptions): Practice
         if (disposed) return;
         await read();
         if (disposed) return;
-        if (!initialized) {
-          initialized = true;
-          emit(session.releaseRecovery());
-        }
+        finishRecovery();
         if (fault) {
           const lease = fault;
           fault = undefined;
