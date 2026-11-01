@@ -5,7 +5,9 @@ import { defineConfig } from 'vitest/config';
 import { getBuildInfo, requireEnvironment } from './config/environments.ts';
 
 const appRoot = fileURLToPath(new URL('.', import.meta.url));
-const manifest = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
+const manifest = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as {
+  version: string;
+};
 
 export default defineConfig(({ mode }) => {
   // Vitest uses its own test mode; application builds accept only named environments.
@@ -13,12 +15,19 @@ export default defineConfig(({ mode }) => {
   const buildInfo = getBuildInfo(environment, manifest.version);
   return {
     root: appRoot,
-    plugins: [react(), {
-      name: 'crystal-path-build-identity',
-      generateBundle() {
-        this.emitFile({ type: 'asset', fileName: 'build-info.json', source: `${JSON.stringify(buildInfo, null, 2)}\n` });
+    plugins: [
+      react(),
+      {
+        name: 'crystal-path-build-identity',
+        generateBundle() {
+          this.emitFile({
+            type: 'asset',
+            fileName: 'build-info.json',
+            source: `${JSON.stringify(buildInfo, null, 2)}\n`,
+          });
+        },
       },
-    }],
+    ],
     define: { __CPI_BUILD_INFO__: JSON.stringify(buildInfo) },
     server: { host: '127.0.0.1', port: 5174, strictPort: true },
     preview: { host: '127.0.0.1', port: 4174, strictPort: true },

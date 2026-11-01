@@ -35,7 +35,9 @@ export function requireEnvironment(value: unknown): AppEnvironment {
 export function getBuildInfo(environment: AppEnvironment, version: string): BuildInfo {
   const selected = requireEnvironment(environment);
   if (typeof version !== 'string' || version.length === 0 || version.trim() !== version) {
-    throw new Error('The mobile package must provide a non-empty version without surrounding whitespace.');
+    throw new Error(
+      'The mobile package must provide a non-empty version without surrounding whitespace.',
+    );
   }
 
   return { schemaVersion: 1, environment: selected, ...identities[selected], version };
@@ -61,7 +63,9 @@ export function assertBuiltEnvironment(
 
   for (const key of keys) {
     if (!Object.hasOwn(actual, key) || actual[key] !== expected[key]) {
-      throw new Error(`Built assets do not match the requested ${environment} build (${key}). ${rebuild}`);
+      throw new Error(
+        `Built assets do not match the requested ${environment} build (${key}). ${rebuild}`,
+      );
     }
   }
 }

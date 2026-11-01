@@ -22,8 +22,11 @@ The root npm workspace contains `apps/mobile`; its dependencies and lockfile liv
 | Root command | Purpose |
 | --- | --- |
 | `npm run dev` | Development browser server on port 5174 |
-| `npm run typecheck` | Check the app, configuration, and environment tests |
-| `npm test` | Run the environment contract tests |
+| `npm run typecheck` | Check the app, configuration, and tests |
+| `npm run lint` | Type-aware application lint and native/CI script checks |
+| `npm run format:check` | Check the scoped app/config/script formatting |
+| `npm run format` | Apply formatting locally to the same scope |
+| `npm test` | Run the environment and startup-diagnostic contract tests |
 | `npm run build` | Build development assets into `apps/mobile/dist` |
 | `npm run build:staging` | Build staging assets into the same directory |
 | `npm run build:production` | Build production assets into the same directory |
@@ -77,16 +80,20 @@ The generator restores the app-specific [Swift Package Manager lock](native-lock
 
 ## Native smoke checks and CI evidence
 
-[The app workflow](../../.github/workflows/mobile-app.yml) defines clean installs, all three web builds, development native compilation, identity/permission checks, and emulator/Simulator launch checks. It is separate from the CPI-002 spike workflow.
+[The app workflow](../../.github/workflows/mobile-app.yml) runs **App quality** on every PR: clean install, typecheck, lint, formatting, application/routing tests and all three web builds. A complete Git diff selects the two native jobs for runtime, dependency, toolchain, workflow or unknown changes; known documentation/planning changes skip them explicitly. **App required checks** always runs and requires successful quality plus both native results when selected. It is separate from the CPI-002 spike workflow. The [CPI-004 record](../../docs/decisions/CPI-004-quality-gates.md) covers gate behavior, settings and verification.
 
 After compiling the development APK or Simulator app and preparing the corresponding runtime, the launch check can be run from the root:
 
 ```sh
-node apps/mobile/scripts/smoke-native.mjs --platform android
-node apps/mobile/scripts/smoke-native.mjs --platform ios
+node --experimental-strip-types apps/mobile/scripts/smoke-native.mjs --platform android
+node --experimental-strip-types apps/mobile/scripts/smoke-native.mjs --platform ios
 ```
 
-The script does not compile. Android needs the dedicated accelerated `cpi003-development` AVD with the API 36 Google APIs x86_64 image and emulator port 5554 available; the script wipes that AVD's data. iOS needs an available iPhone device type with the iOS 26.5 runtime; the script creates a fresh named simulator and deletes only that simulator afterward. The workflow contains the setup commands. Both checks install and launch the development app, wait for its React commit marker to match the build metadata, and capture logs, a screenshot, and a JSON result in `apps/mobile/artifacts`. Boot progress is captured in `ios-boot.log`. Their scope is the minimal screen, with physical-device, gameplay, ads, backend, and store checks tracked separately.
+The script does not compile. Android needs the dedicated accelerated `cpi003-development` AVD with the API 36 Google APIs x86_64 image and emulator port 5554 available; the script wipes that AVD's data. iOS needs an available iPhone device type with the iOS 26.5 runtime; the script creates a fresh named simulator and deletes only that simulator afterward. The workflow contains the setup commands.
+
+Both checks require the React commit marker, page readiness, a real read-only native bridge call, and document pause/resume delivery followed by another native bridge call. Android performs three cold process starts in one emulator, each with Home followed by resuming the same activity. iOS opens Settings then resumes the existing app. Both drivers wait for the actual pause observation before requesting resume. The development-only observer records timestamps and session/sequence information without suppressing errors; staging and production omit that observer. Unexpected JavaScript exceptions and app/unattributed runtime errors fail the check, including errors before the React marker and later in the observation window. Android runtime crashes conclusively attributed to another process remain in the raw logs and a separate diagnostics field; app, WebView, malformed or ambiguous process evidence is never treated as unrelated.
+
+Logs, screenshots, per-attempt diagnostic JSON, lifecycle actions and a final result are saved in `apps/mobile/artifacts`. Boot progress is captured in `ios-boot.log`. Every Android attempt is retained; a later pass cannot erase an earlier error. Their scope is the minimal screen and startup/lifecycle behavior, with physical-device, gameplay, ads, backend, and store checks tracked separately.
 
 | CI artifact | Contents |
 | --- | --- |

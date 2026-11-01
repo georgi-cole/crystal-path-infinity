@@ -2,10 +2,16 @@ name: Проблем в играта
 description: Възпроизводим проблем с игра, профил, класация или реклама
 title: "[Bug] "
 body:
+  - type: input
+    id: cpi
+    attributes:
+      label: Свързана CPI задача
+      description: CPI ID или issue връзка, ако са известни.
+      placeholder: 'CPI-004 · #4'
   - type: textarea
     id: observed
     attributes:
-      label: Какво се случи и какво очакваше?
+      label: Наблюдение и очакван резултат след корекция
     validations:
       required: true
   - type: textarea
@@ -20,3 +26,8 @@ body:
     attributes:
       label: Доказателства
       description: Screenshot или sanitised run/reference ID, ако е наличен.
+  - type: textarea
+    id: validation
+    attributes:
+      label: Проверка на корекцията
+      description: Кой сценарий трябва да заработи; посочи regression проверка, ако е известна.
