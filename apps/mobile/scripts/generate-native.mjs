@@ -140,6 +140,10 @@ function configureAndroid(info) {
   // A disposable copy pins the upstream source and keeps node_modules pristine.
   const capacitorPackage = dirname(appRequire.resolve('@capacitor/android/package.json'));
   cpSync(capacitorPackage, join(appRoot, 'android/cpi-capacitor'), { recursive: true });
+  write(
+    'android/cpi-capacitor/capacitor/src/main/java/com/getcapacitor/CpiLifecycleGate.java',
+    read('native-templates/android/CpiLifecycleGate.java'),
+  );
   const lifecycleSource =
     'android/cpi-capacitor/capacitor/src/main/java/com/getcapacitor/cordova/MockCordovaWebViewImpl.java';
   write(lifecycleSource, patchAndroidLifecycle(read(lifecycleSource)));
@@ -407,6 +411,10 @@ function verifyNative(platform, info) {
       read('android/capacitor.settings.gradle').includes(
         "new File(settingsDir, 'cpi-capacitor/capacitor')",
       ),
+    );
+    assert.equal(
+      read('android/cpi-capacitor/capacitor/src/main/java/com/getcapacitor/CpiLifecycleGate.java'),
+      read('native-templates/android/CpiLifecycleGate.java'),
     );
     assert.ok(
       read(

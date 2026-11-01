@@ -14,23 +14,15 @@ export function patchAndroidLifecycle(source: string): string {
   const before = `    public void triggerDocumentEvent(final String eventName) {
         eval("window.Capacitor.triggerEvent('" + eventName + "', 'document');", (s) -> {});
     }`;
-  const after = `    private static final Map<WebView, String> lifecyclePages =
-        java.util.Collections.synchronizedMap(new java.util.WeakHashMap<>());
-
-    public static void setLifecyclePage(WebView webView, String pageId) {
-        if (pageId == null) lifecyclePages.remove(webView);
-        else lifecyclePages.put(webView, pageId);
-    }
-
-    public void triggerDocumentEvent(final String eventName) {
-        final String owner = lifecyclePages.get(webView);
+  const after = `    public void triggerDocumentEvent(final String eventName) {
+        final String owner = com.getcapacitor.CpiLifecycleGate.getPage(webView);
         if (owner == null) {
             android.util.Log.i("Capacitor", "CPI_NATIVE_PREPAGE_EVENT dropped " + eventName);
             return;
         }
         Handler mainHandler = new Handler(context.getMainLooper());
         mainHandler.post(() -> {
-            if (!owner.equals(lifecyclePages.get(webView))) return;
+            if (!owner.equals(com.getcapacitor.CpiLifecycleGate.getPage(webView))) return;
             // A queued native callback may execute after navigation. The exact
             // handshake identity prevents delivery into another document.
             webView.evaluateJavascript(

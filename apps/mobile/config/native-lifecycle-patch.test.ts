@@ -19,7 +19,9 @@ describe('pinned Android lifecycle patch', () => {
     expect(result).toContain('pluginManager.onPause(keepRunning)');
     expect(result).toContain('pluginManager.onResume(keepRunning)');
     expect(result).toContain('if (owner == null)');
-    expect(result).toContain('if (!owner.equals(lifecyclePages.get(webView))) return;');
+    expect(result).toContain(
+      'if (!owner.equals(com.getcapacitor.CpiLifecycleGate.getPage(webView))) return;',
+    );
     expect(result).toContain('window.__CPI_NATIVE_PAGE_ID__ ===');
     expect(result).not.toContain('catch (');
   });

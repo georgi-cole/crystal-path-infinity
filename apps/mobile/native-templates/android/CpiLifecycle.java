@@ -8,7 +8,7 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.WebViewListener;
 import com.getcapacitor.annotation.CapacitorPlugin;
-import com.getcapacitor.cordova.MockCordovaWebViewImpl;
+import com.getcapacitor.CpiLifecycleGate;
 import java.util.UUID;
 import org.json.JSONObject;
 
@@ -31,7 +31,7 @@ public class CpiLifecycle extends Plugin {
             @Override public void onPageStarted(WebView view) {
                 pageGeneration++;
                 pageId = null;
-                MockCordovaWebViewImpl.setLifecyclePage(view, null);
+                CpiLifecycleGate.setPage(view, null);
             }
         });
     }
@@ -69,7 +69,7 @@ public class CpiLifecycle extends Plugin {
     @Override protected void handleOnDestroy() {
         if (active) accumulated += now() - boundary;
         active = false;
-        MockCordovaWebViewImpl.setLifecyclePage(getBridge().getWebView(), null);
+        CpiLifecycleGate.setPage(getBridge().getWebView(), null);
         pageId = null;
     }
 
@@ -89,7 +89,7 @@ public class CpiLifecycle extends Plugin {
                         return;
                     }
                     pageId = requested;
-                    MockCordovaWebViewImpl.setLifecyclePage(getBridge().getWebView(), requested);
+                    CpiLifecycleGate.setPage(getBridge().getWebView(), requested);
                     call.resolve(snapshot());
                 }
             );
