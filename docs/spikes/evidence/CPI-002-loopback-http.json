@@ -1,0 +1,227 @@
+{
+  "measuredAt": "2026-11-01T15:33:20.241Z",
+  "runtime": {
+    "node": "v24.22.1",
+    "platform": "linux",
+    "architecture": "x64"
+  },
+  "scope": "Serial requests over real loopback HTTP. Server and client share one machine. No TLS, cellular network, mobile WebView, database, or native ad SDK.",
+  "fixture": "Synthetic perfect choices; maxActions raised to 10000 only in this measurement harness. The interactive server retains its 1000-action lab budget. Neither is a product finish rule.",
+  "limitations": [
+    "Artificial delay is server delay, not a cellular-network simulation.",
+    "JSON bytes exclude HTTP headers, TLS, runtime objects, DB metadata/indexes/replicas and provider billing.",
+    "One run per profile is not a load/capacity benchmark."
+  ],
+  "scenarios": [
+    {
+      "name": "long-run-local",
+      "artificialStepDelayMs": 0,
+      "steps": 10000,
+      "httpRequestsIncludingDiagnostics": 10009,
+      "stepRoundTripMs": {
+        "p50": 0.306,
+        "p95": 0.667,
+        "max": 18.5
+      },
+      "stepBodyBytes": {
+        "requestMean": 86.889,
+        "responseMean": 559.227,
+        "requestTotal": 868894,
+        "responseTotal": 5592266
+      },
+      "allHttpBodyBytes": {
+        "request": 869107,
+        "response": 5597147
+      },
+      "checkpoints": [
+        {
+          "completedRows": 1,
+          "retainedActions": 1,
+          "retainedActionJsonBytes": 148,
+          "publicCheckpointJsonBytes": 436
+        },
+        {
+          "completedRows": 100,
+          "retainedActions": 100,
+          "retainedActionJsonBytes": 14977,
+          "publicCheckpointJsonBytes": 446
+        },
+        {
+          "completedRows": 351,
+          "retainedActions": 351,
+          "retainedActionJsonBytes": 53380,
+          "publicCheckpointJsonBytes": 446
+        },
+        {
+          "completedRows": 1000,
+          "retainedActions": 1000,
+          "retainedActionJsonBytes": 152680,
+          "publicCheckpointJsonBytes": 451
+        },
+        {
+          "completedRows": 10000,
+          "retainedActions": 10000,
+          "retainedActionJsonBytes": 1556683,
+          "publicCheckpointJsonBytes": 456
+        }
+      ],
+      "finalMetrics": {
+        "requests": 10009,
+        "errors": 1,
+        "requestBodyBytes": 869107,
+        "responseBodyBytes": 5596514,
+        "handlerMillisecondsTotal": 751.855952999996,
+        "handlerMillisecondsMax": 9.35750199999984,
+        "clientCallbackReports": 0,
+        "ssvVerifiedCallbacks": 0,
+        "runs": 1,
+        "maxRuns": 20,
+        "intents": 0,
+        "transactions": 0,
+        "retainedActions": 10000,
+        "retainedActionJsonBytes": 1556683,
+        "maxActionsPerRun": 10000,
+        "publicCheckpointJsonBytes": 456,
+        "storage": "volatile-memory; JSON byte proxy only; no database or cloud cost measured",
+        "official": false,
+        "activeRequests": 1,
+        "syntheticDelayMs": 0,
+        "measurement": "HTTP body bytes and handler wall time; not native frame latency, DB usage or cloud cost"
+      },
+      "assertions": {
+        "stillPlayingAtLastRow": true,
+        "duplicateDidNotAdvance": true,
+        "explicitLabBudgetError": true,
+        "official": false
+      }
+    },
+    {
+      "name": "delay-150ms",
+      "artificialStepDelayMs": 150,
+      "steps": 30,
+      "httpRequestsIncludingDiagnostics": 36,
+      "stepRoundTripMs": {
+        "p50": 151.745,
+        "p95": 152.988,
+        "max": 153.714
+      },
+      "stepBodyBytes": {
+        "requestMean": 84.7,
+        "responseMean": 543.967,
+        "requestTotal": 2541,
+        "responseTotal": 16319
+      },
+      "allHttpBodyBytes": {
+        "request": 2748,
+        "response": 19271
+      },
+      "checkpoints": [
+        {
+          "completedRows": 1,
+          "retainedActions": 1,
+          "retainedActionJsonBytes": 148,
+          "publicCheckpointJsonBytes": 436
+        },
+        {
+          "completedRows": 30,
+          "retainedActions": 30,
+          "retainedActionJsonBytes": 4474,
+          "publicCheckpointJsonBytes": 441
+        }
+      ],
+      "finalMetrics": {
+        "requests": 36,
+        "errors": 1,
+        "requestBodyBytes": 2748,
+        "responseBodyBytes": 18649,
+        "handlerMillisecondsTotal": 4826.517181000005,
+        "handlerMillisecondsMax": 151.68237299999964,
+        "clientCallbackReports": 0,
+        "ssvVerifiedCallbacks": 0,
+        "runs": 1,
+        "maxRuns": 20,
+        "intents": 0,
+        "transactions": 0,
+        "retainedActions": 30,
+        "retainedActionJsonBytes": 4474,
+        "maxActionsPerRun": 30,
+        "publicCheckpointJsonBytes": 441,
+        "storage": "volatile-memory; JSON byte proxy only; no database or cloud cost measured",
+        "official": false,
+        "activeRequests": 1,
+        "syntheticDelayMs": 150,
+        "measurement": "HTTP body bytes and handler wall time; not native frame latency, DB usage or cloud cost"
+      },
+      "assertions": {
+        "stillPlayingAtLastRow": true,
+        "duplicateDidNotAdvance": true,
+        "explicitLabBudgetError": true,
+        "official": false
+      }
+    },
+    {
+      "name": "delay-600ms",
+      "artificialStepDelayMs": 600,
+      "steps": 12,
+      "httpRequestsIncludingDiagnostics": 18,
+      "stepRoundTripMs": {
+        "p50": 602.182,
+        "p95": 605.012,
+        "max": 605.012
+      },
+      "stepBodyBytes": {
+        "requestMean": 84.25,
+        "responseMean": 540.917,
+        "requestTotal": 1011,
+        "responseTotal": 6491
+      },
+      "allHttpBodyBytes": {
+        "request": 1218,
+        "response": 9438
+      },
+      "checkpoints": [
+        {
+          "completedRows": 1,
+          "retainedActions": 1,
+          "retainedActionJsonBytes": 148,
+          "publicCheckpointJsonBytes": 436
+        },
+        {
+          "completedRows": 12,
+          "retainedActions": 12,
+          "retainedActionJsonBytes": 1774,
+          "publicCheckpointJsonBytes": 441
+        }
+      ],
+      "finalMetrics": {
+        "requests": 18,
+        "errors": 1,
+        "requestBodyBytes": 1218,
+        "responseBodyBytes": 8818,
+        "handlerMillisecondsTotal": 8419.246242999996,
+        "handlerMillisecondsMax": 602.5085029999991,
+        "clientCallbackReports": 0,
+        "ssvVerifiedCallbacks": 0,
+        "runs": 1,
+        "maxRuns": 20,
+        "intents": 0,
+        "transactions": 0,
+        "retainedActions": 12,
+        "retainedActionJsonBytes": 1774,
+        "maxActionsPerRun": 12,
+        "publicCheckpointJsonBytes": 441,
+        "storage": "volatile-memory; JSON byte proxy only; no database or cloud cost measured",
+        "official": false,
+        "activeRequests": 1,
+        "syntheticDelayMs": 600,
+        "measurement": "HTTP body bytes and handler wall time; not native frame latency, DB usage or cloud cost"
+      },
+      "assertions": {
+        "stillPlayingAtLastRow": true,
+        "duplicateDidNotAdvance": true,
+        "explicitLabBudgetError": true,
+        "official": false
+      }
+    }
+  ]
+}

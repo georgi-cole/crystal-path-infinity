@@ -1,0 +1,30 @@
+{
+  "date": "2026-11-01T15:35:48.037Z",
+  "browser": "145.0.7632.6",
+  "checks": [
+    {
+      "check": "lost step response",
+      "sameCommandRetried": true,
+      "mutations": 1,
+      "completedRows": 1
+    },
+    {
+      "check": "lost step reconciled by read",
+      "newInputUnblocked": true,
+      "completedRows": 2
+    },
+    {
+      "check": "delayed response",
+      "waitingVisible": true,
+      "doubleInputBlocked": true
+    },
+    {
+      "check": "lost restore response",
+      "reconciled": true,
+      "revivesApplied": 1,
+      "duplicateRestoreBlocked": true
+    }
+  ],
+  "errors": [],
+  "scope": "Headless desktop Chromium with deliberately lost/delayed responses; not mobile network evidence."
+}

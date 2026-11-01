@@ -1,0 +1,113 @@
+{
+  "date": "2026-11-01T15:32:05.464Z",
+  "browser": "145.0.7632.6",
+  "checks": [
+    {
+      "check": "layout",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "horizontalOverflow": false,
+      "minButtonHeight": 44,
+      "reducedMotion": true
+    },
+    {
+      "check": "layout",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "horizontalOverflow": false,
+      "minButtonHeight": 44,
+      "reducedMotion": true
+    },
+    {
+      "check": "layout",
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "horizontalOverflow": false,
+      "minButtonHeight": 44,
+      "reducedMotion": true
+    },
+    {
+      "check": "authoritative step",
+      "completedRow": 1
+    },
+    {
+      "check": "no-fill",
+      "noReward": true,
+      "revivesUsed": 0
+    },
+    {
+      "check": "pause blocks restore",
+      "passed": true
+    },
+    {
+      "check": "restore",
+      "ordinal": 1,
+      "sp": 200
+    },
+    {
+      "check": "restore",
+      "ordinal": 2,
+      "sp": 200
+    },
+    {
+      "check": "restore",
+      "ordinal": 3,
+      "sp": 200
+    },
+    {
+      "check": "restore",
+      "ordinal": 4,
+      "sp": 200
+    },
+    {
+      "check": "restore",
+      "ordinal": 5,
+      "sp": 200
+    },
+    {
+      "check": "restore",
+      "ordinal": 6,
+      "sp": 150
+    },
+    {
+      "check": "restore",
+      "ordinal": 7,
+      "sp": 150
+    },
+    {
+      "check": "restore",
+      "ordinal": 8,
+      "sp": 150
+    },
+    {
+      "check": "restore",
+      "ordinal": 9,
+      "sp": 150
+    },
+    {
+      "check": "restore",
+      "ordinal": 10,
+      "sp": 150
+    },
+    {
+      "check": "death after tenth continuation",
+      "terminal": true
+    },
+    {
+      "check": "export",
+      "credentialsExcluded": true,
+      "official": false,
+      "verifiedSsvGrants": 0
+    }
+  ],
+  "errors": [],
+  "limits": [
+    "Desktop headless Chromium only; not Android/iOS or real ads."
+  ]
+}
