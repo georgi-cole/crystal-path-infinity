@@ -70,7 +70,7 @@ describe('CPI-013 standalone menu and route model', () => {
 
   it('permits offline practice without age or account gating', () => {
     const html = render('practice');
-    expect(html).toContain('No account');
+    expect(html).toContain('Practice requires no account');
     expect(html).toContain('age answer or analytics consent');
     expect(html).toContain('New practice');
     expect(html).not.toContain('Resume · Row');
