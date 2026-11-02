@@ -156,6 +156,16 @@ describe('CPI-011 strict Android first-boot readiness', () => {
     expect(script).toContain('assert.equal(pid, initialPid');
   });
 
+  it('disables flaky emulator Vulkan composition without bypassing real native events', () => {
+    const script = readFileSync(new URL('../scripts/smoke-native.mjs', import.meta.url), 'utf8');
+    expect(script).toContain("'-feature',\n      '-Vulkan'");
+    expect(script).toContain("'android-failure-anr-index.txt'");
+    expect(script).toContain("'android-failure-anr-trace-'");
+    expect(script).toContain("'android-failure-last-anr.txt'");
+    expect(script).toContain('assertNoTargetAnr()');
+    expect(script).toContain("waitFor('Android native pause after Home', 30_000");
+  });
+
   it('pins a reduced graphics-work AOSP API 36 emulator with real lifecycle checks', () => {
     const workflow = readFileSync(
       new URL('../../../.github/workflows/mobile-app.yml', import.meta.url),

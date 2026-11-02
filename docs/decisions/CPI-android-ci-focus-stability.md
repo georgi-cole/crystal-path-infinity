@@ -118,3 +118,26 @@ top summary remains a hard diagnostic failure rather than a presumed-idle
 reading. Regression tests reject the cached dumpsys report format and check
 normalization on the 4-core emulator. The strict Home/pause/resume, native
 clock, ANR and bridge assertions are unchanged.
+
+
+## Follow-up: genuine ANR despite valid live metrics (run 41512891862)
+
+The Toybox fix passed app quality and produced valid varying live CPU readings.
+The first foreground quiescence gate **passed**: WebView resources were quiet
+for ~8 seconds and the last three CPU readings were approximately 26%, 28%
+and 37% busy with 0% I/O-wait. Immediately following genuine HOME dispatch
+Android still emitted `Activity top resumed state loss timeout`, then the
+original target-app `FocusEvent(hasFocus=false)` ANR and killed the process.
+This disproves a universal claim that a low-load gate by itself prevents the
+native focus problem. iOS passed in the same run.
+
+The emulator log identified gfxstream / Vulkan / SwiftShader composition,
+with disproportionate `surfaceflinger` and `composer3` CPU consumption in the
+ANR report. The next isolated CI experiment keeps API 36, AOSP, KVM, the
+SwiftShader GLES renderer and **all strict native lifecycle assertions**, but
+disables the optional emulator Vulkan feature using Android's documented
+`-feature -Vulkan` compatibility flag. This is a hypothesis to verify, not
+a confirmed fix. Failure evidence now includes the OS ANR thread files from
+`/data/anr` (when readable by shell) plus the last-ANR activity dump.
+If the crash persists, inspect these traces for native UI-thread stalls,
+rather than weakening the gate or assuming an emulator-only cause.

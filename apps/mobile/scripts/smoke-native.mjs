@@ -349,6 +349,11 @@ async function android() {
       '-no-boot-anim',
       '-no-snapshot',
       '-wipe-data',
+      // API 36 / Linux SwiftShader can deadlock focus changes when Vulkan
+      // composition is active. Android documents this GLES-only fallback;
+      // keep the real WebView, focus callbacks, and strict ANR detection.
+      '-feature',
+      '-Vulkan',
       '-gpu',
       'swiftshader',
       '-accel',
@@ -725,6 +730,41 @@ async function android() {
       const result = run(adb, commandArgs, { timeout: 15_000, allowFailure: true });
       save(name, String(result.stdout ?? '') + '\n' + String(result.stderr ?? ''));
     }
+    // An actual focus-loss ANR must remain a hard failure. Preserve the
+    // Android-generated thread dump, not merely its one-line logcat reason,
+    // so a Java/UI lockup can be distinguished from emulator compositor load.
+    const anrList = run(adb, adbArgs('shell', 'ls', '-1', '/data/anr'), {
+      timeout: 15_000,
+      allowFailure: true,
+    });
+    save(
+      'android-failure-anr-index.txt',
+      String(anrList.stdout ?? '') + '\n' + String(anrList.stderr ?? ''),
+    );
+    if (anrList.status === 0) {
+      const traces = String(anrList.stdout ?? '')
+        .split(/\r?\n/)
+        .filter((name) => /^anr_[a-zA-Z0-9_.-]+$/.test(name))
+        .slice(-2);
+      for (const [index, name] of traces.entries()) {
+        const trace = run(adb, adbArgs('shell', 'cat', '/data/anr/' + name), {
+          timeout: 20_000,
+          allowFailure: true,
+        });
+        save(
+          'android-failure-anr-trace-' + (index + 1) + '.txt',
+          String(trace.stdout ?? '') + '\n' + String(trace.stderr ?? ''),
+        );
+      }
+    }
+    const lastAnr = run(adb, adbArgs('shell', 'dumpsys', 'activity', 'lastanr'), {
+      timeout: 15_000,
+      allowFailure: true,
+    });
+    save(
+      'android-failure-last-anr.txt',
+      String(lastAnr.stdout ?? '') + '\n' + String(lastAnr.stderr ?? ''),
+    );
     const screenshot = run(adb, adbArgs('exec-out', 'screencap', '-p'), {
       timeout: 10_000,
       binary: true,
