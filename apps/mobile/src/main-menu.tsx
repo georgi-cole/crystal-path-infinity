@@ -4,6 +4,9 @@ import type { PracticeLoad, PracticeSettings } from './practice-save';
 import { canResumePractice, formatRowLabel, rankedServiceState } from './menu-navigation';
 import type { MenuView } from './menu-navigation';
 import './main-menu.css';
+import './intro-hub-premium.css';
+
+const INTRO_HUB_BASE = import.meta.env.BASE_URL + 'intro-hub/';
 
 type GlyphName = 'play' | 'practice' | 'ranking' | 'profile' | 'settings' | 'arrow';
 
@@ -55,7 +58,7 @@ function Glyph({ name }: { name: GlyphName }) {
   );
 }
 
-/** Standalone button adapts Big Eye press/focus/glass patterns, not its SVG masks. */
+/** Original Big Eye IntroHub button silhouettes and icons; standalone navigation owns the click. */
 export function MenuAction({
   label,
   description,
@@ -69,15 +72,46 @@ export function MenuAction({
   variant?: 'primary' | 'secondary' | 'quiet';
   onClick: () => void;
 }) {
+  const buttonFace =
+    variant === 'primary'
+      ? 'primary_large_normal.svg'
+      : icon === 'practice'
+        ? 'secondary_wide_normal.svg'
+        : icon === 'settings'
+          ? 'secondary_small_normal.svg'
+          : 'secondary_medium_normal.svg';
+  const sourceIcon =
+    icon === 'play'
+      ? 'icons/play.svg'
+      : icon === 'practice'
+        ? 'icons/rules.svg'
+        : icon === 'ranking'
+          ? 'icons/leaderboard.svg'
+          : icon === 'profile'
+            ? 'icons/profile.svg'
+            : icon === 'settings'
+              ? 'utilities/settings_v2.svg'
+              : null;
   return (
     <button
       className={'cpi-menu-action cpi-menu-action--' + variant}
       type="button"
       onClick={onClick}
     >
+      <img
+        className="cpi-menu-action-art"
+        src={INTRO_HUB_BASE + 'buttons/' + buttonFace}
+        alt=""
+        aria-hidden="true"
+        draggable={false}
+      />
       {icon && (
         <span className="cpi-menu-action-icon">
-          <Glyph name={icon} />
+          {sourceIcon ? (
+            <img src={INTRO_HUB_BASE + sourceIcon} alt="" aria-hidden="true" />
+          ) : (
+            <Glyph name={icon} />
+          )}
         </span>
       )}
       <span className="cpi-menu-action-copy">
@@ -88,6 +122,66 @@ export function MenuAction({
         ›
       </span>
     </button>
+  );
+}
+
+function HubUtilityControls({
+  settings,
+  onSettingsChange,
+  onOpen,
+}: Pick<MainMenuProps, 'settings' | 'onSettingsChange' | 'onOpen'>) {
+  return (
+    <div className="cpi-hub-utilities" aria-label="Intro hub utilities">
+      <div className="cpi-hub-utility-stack">
+        {(
+          [
+            { key: 'music', icon: 'music_v2.svg', label: 'Music' },
+            { key: 'soundEffects', icon: 'sound_v2.svg', label: 'Sound effects' },
+          ] as const
+        ).map(({ key, icon, label }) => (
+          <button
+            key={key}
+            type="button"
+            className={'cpi-hub-chip' + (settings[key] ? '' : ' cpi-hub-chip--inactive')}
+            aria-label={(settings[key] ? 'Disable ' : 'Enable ') + label.toLowerCase()}
+            aria-pressed={settings[key]}
+            onClick={() => onSettingsChange({ ...settings, [key]: !settings[key] })}
+          >
+            <img
+              className="cpi-hub-chip-shell"
+              src={INTRO_HUB_BASE + 'utilities/side_utility_shell_normal.svg'}
+              alt=""
+              aria-hidden="true"
+            />
+            <img
+              className="cpi-hub-chip-glyph"
+              src={INTRO_HUB_BASE + 'utilities/' + icon}
+              alt=""
+              aria-hidden="true"
+            />
+          </button>
+        ))}
+      </div>
+      <button
+        type="button"
+        className="cpi-hub-chip"
+        aria-label="Open settings"
+        onClick={() => onOpen('settings')}
+      >
+        <img
+          className="cpi-hub-chip-shell"
+          src={INTRO_HUB_BASE + 'utilities/side_utility_shell_normal.svg'}
+          alt=""
+          aria-hidden="true"
+        />
+        <img
+          className="cpi-hub-chip-glyph"
+          src={INTRO_HUB_BASE + 'utilities/settings_v2.svg'}
+          alt=""
+          aria-hidden="true"
+        />
+      </button>
+    </div>
   );
 }
 
@@ -160,17 +254,19 @@ function MenuHome({
   return (
     <>
       <section className="cpi-menu-hero" aria-labelledby="menu-title">
-        <img
-          className="cpi-menu-mark"
-          src={import.meta.env.BASE_URL + 'brand/prism-mark.svg'}
-          alt=""
-          aria-hidden="true"
-        />
-        <p className="cpi-menu-kicker">An endless crystal journey</p>
+        <div className="cpi-hub-emblem" aria-hidden="true">
+          <span className="cpi-hub-emblem-orbit" />
+          <img
+            className="cpi-menu-mark"
+            src={import.meta.env.BASE_URL + 'brand/prism-mark.svg'}
+            alt=""
+          />
+        </div>
+        <p className="cpi-menu-kicker">Crystal Path · Infinity Protocol</p>
         <h1 id="menu-title" data-menu-heading tabIndex={-1}>
           Infinity
         </h1>
-        <p className="cpi-menu-tagline">Choose your path. Every step counts.</p>
+        <p className="cpi-menu-tagline">The bridge has no end.</p>
       </section>
 
       <section className="cpi-menu-scoreboard" aria-label="Your progress">
@@ -189,6 +285,12 @@ function MenuHome({
           variant="primary"
           onClick={() => onOpen('play')}
         />
+        <MenuAction
+          label="Practice"
+          description="Unlimited offline play · No account"
+          icon="practice"
+          onClick={() => onOpen('practice')}
+        />
         {canResume && saved.status === 'ready' && (
           <div className="cpi-menu-resume">
             <span className="cpi-menu-resume-copy">
@@ -202,12 +304,6 @@ function MenuHome({
             </button>
           </div>
         )}
-        <MenuAction
-          label="Practice"
-          description="Unlimited offline play · No account"
-          icon="practice"
-          onClick={() => onOpen('practice')}
-        />
         <div className="cpi-menu-grid">
           <MenuAction label="Rankings" icon="ranking" onClick={() => onOpen('rankings')} />
           <MenuAction label="Profile" icon="profile" onClick={() => onOpen('profile')} />
@@ -299,7 +395,14 @@ export function MainMenu({
       <div className="cpi-menu-inner">
         <MenuHeader view={view} online={online} onBack={onBack} />
         {view === 'home' ? (
-          <MenuHome saved={saved} best={best} onOpen={onOpen} onResume={onResume} onNew={onNew} />
+          <>
+            <HubUtilityControls
+              settings={settings}
+              onSettingsChange={onSettingsChange}
+              onOpen={onOpen}
+            />
+            <MenuHome saved={saved} best={best} onOpen={onOpen} onResume={onResume} onNew={onNew} />
+          </>
         ) : view === 'practice' ? (
           <MenuPanel title="Practice" eyebrow="Offline · All ages">
             <p>
