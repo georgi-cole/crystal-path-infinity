@@ -117,7 +117,7 @@ export function InfinitySceneView({
 
   return (
     <main
-      className={`cps-shell ${INFINITY_SCENE_SKIN.shell} cpi-infinity-scene${catastrophic ? ' is-catastrophe' : ''}`}
+      className={`cps-shell ${INFINITY_SCENE_SKIN.shell} cpi-infinity-scene${catastrophic ? ' is-catastrophe' : ''}${settings.reducedMotion ? ' cpi-reduced-motion' : ''}`}
       data-testid="infinity-scene"
       aria-label={INFINITY_SCENE_SKIN.title}
     >

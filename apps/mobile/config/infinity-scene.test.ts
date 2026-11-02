@@ -57,6 +57,10 @@ describe('CPI-008 standalone scene', () => {
     expect(html).toContain('aria-modal="true"');
     expect(html).toMatch(/disabled=""[^>]*aria-label="Choose left step"/);
   });
+  it('applies the optional in-app reduced-motion setting', () => {
+    const html = markup({ settings: { ...DEFAULT_PRACTICE_SETTINGS, reducedMotion: true } });
+    expect(html).toContain('cpi-reduced-motion');
+  });
   it('keeps native safe-area, short viewport and reduced-motion rules', () => {
     const css = readFileSync(new URL('../src/infinity-scene.css', import.meta.url), 'utf8');
     expect(css).toContain('env(safe-area-inset-top');

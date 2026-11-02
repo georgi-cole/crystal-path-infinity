@@ -2423,3 +2423,11 @@
     visibility: visible;
   }
 }
+
+/* The in-app Reduce Motion switch mirrors the OS accessibility setting. */
+.cpi-infinity-scene.cpi-reduced-motion *,
+.cpi-infinity-scene.cpi-reduced-motion *::before,
+.cpi-infinity-scene.cpi-reduced-motion *::after {
+  animation: none !important;
+  transition: none !important;
+}
