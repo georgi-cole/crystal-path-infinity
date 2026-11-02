@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { createPracticeCursor, createRun, PRACTICE_RNG } from '@crystal-path-infinity/game-core';
 import { InfinitySceneView } from '../src/infinity-scene';
+import { DEFAULT_PRACTICE_SETTINGS } from '../src/practice-save';
 import { readFileSync } from 'node:fs';
 
 const noop = () => {};
@@ -34,6 +35,8 @@ function markup(modifiers: Record<string, unknown> = {}) {
       onExit: noop,
       onRestart: noop,
       onRetry: noop,
+      settings: DEFAULT_PRACTICE_SETTINGS,
+      onSettingsChange: noop,
       ...modifiers,
     }),
   );
