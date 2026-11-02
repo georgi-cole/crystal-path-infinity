@@ -14,7 +14,9 @@
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent 35%),
     linear-gradient(120deg, rgba(43, 92, 128, 0.68), rgba(58, 48, 103, 0.77));
-  box-shadow: inset 0 1px 0 rgba(226, 252, 255, 0.18), 0 9px 24px rgba(0, 0, 0, 0.26);
+  box-shadow:
+    inset 0 1px 0 rgba(226, 252, 255, 0.18),
+    0 9px 24px rgba(0, 0, 0, 0.26);
   color: var(--cpi-text);
   font-family: var(--cpi-type);
   font-size: 0.9rem;
@@ -27,36 +29,58 @@
   touch-action: manipulation;
   -webkit-user-select: none;
   user-select: none;
-  transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease;
 }
 .cpi-crystal-button--primary {
   border-color: rgba(155, 245, 255, 0.64);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.24), transparent 38%),
     linear-gradient(120deg, #286da3, #594eaf);
-  box-shadow: inset 0 1px 0 rgba(248, 255, 255, 0.32), 0 11px 30px rgba(49, 98, 160, 0.23);
+  box-shadow:
+    inset 0 1px 0 rgba(248, 255, 255, 0.32),
+    0 11px 30px rgba(49, 98, 160, 0.23);
 }
 .cpi-crystal-button--quiet {
   border-color: rgba(156, 214, 233, 0.24);
   background: rgba(13, 30, 50, 0.72);
 }
-.cpi-crystal-button--stretch { width: 100%; }
+.cpi-crystal-button--stretch {
+  width: 100%;
+}
 .cpi-crystal-button__icon {
   display: inline-flex;
   align-items: center;
   flex: 0 0 auto;
   justify-content: center;
 }
-.cpi-crystal-button__text { min-width: 0; overflow-wrap: anywhere; }
+.cpi-crystal-button__text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .cpi-crystal-button:hover:not(:disabled) {
   border-color: var(--cpi-glass-cyan);
   transform: translateY(-1px);
 }
-.cpi-crystal-button:active:not(:disabled) { transform: scale(0.985); }
-.cpi-crystal-button:focus-visible { outline: 3px solid var(--cpi-focus); outline-offset: 3px; }
-.cpi-crystal-button:disabled { opacity: 0.46; cursor: not-allowed; }
+.cpi-crystal-button:active:not(:disabled) {
+  transform: scale(0.985);
+}
+.cpi-crystal-button:focus-visible {
+  outline: 3px solid var(--cpi-focus);
+  outline-offset: 3px;
+}
+.cpi-crystal-button:disabled {
+  opacity: 0.46;
+  cursor: not-allowed;
+}
 @media (prefers-reduced-motion: reduce) {
-  .cpi-crystal-button { transition: none; }
+  .cpi-crystal-button {
+    transition: none;
+  }
   .cpi-crystal-button:hover:not(:disabled),
-  .cpi-crystal-button:active:not(:disabled) { transform: none; }
+  .cpi-crystal-button:active:not(:disabled) {
+    transform: none;
+  }
 }

@@ -31,7 +31,11 @@ describe('CPI-011 independent Midnight Prism identity', () => {
     expect(primary).toContain('Continue practice');
 
     const secondary = renderToStaticMarkup(
-      createElement(CrystalButton, { variant: 'secondary', type: 'submit', stretch: true }, 'New practice'),
+      createElement(
+        CrystalButton,
+        { variant: 'secondary', type: 'submit', stretch: true },
+        'New practice',
+      ),
     );
     expect(secondary).toContain('type="submit"');
     expect(secondary).toContain('cpi-crystal-button--stretch');

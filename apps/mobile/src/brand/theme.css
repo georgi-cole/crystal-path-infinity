@@ -17,10 +17,12 @@
 .launch-screen {
   background:
     radial-gradient(ellipse at 50% 32%, rgba(70, 151, 185, 0.18), transparent 53%),
-    radial-gradient(ellipse at 8% 12%, rgba(153, 119, 235, 0.14), transparent 45%),
-    var(--cpi-void);
+    radial-gradient(ellipse at 8% 12%, rgba(153, 119, 235, 0.14), transparent 45%), var(--cpi-void);
 }
-.launch-screen .brand-name { color: var(--cpi-muted); letter-spacing: 0.23em; }
+.launch-screen .brand-name {
+  color: var(--cpi-muted);
+  letter-spacing: 0.23em;
+}
 .launch-screen .brand-edition {
   color: var(--cpi-text);
   text-shadow: 0 0 32px rgba(117, 213, 240, 0.15);
@@ -40,7 +42,9 @@
   gap: 0.65rem;
   margin-top: 1.2rem;
 }
-.launch-content .cpi-primary-actions > * { width: 100%; }
+.launch-content .cpi-primary-actions > * {
+  width: 100%;
+}
 .cpi-brand-caption {
   font-size: 0.7rem;
   letter-spacing: 0.1em;
@@ -48,8 +52,14 @@
   color: var(--cpi-glass-cyan);
 }
 @media (max-height: 650px) {
-  .cpi-brand-artwork { width: 7.2rem; max-height: 18svh; margin-bottom: 0.35rem; }
+  .cpi-brand-artwork {
+    width: 7.2rem;
+    max-height: 18svh;
+    margin-bottom: 0.35rem;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .cpi-brand-artwork { filter: none; }
+  .cpi-brand-artwork {
+    filter: none;
+  }
 }
