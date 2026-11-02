@@ -1,0 +1,51 @@
+name: CPI-013 canonical formatting (temporary)
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  format-cpi-013:
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'cpi-013-home-menu-navigation' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: cpi-013-home-menu-navigation
+          persist-credentials: true
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.23.4'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Apply exactly the project's pinned formatter to the four failing files
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts
+          files=(
+            apps/mobile/src/App.tsx
+            apps/mobile/src/main-menu.css
+            apps/mobile/src/main-menu.tsx
+            apps/mobile/src/menu-navigation.ts
+          )
+          npx --no-install prettier --write "${files[@]}"
+          npx --no-install prettier --check "${files[@]}"
+          git diff --name-only | while IFS= read -r path; do
+            case "$path" in
+              apps/mobile/src/App.tsx|apps/mobile/src/main-menu.css|apps/mobile/src/main-menu.tsx|apps/mobile/src/menu-navigation.ts) ;;
+              *) echo "::error::Unexpected modified file: $path"; exit 1 ;;
+            esac
+          done
+          git add -- "${files[@]}"
+          if git diff --cached --quiet; then
+            echo "All four files were already formatted."
+            exit 0
+          fi
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -m "CPI-013: apply pinned Prettier formatting to menu and navigation"
+          git push origin HEAD:cpi-013-home-menu-navigation
