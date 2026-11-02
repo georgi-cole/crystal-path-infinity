@@ -33,12 +33,16 @@ const time = { rng: PRACTICE_RNG, activeTimeMs: 0, achievedAt: 1000 };
 function died(cause: 'wrong_tile' | 'mystery' | 'drain' = 'wrong_tile'): RunState {
   const starter = initial();
   const wrong = getCurrentRow(starter).safeSide === 'left' ? 'right' : 'left';
-  const dead = transitionRun({ ...starter, sp: 10 }, {
-    type: 'choose',
-    row: '1',
-    life: 0,
-    side: wrong,
-  }, time).state;
+  const dead = transitionRun(
+    { ...starter, sp: 10 },
+    {
+      type: 'choose',
+      row: '1',
+      life: 0,
+      side: wrong,
+    },
+    time,
+  ).state;
   expect(dead.status).toBe('dead');
   if (cause === 'wrong_tile') return dead;
   return {
@@ -165,12 +169,16 @@ describe('CPI-015 HUD and result state contract', () => {
 
   it('treats a granted-but-unapplied continue as earned, not available for another ad', () => {
     const dead = died();
-    const grant = transitionRun(dead, {
-      type: 'grant-revive',
-      deathId: dead.death!.id,
-      ordinal: 1,
-      grantId: 'earned-1',
-    }, time);
+    const grant = transitionRun(
+      dead,
+      {
+        type: 'grant-revive',
+        deathId: dead.death!.id,
+        ordinal: 1,
+        grantId: 'earned-1',
+      },
+      time,
+    );
     expect(grant.accepted).toBe(true);
     const view = presentRunOutcome(grant.state);
     expect(view.phase).toBe('grant-ready');
@@ -227,12 +235,16 @@ describe('CPI-015 HUD and result state contract', () => {
   it('preserves unbounded row precision and does not finish at Row 350', () => {
     let state = initial();
     for (let row = 1; row <= 350; row += 1) {
-      const result = transitionRun(state, {
-        type: 'choose',
-        row: state.currentRow,
-        life: state.revivesApplied,
-        side: getCurrentRow(state).safeSide,
-      }, time);
+      const result = transitionRun(
+        state,
+        {
+          type: 'choose',
+          row: state.currentRow,
+          life: state.revivesApplied,
+          side: getCurrentRow(state).safeSide,
+        },
+        time,
+      );
       expect(result.accepted).toBe(true);
       state = result.state;
     }

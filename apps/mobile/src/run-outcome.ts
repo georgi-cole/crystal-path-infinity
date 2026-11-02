@@ -3,11 +3,7 @@ import type { DeathCause, RunState } from '@crystal-path-infinity/game-core';
 import { formatRowLabel } from './menu-navigation';
 
 export type RunDisplayPhase =
-  | 'playing'
-  | 'dead'
-  | 'verification-pending'
-  | 'grant-ready'
-  | 'finished';
+  'playing' | 'dead' | 'verification-pending' | 'grant-ready' | 'finished';
 
 export interface ReviveOffer {
   readonly ordinal: number;

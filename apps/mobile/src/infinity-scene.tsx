@@ -114,7 +114,8 @@ export function InfinitySceneView({
   const overlayVisible = paused || confirmEnd || outcome.phase !== 'playing' || !!error;
   const catastrophic = state.death?.cause === 'wrong_tile' && state.status !== 'playing';
   const current = presented.rows.find((row) => row.phase === 'current');
-  const interactive = ready && !busy && !paused && !confirmEnd && !error && outcome.phase === 'playing';
+  const interactive =
+    ready && !busy && !paused && !confirmEnd && !error && outcome.phase === 'playing';
   const spClass = state.sp <= 60 ? 'is-danger' : state.sp <= 140 ? 'is-warn' : 'is-safe';
   const spPct = Math.max(0, Math.min(100, (state.sp / MAX_SP) * 100));
   const notice =
@@ -125,15 +126,15 @@ export function InfinitySceneView({
         ? 'The bridge gave way. The fatal row did not count.'
         : outcome.phase === 'finished'
           ? 'Practice ended. Your local result is ready.'
-        : !ready
-          ? 'Preparing the bridge…'
-          : paused
-            ? 'Active time is paused.'
-            : current?.mysteryAvailable
-              ? 'A mystery is available. Choose a side or risk the centre.'
-              : state.current.mysteryOutcome
-                ? 'Mystery resolved. Choose left or right.'
-                : 'Choose your next step. Cracked glass stays behind you.');
+          : !ready
+            ? 'Preparing the bridge…'
+            : paused
+              ? 'Active time is paused.'
+              : current?.mysteryAvailable
+                ? 'A mystery is available. Choose a side or risk the centre.'
+                : state.current.mysteryOutcome
+                  ? 'Mystery resolved. Choose left or right.'
+                  : 'Choose your next step. Cracked glass stays behind you.');
 
   return (
     <main
@@ -260,10 +261,18 @@ export function InfinitySceneView({
           <span className="cpi-energy-marker" style={{ left: `${spPct}%` }} aria-hidden="true" />
         </div>
         <div className="cpi-run-metrics" aria-label="Run progress and continuation counters">
-          <span>Cleared <strong>{outcome.clearedRows}</strong></span>
-          <span>Continues used <strong>{outcome.appliedContinues} / 10</strong></span>
-          <span>Grants earned <strong>{outcome.grantedContinues} / 10</strong></span>
-          <span>Grant quota left <strong>{outcome.grantsRemaining}</strong></span>
+          <span>
+            Cleared <strong>{outcome.clearedRows}</strong>
+          </span>
+          <span>
+            Continues used <strong>{outcome.appliedContinues} / 10</strong>
+          </span>
+          <span>
+            Grants earned <strong>{outcome.grantedContinues} / 10</strong>
+          </span>
+          <span>
+            Grant quota left <strong>{outcome.grantsRemaining}</strong>
+          </span>
         </div>
         {presented.effects.length > 0 && (
           <div className="cps-effects" aria-label="Active effects">
@@ -377,7 +386,9 @@ export function InfinitySceneView({
                     You have a granted but unused continuation. Ending explicitly forfeits it.
                   </p>
                 )}
-                <p>This permanently finishes the local attempt. It does not submit a ranked score.</p>
+                <p>
+                  This permanently finishes the local attempt. It does not submit a ranked score.
+                </p>
                 <div className="cpi-overlay-actions">
                   <button
                     type="button"
@@ -470,8 +481,8 @@ export function InfinitySceneView({
                       Continue #{outcome.offer.ordinal} · Restore {outcome.offer.restoreSp} SP
                     </strong>
                     <span>
-                      The restore <strong>sets</strong> SP to {outcome.offer.restoreSp}; it does
-                      not add points. {outcome.offer.grantsRemaining} reward grants remain.
+                      The restore <strong>sets</strong> SP to {outcome.offer.restoreSp}; it does not
+                      add points. {outcome.offer.grantsRemaining} reward grants remain.
                     </span>
                     <span>Rewarded continue is not connected in offline practice yet.</span>
                   </div>
@@ -484,7 +495,12 @@ export function InfinitySceneView({
                   <p>No further continues remain for this attempt.</p>
                 )}
                 <div className="cpi-overlay-actions">
-                  <button type="button" data-cpi-overlay-primary disabled={busy} onClick={onRequestEnd}>
+                  <button
+                    type="button"
+                    data-cpi-overlay-primary
+                    disabled={busy}
+                    onClick={onRequestEnd}
+                  >
                     End run
                   </button>
                   <button type="button" disabled={busy} onClick={onExit}>
