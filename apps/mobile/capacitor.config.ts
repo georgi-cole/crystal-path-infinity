@@ -1,8 +1,9 @@
-const CPI_BRAND_BACKGROUND = '#060a18';
 import type { CapacitorConfig } from '@capacitor/cli';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { assertBuiltEnvironment, getBuildInfo, requireEnvironment } from './config/environments';
+
+const CPI_BRAND_BACKGROUND = '#060a18';
 
 // Capacitor 8.5.3 loads this TypeScript file through its CommonJS config loader.
 const environment = requireEnvironment(process.env.CPI_APP_ENV ?? 'development');
