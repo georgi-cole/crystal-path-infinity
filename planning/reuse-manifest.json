@@ -2,7 +2,7 @@
   "source_repository": "georgi-cole/bbmobilenew-source",
   "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
   "inspected_on": "2026-11-01",
-  "status": "visual_parity_original_black_hole_restored_led_rails_fade_near_tiles_commercial_rights_review_pending",
+  "status": "cpi_visual_parity_webp_high_quality_compact_tile_controls_review_pending",
   "resources": [
     {
       "path": "src/minigames/crystalPathShattered/shatteredLogic.ts",
@@ -48,15 +48,19 @@
     {
       "path": "src/minigames/crystalPathShattered/infinity-black-hole-bg.png",
       "decision": "reuse_owner_directed_in_standalone",
-      "notes": "Original premium Infinity black-hole raster copied byte-for-byte from the owner's pinned bbmobilenew-source commit at Georgi's explicit visual-parity request; replaces the CPI-008 radial-gradient approximation. The source game remains unchanged.",
+      "notes": "Exact owner-source PNG verified by Git blob SHA before quality-96 WebP conversion. Original 1.9 MB PNG is not bundled; standalone game uses its 201.7 KB WebP equivalent offline.",
       "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/minigames/crystalPathShattered/infinity-black-hole-bg.png",
       "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
-      "rights": "Owner-proprietary source, reused at Georgi's direction for the new standalone game; confirm any third-party/commercial redistribution rights separately before store release.",
-      "optimization": "Bundled local PNG, no runtime network; preserve original pixels/contrast until physical device review, then compare any future optimized alternative rather than changing artwork silently.",
+      "rights": "Owner proprietary source reused under Georgi's direction; confirm original asset commercial redistribution provenance before store release.",
+      "optimization": "Quality-96 WebP, unchanged dimensions and artwork; reduces compressed size by 89.4%, preserves source SHA in manifest. Avoid remote fetch, maintain local Vite-bundled asset.",
       "target_stage": "CPI-011 visual parity corrective follow-up",
-      "target_path": "apps/mobile/src/infinity-black-hole-bg.png",
+      "target_path": "apps/mobile/src/infinity-black-hole-bg.webp",
       "source_blob_sha": "25e9ceb6f98ac43c2bc15354ce8be7b7e7596cd3",
-      "bytes": 1896459
+      "bytes": 1896459,
+      "source_bytes": 1896459,
+      "optimized_format": "WebP, quality 96, method 6, Pillow 11.3.0; 941×1672",
+      "optimized_bytes": 201680,
+      "optimized_blob_sha": "c8c0458f4f26dcc73a2b42d80663221d629c60a7"
     },
     {
       "path": "public/assets/sounds/minigames/minigame_gb_safe_step.mp3",

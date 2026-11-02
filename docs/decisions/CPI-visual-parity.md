@@ -28,3 +28,29 @@ No tiles, hitboxes, row perspective, HUD, native clock, RNG, SP, scoring, save f
 Run existing Vitest + typecheck + formatting and all three web builds, then Android and iOS native checks. The updated test asserts exact bitmap provenance and explicit rail masking. Visually compare portrait start and later rows against Georgi's supplied original: original detailed black hole should be visible, while front two tile rows remain clear of vertical light rails.
 
 Physical-device visual confirmation, responsive small-screen crop and the source image's commercial licensing history are review requirements, **not** implied by a CI pass.
+
+## Optimization and direct-tile UI follow-up
+
+The original 941 × 1672 PNG was verified at Git blob SHA
+\`25e9ceb6f98ac43c2bc15354ce8be7b7e7596cd3\`, then converted offline
+with pinned Pillow 11.3.0 (WebP quality 96, method 6). The committed
+\`apps/mobile/src/infinity-black-hole-bg.webp\` is **201,680 bytes**, compared with
+1,896,459 bytes for the original PNG: **89.4% smaller**, same dimensions.
+The deterministic output has Git blob SHA
+\`c8c0458f4f26dcc73a2b42d80663221d629c60a7\`. Vite embeds it as a local
+WebP asset. No remote image and no new runtime dependency. The one-time
+conversion workflow and unoptimized PNG are deleted.
+
+The visually redundant bottom \`cps-controls\` instruction panel and duplicate
+Left/Right buttons are removed from the standalone React scene. The glass
+tiles remain the accessible left/right interaction targets and the actual
+mystery tile remains clickable. Hint (with its remaining-count badge) now
+sits beside Pause in a compact top toolbar. Important events still reach an
+\`aria-live=polite\` visually hidden status, and pause/error/result overlays
+remain visible. Freed vertical space expands the bridge view from
+\`46dvh\` to \`54dvh\` within the portrait limits. Neither game-core nor native
+clock/checkpoint rules are changed.
+
+The corrected WebP/toolbar appearance was reviewed in a real mobile-sized
+browser build, not an AI illustration. Physical Android/iPhone visual approval
+is outstanding.
