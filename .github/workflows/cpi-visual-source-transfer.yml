@@ -1,0 +1,38 @@
+name: CPI visual source asset transfer (temporary)
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  copy-original-infinity-background:
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'cpi-visual-parity-black-hole-led-rails' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: cpi-visual-parity-black-hole-led-rails
+          persist-credentials: true
+      - name: Transfer pinned original asset exactly once
+        run: |
+          set -euo pipefail
+          path=apps/mobile/src/infinity-black-hole-bg.png
+          if [[ -f "$path" ]]; then
+            test "$(git hash-object "$path")" = 25e9ceb6f98ac43c2bc15354ce8be7b7e7596cd3
+            echo "Verified existing pinned source asset"
+            exit 0
+          fi
+          curl --fail --location --retry 3 --max-time 90 --silent --show-error \
+            "https://raw.githubusercontent.com/georgi-cole/bbmobilenew-source/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/minigames/crystalPathShattered/infinity-black-hole-bg.png" \
+            --output "$path"
+          test "$(wc -c < "$path" | tr -d ' ')" = 1896459
+          test "$(git hash-object "$path")" = 25e9ceb6f98ac43c2bc15354ce8be7b7e7596cd3
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            add "$path"
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -m "Restore exact original Infinity black-hole background from owner source"
+          git push origin HEAD:cpi-visual-parity-black-hole-led-rails
