@@ -17,7 +17,9 @@
     ),
     url('./infinity-black-hole-bg.webp');
   background-size: cover;
-  background-position: center, center 44%;
+  background-position:
+    center,
+    center 44%;
   background-repeat: no-repeat;
   color: #f4f6ff;
 }
@@ -31,7 +33,10 @@
     radial-gradient(ellipse at 50% 9%, rgba(202, 163, 255, 0.17), transparent 38%),
     radial-gradient(ellipse at 12% 70%, rgba(43, 188, 220, 0.13), transparent 43%),
     linear-gradient(rgba(153, 207, 237, 0.017) 1px, transparent 1px);
-  background-size: 100% 100%, 100% 100%, 100% 34px;
+  background-size:
+    100% 100%,
+    100% 100%,
+    100% 34px;
   pointer-events: none;
 }
 
@@ -111,8 +116,7 @@
 .cpi-menu-shell .cpi-menu-mark {
   width: 88%;
   height: 88%;
-  filter:
-    drop-shadow(0 0 18px rgba(91, 194, 255, 0.24))
+  filter: drop-shadow(0 0 18px rgba(91, 194, 255, 0.24))
     drop-shadow(0 0 45px rgba(169, 90, 246, 0.18));
 }
 
@@ -150,8 +154,7 @@
   min-height: 3.2rem;
   border-radius: 0.7rem;
   border-color: rgba(156, 176, 255, 0.32);
-  background:
-    linear-gradient(115deg, rgba(16, 19, 48, 0.92), rgba(38, 20, 67, 0.72));
+  background: linear-gradient(115deg, rgba(16, 19, 48, 0.92), rgba(38, 20, 67, 0.72));
   box-shadow: inset 0 1px rgba(255, 255, 255, 0.13);
   backdrop-filter: blur(11px) saturate(135%);
 }

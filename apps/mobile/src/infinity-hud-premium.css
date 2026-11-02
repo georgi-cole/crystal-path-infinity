@@ -70,7 +70,9 @@
   letter-spacing: 0.07em;
   cursor: pointer;
   touch-action: manipulation;
-  transition: transform 140ms ease, border-color 140ms ease;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease;
 }
 
 .cpi-infinity-scene .cpi-hud-control::after {
@@ -181,8 +183,7 @@
   z-index: -1;
   pointer-events: none;
   background:
-    linear-gradient(90deg, rgba(77, 232, 255, 0.55), transparent 34%) top left / 67% 2px
-      no-repeat,
+    linear-gradient(90deg, rgba(77, 232, 255, 0.55), transparent 34%) top left / 67% 2px no-repeat,
     linear-gradient(270deg, rgba(181, 131, 255, 0.52), transparent 32%) bottom right / 54% 2px
       no-repeat;
 }
@@ -305,10 +306,16 @@
   margin: 0.08rem 0.38rem 0.25rem;
   border: 1px solid rgba(147, 196, 235, 0.42);
   border-radius: 0.35rem;
-  clip-path: polygon(0.5rem 0, calc(100% - 0.5rem) 0, 100% 50%, calc(100% - 0.5rem) 100%, 0.5rem 100%, 0 50%);
+  clip-path: polygon(
+    0.5rem 0,
+    calc(100% - 0.5rem) 0,
+    100% 50%,
+    calc(100% - 0.5rem) 100%,
+    0.5rem 100%,
+    0 50%
+  );
   background:
-    linear-gradient(180deg, rgba(33, 55, 89, 0.84), rgba(4, 9, 27, 0.98)),
-    rgba(3, 5, 20, 0.96);
+    linear-gradient(180deg, rgba(33, 55, 89, 0.84), rgba(4, 9, 27, 0.98)), rgba(3, 5, 20, 0.96);
   box-shadow:
     inset 0 1px 0 rgba(227, 246, 255, 0.17),
     inset 0 0 12px rgba(13, 26, 53, 0.65),
