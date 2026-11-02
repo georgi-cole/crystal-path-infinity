@@ -172,6 +172,34 @@ jobs:
           export ANDROID_AVD_HOME="$cpi_avd_home"
           printf 'ANDROID_AVD_HOME=%s\n' "$cpi_avd_home" >> "$GITHUB_ENV"
           printf 'no\n' | "$sdk_bin/avdmanager" create avd --force --name cpi003-development --path "$cpi_avd_home/cpi003-development.avd" --package "system-images;android-36;default;x86_64" --device pixel_7 2>&1 | tee apps/mobile/artifacts/android-avd-create.log
+          # GitHub's fresh Pixel 7 AVD defaults to 2 cores, 1.5 GB RAM and
+          # 1080x2400 SwiftShader software graphics. Archived failed runs show
+          # ~71% CPU-stall PSI and ~13% IO-stall PSI during focus-loss ANRs.
+          # Keep the official API 36 AOSP system image, but remove gratuitous
+          # software-compositor/pixel pressure while still testing real UI.
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          config = Path(os.environ['ANDROID_AVD_HOME']) / 'cpi003-development.avd/config.ini'
+          assert config.is_file(), config
+          overrides = {
+              'hw.cpu.ncore': '4',
+              'hw.ramSize': '3072M',
+              'hw.lcd.width': '720',
+              'hw.lcd.height': '1600',
+              'hw.lcd.density': '320',
+              'disk.dataPartition.size': '2048M',
+          }
+          lines = config.read_text().splitlines()
+          entries = {}
+          for line in lines:
+              if '=' in line and not line.lstrip().startswith('#'):
+                  entries[line.split('=', 1)[0].strip()] = line.split('=', 1)[1].strip()
+          entries.update(overrides)
+          config.write_text(''.join(f'{key}={value}\n' for key, value in entries.items()))
+          for key, value in overrides.items():
+              assert (key + '=' + value) in config.read_text()
+          PY
           "$sdk_bin/avdmanager" list avd 2>&1 | tee apps/mobile/artifacts/android-avd-manager-list.txt
           test -f "$cpi_avd_home/cpi003-development.ini"
           cp "$cpi_avd_home/cpi003-development.ini" apps/mobile/artifacts/android-avd.ini
