@@ -1,0 +1,18 @@
+/* CPI-011 Midnight Prism: standalone tokens, not the Big Eye theme runtime. */
+:root {
+  --cpi-night: #060a18;
+  --cpi-abyss: #020711;
+  --cpi-glass: #10223a;
+  --cpi-surface: rgba(8, 21, 40, 0.88);
+  --cpi-glass-edge: rgba(130, 221, 242, 0.34);
+  --cpi-ice: #82dff1;
+  --cpi-iris: #ac9aff;
+  --cpi-text: #edfaff;
+  --cpi-muted: #b6cbdb;
+  --cpi-safe: #67efc5;
+  --cpi-risk: #ff7389;
+  --cpi-warning: #ffdc89;
+  --cpi-focus: #d8faff;
+  --cpi-font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --cpi-font-display: 'Avenir Next', 'Segoe UI Variable Display', 'Segoe UI', sans-serif;
+}

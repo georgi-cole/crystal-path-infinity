@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 620">
+  <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#122540"/><stop offset="1" stop-color="#040916"/></linearGradient><linearGradient id="ice" x2="1" y2="1"><stop stop-color="#dcfbff"/><stop offset="1" stop-color="#49a6d4"/></linearGradient><linearGradient id="iris" x2="1" y2="1"><stop stop-color="#c0b3ff"/><stop offset="1" stop-color="#5b68cf"/></linearGradient><linearGradient id="button" x2="1" y2="1"><stop stop-color="#23687c"/><stop offset="1" stop-color="#383071"/></linearGradient></defs>
+  <rect width="1080" height="620" rx="30" fill="#060a18"/>
+  <text x="42" y="47" fill="#b6cbdb" font-size="16" font-family="sans-serif" letter-spacing="5">CPI-011 / MIDNIGHT PRISM / CONCEPT REVIEW</text>
+  <rect x="32" y="80" width="320" height="505" rx="25" fill="url(#bg)" stroke="#334e66"/>
+  <text x="60" y="124" fill="#b6cbdb" font-family="sans-serif" font-size="15">ICON - scalable vector</text>
+  <rect x="86" y="157" width="212" height="212" rx="48" fill="#080e1e" stroke="#456983"/>
+  <circle cx="192" cy="263" r="85" stroke="#82dff1" opacity=".22" fill="none"/>
+  <path d="M192 183 135 239 151 300 192 341 185 269 169 241Z" fill="url(#ice)"/>
+  <path d="M192 183 249 239 233 300 192 341 199 269 215 241Z" fill="url(#iris)"/>
+  <path d="M192 211 214 256 192 319 170 256Z" fill="#08162c" stroke="#82dff1" stroke-width="2"/>
+  <path d="M182 272H202M177 287H207M173 301H211" stroke="#d8faff" stroke-width="2"/>
+  <text x="192" y="420" text-anchor="middle" fill="#d8faff" font-family="sans-serif" font-size="16" letter-spacing="4">CRYSTAL PATH</text>
+  <text x="192" y="460" text-anchor="middle" fill="#fff" font-family="sans-serif" font-weight="300" font-size="38">Infinity</text>
+  <text x="192" y="515" text-anchor="middle" fill="#b6cbdb" font-family="sans-serif" font-size="14">No embedded icon text</text>
+  <rect x="380" y="80" width="310" height="505" rx="25" fill="url(#bg)" stroke="#334e66"/>
+  <text x="408" y="124" fill="#b6cbdb" font-family="sans-serif" font-size="15">MENU - live HTML labels</text>
+  <circle cx="535" cy="238" r="85" fill="#82dff1" opacity=".045"/>
+  <path d="M535 155 483 220 499 283 535 309 527 232 512 216Z" fill="url(#ice)"/>
+  <path d="M535 155 587 220 571 283 535 309 543 232 558 216Z" fill="url(#iris)"/>
+  <path d="M535 184 553 224 535 287 517 224Z" fill="#08162c"/>
+  <text x="535" y="347" text-anchor="middle" fill="#d8faff" font-family="sans-serif" font-size="13" letter-spacing="4">CRYSTAL PATH</text>
+  <text x="535" y="385" text-anchor="middle" fill="#fff" font-family="sans-serif" font-size="35">Infinity</text>
+  <rect x="430" y="408" width="210" height="57" rx="13" fill="url(#button)" stroke="#82dff1"/>
+  <text x="535" y="443" text-anchor="middle" fill="#fff" font-family="sans-serif" font-weight="bold" font-size="18">New practice</text>
+  <text x="535" y="499" text-anchor="middle" fill="#b6cbdb" font-family="sans-serif" font-size="13">Offline - Not ranked</text>
+  <rect x="718" y="80" width="330" height="505" rx="25" fill="url(#bg)" stroke="#334e66"/>
+  <text x="747" y="124" fill="#b6cbdb" font-family="sans-serif" font-size="15">HUD - representative layout</text>
+  <rect x="735" y="153" width="295" height="110" rx="14" fill="#0d2134" stroke="#37617e"/>
+  <text x="755" y="179" fill="#82dff1" font-family="sans-serif" font-size="12" letter-spacing="1.6">CRYSTAL PATH - INFINITY</text>
+  <text x="755" y="210" fill="#fff" font-family="sans-serif" font-size="18">Row 351</text>
+  <text x="915" y="210" fill="#67efc5" font-family="sans-serif" font-size="18">300 SP</text>
+  <text x="755" y="238" fill="#b6cbdb" font-family="sans-serif" font-size="14">Hints 2</text>
+  <rect x="735" y="282" width="295" height="174" rx="15" fill="#051220" stroke="#37617e"/>
+  <path d="M884 300 813 343 835 429 884 447 933 429 955 343Z" fill="#0c2940" stroke="#5688b8"/>
+  <path d="M832 347 869 328 877 363 842 386Z" fill="#499fc6" stroke="#9be8ff"/>
+  <path d="M899 328 938 347 925 386 890 363Z" fill="#666fc4" stroke="#d0c6ff"/>
+  <rect x="742" y="477" width="137" height="52" rx="10" fill="url(#button)" stroke="#82dff1"/>
+  <rect x="887" y="477" width="137" height="52" rx="10" fill="url(#button)" stroke="#82dff1"/>
+  <text x="811" y="509" text-anchor="middle" fill="#fff" font-family="sans-serif" font-size="17">Left</text>
+  <text x="955" y="509" text-anchor="middle" fill="#fff" font-family="sans-serif" font-size="17">Right</text>
+  <text x="884" y="555" text-anchor="middle" fill="#b6cbdb" font-family="sans-serif" font-size="13">No fixed finish line</text>
+</svg>
