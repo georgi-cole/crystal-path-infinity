@@ -45,6 +45,15 @@ jobs:
         run: |
           mkdir -p apps/mobile/artifacts
           npm ls --workspace @crystal-path-infinity/mobile --depth=0 --json > apps/mobile/artifacts/npm-dependencies.json
+      - name: CPI-010 native verifier formatting capture
+        run: |
+          npx prettier --write apps/mobile/config/native-smoke.ts apps/mobile/config/native-smoke.test.ts
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const paths = ["apps/mobile/config/native-smoke.ts","apps/mobile/config/native-smoke.test.ts"];
+          for (const path of paths) console.log('CPI010_NATIVE_FORMAT_START ' + path + ' ' + fs.readFileSync(path).toString('base64') + ' CPI010_NATIVE_FORMAT_END');
+          NODE
+          exit 1
       - name: TypeScript
         run: npm run typecheck 2>&1 | tee apps/mobile/artifacts/typecheck.log
       - name: Lint
