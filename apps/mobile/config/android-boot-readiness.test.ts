@@ -48,4 +48,14 @@ describe('CPI-011 strict Android first-boot readiness', () => {
     expect(script).toContain("waitFor('Android bridge round-trip after real Home/resume', 30_000");
     expect(script).toContain('saveAttempt(boundary, true)');
   });
+  it('pins the lifecycle emulator to AOSP API 36, without Google setup workload', () => {
+    const workflow = readFileSync(
+      new URL('../../../.github/workflows/mobile-app.yml', import.meta.url),
+      'utf8',
+    );
+    expect(workflow).toContain('system-images;android-36;default;x86_64');
+    expect(workflow).not.toContain('system-images;android-36;google_apis;x86_64');
+    expect(workflow).toContain('system-images/android-36/default/x86_64/source.properties');
+    expect(workflow).toContain('cpi003-development');
+  });
 });

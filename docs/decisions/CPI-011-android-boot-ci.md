@@ -16,3 +16,13 @@ This is a **test-environment provisioning fix**, not a bypass of the ANR. Any ne
 If the updated run still reports an ANR after the user-0 and broadcast-idle gates, treat it as a separate genuine performance defect; collect traces rather than accepting a retry. No device/store readiness is claimed.
 
 Reference: AOSP [ActivityManagerShellCommand.wait-for-broadcast-idle](https://android.googlesource.com/platform/frameworks/base/+/master/services/core/java/com/android/server/am/ActivityManagerShellCommand.java), Android [BOOT_COMPLETED and LOCKED_BOOT_COMPLETED](https://developer.android.com/reference/android/content/Intent).
+
+## Second failed run and revised emulator image
+
+The first boot-readiness fix passed all web tests, but [run 41419851956](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41419851956) **still failed** on exactly the same genuine Home focus-loss ANR. Evidence artifact `13130490244` contains the actual `BOOT_COMPLETED user #0` event and `All broadcast queues are idle!` acknowledgment, recorded **before** the app cold-launch. Android then rendered React and completed the pre-page interruption, yet the Google APIs image reported significant CPU and I/O contention from its bundled Google setup services. The native pause never arrived and the application process was killed. Therefore waiting for broadcasts alone is insufficient; do not call this regression fixed by a timing gate.
+
+The offline native lifecycle smoke is now moved **from Google APIs API 36 x86_64 to the Android 16 AOSP `default` API 36 x86_64 system image**. The API level, Pixel 7 device profile, real native plugins, prepage Home and lock tests, three fresh processes, native foreground clock verification, 30-second ordinary Home pause deadline, and runtime error detection are unchanged. This prevents third-party GMS first-run setup from dominating an offline standalone app lifecycle test; **it does not verify Google Play, AdMob or reward SDK compatibility**, which must be performed in separate Google-services/device tests at the appropriate CPI-002/ads milestones. The image choice is an emulator test infrastructure change only, not production app behavior.
+
+Sources: [Android system-image variants](https://developer.android.com/tools/releases/platforms); [AOSP vs Google API emulator services](https://chromium.googlesource.com/chromium/src/+/main/docs/android_emulator.md); [the exact API-36 AOSP image in a public Android project](https://github.com/OutlineFoundation/outline-apps/blob/master/client/src/cordova/android/README.md).
+
+The AOSP change requires its own complete green native run and evidence inspection before this incident can be considered resolved.
