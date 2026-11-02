@@ -121,16 +121,23 @@
 }
 
 .cpi-menu-shell .cpi-menu-kicker {
+  margin-bottom: 0.55rem;
   font-size: 0.61rem;
+  line-height: 1.4;
   letter-spacing: 0.23em;
   color: #a7e8fa;
   text-shadow: 0 0 12px rgba(66, 205, 255, 0.32);
 }
 
+.cpi-menu-shell .cpi-menu-hero [data-menu-heading]:focus {
+  outline: none;
+}
+
 .cpi-menu-shell .cpi-menu-hero h1 {
+  margin: 0.15rem 0 0;
   font-size: clamp(2.65rem, 11.5vw, 4rem);
   font-weight: 720;
-  line-height: 1.02;
+  line-height: 1.12;
   letter-spacing: 0.09em;
   text-transform: uppercase;
   background: linear-gradient(180deg, #fff 17%, #bde7ff 55%, #b4a8ff 100%);
