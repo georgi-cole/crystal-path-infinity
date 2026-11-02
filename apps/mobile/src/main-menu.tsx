@@ -1,0 +1,364 @@
+import type { ReactNode } from 'react';
+import { AudioSettingsControls } from './audio-settings-controls';
+import type { PracticeLoad, PracticeSettings } from './practice-save';
+import {
+  canResumePractice,
+  formatRowLabel,
+  rankedServiceState,
+} from './menu-navigation';
+import type { MenuView } from './menu-navigation';
+import './main-menu.css';
+
+type GlyphName = 'play' | 'practice' | 'ranking' | 'profile' | 'settings' | 'arrow';
+
+function Glyph({ name }: { name: GlyphName }) {
+  const art: Record<GlyphName, ReactNode> = {
+    play: <path d="m9 5 11 7-11 7V5Z" />,
+    practice: (
+      <>
+        <path d="M12 2 5 11l7 11 7-11-7-9Z" />
+        <path d="M8 11h8M12 4v16" />
+      </>
+    ),
+    ranking: (
+      <>
+        <path d="M4 20V9h5v11M10 20V4h5v16M16 20v-7h4v7" />
+        <path d="M2 21h20" />
+      </>
+    ),
+    profile: (
+      <>
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4 21c0-4.5 3-7 8-7s8 2.5 8 7" />
+      </>
+    ),
+    settings: (
+      <>
+        <path d="M4 7h16M4 17h16" />
+        <circle cx="9" cy="7" r="2" />
+        <circle cx="15" cy="17" r="2" />
+      </>
+    ),
+    arrow: <path d="m14 5-7 7 7 7" />,
+  };
+  return (
+    <svg
+      className="cpi-menu-glyph"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {art[name]}
+    </svg>
+  );
+}
+
+/** Standalone button adapts Big Eye press/focus/glass patterns, not its SVG masks. */
+export function MenuAction({
+  label,
+  description,
+  icon,
+  variant = 'secondary',
+  onClick,
+}: {
+  label: string;
+  description?: string;
+  icon?: GlyphName;
+  variant?: 'primary' | 'secondary' | 'quiet';
+  onClick: () => void;
+}) {
+  return (
+    <button className={'cpi-menu-action cpi-menu-action--' + variant} type="button" onClick={onClick}>
+      {icon && (
+        <span className="cpi-menu-action-icon">
+          <Glyph name={icon} />
+        </span>
+      )}
+      <span className="cpi-menu-action-copy">
+        <span className="cpi-menu-action-title">{label}</span>
+        {description && <span className="cpi-menu-action-description">{description}</span>}
+      </span>
+      <span className="cpi-menu-action-chevron" aria-hidden="true">
+        ›
+      </span>
+    </button>
+  );
+}
+
+/** Semantic compact status inspired by GameTopChip; no season/Redux dependency. */
+function StatusPill({ children, tone = 'neutral' }: { children: ReactNode; tone?: 'neutral' | 'offline' }) {
+  return <span className={'cpi-menu-pill cpi-menu-pill--' + tone}>{children}</span>;
+}
+
+export interface MainMenuProps {
+  view: MenuView;
+  saved: PracticeLoad;
+  best: string | null;
+  online: boolean;
+  settings: PracticeSettings;
+  onOpen: (view: MenuView) => void;
+  onBack: () => void;
+  onResume: () => void;
+  onNew: () => void;
+  onSettingsChange: (settings: PracticeSettings) => void;
+  onRetryConnection: () => void;
+  buildLabel?: string;
+  warning?: string | null;
+}
+
+function MenuHeader({
+  view,
+  online,
+  onBack,
+}: {
+  view: MenuView;
+  online: boolean;
+  onBack: () => void;
+}) {
+  return (
+    <header className="cpi-menu-header">
+      {view !== 'home' ? (
+        <button className="cpi-menu-back" type="button" onClick={onBack} aria-label="Back">
+          <Glyph name="arrow" />
+          <span>Back</span>
+        </button>
+      ) : (
+        <span className="cpi-menu-series">Crystal Path <span aria-hidden="true">/</span> Infinity</span>
+      )}
+      <div className="cpi-menu-status" aria-label="Current status">
+        <StatusPill>Guest</StatusPill>
+        <StatusPill tone={online ? 'neutral' : 'offline'}>
+          {online ? 'Ranked not live' : 'Offline'}
+        </StatusPill>
+      </div>
+    </header>
+  );
+}
+
+function MenuHome({
+  saved,
+  best,
+  onOpen,
+  onResume,
+  onNew,
+}: Pick<MainMenuProps, 'saved' | 'best' | 'onOpen' | 'onResume' | 'onNew'>) {
+  const canResume = canResumePractice(saved);
+  return (
+    <>
+      <section className="cpi-menu-hero" aria-labelledby="menu-title">
+        <img
+          className="cpi-menu-mark"
+          src={import.meta.env.BASE_URL + 'brand/prism-mark.svg'}
+          alt=""
+          aria-hidden="true"
+        />
+        <p className="cpi-menu-kicker">An endless crystal journey</p>
+        <h1 id="menu-title" data-menu-heading tabIndex={-1}>
+          Infinity
+        </h1>
+        <p className="cpi-menu-tagline">Choose your path. Every step counts.</p>
+      </section>
+
+      <section className="cpi-menu-scoreboard" aria-label="Your progress">
+        <div>
+          <span className="cpi-menu-eyebrow">Personal best · Practice only</span>
+          <strong className="cpi-menu-score">Row {formatRowLabel(best)}</strong>
+        </div>
+        <span className="cpi-menu-score-caption">Not a ranked score</span>
+      </section>
+
+      <nav className="cpi-menu-actions" aria-label="Main menu">
+        <MenuAction
+          label="Play"
+          description="Ranked mode · Account needed"
+          icon="play"
+          variant="primary"
+          onClick={() => onOpen('play')}
+        />
+        {canResume && saved.status === 'ready' && (
+          <div className="cpi-menu-resume">
+            <span className="cpi-menu-resume-copy">
+              Saved practice · Row {formatRowLabel(saved.state.currentRow)}
+            </span>
+            <button type="button" onClick={onResume}>
+              Resume
+            </button>
+            <button className="cpi-menu-resume-new" type="button" onClick={onNew}>
+              New
+            </button>
+          </div>
+        )}
+        <MenuAction
+          label="Practice"
+          description="Unlimited offline play · No account"
+          icon="practice"
+          onClick={() => onOpen('practice')}
+        />
+        <div className="cpi-menu-grid">
+          <MenuAction label="Rankings" icon="ranking" onClick={() => onOpen('rankings')} />
+          <MenuAction label="Profile" icon="profile" onClick={() => onOpen('profile')} />
+          <MenuAction label="Settings" icon="settings" onClick={() => onOpen('settings')} />
+        </div>
+      </nav>
+    </>
+  );
+}
+
+function MenuPanel({
+  title,
+  eyebrow,
+  children,
+}: {
+  title: string;
+  eyebrow: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="cpi-menu-panel" aria-labelledby="cpi-panel-title">
+      <p className="cpi-menu-eyebrow">{eyebrow}</p>
+      <h1 id="cpi-panel-title" tabIndex={-1} data-menu-heading>
+        {title}
+      </h1>
+      {children}
+    </section>
+  );
+}
+
+export function ConfirmNewPractice({
+  saved,
+  onCancel,
+  onConfirm,
+}: {
+  saved: PracticeLoad;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const damaged = saved.status === 'corrupt';
+  return (
+    <div className="cpi-menu-modal" role="presentation">
+      <section
+        className="cpi-menu-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cpi-new-title"
+        aria-describedby="cpi-new-copy"
+      >
+        <p className="cpi-menu-eyebrow">Confirm new attempt</p>
+        <h2 id="cpi-new-title">{damaged ? 'Discard damaged save?' : 'Replace saved practice?'}</h2>
+        <p id="cpi-new-copy">
+          {damaged
+            ? 'The saved checkpoint cannot be recovered. Starting fresh deletes that damaged checkpoint.'
+            : 'Starting again permanently replaces your unfinished local attempt. Your completed practice record stays.'}
+        </p>
+        <div className="cpi-menu-dialog-actions">
+          <button className="cpi-menu-dialog-cancel" type="button" onClick={onCancel}>
+            Keep saved attempt
+          </button>
+          <button className="cpi-menu-dialog-confirm" type="button" onClick={onConfirm}>
+            Start new practice
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+export function MainMenu({
+  view,
+  saved,
+  best,
+  online,
+  settings,
+  onOpen,
+  onBack,
+  onResume,
+  onNew,
+  onSettingsChange,
+  onRetryConnection,
+  warning,
+  buildLabel,
+}: MainMenuProps) {
+  const service = rankedServiceState(online);
+  return (
+    <main className="cpi-menu-shell" data-testid="app-ready">
+      <div className="cpi-menu-orbit" aria-hidden="true" />
+      <div className="cpi-menu-inner">
+        <MenuHeader view={view} online={online} onBack={onBack} />
+        {view === 'home' ? (
+          <MenuHome saved={saved} best={best} onOpen={onOpen} onResume={onResume} onNew={onNew} />
+        ) : view === 'practice' ? (
+          <MenuPanel title="Practice" eyebrow="Offline · All ages">
+            <p>Cross the endless bridge. Practice requires no account, age answer or analytics consent.</p>
+            {canResumePractice(saved) && saved.status === 'ready' && (
+              <MenuAction
+                label={'Resume · Row ' + formatRowLabel(saved.state.currentRow)}
+                description="Continue your saved local attempt"
+                icon="play"
+                variant="primary"
+                onClick={onResume}
+              />
+            )}
+            {saved.status === 'corrupt' && <p role="alert">{saved.message}</p>}
+            <MenuAction label="New practice" description="Start at Row 1" icon="practice" onClick={onNew} />
+            <p className="cpi-menu-fine-print">Practice progress stays on this device. It does not enter the official rankings.</p>
+          </MenuPanel>
+        ) : view === 'play' ? (
+          <MenuPanel title="Play" eyebrow="Official ranked mode">
+            <p>Ranked play is not available yet. An official attempt will require an account and the applicable privacy setup before any account details are collected.</p>
+            <div className="cpi-menu-notice" role="status">
+              <strong>{service === 'offline' ? 'You are offline' : 'Online services not connected'}</strong>
+              <span>No sign-in, rankings or ranked run can be started from this build.</span>
+            </div>
+            <MenuAction label="Practice instead" description="Play now · No account needed" icon="practice" variant="primary" onClick={() => onOpen('practice')} />
+          </MenuPanel>
+        ) : view === 'rankings' ? (
+          <MenuPanel title="Rankings" eyebrow="World · Continent · Country">
+            <p>Verified Top 100 rankings will appear here when ranked services are connected. No placements or sample scores are presented as real.</p>
+            <div className="cpi-menu-notice" role="status">
+              <strong>{service === 'offline' ? 'Offline · Rankings unavailable' : 'Rankings not connected yet'}</strong>
+              <span>Local practice records do not qualify as ranked results.</span>
+            </div>
+            <p className="cpi-menu-personal-summary">Local personal best: Row {formatRowLabel(best)}</p>
+            {!online && (
+              <button className="cpi-menu-text-action" type="button" onClick={onRetryConnection}>
+                Recheck connection
+              </button>
+            )}
+            <MenuAction label="Practice offline" icon="practice" onClick={() => onOpen('practice')} />
+          </MenuPanel>
+        ) : view === 'profile' ? (
+          <MenuPanel title="Profile" eyebrow="Guest session">
+            <div className="cpi-menu-notice" role="status">
+              <strong>Playing as guest</strong>
+              <span>No registered profile or account is attached to this device.</span>
+            </div>
+            <p>When account services are available, profile setup will explain what becomes public. Your age response for analytics will be optional, and no date of birth is required for practice.</p>
+            <MenuAction label="Practice without signing in" icon="practice" onClick={() => onOpen('practice')} />
+          </MenuPanel>
+        ) : (
+          <MenuPanel title="Settings" eyebrow="Local preferences">
+            <p>These controls are available offline and affect your practice session.</p>
+            <AudioSettingsControls settings={settings} onChange={onSettingsChange} />
+            <p className="cpi-menu-fine-print">Language, tutorial, privacy and account controls will be added in their dedicated tasks.</p>
+          </MenuPanel>
+        )}
+        {warning && (
+          <p className="cpi-menu-warning" role="alert">
+            {warning}
+          </p>
+        )}
+        <footer className="cpi-menu-footer">
+          <span>Crystal Path: Infinity</span>
+          <span>Offline practice available</span>
+          {buildLabel && <span>{buildLabel}</span>}
+        </footer>
+      </div>
+    </main>
+  );
+}
