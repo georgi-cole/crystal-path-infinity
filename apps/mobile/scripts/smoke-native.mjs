@@ -750,9 +750,12 @@ async function android() {
     );
     if (rootResult.status === 0) {
       try {
-        await waitFor('failure-only Android root debug connection', 25_000, () =>
-          text(adb, adbArgs('shell', 'id', '-u'), { timeout: 10_000, allowFailure: true }) ===
-          '0',
+        await waitFor(
+          'failure-only Android root debug connection',
+          25_000,
+          () =>
+            text(adb, adbArgs('shell', 'id', '-u'), { timeout: 10_000, allowFailure: true }) ===
+            '0',
         );
       } catch (rootError) {
         save('android-failure-root-debug-error.txt', String(rootError));
