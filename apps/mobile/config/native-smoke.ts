@@ -348,7 +348,7 @@ export function analyzeNativeLog(
     }
     const nativeEvent =
       raw.match(
-        /\bCapacitor(?:\(\s*\d+\))?\s*:\s*(App paused|App resumed|App started|Loading app at .*)$/,
+        /\bCapacitor(?:\(\s*\d+\))?\s*:\s*(App paused|App resumed|App started|App destroyed|Loading app at .*)$/,
       ) ?? raw.match(/⚡️\s*(WebView loaded|Loading app at .*)$/);
     if (nativeEvent) result.nativeEvents.push({ line, event: nativeEvent[1], raw });
   }
@@ -489,25 +489,61 @@ export function nativeLifecycleProblems(analysis: NativeLogAnalysis, prebridge: 
       problems.push('Native foreground clock included the background interval');
   }
   if (prebridge) {
-    const gates = analysis.prebridgeGates;
-    const waiting = gates.find((gate) => gate.stage === 'waiting');
+    const page = analysis.diagnostics.find((event) => event.event === 'page-start');
+    const gates = analysis.prebridgeGates.filter((gate) => !page || gate.line < page.line);
+    const waits = gates.filter((gate) => gate.stage === 'waiting');
+    // An Android Activity can be destroyed while Home holds its first WebView
+    // navigation. Only the last, live gate may release into the first JS page.
+    // Every earlier gate must show a real Activity destruction before replacement.
+    const last = waits.at(-1);
     const paused = gates.find(
       (gate) =>
+        last &&
         gate.stage === 'paused' &&
-        waiting &&
-        gate.gateId === waiting.gateId &&
-        gate.line > waiting.line,
+        gate.gateId === last.gateId &&
+        gate.line > last.line,
     );
     const released = gates.find(
       (gate) =>
-        gate.stage === 'released' &&
         paused &&
+        gate.stage === 'released' &&
         gate.gateId === paused.gateId &&
         gate.line > paused.line,
     );
-    const page = analysis.diagnostics.find((event) => event.event === 'page-start');
-    if (!waiting || !paused || !released || !page || page.line <= released.line)
+    if (!last || !paused || !released || !page || page.line <= released.line) {
       problems.push('Missing ordered native interruption before first page/bridge');
+    }
+    for (let index = 0; index < waits.length - 1; index += 1) {
+      const prior = waits[index];
+      const next = waits[index + 1];
+      const oldPause = gates.find(
+        (gate) =>
+          gate.stage === 'paused' &&
+          gate.gateId === prior.gateId &&
+          gate.line > prior.line &&
+          gate.line < next.line,
+      );
+      const destroyed = analysis.nativeEvents.some(
+        (event) =>
+          event.event === 'App destroyed' &&
+          oldPause &&
+          event.line > oldPause.line &&
+          event.line < next.line,
+      );
+      if (!oldPause || !destroyed) {
+        problems.push('Previous prebridge Activity was not destroyed before bridge replacement');
+      }
+      if (
+        gates.some(
+          (gate) =>
+            gate.stage === 'released' &&
+            gate.gateId === prior.gateId &&
+            gate.line >= next.line,
+        )
+      ) {
+        problems.push('A destroyed prebridge gate released into a replacement page');
+      }
+    }
     const firstHandshake = analysis.diagnostics.find(
       (event) => event.event === 'bridge-ready' && event.details?.reason === 'startup',
     );

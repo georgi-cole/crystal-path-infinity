@@ -56,6 +56,35 @@ describe('native foreground and prebridge evidence', () => {
   it('accepts real boundary evidence with a frozen native foreground accumulator', () => {
     expect(nativeLifecycleProblems(analyzeNativeLog(clockEvidence(), build), true)).toEqual([]);
   });
+  it('accepts a new pre-page gate after the previous native Activity is destroyed', () => {
+    const stamp = (stage: string, gateId: string) =>
+      `1793555763.000000 2070 2070 I Capacitor: CPI_NATIVE_GATE ${JSON.stringify({ stage, gateId })}`;
+    const oldSequence = [
+      stamp('waiting', 'native-gate'),
+      stamp('paused', 'native-gate'),
+      stamp('released', 'native-gate'),
+    ].join('\n');
+    const nextSequence = [
+      stamp('waiting', 'old-gate'),
+      stamp('paused', 'old-gate'),
+      '1793555763.000000 2070 2070 D Capacitor: App destroyed',
+      stamp('waiting', 'live-gate'),
+      stamp('paused', 'live-gate'),
+      stamp('released', 'live-gate'),
+    ].join('\n');
+    const log = clockEvidence().replace(oldSequence, nextSequence);
+    expect(nativeLifecycleProblems(analyzeNativeLog(log, build), true)).toEqual([]);
+    expect(nativeLifecycleProblems(analyzeNativeLog(log.replace('App destroyed', 'App stopped'), build), true))
+      .toContain('Previous prebridge Activity was not destroyed before bridge replacement');
+    expect(nativeLifecycleProblems(analyzeNativeLog(log.replace(stamp('paused', 'old-gate'), ''), build), true))
+      .toContain('Previous prebridge Activity was not destroyed before bridge replacement');
+    const staleRelease = log.replace(
+      stamp('released', 'live-gate'),
+      stamp('released', 'old-gate') + '\n' + stamp('released', 'live-gate'),
+    );
+    expect(nativeLifecycleProblems(analyzeNativeLog(staleRelease, build), true))
+      .toContain('A destroyed prebridge gate released into a replacement page');
+  });
   it('rejects missing or reordered prebridge boundaries', () => {
     const log = clockEvidence().replace('"stage":"paused"', '"stage":"released"');
     expect(nativeLifecycleProblems(analyzeNativeLog(log, build), true)).toContain(
