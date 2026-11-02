@@ -74,16 +74,25 @@ describe('native foreground and prebridge evidence', () => {
     ].join('\n');
     const log = clockEvidence().replace(oldSequence, nextSequence);
     expect(nativeLifecycleProblems(analyzeNativeLog(log, build), true)).toEqual([]);
-    expect(nativeLifecycleProblems(analyzeNativeLog(log.replace('App destroyed', 'App stopped'), build), true))
-      .toContain('Previous prebridge Activity was not destroyed before bridge replacement');
-    expect(nativeLifecycleProblems(analyzeNativeLog(log.replace(stamp('paused', 'old-gate'), ''), build), true))
-      .toContain('Previous prebridge Activity was not destroyed before bridge replacement');
+    expect(
+      nativeLifecycleProblems(
+        analyzeNativeLog(log.replace('App destroyed', 'App stopped'), build),
+        true,
+      ),
+    ).toContain('Previous prebridge Activity was not destroyed before bridge replacement');
+    expect(
+      nativeLifecycleProblems(
+        analyzeNativeLog(log.replace(stamp('paused', 'old-gate'), ''), build),
+        true,
+      ),
+    ).toContain('Previous prebridge Activity was not destroyed before bridge replacement');
     const staleRelease = log.replace(
       stamp('released', 'live-gate'),
       stamp('released', 'old-gate') + '\n' + stamp('released', 'live-gate'),
     );
-    expect(nativeLifecycleProblems(analyzeNativeLog(staleRelease, build), true))
-      .toContain('A destroyed prebridge gate released into a replacement page');
+    expect(nativeLifecycleProblems(analyzeNativeLog(staleRelease, build), true)).toContain(
+      'A destroyed prebridge gate released into a replacement page',
+    );
   });
   it('rejects missing or reordered prebridge boundaries', () => {
     const log = clockEvidence().replace('"stage":"paused"', '"stage":"released"');

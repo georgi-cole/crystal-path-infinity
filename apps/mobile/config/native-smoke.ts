@@ -498,10 +498,7 @@ export function nativeLifecycleProblems(analysis: NativeLogAnalysis, prebridge: 
     const last = waits.at(-1);
     const paused = gates.find(
       (gate) =>
-        last &&
-        gate.stage === 'paused' &&
-        gate.gateId === last.gateId &&
-        gate.line > last.line,
+        last && gate.stage === 'paused' && gate.gateId === last.gateId && gate.line > last.line,
     );
     const released = gates.find(
       (gate) =>
@@ -536,9 +533,7 @@ export function nativeLifecycleProblems(analysis: NativeLogAnalysis, prebridge: 
       if (
         gates.some(
           (gate) =>
-            gate.stage === 'released' &&
-            gate.gateId === prior.gateId &&
-            gate.line >= next.line,
+            gate.stage === 'released' && gate.gateId === prior.gateId && gate.line >= next.line,
         )
       ) {
         problems.push('A destroyed prebridge gate released into a replacement page');
