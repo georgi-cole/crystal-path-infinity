@@ -21,6 +21,8 @@ import { fileURLToPath } from 'node:url';
 import {
   androidAppAnrObserved,
   androidBroadcastsIdle,
+  androidCpuInfoWithinBudget,
+  androidDumpsysCpuInfo,
   androidHomeLaunchObserved,
   androidPressureWithinBudget,
   androidRenderPressure,
@@ -370,20 +372,38 @@ async function android() {
     );
   }
 
+  let psiAllowed = true;
   function capturePressure() {
-    const cpu = text(adb, adbArgs('shell', 'cat', '/proc/pressure/cpu'), {
-      timeout: 10_000,
-    });
-    const io = text(adb, adbArgs('shell', 'cat', '/proc/pressure/io'), {
-      timeout: 10_000,
-    });
-    return androidRenderPressure(cpu, io);
+    if (psiAllowed) {
+      const cpu = run(adb, adbArgs('shell', 'cat', '/proc/pressure/cpu'), {
+        timeout: 10_000,
+        allowFailure: true,
+      });
+      const io = run(adb, adbArgs('shell', 'cat', '/proc/pressure/io'), {
+        timeout: 10_000,
+        allowFailure: true,
+      });
+      if (cpu.status === 0 && io.status === 0) {
+        const metrics = androidRenderPressure(String(cpu.stdout), String(io.stdout));
+        assert.ok(metrics, 'Kernel pressure data is unreadable or malformed');
+        return { source: 'kernel-psi', metrics, withinBudget: androidPressureWithinBudget(metrics) };
+      }
+      psiAllowed = false;
+      save(
+        'android-pressure-source.txt',
+        'Android system restricted unprivileged /proc/pressure access; using dumpsys cpuinfo.\n',
+      );
+    }
+    const cpuInfo = text(adb, adbArgs('shell', 'dumpsys', 'cpuinfo'), { timeout: 15_000 });
+    const metrics = androidDumpsysCpuInfo(cpuInfo);
+    assert.ok(metrics, 'Android dumpsys cpuinfo did not provide valid CPU/IO telemetry');
+    return { source: 'dumpsys-cpuinfo', metrics, withinBudget: androidCpuInfoWithinBudget(metrics) };
   }
 
   /**
    * The fresh SwiftShader GPU can be saturated *after* Android boot, broadcast
-   * idle and even a fast native bridge handshake. Require 3 low-stall PSI
-   * samples and no new asset requests before issuing real focus transitions.
+   * idle and even a fast native bridge handshake. Require 3 low-load samples
+   * (kernel PSI or Android dumpsys cpuinfo) plus quiet WebView resources.
    * This test-only gate does not alter production startup or relax native proof.
    */
   async function waitForAndroidGraphicsSettling(stage, quietAssets = false) {
@@ -409,8 +429,7 @@ async function android() {
         }
         const pressure = capturePressure();
         const resourceQuiet = !quietAssets || now - lastAssetAt >= 4000;
-        consecutiveGood =
-          androidPressureWithinBudget(pressure) && resourceQuiet ? consecutiveGood + 1 : 0;
+        consecutiveGood = pressure.withinBudget && resourceQuiet ? consecutiveGood + 1 : 0;
         samples.push({
           at: new Date(now).toISOString(),
           stage,

@@ -57,11 +57,13 @@ serious app defect.
    120-second test-only gate waits for the local WebView asset request stream
    to be quiet for four seconds and for at least three consecutive samples
    with Linux kernel PSI `cpu.some.avg10 <= 48` and
-   `io.some.avg10 <= 8`. The gate is repeated after actual HOME pause and
+   `io.some.avg10 <= 8` when accessible. The gate is repeated after actual HOME pause and
    before resuming the same activity. Thresholds are initial conservative
    heuristics based on the attached failed-run pressure evidence, **not
-   general Android performance requirements**. Missing PSI evidence fails
-   readiness, rather than being treated as a pass.
+   general Android performance requirements**. On Android 16, `/proc/pressure`
+   is not readable by the ordinary `adb shell` UID; the test therefore uses
+   the supported `dumpsys cpuinfo` fallback (CPU total <= 75%, IO wait <= 10%).
+   Neither an unavailable metric nor an unparsable CPU report is treated as idle.
 3. **Never mask a genuine ANR.** The log observer recognizes
    `E ActivityManager: ANR in <appId>` and fails immediately. There are no
    synthetic `App paused` / `App resumed` events, no skipped bridge checks,
@@ -70,7 +72,7 @@ serious app defect.
    process/WebView recreations, native clock boundary and distinct bridge
    identities remain mandatory.
 4. **Actionable evidence.** Each attempt saves its foreground/background
-   PSI samples, asset-request counts, time-to-quiescence and readiness
+   PSI or `dumpsys cpuinfo` readings, asset-request counts, time-to-quiescence and readiness
    decision. Any failure captures current CPU/IO PSI, Android activity and
    window focus, and `gfxinfo`, alongside already preserved logcat, screenshots,
    app identity, process/native observations and errors.
@@ -89,3 +91,12 @@ without diagnosing their evidence.
 Separate physical Android and Google Play/AdMob testing remain required:
 the reduced-dimension AOSP CI emulator does not replace hardware validation,
 GPU stress testing or store certification.
+
+## Initial CI validation lesson
+
+The first run on the right-sized AVD stopped before the HOME gate because
+Android 16 denied `adb shell cat /proc/pressure/cpu` with `Permission denied`.
+This was a diagnostic permission issue, **not another application ANR**.
+The permanent fallback now samples the public `dumpsys cpuinfo` output,
+records which metric source was available, and fails if no valid source can
+be measured. The native application is not run as root.

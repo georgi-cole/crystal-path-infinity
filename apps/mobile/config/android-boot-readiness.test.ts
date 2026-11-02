@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   androidAppAnrObserved,
   androidBroadcastsIdle,
+  androidCpuInfoWithinBudget,
+  androidDumpsysCpuInfo,
   androidHomeLaunchObserved,
   androidPressureWithinBudget,
   androidRenderPressure,
@@ -98,6 +100,19 @@ describe('CPI-011 strict Android first-boot readiness', () => {
     expect(androidRenderPressure(cpu, 'some avg10=unknown')).toBe(null);
     expect(androidPressureWithinBudget(null)).toBe(false);
     expect(androidRenderPressure('full avg10=0', io)).toBe(null);
+  });
+
+  it('uses measured dumpsys cpuinfo load when Android 16 restricts /proc/pressure', () => {
+    const high =
+      'CPU usage from 34144ms to -1ms ago:\n  29% 469/composer3\n  21% system_server\n97% TOTAL: 25% user + 70% kernel + 0.3% iowait + 1.2% irq';
+    const quiet =
+      'CPU usage from 1999ms to 230ms ago:\n  12% 621/system_server\n41% TOTAL: 21% user + 18% kernel + 2% iowait';
+    expect(androidDumpsysCpuInfo(high)).toEqual({ totalCpuPercent: 97, ioWaitPercent: 0.3 });
+    expect(androidCpuInfoWithinBudget(androidDumpsysCpuInfo(high))).toBe(false);
+    expect(androidCpuInfoWithinBudget(androidDumpsysCpuInfo(quiet))).toBe(true);
+    expect(androidDumpsysCpuInfo('cat: /proc/pressure/cpu: Permission denied')).toBe(null);
+    expect(androidDumpsysCpuInfo('not a CPU report')).toBe(null);
+    expect(androidCpuInfoWithinBudget(null)).toBe(false);
   });
 
   it('flags an actual app ANR, not unrelated system messages or another app', () => {

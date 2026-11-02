@@ -55,3 +55,29 @@ export function androidAppAnrObserved(log: string, appId: string): boolean {
     return line.includes(marker + ' (') || line.trimEnd().endsWith(marker);
   });
 }
+
+
+/** Android 16 restricts unprivileged adb shell access to /proc/pressure/*.
+ * In that case, use the public dumpsys cpuinfo command instead of assuming 0% load.
+ */
+export interface AndroidCpuInfoLoad {
+  totalCpuPercent: number;
+  ioWaitPercent: number;
+}
+
+export function androidDumpsysCpuInfo(output: string): AndroidCpuInfoLoad | null {
+  const line = output.split(/\r?\n/).find((entry) => /\bTOTAL:/.test(entry));
+  if (!line) return null;
+  const total = line.match(/(\d+(?:\.\d+)?)%\s+TOTAL:/);
+  const io = line.match(/(\d+(?:\.\d+)?)%\s+iowait/);
+  if (!total || !io) return null;
+  const totalCpuPercent = Number(total[1]);
+  const ioWaitPercent = Number(io[1]);
+  if (!Number.isFinite(totalCpuPercent) || !Number.isFinite(ioWaitPercent)) return null;
+  return { totalCpuPercent, ioWaitPercent };
+}
+
+/** Platform-supported CPU load fallback. Never treat missing measurements as idle. */
+export function androidCpuInfoWithinBudget(load: AndroidCpuInfoLoad | null): boolean {
+  return load !== null && load.totalCpuPercent <= 75 && load.ioWaitPercent <= 10;
+}
