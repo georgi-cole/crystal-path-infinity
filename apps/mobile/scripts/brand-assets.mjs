@@ -8,6 +8,11 @@ import { dirname, join } from 'node:path';
 import { deflateSync } from 'node:zlib';
 
 export const BRAND_BACKGROUND = '#060a18';
+
+/** Reject active/external SVG resources, without rejecting the standard XML namespace. */
+export function unsafeBrandSvg(svg) {
+  return /<!DOCTYPE|<!ENTITY|<(?:script|image|foreignObject)\b|(?:href|xlink:href)\s*=\s*["']\s*(?:https?:|data:|javascript:)|url\(\s*["']?\s*(?:https?:|data:|javascript:)/i.test(svg);
+}
 const IMAGE_SIZES = Object.freeze({ mdpi: 1, hdpi: 1.5, xhdpi: 2, xxhdpi: 3, xxxhdpi: 4 });
 const ICE = [130, 223, 241];
 const IRIS = [172, 154, 255];
@@ -246,7 +251,7 @@ export function syncNativeBrandAssets(appRoot, platform, check = false) {
   const icon = readFileSync(join(appRoot, 'public/brand/app-icon-preview.svg'), 'utf8');
   assert.ok(original.includes('viewBox="0 0 256 256"'));
   assert.ok(icon.includes('viewBox="0 0 512 512"'));
-  assert.ok(!/<(?:script|image)|https?:\/\//i.test(original + icon));
+  assert.ok(!unsafeBrandSvg(original + icon), 'Brand SVG must not load external resources');
   const assets = nativeBrandAssets(platform);
   const summary = [];
   for (const { path, size, mode, bytes } of assets) {

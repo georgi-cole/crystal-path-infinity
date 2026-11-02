@@ -1,7 +1,7 @@
 import { inflateSync } from 'node:zlib';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { BRAND_BACKGROUND, nativeBrandAssets, renderBrandPng } from '../scripts/brand-assets.mjs';
+import { BRAND_BACKGROUND, nativeBrandAssets, renderBrandPng, unsafeBrandSvg } from '../scripts/brand-assets.mjs';
 
 const root = new URL('../', import.meta.url);
 const source = (path: string) => readFileSync(new URL(path, root), 'utf8');
@@ -70,6 +70,17 @@ describe('CPI-012 deterministic native icon exports', () => {
     expect(ios.map((item) => item.size)).toEqual([1024, 160, 320, 480]);
     expect(ios[0]?.path).toContain('AppIcon-512@2x.png');
     expect(new Set([...android, ...ios].map((item) => item.path)).size).toBe(20);
+  });
+
+  it('accepts normal SVG namespaces but rejects scripts and remote resources', () => {
+    expect(unsafeBrandSvg(source('public/brand/prism-mark.svg'))).toBe(false);
+    expect(unsafeBrandSvg(source('public/brand/app-icon-preview.svg'))).toBe(false);
+    expect(unsafeBrandSvg('<svg xmlns="http://www.w3.org/2000/svg"></svg>')).toBe(false);
+    expect(unsafeBrandSvg('<svg><image href="https://example.test/logo.png"/></svg>')).toBe(
+      true,
+    );
+    expect(unsafeBrandSvg('<svg><script>alert(1)</script></svg>')).toBe(true);
+    expect(unsafeBrandSvg('<svg><foreignObject>html</foreignObject></svg>')).toBe(true);
   });
 
   it('uses platform icon/background launch mechanisms, not season aliases', () => {
