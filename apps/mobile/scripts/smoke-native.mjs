@@ -18,6 +18,7 @@ import {
 import { dirname, join, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
+import { androidUserBootPosted, androidBroadcastsIdle } from '../config/android-boot-readiness.ts';
 import {
   analyzeNativeLog,
   lifecycleBoundary,
@@ -378,6 +379,33 @@ async function android() {
       { timeout: 120_000 },
     );
     save('android-webview.txt', text(adb, adbArgs('shell', 'dumpsys', 'webviewupdate')));
+    // sys.boot_completed=1 can precede the user-0 BOOT_COMPLETED broadcast.
+    // In the failed CPI-011 runner this happened AFTER the app's ANR: launching
+    // during first-boot Google services overloaded Activity focus transitions.
+    // Observe the actual user broadcast before clearing logcat, then require
+    // Android's broadcast queues to drain. Neither condition substitutes for
+    // the real app pause/resume/bridge checks below.
+    let postedBootLine = '';
+    await waitFor('Android user-0 BOOT_COMPLETED (not only sys.boot_completed)', 180_000, () => {
+      assertRunning(child, 'Android emulator');
+      const bootLog = text(adb, adbArgs('logcat', '-d', '-v', 'epoch', '-s', 'ActivityManager:I'), {
+        timeout: 15_000,
+      });
+      postedBootLine =
+        bootLog.split('\\n').find((line) => androidUserBootPosted(line)) ?? '';
+      return Boolean(postedBootLine);
+    });
+    save('android-user-boot-completed.log', postedBootLine + '\\n');
+    recordLifecycleAction('android-user-boot-completed');
+    const broadcastDrain = text(adb, adbArgs('shell', 'am', 'wait-for-broadcast-idle'), {
+      timeout: 180_000,
+    });
+    save('android-broadcast-idle.log', broadcastDrain + '\\n');
+    assert.ok(
+      androidBroadcastsIdle(broadcastDrain),
+      'Android user boot broadcasts have not drained: ' + broadcastDrain.slice(-1000),
+    );
+    recordLifecycleAction('android-boot-broadcasts-idle');
     text(adb, adbArgs('logcat', '-c'));
     // Continuous capture starts before launch and includes native OS/activity
     // events. Exceptions before React or after its first frame remain visible.
