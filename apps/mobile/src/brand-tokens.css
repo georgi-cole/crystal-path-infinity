@@ -16,3 +16,48 @@
   --cpi-font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --cpi-font-display: 'Avenir Next', 'Segoe UI Variable Display', 'Segoe UI', sans-serif;
 }
+
+/* Standalone menu application: keep original layout while applying the shared mark. */
+:root {
+  color: var(--cpi-text);
+  background-color: var(--cpi-night);
+  font-family: var(--cpi-font-body);
+}
+
+.launch-screen {
+  background-color: var(--cpi-night);
+}
+
+.crystal-artwork img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 1.2rem 2.5rem rgb(52 158 198 / 12%));
+}
+
+.brand-name {
+  color: var(--cpi-ice);
+}
+
+.brand-edition {
+  color: var(--cpi-text);
+  font-family: var(--cpi-font-display);
+  text-shadow: 0 0 2.5rem rgb(120 210 242 / 12%);
+}
+
+.launch-message,
+.preview-note {
+  color: var(--cpi-muted);
+}
+
+.preview-play-button {
+  border-color: var(--cpi-glass-edge);
+  background: linear-gradient(125deg, rgb(41 143 182 / 40%), rgb(91 69 168 / 38%));
+  color: var(--cpi-text);
+  box-shadow: inset 0 1px 0 rgb(237 250 255 / 13%);
+}
+
+.preview-play-button:focus-visible {
+  outline-color: var(--cpi-focus);
+}
