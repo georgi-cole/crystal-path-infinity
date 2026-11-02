@@ -521,7 +521,10 @@ function verifyNative(platform, info) {
       read('native-templates/ios/LaunchScreen.storyboard'),
     );
     const images = json('ios/App/App/Assets.xcassets/CpiLaunchMark.imageset/Contents.json');
-    assert.deepEqual(images.images.map((item) => item.scale), ['1x', '2x', '3x']);
+    assert.deepEqual(
+      images.images.map((item) => item.scale),
+      ['1x', '2x', '3x'],
+    );
     assert.ok(images.images.every((item) => item.idiom === 'universal'));
     const appIcons = json('ios/App/App/Assets.xcassets/AppIcon.appiconset/Contents.json');
     assert.ok(appIcons.images.some((item) => item.size === '1024x1024'));

@@ -13,7 +13,7 @@ function unpackPng(bytes: Buffer) {
   expect(bytes[24]).toBe(8);
   expect(bytes[25]).toBe(6);
   const compressed: Buffer[] = [];
-  for (let cursor = 8; cursor < bytes.length; ) {
+  for (let cursor = 8; cursor < bytes.length;) {
     const length = bytes.readUInt32BE(cursor);
     const type = bytes.toString('ascii', cursor + 4, cursor + 8);
     if (type === 'IDAT') compressed.push(bytes.subarray(cursor + 8, cursor + 8 + length));
@@ -61,9 +61,9 @@ describe('CPI-012 deterministic native icon exports', () => {
       expect(android.find((asset) => asset.path === base + '/ic_launcher.png')?.size).toBe(
         Math.round(48 * scale),
       );
-      expect(android.find((asset) => asset.path === base + '/ic_launcher_foreground.png')?.size).toBe(
-        Math.round(108 * scale),
-      );
+      expect(
+        android.find((asset) => asset.path === base + '/ic_launcher_foreground.png')?.size,
+      ).toBe(Math.round(108 * scale));
       expect(android.find((asset) => asset.path === base + '/ic_launcher_round.png')).toBeDefined();
     }
     const ios = nativeBrandAssets('ios');

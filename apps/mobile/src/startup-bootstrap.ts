@@ -1,7 +1,5 @@
 /** No auth, network, ads, analytics or remote content belongs in startup. */
-export type StartupResult<T> =
-  | { status: 'ready'; value: T }
-  | { status: 'failed'; reason: string };
+export type StartupResult<T> = { status: 'ready'; value: T } | { status: 'failed'; reason: string };
 
 export const BOOT_TIMEOUT_MS = 1500;
 

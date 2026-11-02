@@ -66,10 +66,8 @@
 .cpi-bootstrap {
   min-height: 100vh;
   min-height: 100dvh;
-  padding: max(1.5rem, env(safe-area-inset-top, 0px))
-    max(1.5rem, env(safe-area-inset-right, 0px))
-    max(1.5rem, env(safe-area-inset-bottom, 0px))
-    max(1.5rem, env(safe-area-inset-left, 0px));
+  padding: max(1.5rem, env(safe-area-inset-top, 0px)) max(1.5rem, env(safe-area-inset-right, 0px))
+    max(1.5rem, env(safe-area-inset-bottom, 0px)) max(1.5rem, env(safe-area-inset-left, 0px));
   display: flex;
   flex-direction: column;
   align-items: center;

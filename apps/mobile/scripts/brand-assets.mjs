@@ -12,13 +12,53 @@ const IMAGE_SIZES = Object.freeze({ mdpi: 1, hdpi: 1.5, xhdpi: 2, xxhdpi: 3, xxx
 const ICE = [130, 223, 241];
 const IRIS = [172, 154, 255];
 const WHITE = [236, 253, 255];
-const OUTER = [[128, 18], [206, 95], [186, 177], [128, 238], [70, 177], [50, 95]];
-const LEFT = [[128, 18], [50, 95], [70, 177], [128, 238], [118, 137], [96, 100]];
-const RIGHT = [[128, 18], [206, 95], [186, 177], [128, 238], [138, 137], [160, 100]];
-const LEFT_FACE = [[50, 95], [96, 100], [118, 137], [70, 177]];
-const RIGHT_FACE = [[206, 95], [160, 100], [138, 137], [186, 177]];
-const CORRIDOR = [[128, 53], [164, 111], [128, 208], [92, 111]];
-const RUNGS = [[111, 148, 145], [104, 168, 152], [97, 187, 159]];
+const OUTER = [
+  [128, 18],
+  [206, 95],
+  [186, 177],
+  [128, 238],
+  [70, 177],
+  [50, 95],
+];
+const LEFT = [
+  [128, 18],
+  [50, 95],
+  [70, 177],
+  [128, 238],
+  [118, 137],
+  [96, 100],
+];
+const RIGHT = [
+  [128, 18],
+  [206, 95],
+  [186, 177],
+  [128, 238],
+  [138, 137],
+  [160, 100],
+];
+const LEFT_FACE = [
+  [50, 95],
+  [96, 100],
+  [118, 137],
+  [70, 177],
+];
+const RIGHT_FACE = [
+  [206, 95],
+  [160, 100],
+  [138, 137],
+  [186, 177],
+];
+const CORRIDOR = [
+  [128, 53],
+  [164, 111],
+  [128, 208],
+  [92, 111],
+];
+const RUNGS = [
+  [111, 148, 145],
+  [104, 168, 152],
+  [97, 187, 159],
+];
 const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 
 function inside(x, y, polygon) {
@@ -26,7 +66,7 @@ function inside(x, y, polygon) {
   for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
     const [ax, ay] = polygon[i];
     const [bx, by] = polygon[j];
-    if ((ay > y) !== (by > y) && x < ((bx - ax) * (y - ay)) / (by - ay) + ax) {
+    if (ay > y !== by > y && x < ((bx - ax) * (y - ay)) / (by - ay) + ax) {
       hit = !hit;
     }
   }
@@ -97,18 +137,20 @@ function sample(x, y, mode) {
     }
     return pixel;
   }
-  if (inside(mx, my, LEFT)) pixel = over(pixel, blend(WHITE, ICE, Math.max(0, my - 18) / 230), 0.97);
-  if (inside(mx, my, RIGHT)) pixel = over(pixel, blend(IRIS, [40, 73, 157], Math.max(0, my - 18) / 230), 0.98);
+  if (inside(mx, my, LEFT))
+    pixel = over(pixel, blend(WHITE, ICE, Math.max(0, my - 18) / 230), 0.97);
+  if (inside(mx, my, RIGHT))
+    pixel = over(pixel, blend(IRIS, [40, 73, 157], Math.max(0, my - 18) / 230), 0.98);
   if (inside(mx, my, LEFT_FACE)) pixel = over(pixel, [208, 247, 255], 0.26);
   if (inside(mx, my, RIGHT_FACE)) pixel = over(pixel, [200, 198, 255], 0.27);
   if (inside(mx, my, CORRIDOR)) {
     pixel = over(pixel, blend([19, 47, 77], [3, 9, 24], (my - 53) / 155), 1);
   }
-  if (outlineDistance(mx, my, OUTER) < 0.95) pixel = over(pixel, WHITE, 0.60);
-  if (outlineDistance(mx, my, CORRIDOR) < 0.85) pixel = over(pixel, ICE, 0.70);
+  if (outlineDistance(mx, my, OUTER) < 0.95) pixel = over(pixel, WHITE, 0.6);
+  if (outlineDistance(mx, my, CORRIDOR) < 0.85) pixel = over(pixel, ICE, 0.7);
   for (const [start, row, end] of RUNGS) {
     if (segmentDistance(mx, my, start, row, end, row) < 1.5) {
-      pixel = over(pixel, WHITE, 0.90);
+      pixel = over(pixel, WHITE, 0.9);
     }
   }
   return pixel;
@@ -179,7 +221,9 @@ function androidAssetList() {
     const size = Math.round(48 * factor);
     assets.push(asset(base + '/ic_launcher.png', size, 'icon'));
     assets.push(asset(base + '/ic_launcher_round.png', size, 'round'));
-    assets.push(asset(base + '/ic_launcher_foreground.png', Math.round(108 * factor), 'foreground'));
+    assets.push(
+      asset(base + '/ic_launcher_foreground.png', Math.round(108 * factor), 'foreground'),
+    );
   }
   assets.push(asset('android/app/src/main/res/drawable-nodpi/cpi_splash_logo.png', 256, 'splash'));
   return assets;
