@@ -22,7 +22,7 @@ import {
   androidAppAnrObserved,
   androidBroadcastsIdle,
   androidCpuInfoWithinBudget,
-  androidDumpsysCpuInfo,
+  androidToyboxTopCpu,
   androidHomeLaunchObserved,
   androidPressureWithinBudget,
   androidRenderPressure,
@@ -395,14 +395,18 @@ async function android() {
       psiAllowed = false;
       save(
         'android-pressure-source.txt',
-        'Android system restricted unprivileged /proc/pressure access; using dumpsys cpuinfo.\n',
+        'Android system restricted unprivileged /proc/pressure access; using live Toybox top.\n',
       );
     }
-    const cpuInfo = text(adb, adbArgs('shell', 'dumpsys', 'cpuinfo'), { timeout: 15_000 });
-    const metrics = androidDumpsysCpuInfo(cpuInfo);
-    assert.ok(metrics, 'Android dumpsys cpuinfo did not provide valid CPU/IO telemetry');
+    // Toybox measures fresh CPU activity for each invocation. The archived
+    // dumpsys cpuinfo fallback repeated 85% CPU unchanged for 118 samples.
+    const cpuInfo = text(adb, adbArgs('shell', 'top', '-b', '-n', '1', '-m', '1'), {
+      timeout: 15_000,
+    });
+    const metrics = androidToyboxTopCpu(cpuInfo);
+    assert.ok(metrics, 'Android Toybox top did not provide valid live CPU/IO telemetry');
     return {
-      source: 'dumpsys-cpuinfo',
+      source: 'toybox-top',
       metrics,
       withinBudget: androidCpuInfoWithinBudget(metrics),
     };

@@ -4,7 +4,7 @@ import {
   androidAppAnrObserved,
   androidBroadcastsIdle,
   androidCpuInfoWithinBudget,
-  androidDumpsysCpuInfo,
+  androidToyboxTopCpu,
   androidHomeLaunchObserved,
   androidPressureWithinBudget,
   androidRenderPressure,
@@ -102,17 +102,31 @@ describe('CPI-011 strict Android first-boot readiness', () => {
     expect(androidRenderPressure('full avg10=0', io)).toBe(null);
   });
 
-  it('uses measured dumpsys cpuinfo load when Android 16 restricts /proc/pressure', () => {
+  it('samples fresh, normalized Android Toybox top load without root', () => {
     const high =
-      'CPU usage from 34144ms to -1ms ago:\n  29% 469/composer3\n  21% system_server\n97% TOTAL: 25% user + 70% kernel + 0.3% iowait + 1.2% irq';
+      'Tasks: 201 total, 3 running\n' +
+      '400%cpu 340%user 0%nice 30%sys 20%idle 10%iow 0%irq 0%sirq 0%host';
     const quiet =
-      'CPU usage from 1999ms to 230ms ago:\n  12% 621/system_server\n41% TOTAL: 21% user + 18% kernel + 2% iowait';
-    expect(androidDumpsysCpuInfo(high)).toEqual({ totalCpuPercent: 97, ioWaitPercent: 0.3 });
-    expect(androidCpuInfoWithinBudget(androidDumpsysCpuInfo(high))).toBe(false);
-    expect(androidCpuInfoWithinBudget(androidDumpsysCpuInfo(quiet))).toBe(true);
-    expect(androidDumpsysCpuInfo('cat: /proc/pressure/cpu: Permission denied')).toBe(null);
-    expect(androidDumpsysCpuInfo('not a CPU report')).toBe(null);
+      'Tasks: 198 total, 1 running\n' +
+      '400%cpu 22%user 0%nice 9%sys 368%idle 1%iow 0%irq 0%sirq 0%host';
+    expect(androidToyboxTopCpu(high)).toEqual({
+      totalCpuPercent: 92.5,
+      ioWaitPercent: 2.5,
+    });
+    expect(androidCpuInfoWithinBudget(androidToyboxTopCpu(high))).toBe(false);
+    expect(androidToyboxTopCpu(quiet)).toEqual({
+      totalCpuPercent: 7.75,
+      ioWaitPercent: 0.25,
+    });
+    expect(androidCpuInfoWithinBudget(androidToyboxTopCpu(quiet))).toBe(true);
+    expect(androidToyboxTopCpu('85% TOTAL: 5.7% iowait')).toBe(null);
+    expect(androidToyboxTopCpu('cat: /proc/pressure/cpu: Permission denied')).toBe(null);
+    expect(androidToyboxTopCpu('400%cpu 399%idle')).toBe(null);
+    expect(androidToyboxTopCpu('400%cpu 400%idle 20%iow')).toBe(null);
     expect(androidCpuInfoWithinBudget(null)).toBe(false);
+    const script = readFileSync(new URL('../scripts/smoke-native.mjs', import.meta.url), 'utf8');
+    expect(script).toContain("'top', '-b', '-n', '1', '-m', '1'");
+    expect(script).not.toContain("adbArgs('shell', 'dumpsys', 'cpuinfo')");
   });
 
   it('flags an actual app ANR, not unrelated system messages or another app', () => {

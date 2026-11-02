@@ -56,24 +56,33 @@ export function androidAppAnrObserved(log: string, appId: string): boolean {
   });
 }
 
-/** Android 16 restricts unprivileged adb shell access to /proc/pressure/*.
- * In that case, use the public dumpsys cpuinfo command instead of assuming 0% load.
+/** Android 16 restricts shell access to /proc/pressure, while dumpsys
+ * cpuinfo can return an unchanged cached sample for minutes. Toybox top
+ * takes fresh CPU readings without root. Normalize its per-core totals.
  */
 export interface AndroidCpuInfoLoad {
   totalCpuPercent: number;
   ioWaitPercent: number;
 }
 
-export function androidDumpsysCpuInfo(output: string): AndroidCpuInfoLoad | null {
-  const line = output.split(/\r?\n/).find((entry) => /\bTOTAL:/.test(entry));
+/** One-shot Android Toybox top prints N*100%cpu for N virtual cores. */
+export function androidToyboxTopCpu(output: string): AndroidCpuInfoLoad | null {
+  const line = output.split(/\r?\n/).find((entry) => /^\s*\d+(?:\.\d+)?%cpu\b/i.test(entry));
   if (!line) return null;
-  const total = line.match(/(\d+(?:\.\d+)?)%\s+TOTAL:/);
-  const io = line.match(/(\d+(?:\.\d+)?)%\s+iowait/);
-  if (!total || !io) return null;
-  const totalCpuPercent = Number(total[1]);
-  const ioWaitPercent = Number(io[1]);
-  if (!Number.isFinite(totalCpuPercent) || !Number.isFinite(ioWaitPercent)) return null;
-  return { totalCpuPercent, ioWaitPercent };
+  const total = line.match(/^\s*(\d+(?:\.\d+)?)%cpu\b/i);
+  const idle = line.match(/(\d+(?:\.\d+)?)%idle\b/i);
+  const io = line.match(/(\d+(?:\.\d+)?)%iow\b/i);
+  if (!total || !idle || !io) return null;
+  const budget = Number(total[1]);
+  const idleAmount = Number(idle[1]);
+  const ioAmount = Number(io[1]);
+  if (![budget, idleAmount, ioAmount].every(Number.isFinite) || budget <= 0) return null;
+  // Allow a single rounded percentage point in Toybox's integer output.
+  if (idleAmount + ioAmount > budget + 1) return null;
+  return {
+    totalCpuPercent: (Math.max(0, budget - idleAmount - ioAmount) / budget) * 100,
+    ioWaitPercent: (ioAmount / budget) * 100,
+  };
 }
 
 /** Platform-supported CPU load fallback. Never treat missing measurements as idle. */

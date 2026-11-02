@@ -62,7 +62,7 @@ serious app defect.
    heuristics based on the attached failed-run pressure evidence, **not
    general Android performance requirements**. On Android 16, `/proc/pressure`
    is not readable by the ordinary `adb shell` UID; the test therefore uses
-   the supported `dumpsys cpuinfo` fallback (CPU total <= 75%, IO wait <= 10%).
+   live Android Toybox `top -b -n 1` measurements normalized by the virtual CPU count (busy CPU <= 75%, IO wait <= 10%).
    Neither an unavailable metric nor an unparsable CPU report is treated as idle.
 3. **Never mask a genuine ANR.** The log observer recognizes
    `E ActivityManager: ANR in <appId>` and fails immediately. There are no
@@ -100,3 +100,21 @@ This was a diagnostic permission issue, **not another application ANR**.
 The permanent fallback now samples the public `dumpsys cpuinfo` output,
 records which metric source was available, and fails if no valid source can
 be measured. The native application is not run as root.
+
+
+## Follow-up: avoid the cached CPU snapshot (run 41510785390)
+
+The first non-root fallback failed its 120-second foreground readiness gate,
+without an observed app ANR. Artifact 13173376318 proves that the existing
+dumpsys cpuinfo output remained **exactly 85% total CPU / 5.7% iowait for all
+118 samples**, even while the WebView asset count stopped changing and its
+quiet interval reached 119 seconds. This is stale service telemetry, not a
+credible sequence of live CPU readings.
+
+The fallback now uses a fresh one-shot Android Toybox top measurement
+(available to the ordinary shell UID) on each sample, with the aggregate
+N-core idle and I/O counters normalized to percentages. An invalid or missing
+top summary remains a hard diagnostic failure rather than a presumed-idle
+reading. Regression tests reject the cached dumpsys report format and check
+normalization on the 4-core emulator. The strict Home/pause/resume, native
+clock, ANR and bridge assertions are unchanged.
