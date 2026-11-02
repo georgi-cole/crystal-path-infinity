@@ -1,8 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
+  androidAppAnrObserved,
   androidBroadcastsIdle,
   androidHomeLaunchObserved,
+  androidPressureWithinBudget,
+  androidRenderPressure,
   androidUserBootPosted,
 } from './android-boot-readiness';
 
@@ -71,6 +74,60 @@ describe('CPI-011 strict Android first-boot readiness', () => {
     expect(script).toContain("'android.intent.category.HOME'");
     expect(script).toContain("waitFor('Android native pause after Home', 30_000");
     expect(script).toContain("waitFor('Android bridge round-trip after real Home/resume', 30_000");
+  });
+
+
+  it('parses Android kernel PSI accurately, rejecting invalid or absent observations', () => {
+    const cpu = 'some avg10=70.92 avg60=39.10 avg300=10.54 total=33920200\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0';
+    const io = 'some avg10=12.71 avg60=9.48 avg300=2.75 total=9076181\nfull avg10=0.32 avg60=1.43 avg300=0.53 total=1996763';
+    expect(androidRenderPressure(cpu, io)).toEqual({
+      cpuSomeAvg10: 70.92,
+      ioSomeAvg10: 12.71,
+    });
+    expect(androidPressureWithinBudget(androidRenderPressure(cpu, io))).toBe(false);
+    expect(
+      androidPressureWithinBudget(
+        androidRenderPressure('some avg10=18.00 avg60=11.00 total=12', 'some avg10=1.50 avg60=3.00 total=8'),
+      ),
+    ).toBe(true);
+    expect(androidRenderPressure('no PSI', io)).toBe(null);
+    expect(androidRenderPressure(cpu, 'some avg10=unknown')).toBe(null);
+    expect(androidPressureWithinBudget(null)).toBe(false);
+    expect(androidRenderPressure('full avg10=0', io)).toBe(null);
+  });
+
+  it('flags an actual app ANR, not unrelated system messages or another app', () => {
+    const appId = 'com.georgicole.crystalpath.infinity.dev';
+    const report = '1793639689.646 621 2636 E ActivityManager: ANR in ' + appId + ' (' + appId + '/.MainActivity)';
+    expect(androidAppAnrObserved(report, appId)).toBe(true);
+    expect(androidAppAnrObserved('ANR in com.android.launcher3', appId)).toBe(false);
+    expect(androidAppAnrObserved('W ActivityManager: ANR in ' + appId, appId)).toBe(false);
+    expect(androidAppAnrObserved('', appId)).toBe(false);
+  });
+
+  it('gates ordinary HOME on stable graphics and retains strict native evidence', () => {
+    const script = readFileSync(new URL('../scripts/smoke-native.mjs', import.meta.url), 'utf8');
+    const ready = script.indexOf('waitForAndroidGraphicsSettling');
+    const home = script.indexOf("recordLifecycleAction('home'");
+    expect(ready).toBeGreaterThan(0);
+    expect(home).toBeGreaterThan(ready);
+    expect(script).toContain('androidAppAnrObserved(');
+    expect(script).toContain('androidPressureWithinBudget(');
+    expect(script).toContain("waitFor('Android native pause after Home', 30_000");
+    expect(script).toContain("waitFor('Android bridge round-trip after real Home/resume', 30_000");
+    expect(script).toContain('assert.equal(pid, initialPid');
+  });
+
+  it('pins a reduced graphics-work AOSP API 36 emulator with real lifecycle checks', () => {
+    const workflow = readFileSync(
+      new URL('../../../.github/workflows/mobile-app.yml', import.meta.url),
+      'utf8',
+    );
+    expect(workflow).toContain("'hw.cpu.ncore': '4'");
+    expect(workflow).toContain("'hw.ramSize': '3072M'");
+    expect(workflow).toContain("'hw.lcd.width': '720'");
+    expect(workflow).toContain("'hw.lcd.height': '1600'");
+    expect(workflow).toContain('system-images;android-36;default;x86_64');
   });
 
   it('pins the lifecycle emulator to AOSP API 36, without Google setup workload', () => {
