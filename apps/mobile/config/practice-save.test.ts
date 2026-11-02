@@ -77,7 +77,8 @@ describe('CPI-009 atomic local practice snapshots',()=>{
     const store=new MemoryStorage();
     writePracticeCheckpoint(store,newRun());
     writePracticeCheckpoint(store,chooseSafe(newRun()));
-    const head=JSON.parse(store.getItem(PRACTICE_SAVE_KEYS.head)!);
+    const head: unknown = JSON.parse(store.getItem(PRACTICE_SAVE_KEYS.head)!);
+    if (!head || typeof head !== 'object' || !('slot' in head) || (head.slot !== 0 && head.slot !== 1)) throw new Error('Invalid test slot');
     store.setItem(PRACTICE_SAVE_KEYS.slots[head.slot],'{bad');
     expect(readPracticeCheckpoint(store).status).toBe('corrupt');
     expect(()=>writePracticeCheckpoint(store,newRun())).toThrow();
