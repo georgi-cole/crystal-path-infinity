@@ -75,7 +75,7 @@ export function presentRunOutcome(state: RunState): RunDisplay {
         : 'playing';
   const deathCause = finished ? state.result?.deathCause : state.death?.cause;
   const fatalRow = finished ? (state.result?.fatalRow ?? null) : (state.death?.fatalRow ?? null);
-  const clearedRows = finished ? state.result!.lastClearedRow : state.lastClearedRow;
+  const clearedRows = finished && state.result ? state.result.lastClearedRow : state.lastClearedRow;
   return {
     phase,
     clearedRows: formatRowLabel(clearedRows),
