@@ -349,8 +349,15 @@ function makeInitialRun(): RunState {
   );
 }
 
-function InfinityRun({ onExit, onRestart }: { onExit: () => void; onRestart: () => void }) {
-  const [initial] = useState(makeInitialRun);
+interface InfinityRunProps {
+  onExit: () => void;
+  onRestart: () => void;
+  initialState: RunState | null;
+  onCheckpoint: (state: RunState) => void;
+}
+function InfinityRun({ onExit, onRestart, initialState, onCheckpoint }: InfinityRunProps) {
+  const [initial] = useState(() => initialState ?? makeInitialRun());
+  const lastCommittedActiveMs = useRef(-500);
   const [state, setState] = useState<RunState>(initial);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -363,13 +370,22 @@ function InfinityRun({ onExit, onRestart }: { onExit: () => void; onRestart: () 
 
   useEffect(() => {
     let alive = true;
+    const lifecycle = getGameplayLifecycle();
     const runtime = createPracticeRuntime({
       state: initial,
       rng: PRACTICE_RNG,
-      lifecycle: getGameplayLifecycle(),
+      lifecycle,
       schedule: schedulePracticeTick,
       onTransition: (result: TimedSessionResult) => {
         if (!alive) return;
+        if (
+          result.events.length > 0 ||
+          result.state.status !== 'playing' ||
+          result.state.activeTimeMs - lastCommittedActiveMs.current >= 500
+        ) {
+          onCheckpoint(result.state);
+          lastCommittedActiveMs.current = result.state.activeTimeMs;
+        }
         setState(result.state);
         const choice = result.events.find(
           (event): event is Extract<RunEvent, { type: 'choice-resolved' }> =>
@@ -387,6 +403,15 @@ function InfinityRun({ onExit, onRestart }: { onExit: () => void; onRestart: () 
       },
     });
     runtimeRef.current = runtime;
+    const unsubscribeCheckpoint = lifecycle.subscribe((snapshot) => {
+      if (!snapshot.active && alive) {
+        try {
+          onCheckpoint(runtime.getState());
+        } catch (cause) {
+          setError(cause instanceof Error ? cause.message : 'Local save failed.');
+        }
+      }
+    });
     void runtime.ready
       .then(() => {
         if (alive) {
@@ -401,9 +426,10 @@ function InfinityRun({ onExit, onRestart }: { onExit: () => void; onRestart: () 
     return () => {
       alive = false;
       if (runtimeRef.current === runtime) runtimeRef.current = null;
+      unsubscribeCheckpoint();
       runtime.dispose();
     };
-  }, [initial]);
+  }, [initial, onCheckpoint]);
 
   async function issue(command: SessionCommand) {
     const runtime = runtimeRef.current;
@@ -445,6 +471,8 @@ function InfinityRun({ onExit, onRestart }: { onExit: () => void; onRestart: () 
         pauseRef.current = lease;
         setPaused(true);
       }
+      onCheckpoint(runtime.getState());
+      lastCommittedActiveMs.current = runtime.getState().activeTimeMs;
       setState(runtime.getState());
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Pause failed.');
@@ -465,12 +493,24 @@ function InfinityRun({ onExit, onRestart }: { onExit: () => void; onRestart: () 
       setError(reason instanceof Error ? reason.message : 'Clock is unavailable.');
     }
   }
-  function exit() {
+  async function exit() {
     if (
       state.status === 'playing' &&
-      !window.confirm('Exit practice? Progress is not yet saved in this preview.')
+      !window.confirm(
+        'Exit practice? Your latest committed checkpoint will remain available to continue.',
+      )
     )
       return;
+    const runtime = runtimeRef.current;
+    if (runtime) {
+      try {
+        if (!paused) await runtime.hold('recovery');
+        onCheckpoint(runtime.getState());
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : 'Unable to pause and save.');
+        return;
+      }
+    }
     onExit();
   }
   return (
@@ -496,7 +536,9 @@ function InfinityRun({ onExit, onRestart }: { onExit: () => void; onRestart: () 
       onEnd={() => {
         void issue({ type: 'end', forfeitGrantedReward: true });
       }}
-      onExit={exit}
+      onExit={() => {
+        void exit();
+      }}
       onRestart={onRestart}
       onRetry={() => {
         void retry();
@@ -505,8 +547,24 @@ function InfinityRun({ onExit, onRestart }: { onExit: () => void; onRestart: () 
   );
 }
 
-/** Preview shell only; CPI-009 will add durable checkpoint selection and recovery. */
-export function InfinityPractice({ onExit }: { onExit: () => void }) {
+/** A new attempt and an explicitly resumed checkpoint have distinct owners. */
+export function InfinityPractice({
+  onExit,
+  initialState = null,
+  onCheckpoint,
+}: {
+  onExit: () => void;
+  initialState?: RunState | null;
+  onCheckpoint: (state: RunState) => void;
+}) {
   const [attempt, setAttempt] = useState(0);
-  return <InfinityRun key={attempt} onExit={onExit} onRestart={() => setAttempt((n) => n + 1)} />;
+  return (
+    <InfinityRun
+      key={attempt}
+      initialState={attempt === 0 ? initialState : null}
+      onCheckpoint={onCheckpoint}
+      onExit={onExit}
+      onRestart={() => setAttempt((n) => n + 1)}
+    />
+  );
 }
