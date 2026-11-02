@@ -51,6 +51,30 @@ jobs:
         run: npm run lint 2>&1 | tee apps/mobile/artifacts/lint.log
       - name: Formatting
         run: npm run format:check 2>&1 | tee apps/mobile/artifacts/format.log
+      - name: Capture canonical Prettier output when formatting fails
+        if: failure()
+        run: |
+          npx prettier --write \
+            apps/mobile/config/native-brand.test.ts \
+            apps/mobile/index.html \
+            apps/mobile/scripts/brand-assets.mjs \
+            apps/mobile/scripts/generate-native.mjs \
+            apps/mobile/src/brand-tokens.css \
+            apps/mobile/src/startup-bootstrap.ts >/dev/null
+          node --input-type=module <<'JS'
+          import { readFileSync } from 'node:fs';
+          const paths = [
+            'apps/mobile/config/native-brand.test.ts',
+            'apps/mobile/index.html',
+            'apps/mobile/scripts/brand-assets.mjs',
+            'apps/mobile/scripts/generate-native.mjs',
+            'apps/mobile/src/brand-tokens.css',
+            'apps/mobile/src/startup-bootstrap.ts',
+          ];
+          for (const path of paths) {
+            console.log('CPI012_FORMATTED_SOURCE ' + JSON.stringify({ path, content: readFileSync(path, 'utf8') }));
+          }
+          JS
       - name: Application tests
         run: npm test 2>&1 | tee apps/mobile/artifacts/tests.log
       - name: Build all three web environments
