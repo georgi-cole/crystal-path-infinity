@@ -82,6 +82,23 @@ describe('CPI-008 standalone scene', () => {
     expect(html).toContain('aria-label="Pause game"');
     expect(html).toContain('class="cpi-scene-footer"');
   });
+  it('keeps a premium, accessible HUD and real 14-segment SP meter', () => {
+    const html = markup();
+    expect(html).toContain('cpi-hud-header');
+    expect(html).toContain('cpi-pause-control');
+    expect(html).toContain('aria-label="Pause game"');
+    expect(html).toContain('cpi-energy-meter');
+    expect(html).toContain('aria-label="Survival points"');
+    expect(html).toContain('aria-valuenow="300"');
+    expect(html).toContain('cpi-energy-segments');
+    expect(html).toContain('cpi-hint-control');
+    const css = readFileSync(new URL('../src/infinity-hud-premium.css', import.meta.url), 'utf8');
+    expect(css).toContain('grid-template-columns: repeat(14');
+    expect(css).toContain('perspective: 1100px');
+    expect(css).toContain('min-height: clamp(23rem, 66dvh, 43rem)');
+    expect(css).toContain('prefers-reduced-motion');
+  });
+
   it('applies the optional in-app reduced-motion setting', () => {
     const html = markup({ settings: { ...DEFAULT_PRACTICE_SETTINGS, reducedMotion: true } });
     expect(html).toContain('cpi-reduced-motion');

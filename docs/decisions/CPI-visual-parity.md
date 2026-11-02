@@ -36,3 +36,42 @@ A real Chromium mobile touch simulation at 390 × 844 advanced from Row 1 throug
 ## Verification and release boundaries
 
 The final PR revision must pass TypeScript, lint, Prettier, application tests, all web builds, and Android/iOS native launch checks. Browser screenshots represent the compiled app, not native-device or App Store screenshots. Physical Android/iPhone portrait visual approval, gesture testing, narrow-height layouts, and third-party source image licensing review remain pending.
+
+## Actual Big Eye IntroHub reuse and HUD redesign (PR #53 follow-up)
+
+This iteration integrates merged CPI-013 (PR #52) into PR #53 as a merge parent,
+rather than reverting its URL routes, local checkpoint resume, Back navigation or
+guest/offline states.
+
+The standalone main menu now **reuses exact graphic assets** from the original
+Big Eye HomeHub at source commit 6ace929a60410e728928aa51eaf80ba9b5cf2262:
+four asymmetric glossy GameButton SVG faces, four action icons, and the original
+IntroHub utility shell with settings/music/sound icons. Each is bundled locally at
+apps/mobile/public/intro-hub/ and tracked in the reuse manifest. Layout follows
+HomeHub.css and css/intro-hub.css: a portrait-limited full-bleed background,
+centered asymmetric button stack, icon corner utilities and darkened lower
+backdrop. The backdrop is the existing optimized original Infinity WebP, not a
+copied house/season/weather image. The utility buttons really toggle local
+music/effects or open the existing Settings route; they do not call Big Eye
+services. Ranked Play remains explicitly unconfigured and never creates a
+fake account or leaderboard. Production signing/privacy flows are unchanged.
+
+The scene's plain text Pause button is now a compact translucent icon control
+with a meaningful accessible label. The player/row/SP hierarchy is a detailed
+glass HUD plate with beveled corners, prismatic accent rails and consistent
+numeric alignment; hints remain accessible. The survival-point meter retains
+role=meter, its precise 0–MAX_SP semantics and live value. It now has fourteen
+optical cells and a gradient spectrum with a visible cursor instead of a flat
+green strip. Warning/danger states preserve their thresholds. These are
+decorative changes only: they do not alter SP calculation, timers or any award.
+
+The freed control space goes into a taller bridge with stronger perspective and
+a more dramatic near-to-far tile scale, while remaining fully tappable.
+The original source-derived black-hole WebP, corrected fading side rails, direct
+tile tapping, mystery action and hidden live announcements remain intact.
+
+Automated tests protect imported asset paths, functional guest Settings/Practice
+navigation, row labels, true meter semantics, accessible Pause/Hint and 14 meter
+cells. Manual review remains required on portrait devices at 320px, 390px and
+larger widths, in both reduced-motion and normal settings. Source art remains
+owner proprietary; license provenance still requires release review.
