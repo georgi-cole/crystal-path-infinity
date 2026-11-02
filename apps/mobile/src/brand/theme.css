@@ -1,0 +1,55 @@
+:root {
+  /* CPI-011 Midnight Prism, proposed default; future skins must preserve signal contrast. */
+  --cpi-void: #080c1b;
+  --cpi-surface: #102034;
+  --cpi-surface-raised: #172e47;
+  --cpi-glass-cyan: #79def2;
+  --cpi-glass-violet: #a78cf6;
+  --cpi-text: #ecf9fe;
+  --cpi-muted: #abc7da;
+  --cpi-safe: #55edb0;
+  --cpi-danger: #ff7b90;
+  --cpi-focus: #d6ffff;
+  --cpi-outline: rgba(125, 223, 233, 0.38);
+  --cpi-edge-shadow: 0 16px 44px rgba(2, 5, 16, 0.48);
+  --cpi-type: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+.launch-screen {
+  background:
+    radial-gradient(ellipse at 50% 32%, rgba(70, 151, 185, 0.18), transparent 53%),
+    radial-gradient(ellipse at 8% 12%, rgba(153, 119, 235, 0.14), transparent 45%),
+    var(--cpi-void);
+}
+.launch-screen .brand-name { color: var(--cpi-muted); letter-spacing: 0.23em; }
+.launch-screen .brand-edition {
+  color: var(--cpi-text);
+  text-shadow: 0 0 32px rgba(117, 213, 240, 0.15);
+}
+.cpi-brand-artwork {
+  display: block;
+  width: clamp(9rem, 40vw, 13.5rem);
+  height: auto;
+  max-height: 26svh;
+  margin: 0 auto 1.1rem;
+  object-fit: contain;
+  filter: drop-shadow(0 0 30px rgba(89, 190, 235, 0.14));
+}
+.launch-content .cpi-primary-actions {
+  display: grid;
+  width: min(100%, 21rem);
+  gap: 0.65rem;
+  margin-top: 1.2rem;
+}
+.launch-content .cpi-primary-actions > * { width: 100%; }
+.cpi-brand-caption {
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--cpi-glass-cyan);
+}
+@media (max-height: 650px) {
+  .cpi-brand-artwork { width: 7.2rem; max-height: 18svh; margin-bottom: 0.35rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cpi-brand-artwork { filter: none; }
+}

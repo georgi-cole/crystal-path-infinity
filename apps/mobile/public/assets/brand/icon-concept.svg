@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+<title id="title">Crystal Path Infinity icon concept</title><desc id="desc">A luminous crystal above two converging glass paths in a midnight-blue void.</desc>
+<defs><linearGradient id="night" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#111f39"/><stop offset=".55" stop-color="#080f22"/><stop offset="1" stop-color="#040914"/></linearGradient>
+<radialGradient id="aura"><stop stop-color="#4fd8f4" stop-opacity=".32"/><stop offset=".52" stop-color="#6f60dc" stop-opacity=".14"/><stop offset="1" stop-color="#6f60dc" stop-opacity="0"/></radialGradient>
+<linearGradient id="glass" x1="0" x2=".8" y1="0" y2="1"><stop stop-color="#d9ffff"/><stop offset=".4" stop-color="#6ee0f6"/><stop offset="1" stop-color="#4669c8"/></linearGradient>
+<linearGradient id="facet" x1="0" x2=".95" y1="0" y2="1"><stop stop-color="#e9ffff"/><stop offset=".55" stop-color="#8cebf8"/><stop offset="1" stop-color="#977cf2"/></linearGradient>
+<filter id="glow" x="-70%" y="-70%" width="240%" height="240%"><feGaussianBlur stdDeviation="12"/></filter></defs>
+<rect width="512" height="512" rx="108" fill="url(#night)"/><circle cx="256" cy="212" r="206" fill="url(#aura)"/>
+<path d="M82 432 235 221M430 432 277 221" fill="none" stroke="#4bcdf4" stroke-width="5" stroke-opacity=".33"/>
+<g fill="url(#glass)" stroke="#d0fdff" stroke-width="3.5" stroke-linejoin="round">
+<path d="m224 258 22-2-20 36-34 3Z" opacity=".62"/><path d="m266 256 22 2 32 37-34-3Z" opacity=".62"/>
+<path d="m187 307 38-4-29 48-59 6Z" opacity=".81"/><path d="m287 303 38 4 50 50-59-6Z" opacity=".81"/>
+<path d="m126 371 69-6-39 72-95 7Z"/><path d="m317 365 69 6 65 73-95-7Z"/></g>
+<path d="M256 90 332 166 302 242 256 278 210 242 180 166Z" fill="#4cddf6" opacity=".5" filter="url(#glow)"/>
+<path d="M256 94 326 164 297 237 256 271 215 237 186 164Z" fill="url(#facet)" stroke="#e6ffff" stroke-width="6" stroke-linejoin="round"/>
+<path d="m256 94-30 73 30 65 30-65-30-73Z" fill="#eefeff" opacity=".42"/>
+<path d="m186 164 40 3 30 65-41 5-29-73ZM326 164l-40 3-30 65 41 5 29-73Z" fill="#416bc1" opacity=".4"/>
+<path d="m215 237 41-5 41 5-41 34-41-34Z" fill="#3853a4" opacity=".4"/>
+<path d="M142 188h18M151 179v18M348 229h14M355 222v14" stroke="#d3fcff" stroke-width="3" stroke-linecap="round" opacity=".8"/>
+</svg>
