@@ -56,8 +56,13 @@ describe('CPI-008 standalone scene', () => {
 
   it('renders accessible left/right/hint controls, no season/AI/prize content', () => {
     const html = markup();
-    expect(html).toContain('aria-label="Choose left step"');
-    expect(html).toContain('aria-label="Choose right step"');
+    expect(html).toContain('aria-label="Row 1 left tile"');
+    expect(html).toContain('aria-label="Row 1 right tile"');
+    expect(html).not.toContain('aria-label="Choose left step"');
+    expect(html).not.toContain('aria-label="Choose right step"');
+    expect(html).not.toContain('class="cps-controls"');
+    expect(html).not.toContain('class="cpi-scene-actions"');
+    expect(html).toContain('class="visually-hidden" role="status" aria-live="polite"');
     expect(html).toContain('aria-label="Use hint, 2 remaining"');
     expect(html).toContain('aria-label="Endless crystal bridge"');
     expect(html).not.toMatch(/VIP unlock|Season immunity|Live feed|AI standings|LOH|POS/);
@@ -67,7 +72,14 @@ describe('CPI-008 standalone scene', () => {
     const html = markup({ paused: true });
     expect((html.match(/data-row=/g) || []).length).toBeLessThanOrEqual(5);
     expect(html).toContain('aria-modal="true"');
-    expect(html).toMatch(/disabled=""[^>]*aria-label="Choose left step"/);
+    expect(html).toMatch(/disabled=""[^>]*aria-label="Row 1 left tile"/);
+  });
+  it('keeps the hint control reachable without duplicating left/right tiles', () => {
+    const html = markup();
+    expect(html).toContain('cpi-scene-toolbar-actions');
+    expect(html).toContain('aria-label="Use hint, 2 remaining"');
+    expect(html).toContain('aria-label="Pause game"');
+    expect(html).toContain('class="cpi-scene-footer"');
   });
   it('applies the optional in-app reduced-motion setting', () => {
     const html = markup({ settings: { ...DEFAULT_PRACTICE_SETTINGS, reducedMotion: true } });

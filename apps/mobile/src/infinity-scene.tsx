@@ -149,14 +149,25 @@ export function InfinitySceneView({
       <div className="cps-content">
         <div className="cpi-scene-toolbar">
           <span className="cpi-practice-tag">Crystal Path · Offline practice</span>
-          <button
-            type="button"
-            onClick={onPause}
-            disabled={!ready || busy || !!error || state.status !== 'playing'}
-            aria-label={paused ? 'Resume game' : 'Pause game'}
-          >
-            {paused ? 'Resume' : 'Pause'}
-          </button>
+          <div className="cpi-scene-toolbar-actions">
+            <button
+              type="button"
+              className="cps-hint-btn"
+              onClick={onHint}
+              disabled={!interactive || state.hints === 0}
+              aria-label={`Use hint, ${state.hints} remaining`}
+            >
+              ✧ <span className="cps-hint-count">{state.hints}</span>
+            </button>
+            <button
+              type="button"
+              onClick={onPause}
+              disabled={!ready || busy || !!error || state.status !== 'playing'}
+              aria-label={paused ? 'Resume game' : 'Pause game'}
+            >
+              {paused ? 'Resume' : 'Pause'}
+            </button>
+          </div>
         </div>
         <header className="cps-header">
           <div className="cps-header-left">
@@ -259,48 +270,9 @@ export function InfinitySceneView({
             </div>
           </div>
         </section>
-        <div className="cps-controls">
-          <p className="cps-status" role="status" aria-live="polite">
-            {notice}
-          </p>
-          <div className="cpi-scene-actions">
-            <button
-              type="button"
-              onClick={() => onChoose('left')}
-              disabled={!interactive}
-              aria-label="Choose left step"
-            >
-              ← Left
-            </button>
-            <button
-              type="button"
-              onClick={() => onChoose('right')}
-              disabled={!interactive}
-              aria-label="Choose right step"
-            >
-              Right →
-            </button>
-          </div>
-          <button
-            type="button"
-            className="cps-hint-btn"
-            onClick={onHint}
-            disabled={!interactive || state.hints === 0}
-            aria-label={`Use hint, ${state.hints} remaining`}
-          >
-            ✧ <span className="cps-hint-count">{state.hints}</span>
-          </button>
-          {current?.mysteryAvailable && (
-            <button
-              type="button"
-              className="cpi-mystery-action"
-              onClick={onMystery}
-              disabled={!interactive}
-            >
-              Risk mystery ?
-            </button>
-          )}
-        </div>
+        <p className="visually-hidden" role="status" aria-live="polite">
+          {notice}
+        </p>
         <p className="cpi-scene-footer">
           Local practice · Not a ranked score · No fixed finish line
         </p>

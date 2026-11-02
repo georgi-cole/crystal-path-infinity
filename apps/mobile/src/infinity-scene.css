@@ -2202,9 +2202,8 @@
   }
 }
 
-/* CPI-008 standalone mobile bridge overrides. Source css above is pinned at
-   bbmobilenew-source@6ace929a; the source bitmap awaits an asset-rights check.
-   The procedural black-hole fallback keeps native/offline builds self-contained. */
+/* CPI-008 standalone mobile bridge overrides, retaining the owner's premium
+   Infinity design and the local original WebP background (no network). */
 .cps-shell.cpi-infinity-scene {
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -2223,7 +2222,7 @@
   min-height: min(100%, 520px);
 }
 .cpi-infinity-scene .cps-board {
-  min-height: clamp(16rem, 46dvh, 28rem);
+  min-height: clamp(18rem, 54dvh, 32rem);
 }
 .cpi-infinity-scene .cps-bridge-track {
   width: min(94%, 390px);
@@ -2268,43 +2267,28 @@
 .cpi-infinity-scene .cps-sp-value {
   overflow-wrap: anywhere;
 }
-.cpi-infinity-scene .cps-controls {
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  padding-bottom: 0.35rem;
-}
-.cpi-infinity-scene .cps-status {
-  flex-basis: 100%;
-  min-height: 1.15rem;
-}
-.cpi-scene-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.6rem;
-  width: 100%;
-}
-.cpi-scene-actions button {
-  min-height: 3.1rem;
-  font-size: 0.92rem;
-  border: 1px solid rgba(130, 222, 240, 0.43);
-  border-radius: 0.7rem;
-  background: linear-gradient(160deg, rgba(90, 180, 220, 0.2), rgba(8, 22, 38, 0.82));
-  color: #effcff;
-  touch-action: manipulation;
-}
-.cpi-scene-actions button:disabled {
-  opacity: 0.35;
-}
 .cpi-scene-toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
+  min-height: 3.1rem;
   margin-bottom: 0.4rem;
 }
-.cpi-scene-toolbar button,
-.cpi-overlay button,
-.cpi-mystery-action {
+.cpi-scene-toolbar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 0 0 auto;
+}
+.cpi-infinity-scene .cpi-scene-toolbar .cps-hint-btn {
+  width: 2.85rem;
+  height: 2.85rem;
+  min-height: 2.85rem;
+  padding: 0;
+}
+.cpi-scene-toolbar > .cpi-scene-toolbar-actions > button:not(.cps-hint-btn),
+.cpi-overlay button {
   min-height: 2.8rem;
   padding: 0.5rem 0.85rem;
   color: #eaf9ff;
@@ -2319,9 +2303,6 @@
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: #c2e5ec;
-}
-.cpi-mystery-action {
-  width: 100%;
 }
 .cpi-message {
   min-height: 2rem;
@@ -2462,7 +2443,7 @@
   border: 1px solid rgb(178 233 247 / 14%);
   background: rgb(0 7 18 / 78%);
 }
-.cpi-infinity-scene .cpi-scene-actions button,
+.cpi-infinity-scene .cpi-scene-toolbar-actions > button:not(.cps-hint-btn),
 .cpi-infinity-scene .cpi-overlay button {
   border-color: var(--cpi-glass-edge);
   background: linear-gradient(145deg, rgb(42 118 149 / 28%), rgb(24 22 66 / 74%));
