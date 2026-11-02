@@ -18,7 +18,7 @@ describe('CPI-011 independent Midnight Prism identity', () => {
     expect(icon).toContain('viewBox="0 0 512 512"');
     expect(icon).toContain('Crystal Path Infinity icon concept');
     expect(icon).not.toMatch(/<script|<image|<text|https?:\/\/|data:image/i);
-    expect(icon).toContain('#79');
+    expect(icon).toContain('#4fd8f4');
   });
 
   it('renders semantic buttons with real labels, native disabled behavior and variants', () => {
