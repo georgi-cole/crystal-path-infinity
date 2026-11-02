@@ -51,9 +51,7 @@ describe('CPI-011 Midnight Prism identity', () => {
     };
     const pin = manifest.source_commit;
     expect(pin).toMatch(/^[0-9a-f]{40}$/);
-    expect(new Set(manifest.resources.map((x) => x.path)).size).toBe(
-      manifest.resources.length,
-    );
+    expect(new Set(manifest.resources.map((x) => x.path)).size).toBe(manifest.resources.length);
     for (const item of manifest.resources) {
       expect(item.source_commit).toBe(pin);
       expect(item.source_url).toContain('/blob/' + pin + '/' + item.path);

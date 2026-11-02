@@ -41,8 +41,7 @@ body {
   padding-left: max(1.25rem, env(safe-area-inset-left, 0px));
   background:
     radial-gradient(ellipse at 50% 35%, rgb(61 149 185 / 18%), transparent 53%),
-    radial-gradient(ellipse at 100% 4%, rgb(105 80 185 / 13%), transparent 42%),
-    var(--cpi-night);
+    radial-gradient(ellipse at 100% 4%, rgb(105 80 185 / 13%), transparent 42%), var(--cpi-night);
 }
 
 .launch-screen::before {
