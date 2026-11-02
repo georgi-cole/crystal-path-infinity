@@ -386,7 +386,11 @@ async function android() {
       if (cpu.status === 0 && io.status === 0) {
         const metrics = androidRenderPressure(String(cpu.stdout), String(io.stdout));
         assert.ok(metrics, 'Kernel pressure data is unreadable or malformed');
-        return { source: 'kernel-psi', metrics, withinBudget: androidPressureWithinBudget(metrics) };
+        return {
+          source: 'kernel-psi',
+          metrics,
+          withinBudget: androidPressureWithinBudget(metrics),
+        };
       }
       psiAllowed = false;
       save(
@@ -397,7 +401,11 @@ async function android() {
     const cpuInfo = text(adb, adbArgs('shell', 'dumpsys', 'cpuinfo'), { timeout: 15_000 });
     const metrics = androidDumpsysCpuInfo(cpuInfo);
     assert.ok(metrics, 'Android dumpsys cpuinfo did not provide valid CPU/IO telemetry');
-    return { source: 'dumpsys-cpuinfo', metrics, withinBudget: androidCpuInfoWithinBudget(metrics) };
+    return {
+      source: 'dumpsys-cpuinfo',
+      metrics,
+      withinBudget: androidCpuInfoWithinBudget(metrics),
+    };
   }
 
   /**

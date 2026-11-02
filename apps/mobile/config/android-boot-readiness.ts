@@ -56,7 +56,6 @@ export function androidAppAnrObserved(log: string, appId: string): boolean {
   });
 }
 
-
 /** Android 16 restricts unprivileged adb shell access to /proc/pressure/*.
  * In that case, use the public dumpsys cpuinfo command instead of assuming 0% load.
  */
