@@ -272,7 +272,7 @@ export function App() {
     window.history.pushState({ cpiModal: true }, '', '#new-practice');
   };
 
-  const closePractice = () => {
+  const closePractice = (destination: MenuView = view) => {
     gameRef.current = null;
     setGame(null);
     backExitInFlight.current = false;
@@ -282,7 +282,8 @@ export function App() {
     } catch {
       setBest(null);
     }
-    window.history.replaceState({ cpiNavigation: true }, '', viewHash(view));
+    setView(destination);
+    window.history.replaceState({ cpiNavigation: true }, '', viewHash(destination));
   };
   const cancelGameExit = () => {
     backExitInFlight.current = false;
@@ -339,7 +340,8 @@ export function App() {
         <InfinityPractice
           key={game.token}
           initialState={game.initial}
-          onExit={closePractice}
+          onExit={() => closePractice()}
+          onViewRankings={() => closePractice('rankings')}
           onExitCancelled={cancelGameExit}
           exitRequest={exitRequest}
           onCheckpoint={onCheckpoint}
