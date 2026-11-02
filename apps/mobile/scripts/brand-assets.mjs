@@ -182,7 +182,6 @@ function androidAssetList() {
     assets.push(asset(base + '/ic_launcher_foreground.png', Math.round(108 * factor), 'foreground'));
   }
   assets.push(asset('android/app/src/main/res/drawable-nodpi/cpi_splash_logo.png', 256, 'splash'));
-  assets.push(asset('android/app/src/main/res/drawable-nodpi/cpi_monochrome.png', 256, 'monochrome'));
   return assets;
 }
 function iosAssetList() {

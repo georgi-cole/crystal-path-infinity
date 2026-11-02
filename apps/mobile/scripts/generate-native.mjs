@@ -22,13 +22,14 @@ import {
   requireEnvironment,
 } from '../config/environments.ts';
 import { patchAndroidLifecycle } from '../config/native-lifecycle-patch.ts';
+import { BRAND_BACKGROUND, syncNativeBrandAssets } from './brand-assets.mjs';
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repositoryRoot = resolve(appRoot, '../..');
 const appRequire = createRequire(join(appRoot, 'package.json'));
 const capacitorVersion = '8.5.3';
 const buildNumber = 1;
-const background = '#080c1b';
+const background = BRAND_BACKGROUND;
 const nativePackages = [
   '@capacitor/cli',
   '@capacitor/core',
@@ -214,17 +215,11 @@ function configureAndroid(info) {
   );
   assert.ok(gradle.includes(`versionCode ${buildNumber}`), 'Unexpected Android versionCode');
   write('android/app/build.gradle', gradle);
-  // Neutral launch background only. The designed splash belongs to its backlog task.
+  // Android 12+ splash is an icon on a fixed background, not fullscreen art.
   write(
     'android/app/src/main/res/values/cpi_colors.xml',
     `<?xml version="1.0" encoding="utf-8"?>
 <resources><color name="cpi_background">${background}</color></resources>
-`,
-  );
-  write(
-    'android/app/src/main/res/drawable/cpi_launch_placeholder.xml',
-    `<?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android"><solid android:color="@android:color/transparent" /></shape>
 `,
   );
   write(
@@ -244,12 +239,23 @@ function configureAndroid(info) {
     </style>
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/cpi_background</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/cpi_launch_placeholder</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/cpi_splash_logo</item>
         <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>
 </resources>
 `,
   );
+  for (const name of ['ic_launcher', 'ic_launcher_round']) {
+    write(
+      `android/app/src/main/res/mipmap-anydpi-v26/${name}.xml`,
+      read('native-templates/android/cpi_adaptive_icon.xml'),
+    );
+  }
+  write(
+    'android/app/src/main/res/drawable/cpi_monochrome.xml',
+    read('native-templates/android/cpi_monochrome.xml'),
+  );
+  syncNativeBrandAssets(appRoot, 'android');
 }
 function configureIOS(info) {
   write(
@@ -330,15 +336,27 @@ function configureIOS(info) {
     .replaceAll('CODE_SIGN_IDENTITY = "iPhone Developer";', 'CODE_SIGN_IDENTITY = "";');
   write('ios/App/App.xcodeproj/project.pbxproj', project);
 
-  let launch = read('ios/App/App/Base.lproj/LaunchScreen.storyboard');
-  launch = launch
-    .replace(' image="Splash"', '')
-    .replace('<image name="Splash" width="1366" height="1366"/>', '')
-    .replace(
-      '<color key="backgroundColor" systemColor="systemBackgroundColor"/>',
-      '<color key="backgroundColor" red="0.031372549" green="0.047058824" blue="0.105882353" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>',
-    );
-  write('ios/App/App/Base.lproj/LaunchScreen.storyboard', launch);
+  // Native static launch, no mandatory animation or wait.
+  write(
+    'ios/App/App/Base.lproj/LaunchScreen.storyboard',
+    read('native-templates/ios/LaunchScreen.storyboard'),
+  );
+  write(
+    'ios/App/App/Assets.xcassets/CpiLaunchMark.imageset/Contents.json',
+    JSON.stringify(
+      {
+        images: [
+          { filename: 'CpiLaunchMark.png', idiom: 'universal', scale: '1x' },
+          { filename: 'CpiLaunchMark@2x.png', idiom: 'universal', scale: '2x' },
+          { filename: 'CpiLaunchMark@3x.png', idiom: 'universal', scale: '3x' },
+        ],
+        info: { author: 'xcode', version: 1 },
+      },
+      null,
+      2,
+    ) + '\n',
+  );
+  syncNativeBrandAssets(appRoot, 'ios');
 
   const savedLock = join(appRoot, 'native-locks/Package.resolved');
   if (existsSync(savedLock)) {
@@ -398,6 +416,20 @@ function verifyNative(platform, info) {
       'No external native plugins; local CpiLifecycle is registered directly in source',
     );
     assert.ok(read('android/app/src/main/res/values/cpi_colors.xml').includes(background));
+    const launchStyle = read('android/app/src/main/res/values/styles.xml');
+    assert.ok(launchStyle.includes('@drawable/cpi_splash_logo'));
+    assert.ok(launchStyle.includes('windowSplashScreenBackground'));
+    assert.ok(!launchStyle.includes('cpi_launch_placeholder'));
+    for (const name of ['ic_launcher', 'ic_launcher_round']) {
+      assert.equal(
+        read(`android/app/src/main/res/mipmap-anydpi-v26/${name}.xml`),
+        read('native-templates/android/cpi_adaptive_icon.xml'),
+      );
+    }
+    assert.equal(
+      read('android/app/src/main/res/drawable/cpi_monochrome.xml'),
+      read('native-templates/android/cpi_monochrome.xml'),
+    );
     assert.equal(
       read(
         'android/cpi-capacitor/capacitor/src/main/java/com/getcapacitor/cordova/MockCordovaWebViewImpl.java',
@@ -484,7 +516,17 @@ function verifyNative(platform, info) {
       read('native-templates/ios/PrivacyInfo.xcprivacy'),
     );
     assert.equal(project.match(/PrivacyInfo.xcprivacy in Resources/g)?.length, 2);
+    assert.equal(
+      read('ios/App/App/Base.lproj/LaunchScreen.storyboard'),
+      read('native-templates/ios/LaunchScreen.storyboard'),
+    );
+    const images = json('ios/App/App/Assets.xcassets/CpiLaunchMark.imageset/Contents.json');
+    assert.deepEqual(images.images.map((item) => item.scale), ['1x', '2x', '3x']);
+    assert.ok(images.images.every((item) => item.idiom === 'universal'));
+    const appIcons = json('ios/App/App/Assets.xcassets/AppIcon.appiconset/Contents.json');
+    assert.ok(appIcons.images.some((item) => item.size === '1024x1024'));
   }
+  const brandAssets = syncNativeBrandAssets(appRoot, platform, true);
   const report = {
     schemaVersion: 1,
     platform,
@@ -492,6 +534,7 @@ function verifyNative(platform, info) {
     buildNumber,
     capacitorVersion,
     background,
+    brandAssets,
     nativeFeaturePlugins: ['CpiLifecycle (local, no device permissions)'],
     bundledSystemBars: config.plugins.SystemBars,
     productionSigningConfigured: false,
