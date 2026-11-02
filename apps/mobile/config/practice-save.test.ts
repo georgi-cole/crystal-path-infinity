@@ -139,7 +139,12 @@ describe('CPI-009 atomic local practice snapshots', () => {
       settings: DEFAULT_PRACTICE_SETTINGS,
       warning: null,
     });
-    writePracticeSettings(store, { music: false, soundEffects: true, haptics: false, reducedMotion: true });
+    writePracticeSettings(store, {
+      music: false,
+      soundEffects: true,
+      haptics: false,
+      reducedMotion: true,
+    });
     expect(readPracticeSettings(store).settings.haptics).toBe(false);
     expect(readPracticeSettings(store).settings.reducedMotion).toBe(true);
     store.setItem(PRACTICE_SAVE_KEYS.settings, 'invalid');
@@ -153,15 +158,24 @@ describe('CPI-010 preference and personal-best migrations', () => {
     const store = new MemoryStorage();
     store.setItem(
       PRACTICE_SAVE_KEYS.settings,
-      JSON.stringify({ version: 1, settings: { music: false, soundEffects: true, reducedMotion: false } }),
+      JSON.stringify({
+        version: 1,
+        settings: { music: false, soundEffects: true, reducedMotion: false },
+      }),
     );
     expect(readPracticeSettings(store).settings).toEqual({
-      music: false, soundEffects: true, haptics: true, reducedMotion: false,
+      music: false,
+      soundEffects: true,
+      haptics: true,
+      reducedMotion: false,
     });
     expect(readPracticeSettings(store).warning).toBeNull();
     store.setItem(
       PRACTICE_SAVE_KEYS.settings,
-      JSON.stringify({ version: 2, settings: { music: true, soundEffects: true, reducedMotion: false } }),
+      JSON.stringify({
+        version: 2,
+        settings: { music: true, soundEffects: true, reducedMotion: false },
+      }),
     );
     expect(readPracticeSettings(store).warning).not.toBeNull();
   });

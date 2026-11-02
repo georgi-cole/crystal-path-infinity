@@ -20,7 +20,12 @@ describe('CPI-010 offline and scoped assets', () => {
       'minigame_gb_winner.mp3',
     ];
     expect(readdirSync(sounds).sort()).toEqual(expected);
-    for (const source of [CRYSTAL_AUDIO.safe, CRYSTAL_AUDIO.death, CRYSTAL_AUDIO.record, CRYSTAL_AUDIO.newTurn]) {
+    for (const source of [
+      CRYSTAL_AUDIO.safe,
+      CRYSTAL_AUDIO.death,
+      CRYSTAL_AUDIO.record,
+      CRYSTAL_AUDIO.newTurn,
+    ]) {
       const bytes = resource(source);
       expect(bytes.byteLength).toBeGreaterThan(1000);
       expect(bytes[0] === 0xff || bytes.toString('ascii', 0, 3) === 'ID3').toBe(true);

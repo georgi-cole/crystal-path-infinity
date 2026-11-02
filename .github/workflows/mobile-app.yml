@@ -45,15 +45,6 @@ jobs:
         run: |
           mkdir -p apps/mobile/artifacts
           npm ls --workspace @crystal-path-infinity/mobile --depth=0 --json > apps/mobile/artifacts/npm-dependencies.json
-      - name: CPI-010 temporary formatting capture (expected controlled exit)
-        run: |
-          npx prettier --write apps/mobile/config/audio-assets.test.ts apps/mobile/config/practice-save.test.ts apps/mobile/config/standalone-audio.test.ts apps/mobile/config/infinity-scene.test.ts apps/mobile/scripts/generate-native.mjs apps/mobile/src/infinity-scene.tsx apps/mobile/src/infinity-scene.css apps/mobile/src/practice-save.ts apps/mobile/src/standalone-audio.ts apps/mobile/src/audio-settings-controls.tsx apps/mobile/src/App.tsx apps/mobile/src/styles.css
-          node - <<'NODE'
-          const fs = require('node:fs');
-          const paths = ["apps/mobile/config/audio-assets.test.ts","apps/mobile/config/practice-save.test.ts","apps/mobile/config/standalone-audio.test.ts","apps/mobile/config/infinity-scene.test.ts","apps/mobile/scripts/generate-native.mjs","apps/mobile/src/infinity-scene.tsx","apps/mobile/src/infinity-scene.css","apps/mobile/src/practice-save.ts","apps/mobile/src/standalone-audio.ts","apps/mobile/src/audio-settings-controls.tsx","apps/mobile/src/App.tsx","apps/mobile/src/styles.css"];
-          for (const path of paths) console.log('CPI010_FORMAT_START ' + path + ' ' + fs.readFileSync(path).toString('base64') + ' CPI010_FORMAT_END');
-          NODE
-          exit 1
       - name: TypeScript
         run: npm run typecheck 2>&1 | tee apps/mobile/artifacts/typecheck.log
       - name: Lint

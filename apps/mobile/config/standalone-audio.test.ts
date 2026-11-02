@@ -23,11 +23,16 @@ function fixture() {
           item.played++;
           item.paused = false;
           if (source === CRYSTAL_AUDIO.music && deferred) {
-            return new Promise<void>((resolve) => { deferred = resolve; });
+            return new Promise<void>((resolve) => {
+              deferred = resolve;
+            });
           }
           return Promise.resolve();
         },
-        pause() { item.stopped++; item.paused = true; },
+        pause() {
+          item.stopped++;
+          item.paused = true;
+        },
       };
       media.set(source, item);
       return item;
@@ -35,23 +40,35 @@ function fixture() {
     haptic,
   };
   return {
-    media, haptic, ports,
-    deferMusic() { deferred = () => {}; },
-    resolveMusic() { deferred?.(); deferred = undefined; },
+    media,
+    haptic,
+    ports,
+    deferMusic() {
+      deferred = () => {};
+    },
+    resolveMusic() {
+      deferred?.();
+      deferred = undefined;
+    },
   };
 }
 const state = { runId: 'practice-test', revivesApplied: 0 } as RunState;
-const choose = (row: string, wrong: boolean): RunEvent =>
-  ({
-    type: 'choice-resolved', row, side: 'left', wrong, spDelta: wrong ? -20 : 0,
-    consumedKind: null, activeTimeMs: 0, observedAt: 0,
-  });
-const death = (id: string): RunEvent =>
-  ({
-    type: 'death',
-    death: { id, sequence: 1, cause: 'wrong_tile', fatalRow: '5', activeTimeMs: 0, observedAt: 0 },
-    activeTimeMs: 0, observedAt: 0,
-  });
+const choose = (row: string, wrong: boolean): RunEvent => ({
+  type: 'choice-resolved',
+  row,
+  side: 'left',
+  wrong,
+  spDelta: wrong ? -20 : 0,
+  consumedKind: null,
+  activeTimeMs: 0,
+  observedAt: 0,
+});
+const death = (id: string): RunEvent => ({
+  type: 'death',
+  death: { id, sequence: 1, cause: 'wrong_tile', fatalRow: '5', activeTimeMs: 0, observedAt: 0 },
+  activeTimeMs: 0,
+  observedAt: 0,
+});
 
 describe('CPI-010 standalone audio ownership', () => {
   it('separates looping music from independent cues and starts only after a gesture', async () => {
@@ -99,7 +116,9 @@ describe('CPI-010 standalone audio ownership', () => {
     const f = fixture();
     f.haptic.mockRejectedValueOnce(new Error('unsupported device'));
     const audio = createStandaloneAudio(f.ports, {
-      ...DEFAULT_PRACTICE_SETTINGS, music: false, soundEffects: false,
+      ...DEFAULT_PRACTICE_SETTINGS,
+      music: false,
+      soundEffects: false,
     });
     audio.setActive(true);
     await audio.unlock();
@@ -120,7 +139,9 @@ describe('CPI-010 standalone audio ownership', () => {
     audio.playEvents([choose('350', false)], state, { foreground: true, personalBest: true });
     expect(f.media.get(CRYSTAL_AUDIO.record)?.played).toBe(0);
     const ending: RunEvent = {
-      type: 'run-ended', activeTimeMs: 1, observedAt: 1,
+      type: 'run-ended',
+      activeTimeMs: 1,
+      observedAt: 1,
       result: {} as Extract<RunEvent, { type: 'run-ended' }>['result'],
     };
     audio.playEvents([ending, ending], state, { foreground: true, personalBest: true });
@@ -138,7 +159,9 @@ describe('CPI-010 standalone audio ownership', () => {
     await audio.unlock();
     audio.setActive(false);
     const ending: RunEvent = {
-      type: 'run-ended', activeTimeMs: 1, observedAt: 1,
+      type: 'run-ended',
+      activeTimeMs: 1,
+      observedAt: 1,
       result: {} as Extract<RunEvent, { type: 'run-ended' }>['result'],
     };
     audio.playEvents([ending, ending], state, { foreground: true, personalBest: true });

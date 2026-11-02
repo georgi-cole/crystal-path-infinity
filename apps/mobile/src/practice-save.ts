@@ -187,7 +187,11 @@ export function readPracticeSettings(storage: PracticeStorage): {
     if (raw === null) return { settings: DEFAULT_PRACTICE_SETTINGS, warning: null };
     if (raw.length > 300) throw new Error('Settings are too large.');
     const value: unknown = JSON.parse(raw);
-    if (!isRecord(value) || (value.version !== 1 && value.version !== 2) || !isRecord(value.settings)) {
+    if (
+      !isRecord(value) ||
+      (value.version !== 1 && value.version !== 2) ||
+      !isRecord(value.settings)
+    ) {
       throw new Error('Unsupported settings.');
     }
     const settings = value.settings;
@@ -217,7 +221,12 @@ export function readPracticeSettings(storage: PracticeStorage): {
   }
 }
 export function writePracticeSettings(storage: PracticeStorage, settings: PracticeSettings): void {
-  for (const value of [settings.music, settings.soundEffects, settings.haptics, settings.reducedMotion]) {
+  for (const value of [
+    settings.music,
+    settings.soundEffects,
+    settings.haptics,
+    settings.reducedMotion,
+  ]) {
     if (typeof value !== 'boolean') throw new TypeError('Invalid practice setting.');
   }
   const record: SettingsEnvelope = { version: 2, settings };

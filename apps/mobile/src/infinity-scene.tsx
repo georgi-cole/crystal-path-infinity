@@ -393,10 +393,13 @@ function InfinityRun({
   useEffect(() => {
     let alive = true;
     const lifecycle = getGameplayLifecycle();
-    const audio = createStandaloneAudio({
-      createMedia: (source) => new Audio(source),
-      haptic: optionalHaptic,
-    }, initialAudioSettings);
+    const audio = createStandaloneAudio(
+      {
+        createMedia: (source) => new Audio(source),
+        haptic: optionalHaptic,
+      },
+      initialAudioSettings,
+    );
     audioRef.current = audio;
     audio.setForeground(document.visibilityState !== 'hidden');
     const runtime = createPracticeRuntime({
@@ -410,7 +413,10 @@ function InfinityRun({
         let personalBest = false;
         if (result.events.some((event) => event.type === 'run-ended')) {
           try {
-            personalBest = recordPracticePersonalBest(window.localStorage, result.state.lastClearedRow);
+            personalBest = recordPracticePersonalBest(
+              window.localStorage,
+              result.state.lastClearedRow,
+            );
           } catch {
             // Corrupted/unavailable local best data must not affect completion.
           }

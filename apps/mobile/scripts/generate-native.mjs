@@ -157,7 +157,12 @@ function configureAndroid(info) {
     ),
   );
   const javaPath = `android/app/src/main/java/${info.appId.replaceAll('.', '/')}`;
-  for (const name of ['MainActivity.java', 'CpiLifecycle.java', 'CpiFeedback.java', 'CpiWebView.java']) {
+  for (const name of [
+    'MainActivity.java',
+    'CpiLifecycle.java',
+    'CpiFeedback.java',
+    'CpiWebView.java',
+  ]) {
     write(
       `${javaPath}/${name}`,
       read(`native-templates/android/${name}`)
@@ -421,7 +426,12 @@ function verifyNative(platform, info) {
         `android/app/src/main/java/${info.appId.replaceAll('.', '/')}/MainActivity.java`,
       ).includes('registerPlugin(CpiLifecycle.class)'),
     );
-    for (const name of ['MainActivity.java', 'CpiLifecycle.java', 'CpiFeedback.java', 'CpiWebView.java']) {
+    for (const name of [
+      'MainActivity.java',
+      'CpiLifecycle.java',
+      'CpiFeedback.java',
+      'CpiWebView.java',
+    ]) {
       assert.equal(
         read(`android/app/src/main/java/${info.appId.replaceAll('.', '/')}/${name}`),
         read(`native-templates/android/${name}`)

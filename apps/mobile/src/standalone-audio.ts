@@ -41,7 +41,10 @@ export interface StandaloneAudio {
 }
 
 /** One owner per attempt; no global SoundManager, clocks, score writes or timers. */
-export function createStandaloneAudio(ports: AudioPorts, settings: PracticeSettings): StandaloneAudio {
+export function createStandaloneAudio(
+  ports: AudioPorts,
+  settings: PracticeSettings,
+): StandaloneAudio {
   const music = ports.createMedia(CRYSTAL_AUDIO.music);
   music.loop = true;
   music.volume = 0.28;
@@ -70,7 +73,6 @@ export function createStandaloneAudio(ports: AudioPorts, settings: PracticeSetti
   let lastStep = '';
   let lastDeath = '';
   let ended = false;
-
 
   function stopEffects(preserveTerminal = false) {
     for (const [name, media] of Object.entries(sfx)) {
@@ -130,7 +132,14 @@ export function createStandaloneAudio(ports: AudioPorts, settings: PracticeSetti
     }
   }
   function cue(name: keyof typeof sfx, playbackRate = 1, allowInactive = false) {
-    if (disposed || (!active && !allowInactive) || !foreground || !unlocked || !preferences.soundEffects) return;
+    if (
+      disposed ||
+      (!active && !allowInactive) ||
+      !foreground ||
+      !unlocked ||
+      !preferences.soundEffects
+    )
+      return;
     const media = sfx[name];
     try {
       media.pause();
