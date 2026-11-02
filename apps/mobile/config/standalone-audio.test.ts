@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createStandaloneAudio, CRYSTAL_AUDIO } from '../src/standalone-audio';
-import type { AudioMedia, HapticKind } from '../src/standalone-audio';
+import type { AudioMedia } from '../src/standalone-audio';
 import { DEFAULT_PRACTICE_SETTINGS } from '../src/practice-save';
 import type { RunEvent, RunState } from '@crystal-path-infinity/game-core';
 
 function fixture() {
   const media = new Map<string, AudioMedia & { played: number; stopped: number }>();
   let deferred: (() => void) | undefined;
-  const haptic = vi.fn(async (_kind: HapticKind) => {});
+  const haptic = vi.fn(async () => {});
   const ports = {
     createMedia(source: string) {
       const item = {

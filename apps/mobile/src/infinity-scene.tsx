@@ -377,6 +377,7 @@ function InfinityRun({
   onSettingsChange,
 }: InfinityRunProps) {
   const [initial] = useState(() => initialState ?? makeInitialRun());
+  const [initialAudioSettings] = useState(settings);
   const lastCommittedActiveMs = useRef(-500);
   const [state, setState] = useState<RunState>(initial);
   const [ready, setReady] = useState(false);
@@ -395,7 +396,7 @@ function InfinityRun({
     const audio = createStandaloneAudio({
       createMedia: (source) => new Audio(source),
       haptic: optionalHaptic,
-    }, settings);
+    }, initialAudioSettings);
     audioRef.current = audio;
     audio.setForeground(document.visibilityState !== 'hidden');
     const runtime = createPracticeRuntime({
@@ -471,7 +472,7 @@ function InfinityRun({
       unsubscribeCheckpoint();
       runtime.dispose();
     };
-  }, [initial, onCheckpoint]);
+  }, [initial, onCheckpoint, initialAudioSettings]);
 
   useEffect(() => {
     audioRef.current?.setSettings(settings);
