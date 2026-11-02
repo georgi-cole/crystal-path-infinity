@@ -12,6 +12,7 @@ import {
   clearPracticeCheckpoint,
   DEFAULT_PRACTICE_SETTINGS,
   PRACTICE_SAVE_KEYS,
+  recordPracticePersonalBest,
   readPracticeCheckpoint,
   readPracticeSettings,
   writePracticeCheckpoint,
@@ -138,10 +139,54 @@ describe('CPI-009 atomic local practice snapshots', () => {
       settings: DEFAULT_PRACTICE_SETTINGS,
       warning: null,
     });
-    writePracticeSettings(store, { music: false, soundEffects: true, reducedMotion: true });
+    writePracticeSettings(store, {
+      music: false,
+      soundEffects: true,
+      haptics: false,
+      reducedMotion: true,
+    });
+    expect(readPracticeSettings(store).settings.haptics).toBe(false);
     expect(readPracticeSettings(store).settings.reducedMotion).toBe(true);
     store.setItem(PRACTICE_SAVE_KEYS.settings, 'invalid');
     expect(readPracticeSettings(store).warning).not.toBeNull();
     expect(readPracticeCheckpoint(store).status).toBe('empty');
+  });
+});
+
+describe('CPI-010 preference and personal-best migrations', () => {
+  it('reads historical v1 audio settings and defaults haptics safely', () => {
+    const store = new MemoryStorage();
+    store.setItem(
+      PRACTICE_SAVE_KEYS.settings,
+      JSON.stringify({
+        version: 1,
+        settings: { music: false, soundEffects: true, reducedMotion: false },
+      }),
+    );
+    expect(readPracticeSettings(store).settings).toEqual({
+      music: false,
+      soundEffects: true,
+      haptics: true,
+      reducedMotion: false,
+    });
+    expect(readPracticeSettings(store).warning).toBeNull();
+    store.setItem(
+      PRACTICE_SAVE_KEYS.settings,
+      JSON.stringify({
+        version: 2,
+        settings: { music: true, soundEffects: true, reducedMotion: false },
+      }),
+    );
+    expect(readPracticeSettings(store).warning).not.toBeNull();
+  });
+  it('records a local best only when strictly higher and never mutates a run', () => {
+    const store = new MemoryStorage();
+    expect(recordPracticePersonalBest(store, '350')).toBe(true);
+    expect(recordPracticePersonalBest(store, '349')).toBe(false);
+    expect(recordPracticePersonalBest(store, '350')).toBe(false);
+    expect(recordPracticePersonalBest(store, '351')).toBe(true);
+    expect(store.getItem(PRACTICE_SAVE_KEYS.personalBest)).toBe('351');
+    expect(readPracticeCheckpoint(store).status).toBe('empty');
+    expect(() => recordPracticePersonalBest(store, '-1')).toThrow();
   });
 });

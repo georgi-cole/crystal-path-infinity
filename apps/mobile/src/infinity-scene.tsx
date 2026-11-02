@@ -13,6 +13,12 @@ import type {
   TimedSessionResult,
 } from '@crystal-path-infinity/game-core';
 import { getGameplayLifecycle } from './gameplay-lifecycle';
+import { createStandaloneAudio } from './standalone-audio';
+import type { StandaloneAudio } from './standalone-audio';
+import { optionalHaptic } from './optional-haptic';
+import { recordPracticePersonalBest } from './practice-save';
+import type { PracticeSettings } from './practice-save';
+import { AudioSettingsControls } from './audio-settings-controls';
 import { createPracticeRuntime, schedulePracticeTick } from './practice-runtime';
 import type { PracticePauseLease, PracticeRuntime } from './practice-runtime';
 import { presentInfinityScene } from './infinity-presentation';
@@ -49,6 +55,8 @@ export interface InfinitySceneViewProps {
   readonly onExit: () => void;
   readonly onRestart: () => void;
   readonly onRetry: () => void;
+  readonly settings: PracticeSettings;
+  readonly onSettingsChange: (next: PracticeSettings) => void;
 }
 
 function tileClass(row: PresentedRow, side: TileSide, feedback: SceneFeedback | null): string {
@@ -82,6 +90,8 @@ export function InfinitySceneView({
   onExit,
   onRestart,
   onRetry,
+  settings,
+  onSettingsChange,
 }: InfinitySceneViewProps) {
   const presented = presentInfinityScene(state);
   const catastrophic = state.death?.cause === 'wrong_tile' && state.status !== 'playing';
@@ -107,7 +117,7 @@ export function InfinitySceneView({
 
   return (
     <main
-      className={`cps-shell ${INFINITY_SCENE_SKIN.shell} cpi-infinity-scene${catastrophic ? ' is-catastrophe' : ''}`}
+      className={`cps-shell ${INFINITY_SCENE_SKIN.shell} cpi-infinity-scene${catastrophic ? ' is-catastrophe' : ''}${settings.reducedMotion ? ' cpi-reduced-motion' : ''}`}
       data-testid="infinity-scene"
       aria-label={INFINITY_SCENE_SKIN.title}
     >
@@ -302,6 +312,7 @@ export function InfinitySceneView({
                   ? 'The game clock and every timed effect are frozen.'
                   : `Cleared rows: ${state.lastClearedRow}. Practice results are not ranked.`)}
             </p>
+            <AudioSettingsControls settings={settings} onChange={onSettingsChange} />
             <div className="cpi-overlay-actions">
               {error ? (
                 <button type="button" onClick={onRetry}>
@@ -354,9 +365,19 @@ interface InfinityRunProps {
   onRestart: () => void;
   initialState: RunState | null;
   onCheckpoint: (state: RunState) => void;
+  settings: PracticeSettings;
+  onSettingsChange: (next: PracticeSettings) => void;
 }
-function InfinityRun({ onExit, onRestart, initialState, onCheckpoint }: InfinityRunProps) {
+function InfinityRun({
+  onExit,
+  onRestart,
+  initialState,
+  onCheckpoint,
+  settings,
+  onSettingsChange,
+}: InfinityRunProps) {
   const [initial] = useState(() => initialState ?? makeInitialRun());
+  const [initialAudioSettings] = useState(settings);
   const lastCommittedActiveMs = useRef(-500);
   const [state, setState] = useState<RunState>(initial);
   const [ready, setReady] = useState(false);
@@ -365,19 +386,45 @@ function InfinityRun({ onExit, onRestart, initialState, onCheckpoint }: Infinity
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<SceneFeedback | null>(null);
   const runtimeRef = useRef<PracticeRuntime | null>(null);
+  const audioRef = useRef<StandaloneAudio | null>(null);
   const pauseRef = useRef<PracticePauseLease | null>(null);
   const commandLock = useRef(false);
 
   useEffect(() => {
     let alive = true;
     const lifecycle = getGameplayLifecycle();
+    const audio = createStandaloneAudio(
+      {
+        createMedia: (source) => new Audio(source),
+        haptic: optionalHaptic,
+      },
+      initialAudioSettings,
+    );
+    audioRef.current = audio;
+    audio.setForeground(document.visibilityState !== 'hidden');
     const runtime = createPracticeRuntime({
       state: initial,
       rng: PRACTICE_RNG,
       lifecycle,
       schedule: schedulePracticeTick,
+      playback: audio,
       onTransition: (result: TimedSessionResult) => {
         if (!alive) return;
+        let personalBest = false;
+        if (result.events.some((event) => event.type === 'run-ended')) {
+          try {
+            personalBest = recordPracticePersonalBest(
+              window.localStorage,
+              result.state.lastClearedRow,
+            );
+          } catch {
+            // Corrupted/unavailable local best data must not affect completion.
+          }
+        }
+        audio.playEvents(result.events, result.state, {
+          foreground: document.visibilityState !== 'hidden',
+          personalBest,
+        });
         if (
           result.events.length > 0 ||
           result.state.status !== 'playing' ||
@@ -404,6 +451,7 @@ function InfinityRun({ onExit, onRestart, initialState, onCheckpoint }: Infinity
     });
     runtimeRef.current = runtime;
     const unsubscribeCheckpoint = lifecycle.subscribe((snapshot) => {
+      audio.setForeground(snapshot.active);
       if (!snapshot.active && alive) {
         try {
           onCheckpoint(runtime.getState());
@@ -426,10 +474,19 @@ function InfinityRun({ onExit, onRestart, initialState, onCheckpoint }: Infinity
     return () => {
       alive = false;
       if (runtimeRef.current === runtime) runtimeRef.current = null;
+      if (audioRef.current === audio) audioRef.current = null;
       unsubscribeCheckpoint();
       runtime.dispose();
     };
-  }, [initial, onCheckpoint]);
+  }, [initial, onCheckpoint, initialAudioSettings]);
+
+  useEffect(() => {
+    audioRef.current?.setSettings(settings);
+  }, [settings]);
+
+  function unlockAudio() {
+    void audioRef.current?.unlock();
+  }
 
   async function issue(command: SessionCommand) {
     const runtime = runtimeRef.current;
@@ -456,6 +513,7 @@ function InfinityRun({ onExit, onRestart, initialState, onCheckpoint }: Infinity
   }
 
   async function togglePause() {
+    if (paused) unlockAudio();
     const runtime = runtimeRef.current;
     if (!runtime || commandLock.current) return;
     commandLock.current = true;
@@ -522,12 +580,15 @@ function InfinityRun({ onExit, onRestart, initialState, onCheckpoint }: Infinity
       paused={paused}
       error={error}
       onChoose={(side) => {
+        unlockAudio();
         void issue({ type: 'choose', side });
       }}
       onHint={() => {
+        unlockAudio();
         void issue({ type: 'hint' });
       }}
       onMystery={() => {
+        unlockAudio();
         void issue({ type: 'mystery' });
       }}
       onPause={() => {
@@ -543,6 +604,8 @@ function InfinityRun({ onExit, onRestart, initialState, onCheckpoint }: Infinity
       onRetry={() => {
         void retry();
       }}
+      settings={settings}
+      onSettingsChange={onSettingsChange}
     />
   );
 }
@@ -552,10 +615,14 @@ export function InfinityPractice({
   onExit,
   initialState = null,
   onCheckpoint,
+  settings,
+  onSettingsChange,
 }: {
   onExit: () => void;
   initialState?: RunState | null;
   onCheckpoint: (state: RunState) => void;
+  settings: PracticeSettings;
+  onSettingsChange: (next: PracticeSettings) => void;
 }) {
   const [attempt, setAttempt] = useState(0);
   return (
@@ -563,6 +630,8 @@ export function InfinityPractice({
       key={attempt}
       initialState={attempt === 0 ? initialState : null}
       onCheckpoint={onCheckpoint}
+      settings={settings}
+      onSettingsChange={onSettingsChange}
       onExit={onExit}
       onRestart={() => setAttempt((n) => n + 1)}
     />
