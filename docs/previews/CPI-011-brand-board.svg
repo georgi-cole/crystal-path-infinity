@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-labelledby="heading summary">
+<title id="heading">CPI-011 Midnight Prism — Crystal Path Infinity visual direction</title>
+<desc id="summary">Static design board with a proposed menu, bridge HUD and app icon. Figures are illustrative, not live ranked results.</desc>
+<defs>
+<linearGradient id="night" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#142743"/><stop offset=".68" stop-color="#090f21"/><stop offset="1" stop-color="#040914"/></linearGradient>
+<radialGradient id="aura"><stop stop-color="#266987" stop-opacity=".65"/><stop offset="1" stop-color="#080c1b" stop-opacity="0"/></radialGradient>
+<linearGradient id="glass" x1="0" y1="0" x2=".6" y2="1"><stop stop-color="#e9ffff"/><stop offset=".45" stop-color="#79def2"/><stop offset="1" stop-color="#6f65c4"/></linearGradient>
+<linearGradient id="button" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#286da3"/><stop offset="1" stop-color="#594eaf"/></linearGradient>
+</defs>
+<rect width="1200" height="720" fill="#080c1b"/><circle cx="320" cy="100" r="360" fill="url(#aura)"/>
+<text x="50" y="48" font-family="Arial,sans-serif" font-size="28" font-weight="700" letter-spacing="3" fill="#ecf9fe">MIDNIGHT PRISM</text>
+<text x="52" y="75" font-family="Arial,sans-serif" font-size="13" letter-spacing="2" fill="#abc7da">CRYSTAL PATH INFINITY / CPI-011 VISUAL DIRECTION</text>
+<text x="1150" y="51" text-anchor="end" font-family="Arial,sans-serif" font-size="12" fill="#abc7da">STATIC CONCEPT / NO LIVE ACTIONS</text>
+<!-- left mobile intro -->
+<rect x="48" y="100" width="306" height="565" rx="34" fill="#030816" stroke="#365875" stroke-width="3"/>
+<rect x="60" y="112" width="282" height="541" rx="27" fill="url(#night)"/>
+<ellipse cx="201" cy="315" rx="139" ry="210" fill="url(#aura)"/>
+<rect x="171" y="124" width="59" height="7" rx="4" fill="#010712"/>
+<text x="89" y="165" fill="#8adef2" font-family="Arial,sans-serif" font-size="12" letter-spacing="2">∞ INFINITY</text>
+<path d="m201 201 58 55-24 59-34 33-34-33-24-59Z" fill="url(#glass)" stroke="#e9ffff" stroke-width="3"/>
+<path d="m201 201-24 56 24 55 24-55Z" fill="#e9ffff" opacity=".34"/>
+<path d="M95 411 174 315M307 411 228 315" stroke="#79def2" stroke-opacity=".38" stroke-width="3"/>
+<path d="m133 379 42-4-21 43-52 5Z" fill="url(#glass)" stroke="#e9ffff" stroke-width="2"/>
+<path d="m228 375 42 4 31 44-52-5Z" fill="url(#glass)" stroke="#e9ffff" stroke-width="2"/>
+<text x="201" y="450" font-family="Arial,sans-serif" font-size="15" letter-spacing="3" text-anchor="middle" fill="#abc7da">CRYSTAL PATH</text>
+<text x="201" y="490" font-family="Arial,sans-serif" font-size="33" font-weight="600" text-anchor="middle" fill="#ecf9fe">INFINITY</text>
+<text x="201" y="516" font-family="Arial,sans-serif" font-size="12" text-anchor="middle" fill="#abc7da">Every step is a choice.</text>
+<rect x="87" y="536" width="228" height="46" rx="11" fill="url(#button)" stroke="#8fdfee"/>
+<text x="201" y="565" font-family="Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle" fill="#ecf9fe">Continue practice</text>
+<rect x="87" y="594" width="228" height="43" rx="10" fill="#152a43" stroke="#6993b4"/>
+<text x="201" y="621" font-family="Arial,sans-serif" font-size="14" text-anchor="middle" fill="#ecf9fe">New practice</text>
+<!-- HUD mobile -->
+<rect x="387" y="100" width="306" height="565" rx="34" fill="#030816" stroke="#365875" stroke-width="3"/>
+<rect x="399" y="112" width="282" height="541" rx="27" fill="url(#night)"/>
+<ellipse cx="540" cy="342" rx="130" ry="210" fill="url(#aura)"/>
+<rect x="510" y="124" width="59" height="7" rx="4" fill="#010712"/>
+<text x="424" y="173" font-family="Arial,sans-serif" font-size="12" letter-spacing="2" fill="#79def2">∞ INFINITY</text>
+<text x="425" y="202" font-family="Arial,sans-serif" font-size="22" font-weight="700" fill="#ecf9fe">ROW 128</text>
+<text x="652" y="180" font-family="Arial,sans-serif" font-size="12" text-anchor="end" fill="#abc7da">HINTS 2</text>
+<text x="652" y="204" font-family="Arial,sans-serif" font-size="17" font-weight="700" text-anchor="end" fill="#55edb0">SP 240</text>
+<rect x="424" y="220" width="234" height="8" rx="4" fill="#19304a"/><rect x="424" y="220" width="175" height="8" rx="4" fill="#55edb0"/>
+<path d="M420 492 516 266M665 492 563 266" stroke="#79def2" stroke-opacity=".36" stroke-width="3"/>
+<g fill="url(#glass)" stroke="#ddfcff" stroke-width="2">
+<path d="m499 292 34-2-17 29-42 3Z" opacity=".58"/><path d="m553 290 34 2 24 30-42-3Z" opacity=".58"/>
+<path d="m465 356 66-4-29 44-75 5Z" opacity=".84"/><path d="m554 352 66 4 38 45-75-5Z" opacity=".84"/>
+<path d="m433 412 96-6-35 52-107 8Z"/><path d="m556 406 96 6 45 54-107-8Z"/>
+</g>
+<text x="540" y="485" font-family="Arial,sans-serif" font-size="11" text-anchor="middle" fill="#79def2" letter-spacing="2">CHOOSE YOUR PATH</text>
+<rect x="420" y="514" width="113" height="49" rx="10" fill="url(#button)" stroke="#79def2"/>
+<rect x="549" y="514" width="113" height="49" rx="10" fill="url(#button)" stroke="#79def2"/>
+<text x="476" y="543" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#fff">← LEFT</text>
+<text x="605" y="543" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#fff">RIGHT →</text>
+<text x="540" y="605" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" fill="#abc7da">OFFLINE PRACTICE / UNRANKED</text>
+<!-- icon and palette -->
+<text x="732" y="145" font-family="Arial,sans-serif" font-size="23" font-weight="700" fill="#ecf9fe">APP ICON CONCEPT</text>
+<rect x="757" y="183" width="224" height="224" rx="48" fill="url(#night)" stroke="#406c86" stroke-width="3"/>
+<path d="M791 363 853 260M947 363 885 260" stroke="#79def2" stroke-opacity=".4" stroke-width="3"/>
+<path d="m835 303 35-3-17 37-45 5Z" fill="url(#glass)" stroke="#e9ffff" stroke-width="2"/>
+<path d="m887 300 35 3 28 39-45-5Z" fill="url(#glass)" stroke="#e9ffff" stroke-width="2"/>
+<path d="m868 212 53 50-21 58-32 29-32-29-21-58Z" fill="url(#glass)" stroke="#e9ffff" stroke-width="3"/>
+<path d="m868 212-21 52 21 54 21-54Z" fill="#e9ffff" opacity=".38"/>
+<rect x="1043" y="264" width="66" height="66" rx="14" fill="url(#night)" stroke="#406c86"/>
+<path d="m1076 277 17 16-7 19-10 10-10-10-7-19Z" fill="url(#glass)" stroke="#e9ffff"/>
+<text x="1076" y="347" font-family="Arial,sans-serif" font-size="12" text-anchor="middle" fill="#abc7da">48px test</text>
+<text x="733" y="470" font-family="Arial,sans-serif" font-size="21" font-weight="700" fill="#ecf9fe">FOUNDATION PALETTE</text>
+<rect x="735" y="488" width="68" height="52" rx="8" fill="#080c1b" stroke="#62849a"/>
+<rect x="815" y="488" width="68" height="52" rx="8" fill="#172e47"/>
+<rect x="895" y="488" width="68" height="52" rx="8" fill="#79def2"/>
+<rect x="975" y="488" width="68" height="52" rx="8" fill="#a78cf6"/>
+<rect x="1055" y="488" width="68" height="52" rx="8" fill="#55edb0"/>
+<g font-family="Arial,sans-serif" font-size="12" fill="#abc7da">
+<text x="735" y="556">Void</text><text x="815" y="556">Surface</text><text x="895" y="556">Glass</text><text x="975" y="556">Accent</text><text x="1055" y="556">Safe</text>
+</g>
+<text x="732" y="606" font-family="Arial,sans-serif" font-size="17" font-weight="700" fill="#ecf9fe">SYSTEM SANS · LIVE UI TEXT</text>
+<text x="733" y="629" font-family="Arial,sans-serif" font-size="12" fill="#abc7da">Icon/native exports only after visual approval (CPI-012)</text>
+<text x="50" y="698" font-family="Arial,sans-serif" font-size="12" fill="#abc7da">Illustrative design only · No fake online rivals, profile screen or Hall of Fame implementation</text>
+</svg>
