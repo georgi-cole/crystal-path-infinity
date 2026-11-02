@@ -1,0 +1,55 @@
+name: CPI original artwork WebP optimization (temporary)
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  convert-source-artwork:
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'cpi-visual-parity-black-hole-led-rails' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: cpi-visual-parity-black-hole-led-rails
+          persist-credentials: true
+      - name: Compress owner-source PNG to quality-96 WebP and commit
+        run: |
+          set -euo pipefail
+          source=apps/mobile/src/infinity-black-hole-bg.png
+          output=apps/mobile/src/infinity-black-hole-bg.webp
+          if [[ -f "$output" ]]; then
+            echo "WebP asset already present; transfer is idempotent."
+            exit 0
+          fi
+          test "$(git hash-object "$source")" = "25e9ceb6f98ac43c2bc15354ce8be7b7e7596cd3"
+          if command -v magick >/dev/null 2>&1; then
+            magick "$source" -strip -define webp:method=6 -quality 96 "$output"
+          elif command -v convert >/dev/null 2>&1; then
+            convert "$source" -strip -define webp:method=6 -quality 96 "$output"
+          elif command -v ffmpeg >/dev/null 2>&1; then
+            ffmpeg -hide_banner -loglevel error -i "$source" -c:v libwebp -quality 96 -compression_level 6 "$output"
+          else
+            echo "::error::No WebP encoder available on runner"
+            exit 1
+          fi
+          size="$(wc -c < "$output" | tr -d ' ')"
+          test "$size" -lt 400000
+          test "$size" -gt 20000
+          python3 - "$output" <<'PY'
+          import pathlib, struct, sys
+          file=pathlib.Path(sys.argv[1]).read_bytes()
+          assert file[:4]==b'RIFF' and file[8:12]==b'WEBP'
+          assert len(file)>20000
+          print('WebP bytes:',len(file))
+          PY
+          sha256sum "$output"
+          git rm "$source"
+          git add "$output"
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -m "Compress original Infinity background to high-quality offline WebP"
+          git push origin HEAD:cpi-visual-parity-black-hole-led-rails
