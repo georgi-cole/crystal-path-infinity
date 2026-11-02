@@ -246,3 +246,16 @@ export function recordPracticePersonalBest(storage: PracticeStorage, score: stri
   storage.setItem(PRACTICE_SAVE_KEYS.personalBest, score);
   return true;
 }
+
+/** Read a completed local practice record without turning it into official rank. */
+export function readPracticePersonalBest(storage: PracticeStorage): string | null {
+  try {
+    const value = storage.getItem(PRACTICE_SAVE_KEYS.personalBest);
+    if (value === null || value.length > 1000 || !/^(0|[1-9][0-9]*)$/.test(value)) {
+      return null;
+    }
+    return value;
+  } catch {
+    return null;
+  }
+}

@@ -48,6 +48,7 @@ npm run dev
 | [CPI-006 — смърт и прогрес](docs/decisions/CPI-006-death-progress.md) | Callback ownership, еднократни действия, cleanup/recovery и граници 349/350/351 |
 | [CPI-007 — часовник и lifecycle](docs/decisions/CPI-007-clock-lifecycle.md) | Активно време, независими паузи, native foreground snapshots и ранни OS прекъсвания |
 | [CPI-011 — визуална идентичност](docs/decisions/CPI-011-visual-identity.md) | Midnight Prism дизайн, визуални ресурси, права и преглед на UI reuse |
+| [CPI-013 — начално меню](docs/decisions/CPI-013-menu-navigation.md) | Play/Practice, Back, guest/offline states, локален рекорд и безопасен Resume |
 | [CPI-012 — native splash и старт](docs/decisions/CPI-012-native-launch.md) | Native икони, Android/iOS splash, bounded offline bootstrap и ограничения |
 | [Инспекция](docs/SOURCE_AUDIT.md) | Установено поведение, зависимости и проблеми |
 | [Backlog](docs/BACKLOG.md) | Задачи с зависимости и критерии |

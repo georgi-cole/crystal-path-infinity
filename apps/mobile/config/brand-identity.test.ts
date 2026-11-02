@@ -24,6 +24,7 @@ describe('CPI-011 Midnight Prism identity', () => {
 
   it('keeps the intro, HUD and web icon consistent without image-embedded copy', () => {
     const app = read('src/App.tsx');
+    const menu = read('src/main-menu.tsx');
     const scene = read('src/infinity-scene.tsx');
     const html = read('index.html');
     const tokens = read('src/brand-tokens.css');
@@ -37,7 +38,11 @@ describe('CPI-011 Midnight Prism identity', () => {
     expect(scene).toContain('Row {presented.currentRow}');
     expect(scene).toContain('{state.sp}');
     expect(scene).not.toMatch(/The Big Eye|season feed|LOH|POS/);
-    expect(app).toContain('<span className="brand-name">Crystal Path</span>');
+    expect(app).toContain('<MainMenu');
+    expect(menu).toContain('brand/prism-mark.svg');
+    expect(menu).toContain('<h1 id="menu-title"');
+    expect(menu).toContain('Crystal Path');
+    expect(menu).toContain('Infinity');
   });
 
   it('tracks the pinned owner source and unresolved rights for every resource', () => {
