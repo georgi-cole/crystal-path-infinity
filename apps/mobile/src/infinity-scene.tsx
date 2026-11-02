@@ -764,7 +764,11 @@ function InfinityRun({
     }
   }
   const exit = useCallback(async () => {
-    if (exitLock.current || commandLock.current) return;
+    if (exitLock.current) return;
+    if (commandLock.current) {
+      onExitCancelled();
+      return;
+    }
     exitLock.current = true;
     try {
       const runtime = runtimeRef.current;
