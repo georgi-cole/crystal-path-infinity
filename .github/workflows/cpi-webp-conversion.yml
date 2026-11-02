@@ -27,16 +27,16 @@ jobs:
             exit 0
           fi
           test "$(git hash-object "$source")" = "25e9ceb6f98ac43c2bc15354ce8be7b7e7596cd3"
-          if command -v magick >/dev/null 2>&1; then
-            magick "$source" -strip -define webp:method=6 -quality 96 "$output"
-          elif command -v convert >/dev/null 2>&1; then
-            convert "$source" -strip -define webp:method=6 -quality 96 "$output"
-          elif command -v ffmpeg >/dev/null 2>&1; then
-            ffmpeg -hide_banner -loglevel error -i "$source" -c:v libwebp -quality 96 -compression_level 6 "$output"
-          else
-            echo "::error::No WebP encoder available on runner"
-            exit 1
-          fi
+          python3 -m venv "$RUNNER_TEMP/cpi-webp"
+          "$RUNNER_TEMP/cpi-webp/bin/pip" install --disable-pip-version-check --quiet "Pillow==11.3.0"
+          "$RUNNER_TEMP/cpi-webp/bin/python" - "$source" "$output" <<'PY'
+          import sys
+          from PIL import Image
+          with Image.open(sys.argv[1]) as image:
+              assert image.size == (941, 1672), "Unexpected source dimension"
+              assert image.mode == "RGB", "Source color model changed"
+              image.save(sys.argv[2], format="WEBP", quality=96, method=6)
+          PY
           size="$(wc -c < "$output" | tr -d ' ')"
           test "$size" -lt 400000
           test "$size" -gt 20000
