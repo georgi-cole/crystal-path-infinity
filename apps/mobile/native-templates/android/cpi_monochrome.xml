@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="256"
+    android:viewportHeight="256">
+    <!-- Center the icon inside the adaptive 66% safe zone. No branded text. -->
+    <group
+        android:pivotX="128"
+        android:pivotY="128"
+        android:scaleX="0.72"
+        android:scaleY="0.72">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:fillType="evenOdd"
+            android:pathData="M128,18 L206,95 L186,177 L128,238 L70,177 L50,95 Z M128,53 L92,111 L128,208 L164,111 Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="2.5"
+            android:pathData="M111,148 L145,148 M104,168 L152,168 M97,187 L159,187" />
+    </group>
+</vector>

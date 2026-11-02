@@ -2,7 +2,7 @@
   "source_repository": "georgi-cole/bbmobilenew-source",
   "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
   "inspected_on": "2026-11-01",
-  "status": "midnight_prism_candidate_ui_audit_done_commercial_clearance_pending",
+  "status": "cpi012_native_brand_exports_and_bootstrap_integrated_source_audio_rights_pending",
   "resources": [
     {
       "path": "src/minigames/crystalPathShattered/shatteredLogic.ts",
@@ -366,7 +366,7 @@
     {
       "path": "src/components/IntroSplash/IntroSplash.tsx",
       "decision": "reference_for_CPI_012",
-      "notes": "Reuse bounded image fallback strategy; reject forced 1800ms intro delay in standalone.",
+      "notes": "CPI-012 reviewed the existing bounded image fallback but rejected the compulsory 1.8-second hold, branding, season/session gate and KoleQuant asset; app shows immediate local-data bootstrap and retry/offline path.",
       "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/components/IntroSplash/IntroSplash.tsx",
       "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
       "reviewed_in": "CPI-011",
@@ -410,6 +410,66 @@
       "targets": [],
       "rights": "Proprietary owner source inspected by file path; no complete component or raw visual asset copied.",
       "optimization": "Use only relevant standalone behavior or CSS primitives, removing seasonal, Redux, masked-image and unsupported native dependencies."
+    },
+    {
+      "path": "src/components/IntroSplash/IntroSplash.css",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/components/IntroSplash/IntroSplash.css",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "decision": "reference_not_imported",
+      "notes": "Original overlay animates and forces a dark #000 panel; standalone uses #060a18 and no minimum dwell.",
+      "reviewed_in": "CPI-012",
+      "target_stage": "CPI-012",
+      "targets": [],
+      "rights": "Owner-proprietary source inspected only; no artwork, app identity or source file copied verbatim.",
+      "optimization": "Keep only source behavior as review context; produce new offline assets and platform-native constraints."
+    },
+    {
+      "path": "src/screens/HomeHub/homeHubSplashSession.ts",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/screens/HomeHub/homeHubSplashSession.ts",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "decision": "reference_not_imported",
+      "notes": "Big Eye records splash per game/season; standalone never requires session-storage gate or replay delay.",
+      "reviewed_in": "CPI-012",
+      "target_stage": "CPI-012",
+      "targets": [],
+      "rights": "Owner-proprietary source inspected only; no artwork, app identity or source file copied verbatim.",
+      "optimization": "Keep only source behavior as review context; produce new offline assets and platform-native constraints."
+    },
+    {
+      "path": "android/app/src/main/res/values/styles.xml",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/android/app/src/main/res/values/styles.xml",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "decision": "reference_not_imported",
+      "notes": "Original Theme.SplashScreen used fullscreen drawable background; standalone uses the Android 12+ icon/background model.",
+      "reviewed_in": "CPI-012",
+      "target_stage": "CPI-012",
+      "targets": [],
+      "rights": "Owner-proprietary source inspected only; no artwork, app identity or source file copied verbatim.",
+      "optimization": "Keep only source behavior as review context; produce new offline assets and platform-native constraints."
+    },
+    {
+      "path": "ios/App/App/Base.lproj/LaunchScreen.storyboard",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/ios/App/App/Base.lproj/LaunchScreen.storyboard",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "decision": "reference_not_imported",
+      "notes": "Source fills root image and uses system background, risking white flash. Standalone uses centered mark and explicit dark background.",
+      "reviewed_in": "CPI-012",
+      "target_stage": "CPI-012",
+      "targets": [],
+      "rights": "Owner-proprietary source inspected only; no artwork, app identity or source file copied verbatim.",
+      "optimization": "Keep only source behavior as review context; produce new offline assets and platform-native constraints."
+    },
+    {
+      "path": "ios/App/App/Assets.xcassets/AppIcon.appiconset/Contents.json",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/ios/App/App/Assets.xcassets/AppIcon.appiconset/Contents.json",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "decision": "reference_not_imported",
+      "notes": "Reviewed single 1024 universal iOS icon slot, but new product artwork and app bundle ID are independent.",
+      "reviewed_in": "CPI-012",
+      "target_stage": "CPI-012",
+      "targets": [],
+      "rights": "Owner-proprietary source inspected only; no artwork, app identity or source file copied verbatim.",
+      "optimization": "Keep only source behavior as review context; produce new offline assets and platform-native constraints."
     }
   ],
   "do_not_copy": [
@@ -447,5 +507,13 @@
       "fallback": "Live app intro and HUD.",
       "optimization": "Review-only mock; do not bundle concept board in the app."
     }
-  ]
+  ],
+  "native_assets": {
+    "source": "apps/mobile/public/brand/prism-mark.svg",
+    "approach": "Deterministic offline PNG export from source geometry in scripts/brand-assets.mjs; Android/iOS resources regenerated and checked.",
+    "android": "Adaptive foreground and monochrome; five densities for launcher and round icons; Android 12+ icon/background splash.",
+    "ios": "Opaque universal 1024x1024 AppIcon, CpiLaunchMark 1x/2x/3x, static dark LaunchScreen storyboard.",
+    "rights": "New original CPI-011 artwork; no assets from The Big Eye copied for native launch.",
+    "pending": "Physical Android and iPhone icon mask, cold/warm/offline and app store asset visual approval; release signing and SDK compliance."
+  }
 }

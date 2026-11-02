@@ -1,6 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { androidBroadcastsIdle, androidUserBootPosted } from './android-boot-readiness';
+import {
+  androidBroadcastsIdle,
+  androidHomeLaunchObserved,
+  androidUserBootPosted,
+} from './android-boot-readiness';
 
 const posted = '1793608779.956 636 675 I ActivityManager: Posting BOOT_COMPLETED user #0';
 const prebootLog = [
@@ -48,6 +52,27 @@ describe('CPI-011 strict Android first-boot readiness', () => {
     expect(script).toContain("waitFor('Android bridge round-trip after real Home/resume', 30_000");
     expect(script).toContain('saveAttempt(boundary, true)');
   });
+  it('recognizes actual Android HOME navigation only after the command boundary', () => {
+    const home =
+      '1793618489.737 635 658 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.HOME] flg=0x10000100 cmp=com.android.launcher3/.QuickstepLauncher}';
+    const notHome =
+      '1793618491.484 635 658 I ActivityTaskManager: START u0 {cmp=com.georgicole.crystalpath.infinity.dev/.MainActivity}';
+    const log = [notHome, home, notHome].join('\n');
+    expect(androidHomeLaunchObserved(log, 0)).toBe(true);
+    expect(androidHomeLaunchObserved(log, 1)).toBe(true);
+    expect(androidHomeLaunchObserved(log, 2)).toBe(false);
+    expect(androidHomeLaunchObserved(notHome, 0)).toBe(false);
+  });
+
+  it('requires real Android pause after a lost Home key and never fakes events', () => {
+    const script = readFileSync(new URL('../scripts/smoke-native.mjs', import.meta.url), 'utf8');
+    expect(script).toContain("waitFor('Android Home key dispatch', 5_000");
+    expect(script).toContain("recordLifecycleAction('home-key-not-dispatched-launcher-intent')");
+    expect(script).toContain("'android.intent.category.HOME'");
+    expect(script).toContain("waitFor('Android native pause after Home', 30_000");
+    expect(script).toContain("waitFor('Android bridge round-trip after real Home/resume', 30_000");
+  });
+
   it('pins the lifecycle emulator to AOSP API 36, without Google setup workload', () => {
     const workflow = readFileSync(
       new URL('../../../.github/workflows/mobile-app.yml', import.meta.url),

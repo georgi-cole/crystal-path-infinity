@@ -10,3 +10,14 @@ export function androidUserBootPosted(log: string): boolean {
 export function androidBroadcastsIdle(output: string): boolean {
   return output.split(/\r?\n/).some((line) => line.trim() === broadcastIdleMarker);
 }
+
+/** True only for an actual ActivityTaskManager launch of the OS Home activity. */
+const homeStart = 'I ActivityTaskManager: START u0 {act=android.intent.action.MAIN';
+const homeCategory = 'cat=[android.intent.category.HOME]';
+
+export function androidHomeLaunchObserved(log: string, afterLine = 0): boolean {
+  return log
+    .split(/\r?\n/)
+    .slice(afterLine)
+    .some((line) => line.includes(homeStart) && line.includes(homeCategory));
+}

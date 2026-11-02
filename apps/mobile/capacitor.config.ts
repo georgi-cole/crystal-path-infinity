@@ -3,6 +3,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { assertBuiltEnvironment, getBuildInfo, requireEnvironment } from './config/environments';
 
+const CPI_BRAND_BACKGROUND = '#060a18';
+
 // Capacitor 8.5.3 loads this TypeScript file through its CommonJS config loader.
 const environment = requireEnvironment(process.env.CPI_APP_ENV ?? 'development');
 const mobilePackage = JSON.parse(readFileSync(join(__dirname, 'package.json'), 'utf8')) as {
@@ -31,7 +33,7 @@ const config: CapacitorConfig = {
   appId: build.appId,
   appName: build.appName,
   webDir: 'dist',
-  backgroundColor: '#080c1b',
+  backgroundColor: CPI_BRAND_BACKGROUND,
   server: { cleartext: false },
   // SystemBars ships with Capacitor core. Keep light icons on this dark shell
   // and use native insets; the CSS already consumes env(safe-area-inset-*).
@@ -43,12 +45,12 @@ const config: CapacitorConfig = {
     },
   },
   android: {
-    backgroundColor: '#080c1b',
+    backgroundColor: CPI_BRAND_BACKGROUND,
     allowMixedContent: false,
     webContentsDebuggingEnabled: debugging,
   },
   ios: {
-    backgroundColor: '#080c1b',
+    backgroundColor: CPI_BRAND_BACKGROUND,
     contentInset: 'never',
     preferredContentMode: 'mobile',
     webContentsDebuggingEnabled: debugging,
