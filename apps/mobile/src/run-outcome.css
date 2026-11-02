@@ -1,0 +1,212 @@
+/* CPI-015. Additive run-state treatment over the existing premium HUD. */
+.cpi-infinity-scene .cpi-scene-toolbar {
+  flex-wrap: wrap;
+}
+
+.cpi-infinity-scene .cpi-scene-toolbar-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.cpi-infinity-scene .cpi-end-control {
+  min-height: 2.85rem;
+  padding-inline: 0.72rem;
+  border-color: rgba(255, 183, 191, 0.42);
+  color: #ffe5e8;
+  white-space: nowrap;
+}
+
+.cpi-run-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.35rem;
+  color: var(--cpi-muted);
+}
+
+.cpi-run-metrics > span {
+  min-width: 0;
+  padding: 0.4rem 0.48rem;
+  font-size: clamp(0.59rem, 1.65vw, 0.71rem);
+  line-height: 1.4;
+  text-align: center;
+  border: 1px solid rgba(141, 221, 240, 0.18);
+  border-radius: 0.55rem;
+  background: rgba(5, 18, 39, 0.75);
+  overflow-wrap: anywhere;
+}
+
+.cpi-run-metrics strong {
+  color: var(--cpi-text);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.cpi-infinity-scene .cpi-overlay-card.cpi-run-outcome {
+  width: min(94vw, 29rem);
+  text-align: left;
+  padding: clamp(0.95rem, 3vw, 1.4rem);
+}
+
+.cpi-run-outcome h2 {
+  margin: 0 0 0.7rem;
+  color: var(--cpi-text);
+  font-family: var(--cpi-font-display);
+  line-height: 1.15;
+}
+
+.cpi-run-outcome p {
+  margin: 0.65rem 0;
+  color: #d5e7f6;
+  line-height: 1.46;
+  font-size: 0.88rem;
+  overflow-wrap: anywhere;
+}
+
+.cpi-run-outcome p[role='alert'] {
+  color: #ffc2c8;
+}
+
+.cpi-run-outcome .cpi-run-status-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  color: var(--cpi-ice);
+}
+
+.cpi-result-score {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  padding: 0.85rem 0.9rem;
+  border: 1px solid rgba(133, 213, 236, 0.35);
+  border-radius: 0.82rem;
+  background: linear-gradient(140deg, rgba(26, 82, 108, 0.5), rgba(21, 17, 60, 0.62));
+  color: var(--cpi-muted);
+  font-size: 0.78rem;
+}
+
+.cpi-result-score strong {
+  color: var(--cpi-text);
+  font-family: var(--cpi-font-display);
+  font-size: clamp(1.8rem, 8vw, 3rem);
+  line-height: 1.1;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.cpi-result-details {
+  margin: 0.65rem 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.cpi-result-details > div {
+  min-width: 0;
+  padding: 0.55rem;
+  border: 1px solid rgba(151, 204, 232, 0.18);
+  border-radius: 0.53rem;
+  background: rgba(9, 24, 43, 0.85);
+}
+
+.cpi-result-details dt {
+  margin-bottom: 0.2rem;
+  color: var(--cpi-muted);
+  font-size: 0.69rem;
+}
+
+.cpi-result-details dd {
+  margin: 0;
+  color: var(--cpi-text);
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.cpi-run-outcome .cpi-new-best {
+  color: var(--cpi-safe);
+  font-weight: 800;
+}
+
+.cpi-revive-offer {
+  display: grid;
+  gap: 0.65rem;
+  margin-block: 0.65rem;
+  padding: 0.9rem;
+  border: 1px solid rgba(202, 157, 247, 0.38);
+  border-radius: 0.75rem;
+  background: linear-gradient(125deg, rgba(61, 39, 95, 0.6), rgba(15, 31, 58, 0.9));
+  color: var(--cpi-muted);
+  line-height: 1.4;
+  font-size: 0.81rem;
+}
+
+.cpi-revive-offer > strong {
+  color: #f1dcff;
+  font-size: 0.94rem;
+}
+
+.cpi-infinity-scene .cpi-overlay .cpi-run-danger-action {
+  border-color: rgba(250, 114, 141, 0.6);
+  color: #ffe4e8;
+  background: rgba(105, 33, 54, 0.64);
+}
+
+.cpi-run-outcome .cpi-overlay-actions {
+  justify-content: stretch;
+  gap: 0.5rem;
+  margin-top: 0.95rem;
+}
+
+.cpi-run-outcome .cpi-overlay-actions button {
+  flex: 1 1 8.5rem;
+  min-height: 2.85rem;
+  overflow-wrap: anywhere;
+  text-align: center;
+  cursor: pointer;
+}
+
+.cpi-run-outcome button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+@media (max-width: 450px) {
+  .cpi-run-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cpi-infinity-scene .cpi-scene-toolbar-actions {
+    gap: 0.25rem;
+  }
+
+  .cpi-infinity-scene .cpi-end-control {
+    font-size: 0.65rem;
+    padding-inline: 0.45rem;
+  }
+}
+
+@media (max-height: 650px) {
+  .cpi-run-outcome h2 {
+    font-size: 1.2rem;
+  }
+
+  .cpi-result-details > div {
+    padding: 0.35rem;
+  }
+
+  .cpi-run-outcome .cpi-result-score {
+    padding: 0.55rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cpi-run-outcome *,
+  .cpi-run-outcome *::before,
+  .cpi-run-outcome *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
