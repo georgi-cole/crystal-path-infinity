@@ -70,7 +70,7 @@ export function createStandaloneAudio(ports: AudioPorts, settings: PracticeSetti
   let lastStep = '';
   let lastDeath = '';
   let ended = false;
-  let introPlayed = false;
+
 
   function stopEffects(preserveTerminal = false) {
     for (const [name, media] of Object.entries(sfx)) {
@@ -184,10 +184,6 @@ export function createStandaloneAudio(ports: AudioPorts, settings: PracticeSetti
     async unlock() {
       if (disposed || !active || !foreground) return false;
       unlocked = true;
-      if (!introPlayed) {
-        introPlayed = true;
-        cue('newTurn');
-      }
       if (!preferences.music) return true;
       return startMusic();
     },

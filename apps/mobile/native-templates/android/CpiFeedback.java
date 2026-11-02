@@ -1,5 +1,6 @@
 package __PACKAGE__;
 
+import android.app.Activity;
 import android.view.HapticFeedbackConstants;
 import android.view.View;
 import com.getcapacitor.Plugin;
@@ -17,9 +18,11 @@ public class CpiFeedback extends Plugin {
             call.reject("Unsupported haptic cue");
             return;
         }
-        getActivity().runOnUiThread(() -> {
-            final View view = getActivity() == null || getActivity().getWindow() == null
-                ? null : getActivity().getWindow().getDecorView();
+        final Activity activity = getActivity();
+        if (activity == null) { call.resolve(); return; }
+        activity.runOnUiThread(() -> {
+            final View view = activity.getWindow() == null
+                ? null : activity.getWindow().getDecorView();
             if (view == null) { call.resolve(); return; }
             final int feedback = "step".equals(kind)
                 ? HapticFeedbackConstants.KEYBOARD_TAP
