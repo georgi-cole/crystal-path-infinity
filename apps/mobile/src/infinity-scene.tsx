@@ -16,7 +16,9 @@ import { getGameplayLifecycle } from './gameplay-lifecycle';
 import { createStandaloneAudio } from './standalone-audio';
 import type { StandaloneAudio } from './standalone-audio';
 import { optionalHaptic } from './optional-haptic';
-import { recordPracticePersonalBest } from './practice-save';
+import { readPracticePersonalBest, recordPracticePersonalBest } from './practice-save';
+import { presentRunOutcome } from './run-outcome';
+import { formatRowLabel } from './menu-navigation';
 import type { PracticeSettings } from './practice-save';
 import { AudioSettingsControls } from './audio-settings-controls';
 import { createPracticeRuntime, schedulePracticeTick } from './practice-runtime';
@@ -25,6 +27,7 @@ import { presentInfinityScene } from './infinity-presentation';
 import type { PresentedRow } from './infinity-presentation';
 import './infinity-scene.css';
 import './infinity-hud-premium.css';
+import './run-outcome.css';
 
 const particles = Array.from({ length: 6 }, (_, index) => index);
 const DEFAULT_VISUAL_SKIN = {
@@ -53,7 +56,13 @@ export interface InfinitySceneViewProps {
   readonly onMystery: () => void;
   readonly onPause: () => void;
   readonly onEnd: () => void;
+  readonly onRequestEnd: () => void;
+  readonly onCancelEnd: () => void;
+  readonly confirmEnd: boolean;
   readonly onExit: () => void;
+  readonly onViewRankings: () => void;
+  readonly personalBest: string | null;
+  readonly newPersonalBest: boolean;
   readonly onRestart: () => void;
   readonly onRetry: () => void;
   readonly settings: PracticeSettings;
@@ -88,24 +97,34 @@ export function InfinitySceneView({
   onMystery,
   onPause,
   onEnd,
+  onRequestEnd,
+  onCancelEnd,
+  confirmEnd,
   onExit,
+  onViewRankings,
+  personalBest,
+  newPersonalBest,
   onRestart,
   onRetry,
   settings,
   onSettingsChange,
 }: InfinitySceneViewProps) {
   const presented = presentInfinityScene(state);
+  const outcome = presentRunOutcome(state);
+  const overlayVisible = paused || confirmEnd || outcome.phase !== 'playing' || !!error;
   const catastrophic = state.death?.cause === 'wrong_tile' && state.status !== 'playing';
   const current = presented.rows.find((row) => row.phase === 'current');
-  const interactive = ready && !busy && !paused && !error && state.status === 'playing';
+  const interactive = ready && !busy && !paused && !confirmEnd && !error && outcome.phase === 'playing';
   const spClass = state.sp <= 60 ? 'is-danger' : state.sp <= 140 ? 'is-warn' : 'is-safe';
   const spPct = Math.max(0, Math.min(100, (state.sp / MAX_SP) * 100));
   const notice =
     error ??
-    (state.status === 'dead'
-      ? 'The bridge gave way.'
-      : state.status === 'finished'
-        ? 'Practice ended.'
+    (outcome.phase === 'verification-pending'
+      ? 'Reward verification is pending. This attempt is not finished.'
+      : outcome.phase === 'dead' || outcome.phase === 'grant-ready'
+        ? 'The bridge gave way. The fatal row did not count.'
+        : outcome.phase === 'finished'
+          ? 'Practice ended. Your local result is ready.'
         : !ready
           ? 'Preparing the bridge…'
           : paused
@@ -147,7 +166,7 @@ export function InfinitySceneView({
         <span className="cps-light-shaft" />
         <span className="cps-light-shaft" />
       </div>
-      <div className="cps-content">
+      <div className="cps-content" inert={overlayVisible}>
         <div className="cpi-scene-toolbar">
           <span className="cpi-practice-tag">
             <span className="cpi-practice-indicator" aria-hidden="true" />
@@ -166,6 +185,15 @@ export function InfinitySceneView({
                 <path d="M12 8v8M8 12h8" />
               </svg>
               <span className="cps-hint-count">{state.hints}</span>
+            </button>
+            <button
+              type="button"
+              className="cpi-end-control cpi-hud-control"
+              onClick={onRequestEnd}
+              disabled={!ready || busy || !!error || !outcome.canEnd}
+              aria-label="End run"
+            >
+              End run
             </button>
             <button
               type="button"
@@ -200,7 +228,7 @@ export function InfinitySceneView({
               INFINITY / RUN
             </span>
             <span className="cps-player-name">Your path</span>
-            <span className="cps-row-display">Row {presented.currentRow}</span>
+            <span className="cps-row-display">Row {formatRowLabel(presented.currentRow)}</span>
           </div>
           <div className="cps-header-right">
             <span className="cps-hints-display">
@@ -230,6 +258,12 @@ export function InfinitySceneView({
             ))}
           </div>
           <span className="cpi-energy-marker" style={{ left: `${spPct}%` }} aria-hidden="true" />
+        </div>
+        <div className="cpi-run-metrics" aria-label="Run progress and continuation counters">
+          <span>Cleared <strong>{outcome.clearedRows}</strong></span>
+          <span>Continues used <strong>{outcome.appliedContinues} / 10</strong></span>
+          <span>Grants earned <strong>{outcome.grantedContinues} / 10</strong></span>
+          <span>Grant quota left <strong>{outcome.grantsRemaining}</strong></span>
         </div>
         {presented.effects.length > 0 && (
           <div className="cps-effects" aria-label="Active effects">
@@ -307,45 +341,176 @@ export function InfinitySceneView({
           Local practice · Not a ranked score · No fixed finish line
         </p>
       </div>
-      {(paused || state.status !== 'playing' || !!error) && (
+      {overlayVisible && (
         <div className="cpi-overlay">
           <div
-            className="cpi-overlay-card"
+            className="cpi-overlay-card cpi-run-outcome"
             role="dialog"
             aria-modal="true"
-            aria-label={error ? 'Gameplay unavailable' : paused ? 'Game paused' : 'Practice result'}
+            aria-labelledby="cpi-run-outcome-title"
           >
-            <h2>{error ? 'Clock needs attention' : paused ? 'Paused' : 'Practice run ended'}</h2>
-            <p>
-              {error ??
-                (paused
-                  ? 'The game clock and every timed effect are frozen.'
-                  : `Cleared rows: ${state.lastClearedRow}. Practice results are not ranked.`)}
-            </p>
-            <AudioSettingsControls settings={settings} onChange={onSettingsChange} />
-            <div className="cpi-overlay-actions">
-              {error ? (
-                <button type="button" onClick={onRetry}>
-                  Retry clock
-                </button>
-              ) : paused ? (
-                <button type="button" onClick={onPause}>
-                  Resume
-                </button>
-              ) : (
-                <button type="button" onClick={onRestart}>
-                  New practice
-                </button>
-              )}
-              {state.status === 'dead' && (
-                <button type="button" onClick={onEnd}>
-                  End attempt
-                </button>
-              )}
-              <button type="button" onClick={onExit}>
-                Exit to intro
-              </button>
-            </div>
+            {error ? (
+              <>
+                <h2 id="cpi-run-outcome-title">Clock needs attention</h2>
+                <p role="alert">{error}</p>
+                <p>Progress remains recoverable. No final score was submitted.</p>
+                <div className="cpi-overlay-actions">
+                  <button type="button" data-cpi-overlay-primary onClick={onRetry}>
+                    Retry clock
+                  </button>
+                  <button type="button" onClick={onExit}>
+                    Save and leave
+                  </button>
+                </div>
+              </>
+            ) : confirmEnd && outcome.canEnd ? (
+              <>
+                <h2 id="cpi-run-outcome-title">End this run?</h2>
+                <p>
+                  Your last cleared row is <strong>{outcome.clearedRows}</strong>.
+                  {outcome.fatalRow !== null
+                    ? ' The fatal row ' + outcome.fatalRow + ' will not count.'
+                    : ' The current unfinished row will not count.'}
+                </p>
+                {outcome.forfeitsGrant && (
+                  <p role="alert">
+                    You have a granted but unused continuation. Ending explicitly forfeits it.
+                  </p>
+                )}
+                <p>This permanently finishes the local attempt. It does not submit a ranked score.</p>
+                <div className="cpi-overlay-actions">
+                  <button
+                    type="button"
+                    data-cpi-overlay-primary
+                    disabled={busy}
+                    onClick={onCancelEnd}
+                  >
+                    Keep attempt
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={onEnd}
+                    className="cpi-run-danger-action"
+                  >
+                    {outcome.forfeitsGrant ? 'End and forfeit grant' : 'Confirm End run'}
+                  </button>
+                </div>
+              </>
+            ) : outcome.phase === 'verification-pending' ? (
+              <>
+                <h2 id="cpi-run-outcome-title">Verification pending</h2>
+                <p>
+                  Your reward has not been verified. Row {outcome.clearedRows} is your last
+                  confirmed progress, not a final result.
+                </p>
+                <p role="status">
+                  This attempt remains recoverable and unpublished. No second reward can be
+                  requested while verification is pending.
+                </p>
+                <div className="cpi-overlay-actions">
+                  <button type="button" data-cpi-overlay-primary onClick={onExit}>
+                    Save and leave · Pending
+                  </button>
+                </div>
+              </>
+            ) : outcome.phase === 'finished' ? (
+              <>
+                <p className="cpi-run-status-label">OFFLINE PRACTICE · NOT VERIFIED</p>
+                <h2 id="cpi-run-outcome-title">Run complete</h2>
+                <div className="cpi-result-score">
+                  <span>Rows cleared</span>
+                  <strong>{outcome.clearedRows}</strong>
+                </div>
+                <dl className="cpi-result-details">
+                  <div>
+                    <dt>Fatal row</dt>
+                    <dd>{outcome.fatalRow ?? 'None'}</dd>
+                  </div>
+                  <div>
+                    <dt>Active time</dt>
+                    <dd>{outcome.activeTime}</dd>
+                  </div>
+                  <div>
+                    <dt>Continues applied</dt>
+                    <dd>{outcome.appliedContinues}</dd>
+                  </div>
+                  <div>
+                    <dt>Personal best · Local</dt>
+                    <dd>{personalBest === null ? 'Not saved' : formatRowLabel(personalBest)}</dd>
+                  </div>
+                </dl>
+                {outcome.deathReason && <p>{outcome.deathReason}</p>}
+                {newPersonalBest && <p className="cpi-new-best">New local personal best</p>}
+                <p>Saved practice result only. Official submission and rankings are not live.</p>
+                <div className="cpi-overlay-actions">
+                  <button type="button" data-cpi-overlay-primary onClick={onRestart}>
+                    Next run
+                  </button>
+                  <button type="button" onClick={onViewRankings}>
+                    Rankings (not live)
+                  </button>
+                  <button type="button" onClick={onExit}>
+                    Return to menu
+                  </button>
+                </div>
+              </>
+            ) : outcome.phase === 'dead' || outcome.phase === 'grant-ready' ? (
+              <>
+                <h2 id="cpi-run-outcome-title">The bridge gave way</h2>
+                {outcome.deathReason && <p>{outcome.deathReason}</p>}
+                <div className="cpi-result-score">
+                  <span>Rows cleared</span>
+                  <strong>{outcome.clearedRows}</strong>
+                </div>
+                <p>Fatal row {outcome.fatalRow} does not count toward your score.</p>
+                {outcome.offer ? (
+                  <div className="cpi-revive-offer">
+                    <strong>
+                      Continue #{outcome.offer.ordinal} · Restore {outcome.offer.restoreSp} SP
+                    </strong>
+                    <span>
+                      The restore <strong>sets</strong> SP to {outcome.offer.restoreSp}; it does
+                      not add points. {outcome.offer.grantsRemaining} reward grants remain.
+                    </span>
+                    <span>Rewarded continue is not connected in offline practice yet.</span>
+                  </div>
+                ) : outcome.phase === 'grant-ready' ? (
+                  <p role="status">
+                    A continuation was granted but not applied. No additional ad is available for
+                    this death; ending explicitly forfeits the grant.
+                  </p>
+                ) : (
+                  <p>No further continues remain for this attempt.</p>
+                )}
+                <div className="cpi-overlay-actions">
+                  <button type="button" data-cpi-overlay-primary disabled={busy} onClick={onRequestEnd}>
+                    End run
+                  </button>
+                  <button type="button" disabled={busy} onClick={onExit}>
+                    Save and leave
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 id="cpi-run-outcome-title">Paused</h2>
+                <p>The game clock and every timed effect are frozen. The run is not finished.</p>
+                <p>Rows cleared: {outcome.clearedRows}</p>
+                <AudioSettingsControls settings={settings} onChange={onSettingsChange} />
+                <div className="cpi-overlay-actions">
+                  <button type="button" data-cpi-overlay-primary disabled={busy} onClick={onPause}>
+                    Resume
+                  </button>
+                  <button type="button" disabled={busy} onClick={onRequestEnd}>
+                    End run
+                  </button>
+                  <button type="button" disabled={busy} onClick={onExit}>
+                    Save and leave
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
