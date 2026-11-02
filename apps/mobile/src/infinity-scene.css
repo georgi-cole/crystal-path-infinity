@@ -1854,7 +1854,7 @@
   position: absolute;
   /* Stop/fade before the two nearest transparent, tappable bridge rows. */
   top: 4%;
-  bottom: 43%;
+  bottom: 56%;
   width: 3px;
   z-index: 0;
   pointer-events: none;

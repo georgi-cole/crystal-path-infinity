@@ -82,7 +82,7 @@ describe('CPI-008 standalone scene', () => {
     const railRules = css.match(
       /\.cps-shell--premium \.cps-board::before,\s*\.cps-shell--premium \.cps-board::after\s*\{([^}]+)\}/,
     );
-    expect(railRules?.[1]).toContain('bottom: 43%');
+    expect(railRules?.[1]).toContain('bottom: 56%');
     expect(railRules?.[1]).toContain('pointer-events: none');
     expect(railRules?.[1]).toContain('mask-image: linear-gradient(to bottom');
     expect(railRules?.[1]).toContain('-webkit-mask-image: linear-gradient(to bottom');

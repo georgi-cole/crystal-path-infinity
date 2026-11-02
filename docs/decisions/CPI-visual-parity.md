@@ -19,7 +19,7 @@ The asset was transferred with a one-time branch-scoped GitHub Actions job using
 
 The original premium view draws rainbow side rails using `.cps-shell--premium .cps-board::before` and `::after`. They extended from 4% to 97% of the board, visibly crossing the closest two transparent tile rows.
 
-The standalone scene retains the original rail colors, 3px thickness, glow, location, animation and depth layers. It instead ends them at 57% of the board height and gradually masks their lower 28% to transparent, before the nearest two interactive rows. Both standard and WebKit masks are declared; the pseudo-elements remain non-interactive.
+The standalone scene retains the original rail colors, 3px thickness, glow, location, animation and depth layers. It instead ends them at 44% of the board height and gradually masks their lower 28% to transparent. Browser geometry checks found the rail ends before the second-nearest row by approximately 20px at a 390×844 portrait viewport and 61px at 640×1260, with no overlapping tile hit area. Both standard and WebKit masks are declared; the pseudo-elements remain non-interactive.
 
 No tiles, hitboxes, row perspective, HUD, native clock, RNG, SP, scoring, save format, revives, menu routes or haptics were changed. The Big Eye source repository is not modified.
 
