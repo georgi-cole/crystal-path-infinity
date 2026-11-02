@@ -44,3 +44,9 @@ Launch colors are set in native config, Android splash values, iOS storyboard, H
 - Separate features: release signing, rewarded ad SDK, offline rankings, login, privacy consent and app-store publication remain outside CPI-012.
 
 No new game-core rules, scores, revive credits or network authority are introduced.
+
+## CPI-012 Android first-launch Home dispatch race
+
+[CI run 41435454704](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41435454704) built the new splash/icon APK and rendered the offline menu correctly. Its first native smoke attempt timed out at the **ordinary Home key** pause step, with no JavaScript errors or AndroidRuntime crash. The captured `android-attempt-1-diagnostics.json` showed a valid startup bridge snapshot and menu; the prior pre-page Home/pause and resume succeeded. The ordinary `adb shell input keyevent KEYCODE_HOME` exited 0, but ActivityTaskManager had **no HOME launch after that command**, and the screenshot still showed the app in the foreground. SystemUI was restarting immediately before this transition.
+
+The test now requires either the actual ActivityTaskManager HOME launch or the real native `App paused` event after the key. Only if neither arrives within 5 seconds does it explicitly request a HOME activity launch through the Android OS (recorded as `home-key-not-dispatched-launcher-intent` with its command output). It then still requires the **same real native pause within 30 seconds**, a native resume, current page/bridge identities, frozen foreground time, three cold attempts and zero app runtime errors. This is an OS Home navigation delivery fallback, **not** a synthetic pause or unconditional test pass; an actual HOME transition that fails to pause the app still fails.

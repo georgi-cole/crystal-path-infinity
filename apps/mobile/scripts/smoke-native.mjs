@@ -18,7 +18,11 @@ import {
 import { dirname, join, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
-import { androidBroadcastsIdle, androidUserBootPosted } from '../config/android-boot-readiness.ts';
+import {
+  androidBroadcastsIdle,
+  androidHomeLaunchObserved,
+  androidUserBootPosted,
+} from '../config/android-boot-readiness.ts';
 import {
   analyzeNativeLog,
   lifecycleBoundary,
@@ -492,12 +496,56 @@ async function android() {
       boundary = lifecycleBoundary(readAnalysis());
       recordLifecycleAction('home', { boundary });
       text(adb, adbArgs('shell', 'input', 'keyevent', 'KEYCODE_HOME'));
+      // A freshly restarted emulator SystemUI can accept the injected key
+      // without opening HOME. This is *not* an app pause failure: do not start
+      // the pause clock until the OS actually dispatches the navigation.
+      const nativePaused = () =>
+        readAnalysis().nativeEvents.some(
+          (event) => event.line > boundary.lineBeforeBackground && event.event === 'App paused',
+        );
+      try {
+        await waitFor('Android Home key dispatch', 5_000, () => {
+          assertRunning(child, 'Android emulator');
+          assertRunning(logcat, 'Android lifecycle log capture');
+          return (
+            nativePaused() ||
+            androidHomeLaunchObserved(
+              appLog().slice(logOffset),
+              boundary.lineBeforeBackground,
+            )
+          );
+        });
+      } catch (reason) {
+        if (
+          !(reason instanceof Error) ||
+          !reason.message.startsWith('Timed out waiting for Android Home key dispatch')
+        )
+          throw reason;
+        // Only when no real launcher transition OR pause was observed:
+        // ask Android ActivityManager to launch HOME, rather than faking
+        // document events, the native clock, or the activity's pause callback.
+        recordLifecycleAction('home-key-not-dispatched-launcher-intent');
+        save(
+          `android-attempt-${attempt}-home-launcher-intent.txt`,
+          text(
+            adb,
+            adbArgs(
+              'shell',
+              'am',
+              'start',
+              '-W',
+              '-a',
+              'android.intent.action.MAIN',
+              '-c',
+              'android.intent.category.HOME',
+            ),
+          ),
+        );
+      }
       await waitFor('Android native pause after Home', 30_000, () => {
         assertRunning(child, 'Android emulator');
         assertRunning(logcat, 'Android lifecycle log capture');
-        return readAnalysis().nativeEvents.some(
-          (event) => event.line > boundary.lineBeforeBackground && event.event === 'App paused',
-        );
+        return nativePaused();
       });
       recordLifecycleAction('native-pause-observed');
       save(
