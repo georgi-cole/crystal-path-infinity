@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 1,
+  "direction": "midnight-prism-v1",
+  "sourceRepository": "georgi-cole/bbmobilenew-source",
+  "sourceCommit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+  "assets": [
+    {
+      "id": "icon-concept",
+      "origin": "original-cpi011",
+      "sourcePath": null,
+      "target": "apps/mobile/public/assets/brand/icon-concept.svg",
+      "format": "SVG 512x512",
+      "rights": "original; visual approval pending",
+      "optimization": "No fonts/scripts/remote assets; inspect at 48px",
+      "fallback": "CSS midnight and HTML wordmark",
+      "next": "CPI-012"
+    },
+    {
+      "id": "wordmark",
+      "origin": "original-standalone",
+      "sourcePath": null,
+      "target": "apps/mobile/src/App.tsx",
+      "format": "HTML/CSS",
+      "rights": "original; system fonts only",
+      "optimization": "Real text, no font downloads",
+      "fallback": "Readable text",
+      "next": "CPI-011"
+    },
+    {
+      "id": "bridge-style",
+      "origin": "adapted-source",
+      "sourcePath": "src/minigames/crystalPathShattered/crystalPathShattered.css",
+      "target": "apps/mobile/src/infinity-scene.css",
+      "format": "CSS",
+      "rights": "owner-directed proprietary code; background bitmap excluded",
+      "optimization": "Bounded DOM and reduced-motion",
+      "fallback": "CSS void gradients",
+      "next": "CPI-008"
+    },
+    {
+      "id": "glass-button",
+      "origin": "adapted-pattern",
+      "sourcePath": "src/components/GameButton/GameButton.tsx; src/components/GameButton/GameButton.css",
+      "target": "apps/mobile/src/brand/CrystalButton.tsx",
+      "format": "React/CSS",
+      "rights": "owner-directed source pattern; no old binary masks copied",
+      "optimization": "No Redux/holiday/JS pointer timers",
+      "fallback": "Native button behavior",
+      "next": "CPI-011"
+    },
+    {
+      "id": "home-menu",
+      "origin": "reference-only",
+      "sourcePath": "src/screens/HomeHub/HomeHub.tsx; src/screens/HomeHub/HomeHub.css",
+      "target": "docs/previews/CPI-011-brand-board.svg",
+      "format": "visual reference",
+      "rights": "no host code copied",
+      "optimization": "No weather/season/VIP",
+      "fallback": "Practice intro only",
+      "next": "CPI-013"
+    },
+    {
+      "id": "splash-pattern",
+      "origin": "reference-only",
+      "sourcePath": "src/components/IntroSplash/IntroSplash.tsx",
+      "target": null,
+      "format": "behavior",
+      "rights": "not copied; excludes Kolequant logo",
+      "optimization": "Bounded startup wait",
+      "fallback": "Native launch background",
+      "next": "CPI-012"
+    },
+    {
+      "id": "back-control",
+      "origin": "reference-only",
+      "sourcePath": "src/components/ui/GameBackButton/GameBackButton.tsx",
+      "target": null,
+      "format": "vector control",
+      "rights": "not copied",
+      "optimization": "At least 44px target",
+      "fallback": "Accessible text back",
+      "next": "CPI-013"
+    },
+    {
+      "id": "profile-settings",
+      "origin": "reference-only",
+      "sourcePath": "src/screens/Profile/Profile.tsx; src/screens/Settings/Settings.tsx",
+      "target": null,
+      "format": "UI reference",
+      "rights": "not copied",
+      "optimization": "Avoid season state; use local settings",
+      "fallback": "Existing preferences",
+      "next": "CPI-016/CPI-019"
+    },
+    {
+      "id": "hall-of-fame-icon",
+      "origin": "excluded-eye-brand",
+      "sourcePath": "public/assets/intro_hub_icons/hall_of_fame.svg",
+      "target": null,
+      "format": "SVG",
+      "rights": "not copied",
+      "optimization": "Independent score glyph later",
+      "fallback": "Text label",
+      "next": "CPI-024"
+    },
+    {
+      "id": "void-bitmap",
+      "origin": "excluded-pending-rights",
+      "sourcePath": "src/minigames/crystalPathShattered/infinity-black-hole-bg.png",
+      "target": null,
+      "format": "PNG",
+      "rights": "third-party provenance unverified",
+      "optimization": "Consider WebP if rights cleared",
+      "fallback": "CSS atmosphere",
+      "next": "CPI-013"
+    },
+    {
+      "id": "glass-music",
+      "origin": "excluded-pending-transfer",
+      "sourcePath": "public/assets/music/glass_bridge.mp3",
+      "target": null,
+      "format": "MP3",
+      "rights": "original file not transferred; commercial rights pending",
+      "optimization": "Audit loop/size once retrieved",
+      "fallback": "CPI-010 original interim WAV",
+      "next": "CPI-010"
+    },
+    {
+      "id": "sfx-minigame_gb_safe_step.mp3",
+      "origin": "copied-source-binary",
+      "sourcePath": "public/assets/sounds/minigames/minigame_gb_safe_step.mp3",
+      "target": "apps/mobile/public/assets/sounds/minigames/minigame_gb_safe_step.mp3",
+      "format": "MP3",
+      "rights": "owner-directed reuse; third-party commercial license not verified",
+      "optimization": "Source codec retained until device audio test",
+      "fallback": "Game works muted",
+      "next": "CPI-010"
+    },
+    {
+      "id": "sfx-minigame_gb_death.mp3",
+      "origin": "copied-source-binary",
+      "sourcePath": "public/assets/sounds/minigames/minigame_gb_death.mp3",
+      "target": "apps/mobile/public/assets/sounds/minigames/minigame_gb_death.mp3",
+      "format": "MP3",
+      "rights": "owner-directed reuse; third-party commercial license not verified",
+      "optimization": "Source codec retained until device audio test",
+      "fallback": "Game works muted",
+      "next": "CPI-010"
+    },
+    {
+      "id": "sfx-minigame_gb_winner.mp3",
+      "origin": "copied-source-binary",
+      "sourcePath": "public/assets/sounds/minigames/minigame_gb_winner.mp3",
+      "target": "apps/mobile/public/assets/sounds/minigames/minigame_gb_winner.mp3",
+      "format": "MP3",
+      "rights": "owner-directed reuse; third-party commercial license not verified",
+      "optimization": "Source codec retained until device audio test",
+      "fallback": "Game works muted",
+      "next": "CPI-010"
+    },
+    {
+      "id": "sfx-minigame_gb_new_turn.mp3",
+      "origin": "copied-source-binary",
+      "sourcePath": "public/assets/sounds/minigames/minigame_gb_new_turn.mp3",
+      "target": "apps/mobile/public/assets/sounds/minigames/minigame_gb_new_turn.mp3",
+      "format": "MP3",
+      "rights": "owner-directed reuse; third-party commercial license not verified",
+      "optimization": "Source codec retained until device audio test",
+      "fallback": "Game works muted",
+      "next": "CPI-010"
+    }
+  ]
+}

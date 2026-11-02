@@ -2,7 +2,7 @@
   "source_repository": "georgi-cole/bbmobilenew-source",
   "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
   "inspected_on": "2026-11-01",
-  "status": "single_player_rules_css_and_selected_audio_adapted_source_music_pending",
+  "status": "midnight_prism_proposal_source_audit_complete_user_visual_approval_pending",
   "resources": [
     {
       "path": "src/minigames/crystalPathShattered/shatteredLogic.ts",
@@ -173,6 +173,92 @@
       "referenced_in": "CPI-005",
       "notes": "The immutable original mulberry32 implementation is used only to capture independent source route vectors. New practice RNG and injected route/reward cursors belong to the standalone core; the whole store is not copied.",
       "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/store/rng.ts"
+    },
+    {
+      "path": "src/components/GameButton/GameButton.tsx",
+      "decision": "adapt_pattern",
+      "notes": "Adapted pressed/focus/disabled idea; omitted Redux, holiday and SVG-mask dependencies.",
+      "reviewed_in": "CPI-011",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/components/GameButton/GameButton.tsx",
+      "targets": [
+        "apps/mobile/src/brand/CrystalButton.tsx"
+      ]
+    },
+    {
+      "path": "src/components/GameButton/GameButton.css",
+      "decision": "adapt_pattern",
+      "notes": "Standalone glass CSS adapts affordance, not old assets.",
+      "reviewed_in": "CPI-011",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/components/GameButton/GameButton.css",
+      "targets": [
+        "apps/mobile/src/brand/crystal-button.css"
+      ]
+    },
+    {
+      "path": "src/screens/HomeHub/HomeHub.tsx",
+      "decision": "reference",
+      "notes": "Narrow portrait menu reference; do not copy Redux/VIP/weather.",
+      "reviewed_in": "CPI-011",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/screens/HomeHub/HomeHub.tsx",
+      "targets": [
+        "docs/previews/CPI-011-brand-board.svg"
+      ]
+    },
+    {
+      "path": "src/screens/HomeHub/HomeHub.css",
+      "decision": "reference",
+      "notes": "Portrait spacing reference; no wholesale copy.",
+      "reviewed_in": "CPI-011",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/screens/HomeHub/HomeHub.css"
+    },
+    {
+      "path": "src/components/IntroSplash/IntroSplash.tsx",
+      "decision": "reference",
+      "notes": "Bounded splash timing for CPI-012; Kolequant excluded.",
+      "reviewed_in": "CPI-011",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/components/IntroSplash/IntroSplash.tsx"
+    },
+    {
+      "path": "src/components/ui/GameBackButton/GameBackButton.tsx",
+      "decision": "reference",
+      "notes": "Inline vector back idea; enlarge 2rem tap target in CPI-013.",
+      "reviewed_in": "CPI-011",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/components/ui/GameBackButton/GameBackButton.tsx"
+    },
+    {
+      "path": "src/components/GameControlDock/GameControlDock.tsx",
+      "decision": "do_not_copy",
+      "notes": "Host portal, Redux, season/audio entanglement; standalone dock later.",
+      "reviewed_in": "CPI-011",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/components/GameControlDock/GameControlDock.tsx"
+    },
+    {
+      "path": "src/screens/Profile/Profile.tsx",
+      "decision": "reference",
+      "notes": "Profile layout only; no original season state.",
+      "reviewed_in": "CPI-011",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/screens/Profile/Profile.tsx"
+    },
+    {
+      "path": "src/screens/Settings/Settings.tsx",
+      "decision": "reference",
+      "notes": "Settings UX only, not season/Redux model.",
+      "reviewed_in": "CPI-011",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/screens/Settings/Settings.tsx"
+    },
+    {
+      "path": "public/assets/intro_hub_icons/hall_of_fame.svg",
+      "decision": "do_not_copy",
+      "notes": "Legacy eye brand, standalone score icon later.",
+      "reviewed_in": "CPI-011",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/public/assets/intro_hub_icons/hall_of_fame.svg"
+    },
+    {
+      "path": "public/assets/intro_hub_icons/play.svg",
+      "decision": "do_not_copy",
+      "notes": "Legacy eye motif, not standalone branding.",
+      "reviewed_in": "CPI-011",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/public/assets/intro_hub_icons/play.svg"
     }
   ],
   "do_not_copy": [
