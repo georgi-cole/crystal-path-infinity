@@ -22,7 +22,6 @@ export function androidHomeLaunchObserved(log: string, afterLine = 0): boolean {
     .some((line) => line.includes(homeStart) && line.includes(homeCategory));
 }
 
-
 /** Android Linux PSI = time some tasks are stalled, not host CPU usage. */
 export interface AndroidRenderPressure {
   cpuSomeAvg10: number;
@@ -37,10 +36,7 @@ function someAvg10(output: string): number | null {
 }
 
 /** Missing or malformed kernel telemetry must never silently pass readiness. */
-export function androidRenderPressure(
-  cpu: string,
-  io: string,
-): AndroidRenderPressure | null {
+export function androidRenderPressure(cpu: string, io: string): AndroidRenderPressure | null {
   const cpuSomeAvg10 = someAvg10(cpu);
   const ioSomeAvg10 = someAvg10(io);
   if (cpuSomeAvg10 === null || ioSomeAvg10 === null) return null;

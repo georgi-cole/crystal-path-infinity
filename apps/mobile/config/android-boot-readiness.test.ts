@@ -76,10 +76,11 @@ describe('CPI-011 strict Android first-boot readiness', () => {
     expect(script).toContain("waitFor('Android bridge round-trip after real Home/resume', 30_000");
   });
 
-
   it('parses Android kernel PSI accurately, rejecting invalid or absent observations', () => {
-    const cpu = 'some avg10=70.92 avg60=39.10 avg300=10.54 total=33920200\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0';
-    const io = 'some avg10=12.71 avg60=9.48 avg300=2.75 total=9076181\nfull avg10=0.32 avg60=1.43 avg300=0.53 total=1996763';
+    const cpu =
+      'some avg10=70.92 avg60=39.10 avg300=10.54 total=33920200\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0';
+    const io =
+      'some avg10=12.71 avg60=9.48 avg300=2.75 total=9076181\nfull avg10=0.32 avg60=1.43 avg300=0.53 total=1996763';
     expect(androidRenderPressure(cpu, io)).toEqual({
       cpuSomeAvg10: 70.92,
       ioSomeAvg10: 12.71,
@@ -87,7 +88,10 @@ describe('CPI-011 strict Android first-boot readiness', () => {
     expect(androidPressureWithinBudget(androidRenderPressure(cpu, io))).toBe(false);
     expect(
       androidPressureWithinBudget(
-        androidRenderPressure('some avg10=18.00 avg60=11.00 total=12', 'some avg10=1.50 avg60=3.00 total=8'),
+        androidRenderPressure(
+          'some avg10=18.00 avg60=11.00 total=12',
+          'some avg10=1.50 avg60=3.00 total=8',
+        ),
       ),
     ).toBe(true);
     expect(androidRenderPressure('no PSI', io)).toBe(null);
@@ -98,7 +102,12 @@ describe('CPI-011 strict Android first-boot readiness', () => {
 
   it('flags an actual app ANR, not unrelated system messages or another app', () => {
     const appId = 'com.georgicole.crystalpath.infinity.dev';
-    const report = '1793639689.646 621 2636 E ActivityManager: ANR in ' + appId + ' (' + appId + '/.MainActivity)';
+    const report =
+      '1793639689.646 621 2636 E ActivityManager: ANR in ' +
+      appId +
+      ' (' +
+      appId +
+      '/.MainActivity)';
     expect(androidAppAnrObserved(report, appId)).toBe(true);
     expect(androidAppAnrObserved('ANR in com.android.launcher3', appId)).toBe(false);
     expect(androidAppAnrObserved('W ActivityManager: ANR in ' + appId, appId)).toBe(false);
