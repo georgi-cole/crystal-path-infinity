@@ -119,10 +119,7 @@ export function App() {
     window.addEventListener('popstate', onLocationChange);
     window.addEventListener('hashchange', onLocationChange);
     // A refreshed deep link cannot resurrect a gameplay runtime or confirm a delete.
-    if (
-      window.location.hash === '#practice-run' ||
-      window.location.hash === '#new-practice'
-    ) {
+    if (window.location.hash === '#practice-run' || window.location.hash === '#new-practice') {
       window.history.replaceState({ cpiNavigation: false }, '', '#practice');
     }
     return () => {
@@ -361,11 +358,7 @@ export function App() {
         />
       </div>
       {confirmNew && (
-        <ConfirmNewPractice
-          saved={saved}
-          onCancel={cancelNew}
-          onConfirm={startNewPractice}
-        />
+        <ConfirmNewPractice saved={saved} onCancel={cancelNew} onConfirm={startNewPractice} />
       )}
     </>
   );
