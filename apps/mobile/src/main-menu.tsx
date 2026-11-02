@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 import { AudioSettingsControls } from './audio-settings-controls';
+import { BridgeTutorial } from './bridge-tutorial';
+import type { TutorialProgress } from './tutorial-progress';
 import type { PracticeLoad, PracticeSettings } from './practice-save';
 import { canResumePractice, formatRowLabel, rankedServiceState } from './menu-navigation';
 import type { MenuView } from './menu-navigation';
@@ -208,6 +210,8 @@ export interface MainMenuProps {
   onNew: () => void;
   onSettingsChange: (settings: PracticeSettings) => void;
   onRetryConnection: () => void;
+  tutorialProgress: TutorialProgress;
+  onTutorialProgress: (progress: Exclude<TutorialProgress, 'unseen'>) => void;
   buildLabel?: string;
   warning?: string | null;
 }
@@ -249,7 +253,8 @@ function MenuHome({
   onOpen,
   onResume,
   onNew,
-}: Pick<MainMenuProps, 'saved' | 'best' | 'onOpen' | 'onResume' | 'onNew'>) {
+  tutorialProgress,
+}: Pick<MainMenuProps, 'saved' | 'best' | 'onOpen' | 'onResume' | 'onNew' | 'tutorialProgress'>) {
   const canResume = canResumePractice(saved);
   return (
     <>
@@ -290,6 +295,13 @@ function MenuHome({
           description="Unlimited offline play · No account"
           icon="practice"
           onClick={() => onOpen('practice')}
+        />
+        <MenuAction
+          label={tutorialProgress === 'completed' ? 'Replay tutorial' : 'Learn the bridge'}
+          description="Five short hands-on lessons · No saved score"
+          icon="practice"
+          variant="quiet"
+          onClick={() => onOpen('tutorial')}
         />
         {canResume && saved.status === 'ready' && (
           <div className="cpi-menu-resume">
@@ -385,6 +397,8 @@ export function MainMenu({
   onNew,
   onSettingsChange,
   onRetryConnection,
+  tutorialProgress,
+  onTutorialProgress,
   warning,
   buildLabel,
 }: MainMenuProps) {
@@ -401,7 +415,14 @@ export function MainMenu({
               onSettingsChange={onSettingsChange}
               onOpen={onOpen}
             />
-            <MenuHome saved={saved} best={best} onOpen={onOpen} onResume={onResume} onNew={onNew} />
+            <MenuHome
+              saved={saved}
+              best={best}
+              onOpen={onOpen}
+              onResume={onResume}
+              onNew={onNew}
+              tutorialProgress={tutorialProgress}
+            />
           </>
         ) : view === 'practice' ? (
           <MenuPanel title="Practice" eyebrow="Offline · All ages">
@@ -409,6 +430,12 @@ export function MainMenu({
               Cross the endless bridge. Practice requires no account, age answer or analytics
               consent.
             </p>
+            <MenuAction
+              label={tutorialProgress === 'completed' ? 'Replay tutorial' : 'Learn the bridge'}
+              description="Try safe and wrong glass, hints and an optional mystery"
+              icon="practice"
+              onClick={() => onOpen('tutorial')}
+            />
             {canResumePractice(saved) && saved.status === 'ready' && (
               <MenuAction
                 label={'Resume · Row ' + formatRowLabel(saved.state.currentRow)}
@@ -429,6 +456,16 @@ export function MainMenu({
               Practice progress stays on this device. It does not enter the official rankings.
             </p>
           </MenuPanel>
+        ) : view === 'tutorial' ? (
+          <BridgeTutorial
+            onComplete={() => onTutorialProgress('completed')}
+            onSkip={() => {
+              onTutorialProgress('skipped');
+              onOpen('practice');
+            }}
+            onStartPractice={() => onOpen('practice')}
+            reducedMotion={settings.reducedMotion}
+          />
         ) : view === 'play' ? (
           <MenuPanel title="Play" eyebrow="Official ranked mode">
             <p>
@@ -498,9 +535,20 @@ export function MainMenu({
           <MenuPanel title="Settings" eyebrow="Local preferences">
             <p>These controls are available offline and affect your practice session.</p>
             <AudioSettingsControls settings={settings} onChange={onSettingsChange} />
+            <MenuAction
+              label={tutorialProgress === 'completed' ? 'Replay tutorial' : 'Open tutorial'}
+              description={
+                tutorialProgress === 'completed'
+                  ? 'Completed · Run the lessons again'
+                  : tutorialProgress === 'skipped'
+                    ? 'Skipped · Learn the bridge any time'
+                    : 'Five steps · Safe, wrong, hints and mystery'
+              }
+              icon="practice"
+              onClick={() => onOpen('tutorial')}
+            />
             <p className="cpi-menu-fine-print">
-              Language, tutorial, privacy and account controls will be added in their dedicated
-              tasks.
+              Language, privacy and account controls will be added in their dedicated tasks.
             </p>
           </MenuPanel>
         )}

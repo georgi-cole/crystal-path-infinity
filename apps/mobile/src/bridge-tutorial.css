@@ -1,0 +1,243 @@
+/* CPI-014: compact instructional route, not an overlay on gameplay touch targets. */
+.cpi-tutorial {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  width: 100%;
+  padding: 0.9rem 0 1.5rem;
+  color: var(--cpi-text);
+}
+
+.cpi-tutorial-topline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+}
+
+.cpi-tutorial-proof {
+  font-size: 0.7rem;
+  font-weight: 650;
+  color: var(--cpi-safe);
+}
+
+.cpi-tutorial h1 {
+  margin: 0.25rem 0 0;
+  font: 650 clamp(1.5rem, 7vw, 2rem) / 1.13 var(--cpi-font-display);
+}
+
+.cpi-tutorial-instruction {
+  margin: 0;
+  font-size: 0.91rem;
+  line-height: 1.5;
+  color: #d3e7f6;
+}
+
+.cpi-tutorial-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.cpi-tutorial-stats span {
+  display: inline-flex;
+  gap: 0.28rem;
+  align-items: baseline;
+  min-height: 2.3rem;
+  padding: 0.52rem 0.62rem;
+  border: 1px solid var(--cpi-glass-edge);
+  border-radius: 0.55rem;
+  background: var(--cpi-surface);
+  color: var(--cpi-muted);
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.cpi-tutorial-stats strong {
+  color: var(--cpi-text);
+}
+
+.cpi-tutorial-bridge {
+  border: 1px solid rgba(130, 221, 242, 0.3);
+  border-radius: 1rem;
+  padding: 0.95rem 0.65rem 0.75rem;
+  background:
+    radial-gradient(ellipse at 50% 5%, rgba(122, 165, 224, 0.17), transparent 58%),
+    linear-gradient(170deg, #16253e, #080d20);
+}
+
+.cpi-tutorial-row-caption {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 750;
+  color: var(--cpi-ice);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding-bottom: 0.85rem;
+}
+
+.cpi-tutorial-glass {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(2.75rem, 0.32fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 23rem;
+  margin-inline: auto;
+}
+
+.cpi-tutorial-pane {
+  min-width: 0;
+  min-height: 6.1rem;
+  display: grid;
+  place-content: center;
+  gap: 0.4rem;
+  padding: 0.6rem 0.3rem;
+  text-align: center;
+  border-radius: 0.8rem;
+  border: 2px solid rgba(163, 232, 248, 0.7);
+  background: linear-gradient(130deg, rgba(83, 174, 210, 0.6), rgba(67, 77, 160, 0.6));
+  color: #f3fbff;
+  font: inherit;
+  touch-action: manipulation;
+  cursor: pointer;
+}
+
+.cpi-tutorial-pane:disabled {
+  cursor: default;
+  opacity: 0.49;
+  border-style: dashed;
+}
+
+.cpi-tutorial-pane.is-revealed {
+  border-color: var(--cpi-safe);
+  box-shadow: 0 0 0 3px rgba(103, 239, 197, 0.15);
+}
+
+.cpi-tutorial-pane-label {
+  font-size: 0.83rem;
+  font-weight: 800;
+}
+
+.cpi-tutorial-pane-note {
+  font-size: 0.67rem;
+  font-weight: 650;
+}
+
+.cpi-tutorial-centre {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+}
+
+.cpi-tutorial-mystery {
+  width: max(2.75rem, 100%);
+  min-height: 3.6rem;
+  border-radius: 0.7rem;
+  border: 1px solid var(--cpi-warning);
+  color: var(--cpi-warning);
+  background: rgba(116, 78, 151, 0.5);
+  font: 800 1.4rem var(--cpi-font-display);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.cpi-tutorial-mystery:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.cpi-tutorial-feedback {
+  margin: 0.85rem 0 0;
+  min-height: 2.8rem;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: #f6eac3;
+  text-align: center;
+}
+
+.cpi-tutorial-actions {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.cpi-tutorial-actions button,
+.cpi-tutorial-skip {
+  min-height: 2.75rem;
+  width: 100%;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--cpi-glass-edge);
+  border-radius: 0.73rem;
+  background: rgba(15, 35, 56, 0.95);
+  color: var(--cpi-text);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 720;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.cpi-tutorial-actions .cpi-tutorial-primary {
+  background: linear-gradient(115deg, #226e91, #4b4594);
+  border-color: var(--cpi-ice);
+}
+
+.cpi-tutorial-finished {
+  margin: 0;
+  color: var(--cpi-safe);
+  font-size: 0.86rem;
+}
+
+.cpi-tutorial-facts {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.85rem;
+  border-left: 3px solid var(--cpi-ice);
+  background: rgba(12, 33, 55, 0.72);
+  border-radius: 0.3rem 0.8rem 0.8rem 0.3rem;
+}
+
+.cpi-tutorial-facts p {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--cpi-muted);
+  line-height: 1.5;
+}
+
+.cpi-tutorial-facts strong {
+  color: var(--cpi-text);
+}
+
+.cpi-tutorial-skip {
+  background: transparent;
+  border-color: transparent;
+  color: var(--cpi-muted);
+}
+
+.cpi-tutorial button:focus-visible {
+  outline: 3px solid var(--cpi-focus);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cpi-tutorial *,
+  .cpi-tutorial *::before,
+  .cpi-tutorial *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+.cpi-tutorial.cpi-reduced-motion * {
+  transition: none !important;
+  animation: none !important;
+}
+
+@media (max-height: 650px) {
+  .cpi-tutorial {
+    gap: 0.6rem;
+  }
+  .cpi-tutorial-pane {
+    min-height: 4.3rem;
+  }
+}

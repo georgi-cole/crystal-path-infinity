@@ -1,7 +1,15 @@
 import type { PracticeLoad } from './practice-save';
 
 /** Navigation only. Ranked authority, auth and practice runtime remain separate. */
-export const MENU_VIEWS = ['home', 'play', 'practice', 'rankings', 'profile', 'settings'] as const;
+export const MENU_VIEWS = [
+  'home',
+  'play',
+  'practice',
+  'tutorial',
+  'rankings',
+  'profile',
+  'settings',
+] as const;
 
 export type MenuView = (typeof MENU_VIEWS)[number];
 export type RankedService = 'unconfigured' | 'offline' | 'maintenance' | 'ready';

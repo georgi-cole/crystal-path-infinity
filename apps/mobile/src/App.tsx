@@ -14,6 +14,8 @@ import type { PracticeLoad, PracticeSettings } from './practice-save';
 import { InfinityPractice } from './infinity-scene';
 import { ConfirmNewPractice, MainMenu } from './main-menu';
 import { historyFlag, viewFromHash, viewHash } from './menu-navigation';
+import { readTutorialProgress, writeTutorialProgress } from './tutorial-progress';
+import type { TutorialProgress } from './tutorial-progress';
 import type { MenuView } from './menu-navigation';
 import { markDiagnosticReactReady } from './startup-diagnostics';
 import { settleStartup } from './startup-bootstrap';
@@ -47,6 +49,14 @@ export function App() {
   const [best, setBest] = useState<string | null>(null);
   const [storageWarning, setStorageWarning] = useState<string | null>(null);
   const [settings, setSettings] = useState<PracticeSettings>(DEFAULT_PRACTICE_SETTINGS);
+  const [tutorialProgress, setTutorialProgress] = useState<TutorialProgress>(() => {
+    if (typeof window === 'undefined') return 'unseen';
+    try {
+      return readTutorialProgress(window.localStorage);
+    } catch {
+      return 'unseen';
+    }
+  });
   const [bootPhase, setBootPhase] = useState<'loading' | 'ready' | 'failed'>('loading');
   const [bootError, setBootError] = useState('');
   const [bootAttempt, setBootAttempt] = useState(0);
@@ -199,6 +209,16 @@ export function App() {
       setStorageWarning('Settings could not be saved on this device.');
     }
   }, []);
+  const onTutorialProgress = (progress: Exclude<TutorialProgress, 'unseen'>) => {
+    // Replaying or skipping a completed tutorial must never erase completion.
+    const next = tutorialProgress === 'completed' ? 'completed' : progress;
+    setTutorialProgress(next);
+    try {
+      writeTutorialProgress(window.localStorage, next);
+    } catch {
+      setStorageWarning('Tutorial progress could not be saved on this device.');
+    }
+  };
   const onCheckpoint = useCallback((state: RunState) => {
     try {
       writePracticeCheckpoint(window.localStorage, state);
@@ -353,6 +373,8 @@ export function App() {
           onNew={requestNewPractice}
           onSettingsChange={changeSettings}
           onRetryConnection={retryConnectivity}
+          tutorialProgress={tutorialProgress}
+          onTutorialProgress={onTutorialProgress}
           buildLabel={buildLabel}
           warning={storageWarning}
         />

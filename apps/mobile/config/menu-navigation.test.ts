@@ -46,6 +46,8 @@ function render(view: MenuView = 'home', options: Partial<Parameters<typeof Main
       onNew: noop,
       onSettingsChange: noop,
       onRetryConnection: noop,
+      tutorialProgress: 'unseen',
+      onTutorialProgress: noop,
       ...options,
     }),
   );
@@ -62,6 +64,7 @@ describe('CPI-013 standalone menu and route model', () => {
     expect(html).toContain('Rankings');
     expect(html).toContain('Profile');
     expect(html).toContain('Settings');
+    expect(html).toContain('Learn the bridge');
     expect(html).toContain('Personal best · Practice only');
     expect(html).toContain('Not a ranked score');
     expect(html).toContain('Guest');
@@ -73,6 +76,7 @@ describe('CPI-013 standalone menu and route model', () => {
     expect(html).toContain('Practice requires no account');
     expect(html).toContain('age answer or analytics consent');
     expect(html).toContain('New practice');
+    expect(html).toContain('Learn the bridge');
     expect(html).not.toContain('Resume · Row');
   });
 
@@ -112,6 +116,7 @@ describe('CPI-013 standalone menu and route model', () => {
     expect(html).toContain('Sound effects');
     expect(html).toContain('Haptic feedback');
     expect(html).toContain('Reduce motion');
+    expect(html).toContain('Open tutorial');
     expect(html).toContain('type="checkbox"');
   });
 
@@ -127,9 +132,18 @@ describe('CPI-013 standalone menu and route model', () => {
   });
 
   it('normalizes cold deep links and connects browser/Android Back to the game owner', () => {
-    for (const view of ['home', 'play', 'practice', 'rankings', 'profile', 'settings'] as const) {
+    for (const view of [
+      'home',
+      'play',
+      'practice',
+      'tutorial',
+      'rankings',
+      'profile',
+      'settings',
+    ] as const) {
       expect(viewFromHash(viewHash(view))).toBe(view);
     }
+    expect(render('tutorial')).toContain('Take a safe step');
     expect(viewFromHash('#practice-run')).toBe('practice');
     expect(viewFromHash('#new-practice')).toBe('practice');
     expect(viewFromHash('#unknown-route')).toBe('home');
