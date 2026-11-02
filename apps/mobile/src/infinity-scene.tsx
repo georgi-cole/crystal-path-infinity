@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   createPracticeCursor,
   createRun,
@@ -342,6 +342,8 @@ function makeInitialRun(): RunState {
 
 interface InfinityRunProps {
   onExit: () => void;
+  onExitCancelled: () => void;
+  exitRequest: number;
   onRestart: () => void;
   initialState: RunState | null;
   onCheckpoint: (state: RunState) => void;
@@ -350,6 +352,8 @@ interface InfinityRunProps {
 }
 function InfinityRun({
   onExit,
+  onExitCancelled,
+  exitRequest,
   onRestart,
   initialState,
   onCheckpoint,
@@ -531,14 +535,16 @@ function InfinityRun({
       setError(reason instanceof Error ? reason.message : 'Clock is unavailable.');
     }
   }
-  async function exit() {
+  const exit = useCallback(async () => {
     if (
       state.status === 'playing' &&
       !window.confirm(
         'Exit practice? Your latest committed checkpoint will remain available to continue.',
       )
-    )
+    ) {
+      onExitCancelled();
       return;
+    }
     const runtime = runtimeRef.current;
     if (runtime) {
       try {
@@ -546,11 +552,19 @@ function InfinityRun({
         onCheckpoint(runtime.getState());
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : 'Unable to pause and save.');
+        onExitCancelled();
         return;
       }
     }
     onExit();
-  }
+  }, [state.status, paused, onCheckpoint, onExit, onExitCancelled]);
+
+  const handledExitRequest = useRef(0);
+  useEffect(() => {
+    if (exitRequest === 0 || handledExitRequest.current === exitRequest) return;
+    handledExitRequest.current = exitRequest;
+    void exit();
+  }, [exitRequest, exit]);
   return (
     <InfinitySceneView
       state={state}
@@ -593,12 +607,16 @@ function InfinityRun({
 /** A new attempt and an explicitly resumed checkpoint have distinct owners. */
 export function InfinityPractice({
   onExit,
+  onExitCancelled,
+  exitRequest = 0,
   initialState = null,
   onCheckpoint,
   settings,
   onSettingsChange,
 }: {
   onExit: () => void;
+  onExitCancelled?: () => void;
+  exitRequest?: number;
   initialState?: RunState | null;
   onCheckpoint: (state: RunState) => void;
   settings: PracticeSettings;
@@ -613,6 +631,8 @@ export function InfinityPractice({
       settings={settings}
       onSettingsChange={onSettingsChange}
       onExit={onExit}
+      onExitCancelled={onExitCancelled ?? (() => {})}
+      exitRequest={exitRequest}
       onRestart={() => setAttempt((n) => n + 1)}
     />
   );

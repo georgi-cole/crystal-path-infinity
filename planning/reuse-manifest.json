@@ -2,7 +2,7 @@
   "source_repository": "georgi-cole/bbmobilenew-source",
   "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
   "inspected_on": "2026-11-01",
-  "status": "cpi_visual_parity_webp_high_quality_compact_tile_controls_review_pending",
+  "status": "cpi013_navigation_and_cpi_visual_parity_integrated_source_art_license_pending",
   "resources": [
     {
       "path": "src/minigames/crystalPathShattered/shatteredLogic.ts",
@@ -269,7 +269,12 @@
       "target_stage": "CPI-013",
       "targets": [],
       "rights": "Proprietary owner source inspected by file path; no complete component or raw visual asset copied.",
-      "optimization": "Use only relevant standalone behavior or CSS primitives, removing seasonal, Redux, masked-image and unsupported native dependencies."
+      "optimization": "Use only relevant standalone behavior or CSS primitives, removing seasonal, Redux, masked-image and unsupported native dependencies.",
+      "cpi013_adaptation": {
+        "decision": "semantic_pattern_only_no_file_copy",
+        "implementation": "apps/mobile/src/main-menu.tsx",
+        "notes": "Standalone local navigation with no seasons/VIP/store dependency."
+      }
     },
     {
       "path": "src/components/GameButton/GameButton.css",
@@ -283,7 +288,12 @@
         "apps/mobile/src/styles.css"
       ],
       "rights": "Proprietary owner source inspected by file path; no complete component or raw visual asset copied.",
-      "optimization": "Use only relevant standalone behavior or CSS primitives, removing seasonal, Redux, masked-image and unsupported native dependencies."
+      "optimization": "Use only relevant standalone behavior or CSS primitives, removing seasonal, Redux, masked-image and unsupported native dependencies.",
+      "cpi013_adaptation": {
+        "decision": "semantic_pattern_only_no_file_copy",
+        "implementation": "apps/mobile/src/main-menu.css",
+        "notes": "Standalone local navigation with no seasons/VIP/store dependency."
+      }
     },
     {
       "path": "src/components/GameTopChip/GameTopChip.tsx",
@@ -295,7 +305,12 @@
       "target_stage": "CPI-013",
       "targets": [],
       "rights": "Proprietary owner source inspected by file path; no complete component or raw visual asset copied.",
-      "optimization": "Use only relevant standalone behavior or CSS primitives, removing seasonal, Redux, masked-image and unsupported native dependencies."
+      "optimization": "Use only relevant standalone behavior or CSS primitives, removing seasonal, Redux, masked-image and unsupported native dependencies.",
+      "cpi013_adaptation": {
+        "decision": "semantic_pattern_only_no_file_copy",
+        "implementation": "apps/mobile/src/main-menu.tsx",
+        "notes": "Standalone local navigation with no seasons/VIP/store dependency."
+      }
     },
     {
       "path": "src/components/GameTopChip/GameTopChip.css",
@@ -309,7 +324,12 @@
         "apps/mobile/src/infinity-scene.css"
       ],
       "rights": "Proprietary owner source inspected by file path; no complete component or raw visual asset copied.",
-      "optimization": "Use only relevant standalone behavior or CSS primitives, removing seasonal, Redux, masked-image and unsupported native dependencies."
+      "optimization": "Use only relevant standalone behavior or CSS primitives, removing seasonal, Redux, masked-image and unsupported native dependencies.",
+      "cpi013_adaptation": {
+        "decision": "semantic_pattern_only_no_file_copy",
+        "implementation": "apps/mobile/src/main-menu.css",
+        "notes": "Standalone local navigation with no seasons/VIP/store dependency."
+      }
     },
     {
       "path": "src/components/ui/StatusPill.tsx",
@@ -345,7 +365,12 @@
       "target_stage": "CPI-013",
       "targets": [],
       "rights": "Proprietary owner source inspected by file path; no complete component or raw visual asset copied.",
-      "optimization": "Use only relevant standalone behavior or CSS primitives, removing seasonal, Redux, masked-image and unsupported native dependencies."
+      "optimization": "Use only relevant standalone behavior or CSS primitives, removing seasonal, Redux, masked-image and unsupported native dependencies.",
+      "cpi013_adaptation": {
+        "decision": "semantic_pattern_only_no_file_copy",
+        "implementation": "apps/mobile/src/main-menu.tsx",
+        "notes": "Standalone local navigation with no seasons/VIP/store dependency."
+      }
     },
     {
       "path": "src/components/ui/GameBackButton/GameBackButton.css",
@@ -357,7 +382,12 @@
       "target_stage": "CPI-013",
       "targets": [],
       "rights": "Proprietary owner source inspected by file path; no complete component or raw visual asset copied.",
-      "optimization": "Use only relevant standalone behavior or CSS primitives, removing seasonal, Redux, masked-image and unsupported native dependencies."
+      "optimization": "Use only relevant standalone behavior or CSS primitives, removing seasonal, Redux, masked-image and unsupported native dependencies.",
+      "cpi013_adaptation": {
+        "decision": "semantic_pattern_only_no_file_copy",
+        "implementation": "apps/mobile/src/main-menu.css",
+        "notes": "Standalone local navigation with no seasons/VIP/store dependency."
+      }
     },
     {
       "path": "src/screens/HomeHub/HomeHub.css",
@@ -369,7 +399,12 @@
       "target_stage": "CPI-013",
       "targets": [],
       "rights": "Proprietary owner source inspected by file path; no complete component or raw visual asset copied.",
-      "optimization": "Use only relevant standalone behavior or CSS primitives, removing seasonal, Redux, masked-image and unsupported native dependencies."
+      "optimization": "Use only relevant standalone behavior or CSS primitives, removing seasonal, Redux, masked-image and unsupported native dependencies.",
+      "cpi013_adaptation": {
+        "decision": "semantic_pattern_only_no_file_copy",
+        "implementation": "apps/mobile/src/main-menu.css",
+        "notes": "Standalone local navigation with no seasons/VIP/store dependency."
+      }
     },
     {
       "path": "src/components/IntroSplash/IntroSplash.tsx",
@@ -478,6 +513,20 @@
       "targets": [],
       "rights": "Owner-proprietary source inspected only; no artwork, app identity or source file copied verbatim.",
       "optimization": "Keep only source behavior as review context; produce new offline assets and platform-native constraints."
+    },
+    {
+      "path": "src/screens/HomeHub/HomeHub.tsx",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/screens/HomeHub/HomeHub.tsx",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "decision": "reference_only_launcher_flow",
+      "notes": "Menu entry behavior reviewed; source season/weather/remote mode selection not imported.",
+      "reviewed_in": "CPI-013",
+      "target_stage": "CPI-013",
+      "targets": [
+        "apps/mobile/src/main-menu.tsx"
+      ],
+      "rights": "Proprietary owner source inspected only; no source file copied.",
+      "optimization": "Adapt standalone menu hierarchy, remove season/AI/store/remote service dependencies."
     }
   ],
   "do_not_copy": [
