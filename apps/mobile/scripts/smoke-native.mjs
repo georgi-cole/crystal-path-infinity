@@ -509,10 +509,7 @@ async function android() {
           assertRunning(logcat, 'Android lifecycle log capture');
           return (
             nativePaused() ||
-            androidHomeLaunchObserved(
-              appLog().slice(logOffset),
-              boundary.lineBeforeBackground,
-            )
+            androidHomeLaunchObserved(appLog().slice(logOffset), boundary.lineBeforeBackground)
           );
         });
       } catch (reason) {
