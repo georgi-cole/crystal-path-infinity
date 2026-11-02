@@ -73,7 +73,7 @@ describe('CPI-008 standalone scene', () => {
     const html = markup({ paused: true });
     expect((html.match(/data-row=/g) || []).length).toBeLessThanOrEqual(5);
     expect(html).toContain('aria-modal="true"');
-    expect(html).toMatch(/disabled=""[^>]*aria-label="Row 1 left tile"/);
+    expect(html).toMatch(/aria-label="Row 1 left tile"[^>]*disabled=""/);
   });
   it('keeps the hint control reachable without duplicating left/right tiles', () => {
     const html = markup();
