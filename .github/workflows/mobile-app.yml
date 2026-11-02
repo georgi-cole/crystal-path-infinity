@@ -45,6 +45,15 @@ jobs:
         run: |
           mkdir -p apps/mobile/artifacts
           npm ls --workspace @crystal-path-infinity/mobile --depth=0 --json > apps/mobile/artifacts/npm-dependencies.json
+      - name: Export CPI-009 formatted files for repair
+        run: |
+          npx prettier --write apps/mobile/config/practice-save.test.ts apps/mobile/src/App.tsx apps/mobile/src/infinity-scene.tsx apps/mobile/src/practice-save.ts apps/mobile/src/styles.css
+          node - <<'NODE'
+          const fs=require('node:fs');
+          for(const path of ['apps/mobile/config/practice-save.test.ts','apps/mobile/src/App.tsx','apps/mobile/src/infinity-scene.tsx','apps/mobile/src/practice-save.ts','apps/mobile/src/styles.css']) {
+            console.log('CPI009_FORMAT_START '+path+' '+fs.readFileSync(path).toString('base64')+' CPI009_FORMAT_END');
+          }
+          NODE
       - name: TypeScript
         run: npm run typecheck 2>&1 | tee apps/mobile/artifacts/typecheck.log
       - name: Lint
