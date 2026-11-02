@@ -2,7 +2,7 @@
   "source_repository": "georgi-cole/bbmobilenew-source",
   "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
   "inspected_on": "2026-11-01",
-  "status": "cpi013_menu_routes_and_practice_resume_integrated_account_backend_rankings_pending",
+  "status": "cpi013_hub_art_reused_and_cpi_visual_parity_hud_rebuilt_source_asset_rights_pending",
   "resources": [
     {
       "path": "src/minigames/crystalPathShattered/shatteredLogic.ts",
@@ -47,12 +47,20 @@
     },
     {
       "path": "src/minigames/crystalPathShattered/infinity-black-hole-bg.png",
-      "decision": "reuse_after_rights_check",
-      "notes": "Original bitmap provenance/rights remain separately tracked; it is not silently copied. CPI-008 supplies a bundled CSS-rendered black-hole atmosphere and rings, available offline without a network request. Exact bitmap comparison/replacement remains an asset review.",
+      "decision": "reuse_owner_directed_in_standalone",
+      "notes": "Exact owner-source PNG verified by Git blob SHA before quality-96 WebP conversion. Original 1.9 MB PNG is not bundled; standalone game uses its 201.7 KB WebP equivalent offline.",
       "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/minigames/crystalPathShattered/infinity-black-hole-bg.png",
       "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
-      "rights": "Proprietary owner source; reference only or pending rights review, not copied into the standalone project.",
-      "optimization": "Do not copy until rights and visual fidelity are reviewed; CSS-rendered offline black-hole fallback retained."
+      "rights": "Owner proprietary source reused under Georgi's direction; confirm original asset commercial redistribution provenance before store release.",
+      "optimization": "Quality-96 WebP, unchanged dimensions and artwork; reduces compressed size by 89.4%, preserves source SHA in manifest. Avoid remote fetch, maintain local Vite-bundled asset.",
+      "target_stage": "CPI-011 visual parity corrective follow-up",
+      "target_path": "apps/mobile/src/infinity-black-hole-bg.webp",
+      "source_blob_sha": "25e9ceb6f98ac43c2bc15354ce8be7b7e7596cd3",
+      "bytes": 1896459,
+      "source_bytes": 1896459,
+      "optimized_format": "WebP, quality 96, method 6, Pillow 11.3.0; 941×1672",
+      "optimized_bytes": 201680,
+      "optimized_blob_sha": "c8c0458f4f26dcc73a2b42d80663221d629c60a7"
     },
     {
       "path": "public/assets/sounds/minigames/minigame_gb_safe_step.mp3",
@@ -519,6 +527,150 @@
       ],
       "rights": "Proprietary owner source inspected only; no source file copied.",
       "optimization": "Adapt standalone menu hierarchy, remove season/AI/store/remote service dependencies."
+    },
+    {
+      "path": "public/assets/buttons/primary_large_normal.svg",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/public/assets/buttons/primary_large_normal.svg",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "target_path": "apps/mobile/public/intro-hub/buttons/primary_large_normal.svg",
+      "reviewed_in": "PR #53 visual premium follow-up",
+      "target_stage": "CPI-013 hub refinement",
+      "decision": "exact owner-source SVG copied with direct user instruction to reuse the Big Eye IntroHub",
+      "notes": "Original Big Eye HomeHub/GameButton/IntroHub visual asset, now local and offline in Crystal Path; not its season or Redux logic.",
+      "rights": "Owner-proprietary SVG transferred at Georgi's request; commercial third-party license clearance must be verified before store release.",
+      "optimization": "Compact standalone SVG, no dynamic image hosting or imported season runtime; CSS handles hover and pressed feedback."
+    },
+    {
+      "path": "public/assets/buttons/secondary_medium_normal.svg",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/public/assets/buttons/secondary_medium_normal.svg",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "target_path": "apps/mobile/public/intro-hub/buttons/secondary_medium_normal.svg",
+      "reviewed_in": "PR #53 visual premium follow-up",
+      "target_stage": "CPI-013 hub refinement",
+      "decision": "exact owner-source SVG copied with direct user instruction to reuse the Big Eye IntroHub",
+      "notes": "Original Big Eye HomeHub/GameButton/IntroHub visual asset, now local and offline in Crystal Path; not its season or Redux logic.",
+      "rights": "Owner-proprietary SVG transferred at Georgi's request; commercial third-party license clearance must be verified before store release.",
+      "optimization": "Compact standalone SVG, no dynamic image hosting or imported season runtime; CSS handles hover and pressed feedback."
+    },
+    {
+      "path": "public/assets/buttons/secondary_wide_normal.svg",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/public/assets/buttons/secondary_wide_normal.svg",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "target_path": "apps/mobile/public/intro-hub/buttons/secondary_wide_normal.svg",
+      "reviewed_in": "PR #53 visual premium follow-up",
+      "target_stage": "CPI-013 hub refinement",
+      "decision": "exact owner-source SVG copied with direct user instruction to reuse the Big Eye IntroHub",
+      "notes": "Original Big Eye HomeHub/GameButton/IntroHub visual asset, now local and offline in Crystal Path; not its season or Redux logic.",
+      "rights": "Owner-proprietary SVG transferred at Georgi's request; commercial third-party license clearance must be verified before store release.",
+      "optimization": "Compact standalone SVG, no dynamic image hosting or imported season runtime; CSS handles hover and pressed feedback."
+    },
+    {
+      "path": "public/assets/buttons/secondary_small_normal.svg",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/public/assets/buttons/secondary_small_normal.svg",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "target_path": "apps/mobile/public/intro-hub/buttons/secondary_small_normal.svg",
+      "reviewed_in": "PR #53 visual premium follow-up",
+      "target_stage": "CPI-013 hub refinement",
+      "decision": "exact owner-source SVG copied with direct user instruction to reuse the Big Eye IntroHub",
+      "notes": "Original Big Eye HomeHub/GameButton/IntroHub visual asset, now local and offline in Crystal Path; not its season or Redux logic.",
+      "rights": "Owner-proprietary SVG transferred at Georgi's request; commercial third-party license clearance must be verified before store release.",
+      "optimization": "Compact standalone SVG, no dynamic image hosting or imported season runtime; CSS handles hover and pressed feedback."
+    },
+    {
+      "path": "public/assets/intro_hub_icons/play.svg",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/public/assets/intro_hub_icons/play.svg",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "target_path": "apps/mobile/public/intro-hub/icons/play.svg",
+      "reviewed_in": "PR #53 visual premium follow-up",
+      "target_stage": "CPI-013 hub refinement",
+      "decision": "exact owner-source SVG copied with direct user instruction to reuse the Big Eye IntroHub",
+      "notes": "Original Big Eye HomeHub/GameButton/IntroHub visual asset, now local and offline in Crystal Path; not its season or Redux logic.",
+      "rights": "Owner-proprietary SVG transferred at Georgi's request; commercial third-party license clearance must be verified before store release.",
+      "optimization": "Compact standalone SVG, no dynamic image hosting or imported season runtime; CSS handles hover and pressed feedback."
+    },
+    {
+      "path": "public/assets/intro_hub_icons/rules.svg",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/public/assets/intro_hub_icons/rules.svg",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "target_path": "apps/mobile/public/intro-hub/icons/rules.svg",
+      "reviewed_in": "PR #53 visual premium follow-up",
+      "target_stage": "CPI-013 hub refinement",
+      "decision": "exact owner-source SVG copied with direct user instruction to reuse the Big Eye IntroHub",
+      "notes": "Original Big Eye HomeHub/GameButton/IntroHub visual asset, now local and offline in Crystal Path; not its season or Redux logic.",
+      "rights": "Owner-proprietary SVG transferred at Georgi's request; commercial third-party license clearance must be verified before store release.",
+      "optimization": "Compact standalone SVG, no dynamic image hosting or imported season runtime; CSS handles hover and pressed feedback."
+    },
+    {
+      "path": "public/assets/intro_hub_icons/leaderboard.svg",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/public/assets/intro_hub_icons/leaderboard.svg",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "target_path": "apps/mobile/public/intro-hub/icons/leaderboard.svg",
+      "reviewed_in": "PR #53 visual premium follow-up",
+      "target_stage": "CPI-013 hub refinement",
+      "decision": "exact owner-source SVG copied with direct user instruction to reuse the Big Eye IntroHub",
+      "notes": "Original Big Eye HomeHub/GameButton/IntroHub visual asset, now local and offline in Crystal Path; not its season or Redux logic.",
+      "rights": "Owner-proprietary SVG transferred at Georgi's request; commercial third-party license clearance must be verified before store release.",
+      "optimization": "Compact standalone SVG, no dynamic image hosting or imported season runtime; CSS handles hover and pressed feedback."
+    },
+    {
+      "path": "public/assets/intro_hub_icons/profile.svg",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/public/assets/intro_hub_icons/profile.svg",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "target_path": "apps/mobile/public/intro-hub/icons/profile.svg",
+      "reviewed_in": "PR #53 visual premium follow-up",
+      "target_stage": "CPI-013 hub refinement",
+      "decision": "exact owner-source SVG copied with direct user instruction to reuse the Big Eye IntroHub",
+      "notes": "Original Big Eye HomeHub/GameButton/IntroHub visual asset, now local and offline in Crystal Path; not its season or Redux logic.",
+      "rights": "Owner-proprietary SVG transferred at Georgi's request; commercial third-party license clearance must be verified before store release.",
+      "optimization": "Compact standalone SVG, no dynamic image hosting or imported season runtime; CSS handles hover and pressed feedback."
+    },
+    {
+      "path": "public/assets/side_utilities_button/side_utility_shell_normal.svg",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/public/assets/side_utilities_button/side_utility_shell_normal.svg",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "target_path": "apps/mobile/public/intro-hub/utilities/side_utility_shell_normal.svg",
+      "reviewed_in": "PR #53 visual premium follow-up",
+      "target_stage": "CPI-013 hub refinement",
+      "decision": "exact owner-source SVG copied with direct user instruction to reuse the Big Eye IntroHub",
+      "notes": "Original Big Eye HomeHub/GameButton/IntroHub visual asset, now local and offline in Crystal Path; not its season or Redux logic.",
+      "rights": "Owner-proprietary SVG transferred at Georgi's request; commercial third-party license clearance must be verified before store release.",
+      "optimization": "Compact standalone SVG, no dynamic image hosting or imported season runtime; CSS handles hover and pressed feedback."
+    },
+    {
+      "path": "public/assets/side_utilities_button/settings_v2.svg",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/public/assets/side_utilities_button/settings_v2.svg",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "target_path": "apps/mobile/public/intro-hub/utilities/settings_v2.svg",
+      "reviewed_in": "PR #53 visual premium follow-up",
+      "target_stage": "CPI-013 hub refinement",
+      "decision": "exact owner-source SVG copied with direct user instruction to reuse the Big Eye IntroHub",
+      "notes": "Original Big Eye HomeHub/GameButton/IntroHub visual asset, now local and offline in Crystal Path; not its season or Redux logic.",
+      "rights": "Owner-proprietary SVG transferred at Georgi's request; commercial third-party license clearance must be verified before store release.",
+      "optimization": "Compact standalone SVG, no dynamic image hosting or imported season runtime; CSS handles hover and pressed feedback."
+    },
+    {
+      "path": "public/assets/side_utilities_button/music_v2.svg",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/public/assets/side_utilities_button/music_v2.svg",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "target_path": "apps/mobile/public/intro-hub/utilities/music_v2.svg",
+      "reviewed_in": "PR #53 visual premium follow-up",
+      "target_stage": "CPI-013 hub refinement",
+      "decision": "exact owner-source SVG copied with direct user instruction to reuse the Big Eye IntroHub",
+      "notes": "Original Big Eye HomeHub/GameButton/IntroHub visual asset, now local and offline in Crystal Path; not its season or Redux logic.",
+      "rights": "Owner-proprietary SVG transferred at Georgi's request; commercial third-party license clearance must be verified before store release.",
+      "optimization": "Compact standalone SVG, no dynamic image hosting or imported season runtime; CSS handles hover and pressed feedback."
+    },
+    {
+      "path": "public/assets/side_utilities_button/sound_v2.svg",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/public/assets/side_utilities_button/sound_v2.svg",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "target_path": "apps/mobile/public/intro-hub/utilities/sound_v2.svg",
+      "reviewed_in": "PR #53 visual premium follow-up",
+      "target_stage": "CPI-013 hub refinement",
+      "decision": "exact owner-source SVG copied with direct user instruction to reuse the Big Eye IntroHub",
+      "notes": "Original Big Eye HomeHub/GameButton/IntroHub visual asset, now local and offline in Crystal Path; not its season or Redux logic.",
+      "rights": "Owner-proprietary SVG transferred at Georgi's request; commercial third-party license clearance must be verified before store release.",
+      "optimization": "Compact standalone SVG, no dynamic image hosting or imported season runtime; CSS handles hover and pressed feedback."
     }
   ],
   "do_not_copy": [
@@ -530,7 +682,7 @@
     "pr1509-preview duplicate tree",
     "Whole source repository or its complete dependency list"
   ],
-  "visual_identity": "Midnight Prism — pending Georgi visual approval",
+  "visual_identity": "Owner-approved reference direction: Big Eye IntroHub layout and original Infinity bridge art; final device visual sign-off pending",
   "original_assets": [
     {
       "path": "apps/mobile/public/brand/prism-mark.svg",

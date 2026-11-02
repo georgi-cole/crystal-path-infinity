@@ -167,6 +167,22 @@ describe('CPI-013 standalone menu and route model', () => {
     expect(readPracticePersonalBest(storage)).toBe(null);
   });
 
+  it('renders the original Big Eye hub silhouettes and genuinely functioning corner utilities', () => {
+    const html = render('home');
+    expect(html).toContain('intro-hub/buttons/primary_large_normal.svg');
+    expect(html).toContain('intro-hub/buttons/secondary_wide_normal.svg');
+    expect(html).toContain('intro-hub/buttons/secondary_medium_normal.svg');
+    expect(html).toContain('intro-hub/utilities/side_utility_shell_normal.svg');
+    expect(html).toContain('aria-label="Disable music"');
+    expect(html).toContain('aria-label="Disable sound effects"');
+    expect(html).toContain('aria-label="Open settings"');
+    const css = readFileSync(new URL('../src/intro-hub-premium.css', import.meta.url), 'utf8');
+    expect(css).toContain("url('./infinity-black-hole-bg.webp')");
+    expect(css).toContain('backdrop-filter');
+    expect(css).toContain('prefers-reduced-motion');
+    expect(css).toContain('max-height: 690px');
+  });
+
   it('provides safe areas, focus, touch sizing and reduced-motion rules', () => {
     const css = readFileSync(new URL('../src/main-menu.css', import.meta.url), 'utf8');
     expect(css).toContain('env(safe-area-inset-top');

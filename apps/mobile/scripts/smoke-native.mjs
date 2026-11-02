@@ -19,8 +19,13 @@ import { dirname, join, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import {
+  androidAppAnrObserved,
   androidBroadcastsIdle,
+  androidCpuInfoWithinBudget,
+  androidToyboxTopCpu,
   androidHomeLaunchObserved,
+  androidPressureWithinBudget,
+  androidRenderPressure,
   androidUserBootPosted,
 } from '../config/android-boot-readiness.ts';
 import {
@@ -344,8 +349,14 @@ async function android() {
       '-no-boot-anim',
       '-no-snapshot',
       '-wipe-data',
+      // The API 36 headless runner reproduced focus ANRs with gfxstream's
+      // direct SwiftShader GLES path both with and without Vulkan enabled.
+      // Use the supported ANGLE-on-SwiftShader GLES backend; preserve native
+      // WebView rendering, real HOME transitions and ANR failure semantics.
+      '-feature',
+      '-Vulkan',
       '-gpu',
-      'swiftshader',
+      'swangle',
       '-accel',
       'on',
       '-camera-back',
@@ -358,6 +369,105 @@ async function android() {
   let logcat;
   let boundary;
   let device;
+
+  /** A real target-app ANR must always fail, regardless of emulator pressure. */
+  function assertNoTargetAnr() {
+    assert.ok(
+      !androidAppAnrObserved(appLog().slice(logOffset), buildInfo.appId),
+      'Android target-app ANR during focus transition; see ActivityManager logs',
+    );
+  }
+
+  let psiAllowed = true;
+  function capturePressure() {
+    if (psiAllowed) {
+      const cpu = run(adb, adbArgs('shell', 'cat', '/proc/pressure/cpu'), {
+        timeout: 10_000,
+        allowFailure: true,
+      });
+      const io = run(adb, adbArgs('shell', 'cat', '/proc/pressure/io'), {
+        timeout: 10_000,
+        allowFailure: true,
+      });
+      if (cpu.status === 0 && io.status === 0) {
+        const metrics = androidRenderPressure(String(cpu.stdout), String(io.stdout));
+        assert.ok(metrics, 'Kernel pressure data is unreadable or malformed');
+        return {
+          source: 'kernel-psi',
+          metrics,
+          withinBudget: androidPressureWithinBudget(metrics),
+        };
+      }
+      psiAllowed = false;
+      save(
+        'android-pressure-source.txt',
+        'Android system restricted unprivileged /proc/pressure access; using live Toybox top.\n',
+      );
+    }
+    // Toybox measures fresh CPU activity for each invocation. The archived
+    // dumpsys cpuinfo fallback repeated 85% CPU unchanged for 118 samples.
+    const cpuInfo = text(adb, adbArgs('shell', 'top', '-b', '-n', '1', '-m', '1'), {
+      timeout: 15_000,
+    });
+    const metrics = androidToyboxTopCpu(cpuInfo);
+    assert.ok(metrics, 'Android Toybox top did not provide valid live CPU/IO telemetry');
+    return {
+      source: 'toybox-top',
+      metrics,
+      withinBudget: androidCpuInfoWithinBudget(metrics),
+    };
+  }
+
+  /**
+   * The fresh SwiftShader GPU can be saturated *after* Android boot, broadcast
+   * idle and even a fast native bridge handshake. Require 3 low-load samples
+   * (kernel PSI or Android dumpsys cpuinfo) plus quiet WebView resources.
+   * This test-only gate does not alter production startup or relax native proof.
+   */
+  async function waitForAndroidGraphicsSettling(stage, quietAssets = false) {
+    const samples = [];
+    const started = Date.now();
+    let lastAssetCount = -1;
+    let lastAssetAt = started;
+    let consecutiveGood = 0;
+    let completed = false;
+    try {
+      await waitFor('Android ' + stage + ' graphics/IO pressure readiness', 120_000, () => {
+        assertRunning(child, 'Android emulator');
+        assertRunning(logcat, 'Android lifecycle log capture');
+        assertNoTargetAnr();
+        const now = Date.now();
+        const currentLog = appLog().slice(logOffset);
+        const resourceCount = (currentLog.match(/D Capacitor: Handling local request:/g) ?? [])
+          .length;
+        if (resourceCount !== lastAssetCount) {
+          lastAssetCount = resourceCount;
+          lastAssetAt = now;
+          consecutiveGood = 0;
+        }
+        const pressure = capturePressure();
+        const resourceQuiet = !quietAssets || now - lastAssetAt >= 4000;
+        consecutiveGood = pressure.withinBudget && resourceQuiet ? consecutiveGood + 1 : 0;
+        samples.push({
+          at: new Date(now).toISOString(),
+          stage,
+          pressure,
+          resourceCount,
+          quietForMs: now - lastAssetAt,
+          consecutiveGood,
+        });
+        if (samples.length > 180) samples.shift();
+        return consecutiveGood >= 3 && now - started >= (quietAssets ? 6000 : 2500);
+      });
+      completed = true;
+    } finally {
+      save(
+        'android-attempt-' + attempt + '-' + stage + '-graphics-readiness.json',
+        JSON.stringify({ attempt, stage, completed, samples }, null, 2) + '\n',
+      );
+    }
+  }
+
   try {
     await waitFor('Android boot', 360_000, () => {
       assertRunning(child, 'Android emulator');
@@ -492,6 +602,9 @@ async function android() {
         assertRunning(logcat, 'Android lifecycle log capture');
         return hasStartupEvidence();
       });
+      // The initial bridge-ready marker precedes the first GPU/WebView paint.
+      await waitForAndroidGraphicsSettling('foreground', true);
+      recordLifecycleAction('foreground-render-stable');
       const initialPid = text(adb, adbArgs('shell', 'pidof', buildInfo.appId));
       boundary = lifecycleBoundary(readAnalysis());
       recordLifecycleAction('home', { boundary });
@@ -507,6 +620,7 @@ async function android() {
         await waitFor('Android Home key dispatch', 5_000, () => {
           assertRunning(child, 'Android emulator');
           assertRunning(logcat, 'Android lifecycle log capture');
+          assertNoTargetAnr();
           return (
             nativePaused() ||
             androidHomeLaunchObserved(appLog().slice(logOffset), boundary.lineBeforeBackground)
@@ -542,6 +656,7 @@ async function android() {
       await waitFor('Android native pause after Home', 30_000, () => {
         assertRunning(child, 'Android emulator');
         assertRunning(logcat, 'Android lifecycle log capture');
+        assertNoTargetAnr();
         return nativePaused();
       });
       recordLifecycleAction('native-pause-observed');
@@ -549,6 +664,9 @@ async function android() {
         `android-attempt-${attempt}-background-activity.txt`,
         text(adb, adbArgs('shell', 'dumpsys', 'activity', 'activities')),
       );
+      // Do not immediately switch focus back while the OS compositor is busy.
+      await waitForAndroidGraphicsSettling('background');
+      recordLifecycleAction('background-render-stable');
       recordLifecycleAction('resume-existing-activity');
       save(
         `android-attempt-${attempt}-resume.txt`,
@@ -556,6 +674,7 @@ async function android() {
       );
       await waitFor('Android bridge round-trip after real Home/resume', 30_000, () => {
         assertRunning(logcat, 'Android lifecycle log capture');
+        assertNoTargetAnr();
         return hasResumeEvidence(boundary);
       });
       const pid = text(adb, adbArgs('shell', 'pidof', buildInfo.appId));
@@ -601,6 +720,96 @@ async function android() {
     saveAttempt(boundary, true);
     return device;
   } catch (error) {
+    // Attach system focus/load evidence on failure without replacing the error.
+    for (const [name, commandArgs] of [
+      ['android-failure-cpu-pressure.txt', adbArgs('shell', 'cat', '/proc/pressure/cpu')],
+      ['android-failure-io-pressure.txt', adbArgs('shell', 'cat', '/proc/pressure/io')],
+      ['android-failure-window.txt', adbArgs('shell', 'dumpsys', 'window', 'windows')],
+      ['android-failure-activities.txt', adbArgs('shell', 'dumpsys', 'activity', 'activities')],
+      ['android-failure-gfxinfo.txt', adbArgs('shell', 'dumpsys', 'gfxinfo', buildInfo.appId)],
+    ]) {
+      const result = run(adb, commandArgs, { timeout: 15_000, allowFailure: true });
+      save(name, String(result.stdout ?? '') + '\n' + String(result.stderr ?? ''));
+    }
+    // The OS trace may be root-only even when /data/anr can be listed.
+    // Collect the readable DropBox copy first, then try adb root on this
+    // disposable AOSP emulator. A production/root-denied image falls back
+    // to the official adb bugreport without bypassing the ANR failure.
+    const dropbox = run(adb, adbArgs('shell', 'dumpsys', 'dropbox', '--print', 'data_app_anr'), {
+      timeout: 25_000,
+      allowFailure: true,
+    });
+    save(
+      'android-failure-dropbox-anr.txt',
+      String(dropbox.stdout ?? '') + '\n' + String(dropbox.stderr ?? ''),
+    );
+    const rootResult = run(adb, adbArgs('root'), { timeout: 20_000, allowFailure: true });
+    save(
+      'android-failure-adb-root.txt',
+      String(rootResult.stdout ?? '') + '\n' + String(rootResult.stderr ?? ''),
+    );
+    if (rootResult.status === 0) {
+      try {
+        await waitFor(
+          'failure-only Android root debug connection',
+          25_000,
+          () =>
+            text(adb, adbArgs('shell', 'id', '-u'), { timeout: 10_000, allowFailure: true }) ===
+            '0',
+        );
+      } catch (rootError) {
+        save('android-failure-root-debug-error.txt', String(rootError));
+      }
+    }
+    const anrList = run(adb, adbArgs('shell', 'ls', '-1', '/data/anr'), {
+      timeout: 15_000,
+      allowFailure: true,
+    });
+    save(
+      'android-failure-anr-index.txt',
+      String(anrList.stdout ?? '') + '\n' + String(anrList.stderr ?? ''),
+    );
+    let traceCaptured = false;
+    if (anrList.status === 0) {
+      const traces = String(anrList.stdout ?? '')
+        .split(/\r?\n/)
+        .filter((name) => /^anr_[a-zA-Z0-9_.-]+$/.test(name))
+        .slice(-2);
+      for (const [index, name] of traces.entries()) {
+        const trace = run(adb, adbArgs('shell', 'cat', '/data/anr/' + name), {
+          timeout: 20_000,
+          allowFailure: true,
+        });
+        const body = String(trace.stdout ?? '') + '\n' + String(trace.stderr ?? '');
+        save('android-failure-anr-trace-' + (index + 1) + '.txt', body);
+        if (trace.status === 0 && body.includes('Cmd line: ' + buildInfo.appId))
+          traceCaptured = true;
+      }
+    }
+    if (!traceCaptured) {
+      const report = run(
+        adb,
+        adbArgs('bugreport', join(evidenceRoot, 'android-failure-bugreport.zip')),
+        { timeout: 120_000, allowFailure: true },
+      );
+      save(
+        'android-failure-bugreport-status.txt',
+        JSON.stringify({
+          status: report.status,
+          error: String(report.error ?? ''),
+          stdout: String(report.stdout ?? '').slice(-2000),
+          stderr: String(report.stderr ?? '').slice(-2000),
+        }),
+      );
+    }
+    const lastAnr = run(adb, adbArgs('shell', 'dumpsys', 'activity', 'lastanr'), {
+      timeout: 15_000,
+      allowFailure: true,
+    });
+    save(
+      'android-failure-last-anr.txt',
+      String(lastAnr.stdout ?? '') + '\n' + String(lastAnr.stderr ?? ''),
+    );
     const screenshot = run(adb, adbArgs('exec-out', 'screencap', '-p'), {
       timeout: 10_000,
       binary: true,

@@ -1,8 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
+  androidAppAnrObserved,
   androidBroadcastsIdle,
+  androidCpuInfoWithinBudget,
+  androidToyboxTopCpu,
   androidHomeLaunchObserved,
+  androidPressureWithinBudget,
+  androidRenderPressure,
   androidUserBootPosted,
 } from './android-boot-readiness';
 
@@ -71,6 +76,109 @@ describe('CPI-011 strict Android first-boot readiness', () => {
     expect(script).toContain("'android.intent.category.HOME'");
     expect(script).toContain("waitFor('Android native pause after Home', 30_000");
     expect(script).toContain("waitFor('Android bridge round-trip after real Home/resume', 30_000");
+  });
+
+  it('parses Android kernel PSI accurately, rejecting invalid or absent observations', () => {
+    const cpu =
+      'some avg10=70.92 avg60=39.10 avg300=10.54 total=33920200\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0';
+    const io =
+      'some avg10=12.71 avg60=9.48 avg300=2.75 total=9076181\nfull avg10=0.32 avg60=1.43 avg300=0.53 total=1996763';
+    expect(androidRenderPressure(cpu, io)).toEqual({
+      cpuSomeAvg10: 70.92,
+      ioSomeAvg10: 12.71,
+    });
+    expect(androidPressureWithinBudget(androidRenderPressure(cpu, io))).toBe(false);
+    expect(
+      androidPressureWithinBudget(
+        androidRenderPressure(
+          'some avg10=18.00 avg60=11.00 total=12',
+          'some avg10=1.50 avg60=3.00 total=8',
+        ),
+      ),
+    ).toBe(true);
+    expect(androidRenderPressure('no PSI', io)).toBe(null);
+    expect(androidRenderPressure(cpu, 'some avg10=unknown')).toBe(null);
+    expect(androidPressureWithinBudget(null)).toBe(false);
+    expect(androidRenderPressure('full avg10=0', io)).toBe(null);
+  });
+
+  it('samples fresh, normalized Android Toybox top load without root', () => {
+    const high =
+      'Tasks: 201 total, 3 running\n' +
+      '400%cpu 340%user 0%nice 30%sys 20%idle 10%iow 0%irq 0%sirq 0%host';
+    const quiet =
+      'Tasks: 198 total, 1 running\n' +
+      '400%cpu 22%user 0%nice 9%sys 368%idle 1%iow 0%irq 0%sirq 0%host';
+    expect(androidToyboxTopCpu(high)).toEqual({
+      totalCpuPercent: 92.5,
+      ioWaitPercent: 2.5,
+    });
+    expect(androidCpuInfoWithinBudget(androidToyboxTopCpu(high))).toBe(false);
+    expect(androidToyboxTopCpu(quiet)).toEqual({
+      totalCpuPercent: 7.75,
+      ioWaitPercent: 0.25,
+    });
+    expect(androidCpuInfoWithinBudget(androidToyboxTopCpu(quiet))).toBe(true);
+    expect(androidToyboxTopCpu('85% TOTAL: 5.7% iowait')).toBe(null);
+    expect(androidToyboxTopCpu('cat: /proc/pressure/cpu: Permission denied')).toBe(null);
+    expect(androidToyboxTopCpu('400%cpu 399%idle')).toBe(null);
+    expect(androidToyboxTopCpu('400%cpu 400%idle 20%iow')).toBe(null);
+    expect(androidCpuInfoWithinBudget(null)).toBe(false);
+    const script = readFileSync(new URL('../scripts/smoke-native.mjs', import.meta.url), 'utf8');
+    expect(script).toContain("'top', '-b', '-n', '1', '-m', '1'");
+    expect(script).not.toContain("adbArgs('shell', 'dumpsys', 'cpuinfo')");
+  });
+
+  it('flags an actual app ANR, not unrelated system messages or another app', () => {
+    const appId = 'com.georgicole.crystalpath.infinity.dev';
+    const report =
+      '1793639689.646 621 2636 E ActivityManager: ANR in ' +
+      appId +
+      ' (' +
+      appId +
+      '/.MainActivity)';
+    expect(androidAppAnrObserved(report, appId)).toBe(true);
+    expect(androidAppAnrObserved('ANR in com.android.launcher3', appId)).toBe(false);
+    expect(androidAppAnrObserved('W ActivityManager: ANR in ' + appId, appId)).toBe(false);
+    expect(androidAppAnrObserved('', appId)).toBe(false);
+  });
+
+  it('gates ordinary HOME on stable graphics and retains strict native evidence', () => {
+    const script = readFileSync(new URL('../scripts/smoke-native.mjs', import.meta.url), 'utf8');
+    const ready = script.indexOf('waitForAndroidGraphicsSettling');
+    const home = script.indexOf("recordLifecycleAction('home'");
+    expect(ready).toBeGreaterThan(0);
+    expect(home).toBeGreaterThan(ready);
+    expect(script).toContain('androidAppAnrObserved(');
+    expect(script).toContain('androidPressureWithinBudget(');
+    expect(script).toContain("waitFor('Android native pause after Home', 30_000");
+    expect(script).toContain("waitFor('Android bridge round-trip after real Home/resume', 30_000");
+    expect(script).toContain('assert.equal(pid, initialPid');
+  });
+
+  it('disables flaky emulator Vulkan composition without bypassing real native events', () => {
+    const script = readFileSync(new URL('../scripts/smoke-native.mjs', import.meta.url), 'utf8');
+    expect(script).toContain("'-feature',\n      '-Vulkan'");
+    expect(script).toContain("'-gpu',\n      'swangle'");
+    expect(script).toContain("'android-failure-dropbox-anr.txt'");
+    expect(script).toContain("'android-failure-bugreport.zip'");
+    expect(script).toContain("'android-failure-anr-index.txt'");
+    expect(script).toContain("'android-failure-anr-trace-'");
+    expect(script).toContain("'android-failure-last-anr.txt'");
+    expect(script).toContain('assertNoTargetAnr()');
+    expect(script).toContain("waitFor('Android native pause after Home', 30_000");
+  });
+
+  it('pins a reduced graphics-work AOSP API 36 emulator with real lifecycle checks', () => {
+    const workflow = readFileSync(
+      new URL('../../../.github/workflows/mobile-app.yml', import.meta.url),
+      'utf8',
+    );
+    expect(workflow).toContain("'hw.cpu.ncore': '4'");
+    expect(workflow).toContain("'hw.ramSize': '3072M'");
+    expect(workflow).toContain("'hw.lcd.width': '720'");
+    expect(workflow).toContain("'hw.lcd.height': '1600'");
+    expect(workflow).toContain('system-images;android-36;default;x86_64');
   });
 
   it('pins the lifecycle emulator to AOSP API 36, without Google setup workload', () => {

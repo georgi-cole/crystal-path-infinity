@@ -5,6 +5,7 @@ import { createPracticeCursor, createRun, PRACTICE_RNG } from '@crystal-path-inf
 import { InfinitySceneView } from '../src/infinity-scene';
 import { DEFAULT_PRACTICE_SETTINGS } from '../src/practice-save';
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 
 const noop = () => {};
 function makeState() {
@@ -42,10 +43,27 @@ function markup(modifiers: Record<string, unknown> = {}) {
   );
 }
 describe('CPI-008 standalone scene', () => {
+  it('bundles source-verified black-hole artwork as high-quality offline WebP', () => {
+    const image = readFileSync(new URL('../src/infinity-black-hole-bg.webp', import.meta.url));
+    expect(image.length).toBe(201_680);
+    expect(image.subarray(0, 4).toString('ascii')).toBe('RIFF');
+    expect(image.subarray(8, 12).toString('ascii')).toBe('WEBP');
+    const gitObjectId = createHash('sha1')
+      .update('blob ' + image.length + '\0')
+      .update(image)
+      .digest('hex');
+    expect(gitObjectId).toBe('c8c0458f4f26dcc73a2b42d80663221d629c60a7');
+  });
+
   it('renders accessible left/right/hint controls, no season/AI/prize content', () => {
     const html = markup();
-    expect(html).toContain('aria-label="Choose left step"');
-    expect(html).toContain('aria-label="Choose right step"');
+    expect(html).toContain('aria-label="Row 1 left tile"');
+    expect(html).toContain('aria-label="Row 1 right tile"');
+    expect(html).not.toContain('aria-label="Choose left step"');
+    expect(html).not.toContain('aria-label="Choose right step"');
+    expect(html).not.toContain('class="cps-controls"');
+    expect(html).not.toContain('class="cpi-scene-actions"');
+    expect(html).toContain('class="visually-hidden" role="status" aria-live="polite"');
     expect(html).toContain('aria-label="Use hint, 2 remaining"');
     expect(html).toContain('aria-label="Endless crystal bridge"');
     expect(html).not.toMatch(/VIP unlock|Season immunity|Live feed|AI standings|LOH|POS/);
@@ -55,8 +73,32 @@ describe('CPI-008 standalone scene', () => {
     const html = markup({ paused: true });
     expect((html.match(/data-row=/g) || []).length).toBeLessThanOrEqual(5);
     expect(html).toContain('aria-modal="true"');
-    expect(html).toMatch(/disabled=""[^>]*aria-label="Choose left step"/);
+    expect(html).toMatch(/aria-label="Row 1 left tile"[^>]*disabled=""/);
   });
+  it('keeps the hint control reachable without duplicating left/right tiles', () => {
+    const html = markup();
+    expect(html).toContain('cpi-scene-toolbar-actions');
+    expect(html).toContain('aria-label="Use hint, 2 remaining"');
+    expect(html).toContain('aria-label="Pause game"');
+    expect(html).toContain('class="cpi-scene-footer"');
+  });
+  it('keeps a premium, accessible HUD and real 14-segment SP meter', () => {
+    const html = markup();
+    expect(html).toContain('cpi-hud-header');
+    expect(html).toContain('cpi-pause-control');
+    expect(html).toContain('aria-label="Pause game"');
+    expect(html).toContain('cpi-energy-meter');
+    expect(html).toContain('aria-label="Survival points"');
+    expect(html).toContain('aria-valuenow="300"');
+    expect(html).toContain('cpi-energy-segments');
+    expect(html).toContain('cpi-hint-control');
+    const css = readFileSync(new URL('../src/infinity-hud-premium.css', import.meta.url), 'utf8');
+    expect(css).toContain('grid-template-columns: repeat(14');
+    expect(css).toContain('perspective: 1100px');
+    expect(css).toContain('min-height: clamp(23rem, 66dvh, 43rem)');
+    expect(css).toContain('prefers-reduced-motion');
+  });
+
   it('applies the optional in-app reduced-motion setting', () => {
     const html = markup({ settings: { ...DEFAULT_PRACTICE_SETTINGS, reducedMotion: true } });
     expect(html).toContain('cpi-reduced-motion');
@@ -66,6 +108,13 @@ describe('CPI-008 standalone scene', () => {
     expect(css).toContain('env(safe-area-inset-top');
     expect(css).toMatch(/max-height:\s*650px/);
     expect(css).toContain('prefers-reduced-motion');
-    expect(css).not.toContain("url('./infinity-black-hole-bg.png')");
+    expect(css).toContain("url('./infinity-black-hole-bg.webp')");
+    const railRules = css.match(
+      /\.cps-shell--premium \.cps-board::before,\s*\.cps-shell--premium \.cps-board::after\s*\{([^}]+)\}/,
+    );
+    expect(railRules?.[1]).toContain('bottom: 56%');
+    expect(railRules?.[1]).toContain('pointer-events: none');
+    expect(railRules?.[1]).toContain('mask-image: linear-gradient(to bottom');
+    expect(railRules?.[1]).toContain('-webkit-mask-image: linear-gradient(to bottom');
   });
 });

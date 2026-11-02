@@ -24,6 +24,7 @@ import type { PracticePauseLease, PracticeRuntime } from './practice-runtime';
 import { presentInfinityScene } from './infinity-presentation';
 import type { PresentedRow } from './infinity-presentation';
 import './infinity-scene.css';
+import './infinity-hud-premium.css';
 
 const particles = Array.from({ length: 6 }, (_, index) => index);
 const DEFAULT_VISUAL_SKIN = {
@@ -148,17 +149,46 @@ export function InfinitySceneView({
       </div>
       <div className="cps-content">
         <div className="cpi-scene-toolbar">
-          <span className="cpi-practice-tag">Crystal Path · Offline practice</span>
-          <button
-            type="button"
-            onClick={onPause}
-            disabled={!ready || busy || !!error || state.status !== 'playing'}
-            aria-label={paused ? 'Resume game' : 'Pause game'}
-          >
-            {paused ? 'Resume' : 'Pause'}
-          </button>
+          <span className="cpi-practice-tag">
+            <span className="cpi-practice-indicator" aria-hidden="true" />
+            LOCAL · INFINITY PROTOCOL
+          </span>
+          <div className="cpi-scene-toolbar-actions">
+            <button
+              type="button"
+              className="cps-hint-btn cpi-hud-control cpi-hint-control"
+              onClick={onHint}
+              disabled={!interactive || state.hints === 0}
+              aria-label={`Use hint, ${state.hints} remaining`}
+            >
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 2.8 14.5 9.5 21.2 12 14.5 14.5 12 21.2 9.5 14.5 2.8 12 9.5 9.5Z" />
+                <path d="M12 8v8M8 12h8" />
+              </svg>
+              <span className="cps-hint-count">{state.hints}</span>
+            </button>
+            <button
+              type="button"
+              className="cpi-pause-control cpi-hud-control"
+              onClick={onPause}
+              disabled={!ready || busy || !!error || state.status !== 'playing'}
+              aria-label={paused ? 'Resume game' : 'Pause game'}
+            >
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                {paused ? (
+                  <path d="m9 5 10 7-10 7V5Z" />
+                ) : (
+                  <>
+                    <rect x="6" y="5" width="4" height="14" rx="1" />
+                    <rect x="14" y="5" width="4" height="14" rx="1" />
+                  </>
+                )}
+              </svg>
+              <span>{paused ? 'Resume' : 'Pause'}</span>
+            </button>
+          </div>
         </div>
-        <header className="cps-header">
+        <header className="cps-header cpi-hud-header">
           <div className="cps-header-left">
             <span className="cps-protocol-label">
               <img
@@ -167,21 +197,26 @@ export function InfinitySceneView({
                 alt=""
                 aria-hidden="true"
               />
-              Crystal Path · Infinity
+              INFINITY / RUN
             </span>
             <span className="cps-player-name">Your path</span>
             <span className="cps-row-display">Row {presented.currentRow}</span>
           </div>
           <div className="cps-header-right">
-            <span className="cps-hints-display">Hints {state.hints}</span>
+            <span className="cps-hints-display">
+              <span className="cpi-hud-small-label">HINTS</span> {state.hints}
+            </span>
             <div className="cps-sp-display">
-              <span className="cps-sp-label">SP</span>
-              <span className={`cps-sp-value ${spClass}`}>{state.sp}</span>
+              <span className="cps-sp-label">SURVIVAL POINTS</span>
+              <span className={`cps-sp-value ${spClass}`}>
+                {state.sp}
+                <span className="cpi-hud-sp-unit"> SP</span>
+              </span>
             </div>
           </div>
         </header>
         <div
-          className={`cps-sp-bar-main ${state.sp <= 60 ? 'is-low' : ''}`}
+          className={`cps-sp-bar-main cpi-energy-meter ${state.sp <= 60 ? 'is-low' : ''}`}
           role="meter"
           aria-label="Survival points"
           aria-valuemin={0}
@@ -189,6 +224,12 @@ export function InfinitySceneView({
           aria-valuenow={state.sp}
         >
           <div className={`cps-sp-bar-fill ${spClass}`} style={{ width: `${spPct}%` }} />
+          <div className="cpi-energy-segments" aria-hidden="true">
+            {Array.from({ length: 14 }, (_, index) => (
+              <span key={index} />
+            ))}
+          </div>
+          <span className="cpi-energy-marker" style={{ left: `${spPct}%` }} aria-hidden="true" />
         </div>
         {presented.effects.length > 0 && (
           <div className="cps-effects" aria-label="Active effects">
@@ -259,48 +300,9 @@ export function InfinitySceneView({
             </div>
           </div>
         </section>
-        <div className="cps-controls">
-          <p className="cps-status" role="status" aria-live="polite">
-            {notice}
-          </p>
-          <div className="cpi-scene-actions">
-            <button
-              type="button"
-              onClick={() => onChoose('left')}
-              disabled={!interactive}
-              aria-label="Choose left step"
-            >
-              ← Left
-            </button>
-            <button
-              type="button"
-              onClick={() => onChoose('right')}
-              disabled={!interactive}
-              aria-label="Choose right step"
-            >
-              Right →
-            </button>
-          </div>
-          <button
-            type="button"
-            className="cps-hint-btn"
-            onClick={onHint}
-            disabled={!interactive || state.hints === 0}
-            aria-label={`Use hint, ${state.hints} remaining`}
-          >
-            ✧ <span className="cps-hint-count">{state.hints}</span>
-          </button>
-          {current?.mysteryAvailable && (
-            <button
-              type="button"
-              className="cpi-mystery-action"
-              onClick={onMystery}
-              disabled={!interactive}
-            >
-              Risk mystery ?
-            </button>
-          )}
-        </div>
+        <p className="visually-hidden" role="status" aria-live="polite">
+          {notice}
+        </p>
         <p className="cpi-scene-footer">
           Local practice · Not a ranked score · No fixed finish line
         </p>
