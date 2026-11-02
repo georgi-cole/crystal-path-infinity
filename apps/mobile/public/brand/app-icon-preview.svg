@@ -5,7 +5,7 @@
     <linearGradient id="iris" x1="134" y1="25" x2="209" y2="215" gradientUnits="userSpaceOnUse"><stop stop-color="#B8ACFF"/><stop offset=".52" stop-color="#7F83E7"/><stop offset="1" stop-color="#294A99"/></linearGradient>
     <linearGradient id="corridor" x1="128" y1="68" x2="128" y2="205" gradientUnits="userSpaceOnUse"><stop stop-color="#132F4D"/><stop offset="1" stop-color="#030918"/></linearGradient>
   </defs>
-  <rect width="512" height="512" rx="108" fill="url(#night)"/>
+  <rect width="512" height="512" fill="url(#night)"/>
   <circle cx="256" cy="256" r="187" stroke="#A1DFF6" stroke-opacity=".09" stroke-width="2"/>
   <circle cx="256" cy="256" r="153" stroke="#A1DFF6" stroke-opacity=".15" stroke-width="2"/>
   <g transform="translate(256 256) scale(1.5) translate(-128 -128)">

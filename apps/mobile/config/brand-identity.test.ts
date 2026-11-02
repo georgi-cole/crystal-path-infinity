@@ -16,8 +16,10 @@ describe('CPI-011 Midnight Prism identity', () => {
       expect(svg).not.toMatch(/THE BIG EYE|LOH|POS/);
     }
     expect(read('public/brand/prism-mark.svg')).toContain('viewBox="0 0 256 256"');
-    expect(read('public/brand/app-icon-preview.svg')).toContain('viewBox="0 0 512 512"');
-    expect(read('public/brand/app-icon-preview.svg')).toContain('fill="url(#night)"');
+    const icon = read('public/brand/app-icon-preview.svg');
+    expect(icon).toContain('viewBox="0 0 512 512"');
+    expect(icon).toContain('<rect width="512" height="512" fill="url(#night)"/>');
+    expect(icon).not.toContain('rx="108"');
   });
 
   it('keeps the intro, HUD and web icon consistent without image-embedded copy', () => {
