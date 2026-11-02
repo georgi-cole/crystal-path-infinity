@@ -127,8 +127,35 @@ class CpiWebView: WKWebView {
 }
 
 class CpiBridgeViewController: CAPBridgeViewController {
-    override func capacitorDidLoad() { bridge?.registerPluginInstance(CpiLifecycle()) }
+    override func capacitorDidLoad() {
+        bridge?.registerPluginInstance(CpiLifecycle())
+        bridge?.registerPluginInstance(CpiFeedback())
+    }
     override func webView(with frame: CGRect, configuration: WKWebViewConfiguration) -> WKWebView {
         CpiWebView(frame: frame, configuration: configuration)
+    }
+}
+
+@objc(CpiFeedback)
+public class CpiFeedback: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "CpiFeedback"
+    public let jsName = "CpiFeedback"
+    public let pluginMethods: [CAPPluginMethod] = [CAPPluginMethod(name: "impact", returnType: CAPPluginReturnPromise)]
+
+    @objc func impact(_ call: CAPPluginCall) {
+        guard let kind = call.getString("kind"),
+              ["step", "damage", "end"].contains(kind) else {
+            call.reject("Unsupported haptic cue")
+            return
+        }
+        DispatchQueue.main.async {
+            guard UIApplication.shared.applicationState == .active else { call.resolve(); return }
+            switch kind {
+            case "step": UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            case "damage": UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+            default: UINotificationFeedbackGenerator().notificationOccurred(.error)
+            }
+            call.resolve()
+        }
     }
 }

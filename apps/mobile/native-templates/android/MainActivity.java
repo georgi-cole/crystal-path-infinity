@@ -8,6 +8,7 @@ public class MainActivity extends BridgeActivity {
 
     @Override public void onCreate(Bundle state) {
         registerPlugin(CpiLifecycle.class);
+        registerPlugin(CpiFeedback.class);
         super.onCreate(state);
     }
 

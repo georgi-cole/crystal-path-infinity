@@ -2,7 +2,7 @@
   "source_repository": "georgi-cole/bbmobilenew-source",
   "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
   "inspected_on": "2026-11-01",
-  "status": "single_player_rules_and_css_scene_adapted_binary_assets_pending",
+  "status": "single_player_rules_css_and_selected_audio_adapted_source_music_pending",
   "resources": [
     {
       "path": "src/minigames/crystalPathShattered/shatteredLogic.ts",
@@ -44,39 +44,62 @@
     },
     {
       "path": "public/assets/sounds/minigames/minigame_gb_safe_step.mp3",
-      "decision": "reuse_after_rights_check",
-      "notes": "Safe-step audio.",
-      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/public/assets/sounds/minigames/minigame_gb_safe_step.mp3"
+      "decision": "reuse_under_owner_direction_pending_commercial_provenance_review",
+      "notes": "Safe-step audio. Copied unchanged from pinned owner repository for CPI-010; production third-party provenance/licensing remains for owner verification.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/public/assets/sounds/minigames/minigame_gb_safe_step.mp3",
+      "adapted_in": "CPI-010",
+      "targets": [
+        "apps/mobile/public/assets/sounds/minigames/minigame_gb_safe_step.mp3"
+      ]
     },
     {
       "path": "public/assets/sounds/minigames/minigame_gb_death.mp3",
-      "decision": "reuse_after_rights_check",
-      "notes": "Death audio.",
-      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/public/assets/sounds/minigames/minigame_gb_death.mp3"
+      "decision": "reuse_under_owner_direction_pending_commercial_provenance_review",
+      "notes": "Death audio. Copied unchanged from pinned owner repository for CPI-010; production third-party provenance/licensing remains for owner verification.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/public/assets/sounds/minigames/minigame_gb_death.mp3",
+      "adapted_in": "CPI-010",
+      "targets": [
+        "apps/mobile/public/assets/sounds/minigames/minigame_gb_death.mp3"
+      ]
     },
     {
       "path": "public/assets/sounds/minigames/minigame_gb_winner.mp3",
-      "decision": "reuse_after_rights_check",
-      "notes": "Potential personal-best/run-result cue after review; the standalone game has no fixed final-row victory.",
-      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/public/assets/sounds/minigames/minigame_gb_winner.mp3"
+      "decision": "reuse_under_owner_direction_pending_commercial_provenance_review",
+      "notes": "Potential personal-best/run-result cue after review; the standalone game has no fixed final-row victory. Copied unchanged from pinned owner repository for CPI-010; production third-party provenance/licensing remains for owner verification.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/public/assets/sounds/minigames/minigame_gb_winner.mp3",
+      "adapted_in": "CPI-010",
+      "targets": [
+        "apps/mobile/public/assets/sounds/minigames/minigame_gb_winner.mp3"
+      ]
     },
     {
       "path": "public/assets/sounds/minigames/minigame_gb_new_turn.mp3",
-      "decision": "reuse_after_rights_check",
-      "notes": "Optional start/resume cue; no season turn loop.",
-      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/public/assets/sounds/minigames/minigame_gb_new_turn.mp3"
+      "decision": "reuse_under_owner_direction_pending_commercial_provenance_review",
+      "notes": "Optional start/resume cue; no season turn loop. Copied unchanged from pinned owner repository for CPI-010; production third-party provenance/licensing remains for owner verification.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/public/assets/sounds/minigames/minigame_gb_new_turn.mp3",
+      "adapted_in": "CPI-010",
+      "targets": [
+        "apps/mobile/public/assets/sounds/minigames/minigame_gb_new_turn.mp3"
+      ]
     },
     {
       "path": "public/assets/music/glass_bridge.mp3",
-      "decision": "reuse_after_rights_check",
-      "notes": "New shell owns music playback and interruption behavior.",
-      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/public/assets/music/glass_bridge.mp3"
+      "decision": "pending_import",
+      "notes": "New shell owns music playback and interruption behavior. The source file exceeds the connector's direct-content limit. CPI-010 includes a separately authored offline interim WAV ambience, not the Big Eye track. Replace after original retrieval and rights review.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/public/assets/music/glass_bridge.mp3",
+      "targets": [
+        "apps/mobile/public/assets/music/crystal-ambient-interim.wav"
+      ]
     },
     {
       "path": "src/hooks/useGlassBridgeAudio.ts",
       "decision": "adapt",
       "notes": "Four SFX only; old global sound service is broader than needed.",
-      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/hooks/useGlassBridgeAudio.ts"
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/hooks/useGlassBridgeAudio.ts",
+      "adapted_in": "CPI-010",
+      "targets": [
+        "apps/mobile/src/standalone-audio.ts"
+      ]
     },
     {
       "path": "src/services/ads/admobBridge.ts",

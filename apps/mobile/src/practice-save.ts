@@ -15,6 +15,7 @@ export const PRACTICE_SAVE_KEYS = Object.freeze({
   head: 'cpi.practice.v1.head',
   slots: ['cpi.practice.v1.slot.0', 'cpi.practice.v1.slot.1'] as const,
   settings: 'cpi.practice.v1.settings',
+  personalBest: 'cpi.practice.v1.best',
 });
 export const MAX_CHECKPOINT_CHARS = 80_000;
 
@@ -43,15 +44,17 @@ export type PracticeLoad =
 export interface PracticeSettings {
   readonly music: boolean;
   readonly soundEffects: boolean;
+  readonly haptics: boolean;
   readonly reducedMotion: boolean;
 }
 export const DEFAULT_PRACTICE_SETTINGS: PracticeSettings = Object.freeze({
   music: true,
   soundEffects: true,
+  haptics: true,
   reducedMotion: false,
 });
 interface SettingsEnvelope {
-  version: 1;
+  version: 2;
   settings: PracticeSettings;
 }
 
@@ -184,13 +187,14 @@ export function readPracticeSettings(storage: PracticeStorage): {
     if (raw === null) return { settings: DEFAULT_PRACTICE_SETTINGS, warning: null };
     if (raw.length > 300) throw new Error('Settings are too large.');
     const value: unknown = JSON.parse(raw);
-    if (!isRecord(value) || value.version !== 1 || !isRecord(value.settings)) {
+    if (!isRecord(value) || (value.version !== 1 && value.version !== 2) || !isRecord(value.settings)) {
       throw new Error('Unsupported settings.');
     }
     const settings = value.settings;
     if (
       typeof settings.music !== 'boolean' ||
       typeof settings.soundEffects !== 'boolean' ||
+      (value.version === 2 && typeof settings.haptics !== 'boolean') ||
       typeof settings.reducedMotion !== 'boolean'
     ) {
       throw new Error('Invalid settings fields.');
@@ -199,6 +203,7 @@ export function readPracticeSettings(storage: PracticeStorage): {
       settings: {
         music: settings.music,
         soundEffects: settings.soundEffects,
+        haptics: value.version === 1 ? true : (settings.haptics as boolean),
         reducedMotion: settings.reducedMotion,
       },
       warning: null,
@@ -212,9 +217,23 @@ export function readPracticeSettings(storage: PracticeStorage): {
   }
 }
 export function writePracticeSettings(storage: PracticeStorage, settings: PracticeSettings): void {
-  for (const value of [settings.music, settings.soundEffects, settings.reducedMotion]) {
+  for (const value of [settings.music, settings.soundEffects, settings.haptics, settings.reducedMotion]) {
     if (typeof value !== 'boolean') throw new TypeError('Invalid practice setting.');
   }
-  const record: SettingsEnvelope = { version: 1, settings };
+  const record: SettingsEnvelope = { version: 2, settings };
   storage.setItem(PRACTICE_SAVE_KEYS.settings, JSON.stringify(record));
+}
+
+/** Strictly local practice best, never an official ranked result or upload token. */
+export function recordPracticePersonalBest(storage: PracticeStorage, score: string): boolean {
+  if (!/^(0|[1-9][0-9]*)$/.test(score) || score.length > 1000) {
+    throw new TypeError('Invalid local practice score.');
+  }
+  const stored = storage.getItem(PRACTICE_SAVE_KEYS.personalBest) ?? '0';
+  if (!/^(0|[1-9][0-9]*)$/.test(stored) || stored.length > 1000) {
+    throw new Error('The local personal-best record is damaged.');
+  }
+  if (BigInt(score) <= BigInt(stored)) return false;
+  storage.setItem(PRACTICE_SAVE_KEYS.personalBest, score);
+  return true;
 }
