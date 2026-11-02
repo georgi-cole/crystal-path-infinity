@@ -537,6 +537,7 @@ function makeInitialRun(): RunState {
 
 interface InfinityRunProps {
   onExit: () => void;
+  onViewRankings: () => void;
   onExitCancelled: () => void;
   exitRequest: number;
   onRestart: () => void;
@@ -547,6 +548,7 @@ interface InfinityRunProps {
 }
 function InfinityRun({
   onExit,
+  onViewRankings,
   onExitCancelled,
   exitRequest,
   onRestart,
@@ -564,10 +566,14 @@ function InfinityRun({
   const [paused, setPaused] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<SceneFeedback | null>(null);
+  const [confirmEnd, setConfirmEnd] = useState(false);
+  const [personalBest, setPersonalBest] = useState<string | null>(null);
+  const [newPersonalBest, setNewPersonalBest] = useState(false);
   const runtimeRef = useRef<PracticeRuntime | null>(null);
   const audioRef = useRef<StandaloneAudio | null>(null);
   const pauseRef = useRef<PracticePauseLease | null>(null);
   const commandLock = useRef(false);
+  const exitLock = useRef(false);
 
   useEffect(() => {
     let alive = true;
@@ -589,20 +595,24 @@ function InfinityRun({
       playback: audio,
       onTransition: (result: TimedSessionResult) => {
         if (!alive) return;
-        let personalBest = false;
+        let earnedNewBest = false;
         if (result.events.some((event) => event.type === 'run-ended')) {
           try {
-            personalBest = recordPracticePersonalBest(
+            earnedNewBest = recordPracticePersonalBest(
               window.localStorage,
               result.state.lastClearedRow,
             );
+            setPersonalBest(readPracticePersonalBest(window.localStorage));
+            setNewPersonalBest(earnedNewBest);
           } catch {
-            // Corrupted/unavailable local best data must not affect completion.
+            // A storage error must not change game result or claim a saved best.
+            setPersonalBest(null);
+            setNewPersonalBest(false);
           }
         }
         audio.playEvents(result.events, result.state, {
           foreground: document.visibilityState !== 'hidden',
-          personalBest,
+          personalBest: earnedNewBest,
         });
         if (
           result.events.length > 0 ||
@@ -663,13 +673,31 @@ function InfinityRun({
     audioRef.current?.setSettings(settings);
   }, [settings]);
 
+  useEffect(() => {
+    if (paused || confirmEnd || state.status !== 'playing' || error) {
+      document.querySelector<HTMLButtonElement>('.cpi-overlay [data-cpi-overlay-primary]')?.focus();
+    }
+  }, [paused, confirmEnd, state.status, state.pendingReward, error]);
+
+  useEffect(() => {
+    if (!confirmEnd) return;
+    const cancelOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setConfirmEnd(false);
+      }
+    };
+    document.addEventListener('keydown', cancelOnEscape);
+    return () => document.removeEventListener('keydown', cancelOnEscape);
+  }, [confirmEnd]);
+
   function unlockAudio() {
     void audioRef.current?.unlock();
   }
 
   async function issue(command: SessionCommand) {
     const runtime = runtimeRef.current;
-    if (!runtime || !ready || paused || commandLock.current) return;
+    if (!runtime || !ready || (paused && command.type !== 'end') || commandLock.current) return;
     commandLock.current = true;
     setBusy(true);
     try {
@@ -691,7 +719,11 @@ function InfinityRun({
     }
   }
 
-  async function togglePause() {
+  async function togglePause(requestEndAfterPause = false) {
+    if (requestEndAfterPause && paused) {
+      setConfirmEnd(true);
+      return;
+    }
     if (paused) unlockAudio();
     const runtime = runtimeRef.current;
     if (!runtime || commandLock.current) return;
@@ -708,6 +740,7 @@ function InfinityRun({
         pauseRef.current = lease;
         setPaused(true);
       }
+      if (requestEndAfterPause) setConfirmEnd(true);
       onCheckpoint(runtime.getState());
       lastCommittedActiveMs.current = runtime.getState().activeTimeMs;
       setState(runtime.getState());
@@ -731,27 +764,33 @@ function InfinityRun({
     }
   }
   const exit = useCallback(async () => {
-    if (
-      state.status === 'playing' &&
-      !window.confirm(
-        'Exit practice? Your latest committed checkpoint will remain available to continue.',
-      )
-    ) {
-      onExitCancelled();
-      return;
-    }
-    const runtime = runtimeRef.current;
-    if (runtime) {
-      try {
-        if (!paused) await runtime.hold('recovery');
-        onCheckpoint(runtime.getState());
-      } catch (cause) {
-        setError(cause instanceof Error ? cause.message : 'Unable to pause and save.');
+    if (exitLock.current || commandLock.current) return;
+    exitLock.current = true;
+    try {
+      const runtime = runtimeRef.current;
+      if (
+        (runtime?.getState().status ?? state.status) === 'playing' &&
+        !window.confirm(
+          'Save and leave practice? Your latest checkpoint stays available to resume. This does NOT end the run.',
+        )
+      ) {
         onExitCancelled();
         return;
       }
+      if (runtime) {
+        try {
+          if (!paused) await runtime.hold('recovery');
+          onCheckpoint(runtime.getState());
+        } catch (cause) {
+          setError(cause instanceof Error ? cause.message : 'Unable to pause and save.');
+          onExitCancelled();
+          return;
+        }
+      }
+      onExit();
+    } finally {
+      exitLock.current = false;
     }
-    onExit();
   }, [state.status, paused, onCheckpoint, onExit, onExitCancelled]);
 
   const handledExitRequest = useRef(0);
@@ -783,9 +822,28 @@ function InfinityRun({
       onPause={() => {
         void togglePause();
       }}
+      onRequestEnd={() => {
+        if (!ready || busy || commandLock.current || !presentRunOutcome(state).canEnd) return;
+        if (state.status === 'dead') {
+          setConfirmEnd(true);
+        } else {
+          void togglePause(true);
+        }
+      }}
+      onCancelEnd={() => setConfirmEnd(false)}
+      confirmEnd={confirmEnd}
       onEnd={() => {
+        if (!confirmEnd || !presentRunOutcome(state).canEnd) return;
+        // The explicit confirmation includes forfeiture of any unused grant.
+        // Core rejects unresolved pending rewards; no fake SSV success exists.
+        setConfirmEnd(false);
         void issue({ type: 'end', forfeitGrantedReward: true });
       }}
+      onViewRankings={() => {
+        if (state.status === 'finished' && state.result) onViewRankings();
+      }}
+      personalBest={personalBest}
+      newPersonalBest={newPersonalBest}
       onExit={() => {
         void exit();
       }}
@@ -802,6 +860,7 @@ function InfinityRun({
 /** A new attempt and an explicitly resumed checkpoint have distinct owners. */
 export function InfinityPractice({
   onExit,
+  onViewRankings,
   onExitCancelled,
   exitRequest = 0,
   initialState = null,
@@ -810,6 +869,7 @@ export function InfinityPractice({
   onSettingsChange,
 }: {
   onExit: () => void;
+  onViewRankings: () => void;
   onExitCancelled?: () => void;
   exitRequest?: number;
   initialState?: RunState | null;
@@ -818,6 +878,10 @@ export function InfinityPractice({
   onSettingsChange: (next: PracticeSettings) => void;
 }) {
   const [attempt, setAttempt] = useState(0);
+  const restartLock = useRef(false);
+  useEffect(() => {
+    restartLock.current = false;
+  }, [attempt]);
   return (
     <InfinityRun
       key={attempt}
@@ -826,9 +890,14 @@ export function InfinityPractice({
       settings={settings}
       onSettingsChange={onSettingsChange}
       onExit={onExit}
+      onViewRankings={onViewRankings}
       onExitCancelled={onExitCancelled ?? (() => {})}
       exitRequest={exitRequest}
-      onRestart={() => setAttempt((n) => n + 1)}
+      onRestart={() => {
+        if (restartLock.current) return;
+        restartLock.current = true;
+        setAttempt((n) => n + 1);
+      }}
     />
   );
 }
