@@ -392,15 +392,15 @@ async function android() {
         timeout: 15_000,
       });
       postedBootLine =
-        bootLog.split('\\n').find((line) => androidUserBootPosted(line)) ?? '';
+        bootLog.split('\n').find((line) => androidUserBootPosted(line)) ?? '';
       return Boolean(postedBootLine);
     });
-    save('android-user-boot-completed.log', postedBootLine + '\\n');
+    save('android-user-boot-completed.log', postedBootLine + '\n');
     recordLifecycleAction('android-user-boot-completed');
     const broadcastDrain = text(adb, adbArgs('shell', 'am', 'wait-for-broadcast-idle'), {
       timeout: 180_000,
     });
-    save('android-broadcast-idle.log', broadcastDrain + '\\n');
+    save('android-broadcast-idle.log', broadcastDrain + '\n');
     assert.ok(
       androidBroadcastsIdle(broadcastDrain),
       'Android user boot broadcasts have not drained: ' + broadcastDrain.slice(-1000),
