@@ -131,7 +131,8 @@ export function readPracticeCheckpoint(storage: PracticeStorage): PracticeLoad {
   } catch {
     return {
       status: 'corrupt',
-      message: 'The saved practice cannot be safely restored. Start a new practice to discard it; the previous run will not be replayed.',
+      message:
+        'The saved practice cannot be safely restored. Start a new practice to discard it; the previous run will not be replayed.',
     };
   }
 }
@@ -203,7 +204,11 @@ export function readPracticeSettings(storage: PracticeStorage): {
       warning: null,
     };
   } catch {
-    return { settings: DEFAULT_PRACTICE_SETTINGS, warning: 'Local practice settings were reset to defaults because the saved version was unreadable.' };
+    return {
+      settings: DEFAULT_PRACTICE_SETTINGS,
+      warning:
+        'Local practice settings were reset to defaults because the saved version was unreadable.',
+    };
   }
 }
 export function writePracticeSettings(storage: PracticeStorage, settings: PracticeSettings): void {

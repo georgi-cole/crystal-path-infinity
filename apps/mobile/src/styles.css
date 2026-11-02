@@ -294,9 +294,16 @@ h1 {
 }
 
 .cpi-storage-warning {
-  position: fixed; z-index: 99; left: max(.5rem, env(safe-area-inset-left,0px));
-  right: max(.5rem, env(safe-area-inset-right,0px));
-  bottom: max(.6rem, env(safe-area-inset-bottom,0px));
-  padding: .65rem .85rem; border: 1px solid #e0b26e; border-radius: .6rem;
-  color: #fff0cf; background: #33230e; font-size: .7rem; text-align: center;
+  position: fixed;
+  z-index: 99;
+  left: max(0.5rem, env(safe-area-inset-left, 0px));
+  right: max(0.5rem, env(safe-area-inset-right, 0px));
+  bottom: max(0.6rem, env(safe-area-inset-bottom, 0px));
+  padding: 0.65rem 0.85rem;
+  border: 1px solid #e0b26e;
+  border-radius: 0.6rem;
+  color: #fff0cf;
+  background: #33230e;
+  font-size: 0.7rem;
+  text-align: center;
 }

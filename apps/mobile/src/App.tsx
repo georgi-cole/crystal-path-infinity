@@ -103,7 +103,11 @@ function loadLocalPractice(): PracticeLoad {
   try {
     return readPracticeCheckpoint(window.localStorage);
   } catch {
-    return { status: 'corrupt', message: 'Local storage is unavailable. Practice is still playable, but progress may not be saved.' };
+    return {
+      status: 'corrupt',
+      message:
+        'Local storage is unavailable. Practice is still playable, but progress may not be saved.',
+    };
   }
 }
 
@@ -116,19 +120,32 @@ export function App() {
       writePracticeCheckpoint(window.localStorage, state);
       setStorageWarning(null);
     } catch {
-      setStorageWarning('Local storage could not save this checkpoint. You can keep playing, but progress might not survive an app restart.');
+      setStorageWarning(
+        'Local storage could not save this checkpoint. You can keep playing, but progress might not survive an app restart.',
+      );
     }
   }, []);
   function newPractice() {
-    if (saved.status === 'ready' && saved.state.status !== 'finished' &&
-      !window.confirm('Start a new practice? This permanently replaces the saved attempt and its progress.')) return;
-    if (saved.status === 'corrupt' &&
-      !window.confirm('Discard the damaged practice save and begin a new attempt?')) return;
+    if (
+      saved.status === 'ready' &&
+      saved.state.status !== 'finished' &&
+      !window.confirm(
+        'Start a new practice? This permanently replaces the saved attempt and its progress.',
+      )
+    )
+      return;
+    if (
+      saved.status === 'corrupt' &&
+      !window.confirm('Discard the damaged practice save and begin a new attempt?')
+    )
+      return;
     try {
       clearPracticeCheckpoint(window.localStorage);
       setStorageWarning(null);
     } catch {
-      setStorageWarning('Local storage is unavailable. The new attempt can be played but might not be saved.');
+      setStorageWarning(
+        'Local storage is unavailable. The new attempt can be played but might not be saved.',
+      );
     }
     setGame({ initial: null });
   }
@@ -144,12 +161,21 @@ export function App() {
     }
   }, []);
 
-  if (game) return (
-    <>
-      <InfinityPractice onExit={closePractice} initialState={game.initial} onCheckpoint={onCheckpoint} />
-      {storageWarning && <div role="alert" className="cpi-storage-warning">{storageWarning}</div>}
-    </>
-  );
+  if (game)
+    return (
+      <>
+        <InfinityPractice
+          onExit={closePractice}
+          initialState={game.initial}
+          onCheckpoint={onCheckpoint}
+        />
+        {storageWarning && (
+          <div role="alert" className="cpi-storage-warning">
+            {storageWarning}
+          </div>
+        )}
+      </>
+    );
 
   return (
     <main className="launch-screen" data-testid="app-ready" aria-labelledby="brand-title">
@@ -176,16 +202,30 @@ export function App() {
         </div>
         <p className="launch-message">The endless crystal bridge is taking shape.</p>
         {saved.status === 'ready' && (
-          <button className="preview-play-button" type="button" onClick={() => setGame({ initial: saved.state })}>
+          <button
+            className="preview-play-button"
+            type="button"
+            onClick={() => setGame({ initial: saved.state })}
+          >
             Continue practice · Row {saved.state.currentRow}
           </button>
         )}
-        {saved.status === 'corrupt' && <p className="preview-note" role="alert">{saved.message}</p>}
+        {saved.status === 'corrupt' && (
+          <p className="preview-note" role="alert">
+            {saved.message}
+          </p>
+        )}
         <button className="preview-play-button" type="button" onClick={newPractice}>
           {saved.status === 'corrupt' ? 'Discard save and start new' : 'New practice'}
         </button>
-        {storageWarning && <p className="preview-note" role="alert">{storageWarning}</p>}
-        <p className="preview-note">Offline practice · No account needed · Results are not ranked</p>
+        {storageWarning && (
+          <p className="preview-note" role="alert">
+            {storageWarning}
+          </p>
+        )}
+        <p className="preview-note">
+          Offline practice · No account needed · Results are not ranked
+        </p>
       </section>
 
       <footer className="launch-footer">

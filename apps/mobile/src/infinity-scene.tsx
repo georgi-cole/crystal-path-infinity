@@ -378,8 +378,11 @@ function InfinityRun({ onExit, onRestart, initialState, onCheckpoint }: Infinity
       schedule: schedulePracticeTick,
       onTransition: (result: TimedSessionResult) => {
         if (!alive) return;
-        if (result.events.length > 0 || result.state.status !== 'playing' ||
-          result.state.activeTimeMs - lastCommittedActiveMs.current >= 500) {
+        if (
+          result.events.length > 0 ||
+          result.state.status !== 'playing' ||
+          result.state.activeTimeMs - lastCommittedActiveMs.current >= 500
+        ) {
           onCheckpoint(result.state);
           lastCommittedActiveMs.current = result.state.activeTimeMs;
         }
@@ -402,8 +405,11 @@ function InfinityRun({ onExit, onRestart, initialState, onCheckpoint }: Infinity
     runtimeRef.current = runtime;
     const unsubscribeCheckpoint = lifecycle.subscribe((snapshot) => {
       if (!snapshot.active && alive) {
-        try { onCheckpoint(runtime.getState()); }
-        catch (cause) { setError(cause instanceof Error ? cause.message : 'Local save failed.'); }
+        try {
+          onCheckpoint(runtime.getState());
+        } catch (cause) {
+          setError(cause instanceof Error ? cause.message : 'Local save failed.');
+        }
       }
     });
     void runtime.ready
@@ -488,7 +494,13 @@ function InfinityRun({ onExit, onRestart, initialState, onCheckpoint }: Infinity
     }
   }
   async function exit() {
-    if (state.status === 'playing' && !window.confirm('Exit practice? Your latest committed checkpoint will remain available to continue.')) return;
+    if (
+      state.status === 'playing' &&
+      !window.confirm(
+        'Exit practice? Your latest committed checkpoint will remain available to continue.',
+      )
+    )
+      return;
     const runtime = runtimeRef.current;
     if (runtime) {
       try {
@@ -524,7 +536,9 @@ function InfinityRun({ onExit, onRestart, initialState, onCheckpoint }: Infinity
       onEnd={() => {
         void issue({ type: 'end', forfeitGrantedReward: true });
       }}
-      onExit={() => { void exit(); }}
+      onExit={() => {
+        void exit();
+      }}
       onRestart={onRestart}
       onRetry={() => {
         void retry();
@@ -535,15 +549,22 @@ function InfinityRun({ onExit, onRestart, initialState, onCheckpoint }: Infinity
 
 /** A new attempt and an explicitly resumed checkpoint have distinct owners. */
 export function InfinityPractice({
-  onExit, initialState = null, onCheckpoint,
+  onExit,
+  initialState = null,
+  onCheckpoint,
 }: {
   onExit: () => void;
   initialState?: RunState | null;
   onCheckpoint: (state: RunState) => void;
 }) {
   const [attempt, setAttempt] = useState(0);
-  return <InfinityRun
-    key={attempt} initialState={attempt === 0 ? initialState : null}
-    onCheckpoint={onCheckpoint} onExit={onExit}
-    onRestart={() => setAttempt(n => n + 1)} />;
+  return (
+    <InfinityRun
+      key={attempt}
+      initialState={attempt === 0 ? initialState : null}
+      onCheckpoint={onCheckpoint}
+      onExit={onExit}
+      onRestart={() => setAttempt((n) => n + 1)}
+    />
+  );
 }
