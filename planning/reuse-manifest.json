@@ -2,7 +2,7 @@
   "source_repository": "georgi-cole/bbmobilenew-source",
   "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
   "inspected_on": "2026-11-01",
-  "status": "single_player_rules_css_and_selected_audio_adapted_source_music_pending",
+  "status": "midnight_prism_candidate_ui_audit_done_commercial_clearance_pending",
   "resources": [
     {
       "path": "src/minigames/crystalPathShattered/shatteredLogic.ts",
@@ -14,7 +14,10 @@
         "packages/game-core/src/rules.ts",
         "packages/game-core/src/effects.ts",
         "packages/game-core/src/rows.ts"
-      ]
+      ],
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "rights": "Proprietary owner source adapted under Georgi's direction; external redistribution rights not independently cleared.",
+      "optimization": "Extract only standalone logic or interaction pattern; avoid source service dependencies, secrets and season state."
     },
     {
       "path": "src/minigames/crystalPathShattered/CrystalPathShatteredGame.tsx",
@@ -24,7 +27,10 @@
       "partially_adapted_in": "CPI-005",
       "targets": [
         "packages/game-core/src/run.ts"
-      ]
+      ],
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "rights": "Proprietary owner source adapted under Georgi's direction; external redistribution rights not independently cleared.",
+      "optimization": "Extract only standalone logic or interaction pattern; avoid source service dependencies, secrets and season state."
     },
     {
       "path": "src/minigames/crystalPathShattered/crystalPathShattered.css",
@@ -34,13 +40,19 @@
       "adapted_in": "CPI-008",
       "targets": [
         "apps/mobile/src/infinity-scene.css"
-      ]
+      ],
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "rights": "Proprietary owner source adapted under Georgi's direction; external redistribution rights not independently cleared.",
+      "optimization": "Adapt mobile-safe CSS selectively; remove seasonal selectors, excessive effects and unused assets."
     },
     {
       "path": "src/minigames/crystalPathShattered/infinity-black-hole-bg.png",
       "decision": "reuse_after_rights_check",
       "notes": "Original bitmap provenance/rights remain separately tracked; it is not silently copied. CPI-008 supplies a bundled CSS-rendered black-hole atmosphere and rings, available offline without a network request. Exact bitmap comparison/replacement remains an asset review.",
-      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/minigames/crystalPathShattered/infinity-black-hole-bg.png"
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/minigames/crystalPathShattered/infinity-black-hole-bg.png",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "rights": "Proprietary owner source; reference only or pending rights review, not copied into the standalone project.",
+      "optimization": "Do not copy until rights and visual fidelity are reviewed; CSS-rendered offline black-hole fallback retained."
     },
     {
       "path": "public/assets/sounds/minigames/minigame_gb_safe_step.mp3",
@@ -50,7 +62,10 @@
       "adapted_in": "CPI-010",
       "targets": [
         "apps/mobile/public/assets/sounds/minigames/minigame_gb_safe_step.mp3"
-      ]
+      ],
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "rights": "Proprietary owner source; owner-directed copy; pending third-party commercial licensing and provenance verification.",
+      "optimization": "Original offline MP3 bytes retained; verify third-party rights, codec and compression for commercial release."
     },
     {
       "path": "public/assets/sounds/minigames/minigame_gb_death.mp3",
@@ -60,7 +75,10 @@
       "adapted_in": "CPI-010",
       "targets": [
         "apps/mobile/public/assets/sounds/minigames/minigame_gb_death.mp3"
-      ]
+      ],
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "rights": "Proprietary owner source; owner-directed copy; pending third-party commercial licensing and provenance verification.",
+      "optimization": "Original offline MP3 bytes retained; verify third-party rights, codec and compression for commercial release."
     },
     {
       "path": "public/assets/sounds/minigames/minigame_gb_winner.mp3",
@@ -70,7 +88,10 @@
       "adapted_in": "CPI-010",
       "targets": [
         "apps/mobile/public/assets/sounds/minigames/minigame_gb_winner.mp3"
-      ]
+      ],
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "rights": "Proprietary owner source; owner-directed copy; pending third-party commercial licensing and provenance verification.",
+      "optimization": "Original offline MP3 bytes retained; verify third-party rights, codec and compression for commercial release."
     },
     {
       "path": "public/assets/sounds/minigames/minigame_gb_new_turn.mp3",
@@ -80,7 +101,10 @@
       "adapted_in": "CPI-010",
       "targets": [
         "apps/mobile/public/assets/sounds/minigames/minigame_gb_new_turn.mp3"
-      ]
+      ],
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "rights": "Proprietary owner source; owner-directed copy; pending third-party commercial licensing and provenance verification.",
+      "optimization": "Original offline MP3 bytes retained; verify third-party rights, codec and compression for commercial release."
     },
     {
       "path": "public/assets/music/glass_bridge.mp3",
@@ -89,7 +113,10 @@
       "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/public/assets/music/glass_bridge.mp3",
       "targets": [
         "apps/mobile/public/assets/music/crystal-ambient-interim.wav"
-      ]
+      ],
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "rights": "Proprietary owner source; reference only or pending rights review, not copied into the standalone project.",
+      "optimization": "Original large music not imported; standalone interim WAV is not presented as source music."
     },
     {
       "path": "src/hooks/useGlassBridgeAudio.ts",
@@ -99,37 +126,55 @@
       "adapted_in": "CPI-010",
       "targets": [
         "apps/mobile/src/standalone-audio.ts"
-      ]
+      ],
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "rights": "Proprietary owner source adapted under Georgi's direction; external redistribution rights not independently cleared.",
+      "optimization": "Extract only standalone logic or interaction pattern; avoid source service dependencies, secrets and season state."
     },
     {
       "path": "src/services/ads/admobBridge.ts",
       "decision": "reference",
       "notes": "Reference lifecycle/consent patterns only; add a standalone provider and SSV ledger. Re-evaluate all-ages child/unknown privacy, applicable parental/consent flows, exact Families SDK versions and closeability; do not inherit an adult-only policy.",
-      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/services/ads/admobBridge.ts"
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/services/ads/admobBridge.ts",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "rights": "Proprietary owner source; reference only or pending rights review, not copied into the standalone project.",
+      "optimization": "Extract only standalone logic or interaction pattern; avoid source service dependencies, secrets and season state."
     },
     {
       "path": "src/services/ads/admobConfig.ts",
       "decision": "adapt",
       "notes": "Rewarded-only config and new app/ad-unit IDs; no interstitial requirement. Apply the separately resolved privacyContext and permitted child/unknown settings before relevant data processing; optional age analytics never grants ad permission.",
-      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/services/ads/admobConfig.ts"
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/services/ads/admobConfig.ts",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "rights": "Proprietary owner source; reference only or pending rights review, not copied into the standalone project.",
+      "optimization": "Extract only standalone logic or interaction pattern; avoid source service dependencies, secrets and season state."
     },
     {
       "path": "capacitor.config.ts",
       "decision": "reference",
       "notes": "Fresh app identity; copy only needed safe-area/platform patterns.",
-      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/capacitor.config.ts"
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/capacitor.config.ts",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "rights": "Proprietary owner source; reference only or pending rights review, not copied into the standalone project.",
+      "optimization": "Extract only standalone logic or interaction pattern; avoid source service dependencies, secrets and season state."
     },
     {
       "path": "ios/App/App/MainViewController.swift",
       "decision": "reference",
       "notes": "Review safe-area/idle-timer patterns without story icon plugin.",
-      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/ios/App/App/MainViewController.swift"
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/ios/App/App/MainViewController.swift",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "rights": "Proprietary owner source; reference only or pending rights review, not copied into the standalone project.",
+      "optimization": "Extract only standalone logic or interaction pattern; avoid source service dependencies, secrets and season state."
     },
     {
       "path": "src/services/backend/supabaseTransport.ts",
       "decision": "reference",
       "notes": "Timeout/session patterns only; replace anonymous install-bound identity.",
-      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/services/backend/supabaseTransport.ts"
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/services/backend/supabaseTransport.ts",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "rights": "Proprietary owner source; reference only or pending rights review, not copied into the standalone project.",
+      "optimization": "Extract only standalone logic or interaction pattern; avoid source service dependencies, secrets and season state."
     },
     {
       "path": "tests/crystalPathShattered.logic.test.ts",
@@ -140,39 +185,231 @@
       "targets": [
         "packages/game-core/test/fixtures/source-baseline.ts",
         "packages/game-core/test/baseline.test.ts"
-      ]
+      ],
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "rights": "Proprietary owner source adapted under Georgi's direction; external redistribution rights not independently cleared.",
+      "optimization": "Extract only standalone logic or interaction pattern; avoid source service dependencies, secrets and season state."
     },
     {
       "path": "tests/crystalPathShattered.asyncFlow.test.tsx",
       "decision": "adapt",
       "notes": "CPI-005 references survived-wrong and historical fatal-progress behavior in pinned-source fixtures. No React async-flow suite is ported yet; rendering/unmount and gameplay integration remain subsequent tasks.",
       "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/tests/crystalPathShattered.asyncFlow.test.tsx",
-      "referenced_in": "CPI-005"
+      "referenced_in": "CPI-005",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "rights": "Proprietary owner source; reference only or pending rights review, not copied into the standalone project.",
+      "optimization": "Extract only standalone logic or interaction pattern; avoid source service dependencies, secrets and season state."
     },
     {
       "path": "tests/crystalPathShattered.styles.test.ts",
       "decision": "review",
       "notes": "Keep only useful presentation invariants.",
-      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/tests/crystalPathShattered.styles.test.ts"
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/tests/crystalPathShattered.styles.test.ts",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "rights": "Proprietary owner source; reference only or pending rights review, not copied into the standalone project.",
+      "optimization": "Extract only standalone logic or interaction pattern; avoid source service dependencies, secrets and season state."
     },
     {
       "path": "tests/integration/minigame.crystalPathShattered.integration.test.ts",
       "decision": "replace",
       "notes": "Replace host wiring with standalone lifecycle and backend tests.",
-      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/tests/integration/minigame.crystalPathShattered.integration.test.ts"
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/tests/integration/minigame.crystalPathShattered.integration.test.ts",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "rights": "Proprietary owner source; reference only or pending rights review, not copied into the standalone project.",
+      "optimization": "Extract only standalone logic or interaction pattern; avoid source service dependencies, secrets and season state."
     },
     {
       "path": "LICENSE",
       "decision": "retain",
       "notes": "Proprietary copyright 2026 Georgi Kolev; asset-specific checks still required.",
-      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/LICENSE"
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/LICENSE",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "rights": "Proprietary owner source; reference only or pending rights review, not copied into the standalone project.",
+      "optimization": "Extract only standalone logic or interaction pattern; avoid source service dependencies, secrets and season state."
     },
     {
       "path": "src/store/rng.ts",
       "decision": "reference",
       "referenced_in": "CPI-005",
       "notes": "The immutable original mulberry32 implementation is used only to capture independent source route vectors. New practice RNG and injected route/reward cursors belong to the standalone core; the whole store is not copied.",
-      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/store/rng.ts"
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/store/rng.ts",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "rights": "Proprietary owner source; reference only or pending rights review, not copied into the standalone project.",
+      "optimization": "Extract only standalone logic or interaction pattern; avoid source service dependencies, secrets and season state."
+    },
+    {
+      "path": "src/styles/gameDesignSystem.css",
+      "decision": "adapt_design_tokens",
+      "notes": "Adapt semantic token and motion organization to standalone --cpi-* variables, not Big Eye global CSS.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/styles/gameDesignSystem.css",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "reviewed_in": "CPI-011",
+      "target_stage": "CPI-011",
+      "targets": [
+        "apps/mobile/src/brand-tokens.css"
+      ],
+      "rights": "Proprietary owner source inspected by file path; no complete component or raw visual asset copied.",
+      "optimization": "Use only relevant standalone behavior or CSS primitives, removing seasonal, Redux, masked-image and unsupported native dependencies."
+    },
+    {
+      "path": "src/components/GameButton/GameButton.tsx",
+      "decision": "reference_for_CPI_013",
+      "notes": "Inspect SVG-backed press, focus and enabled states; holiday artwork, masked assets and season variants are coupled and must not be imported.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/components/GameButton/GameButton.tsx",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "reviewed_in": "CPI-011",
+      "target_stage": "CPI-013",
+      "targets": [],
+      "rights": "Proprietary owner source inspected by file path; no complete component or raw visual asset copied.",
+      "optimization": "Use only relevant standalone behavior or CSS primitives, removing seasonal, Redux, masked-image and unsupported native dependencies."
+    },
+    {
+      "path": "src/components/GameButton/GameButton.css",
+      "decision": "adapt_visual_pattern",
+      "notes": "Use polished bevel, pressed and focus affordances as inspiration for standalone glass actions; do not copy source masked button art.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/components/GameButton/GameButton.css",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "reviewed_in": "CPI-011",
+      "target_stage": "CPI-011",
+      "targets": [
+        "apps/mobile/src/styles.css"
+      ],
+      "rights": "Proprietary owner source inspected by file path; no complete component or raw visual asset copied.",
+      "optimization": "Use only relevant standalone behavior or CSS primitives, removing seasonal, Redux, masked-image and unsupported native dependencies."
+    },
+    {
+      "path": "src/components/GameTopChip/GameTopChip.tsx",
+      "decision": "reference_for_CPI_013",
+      "notes": "A stretch-safe and semantic HUD status chip is useful; avoid fixed-width calculations for unbounded decimal row labels.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/components/GameTopChip/GameTopChip.tsx",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "reviewed_in": "CPI-011",
+      "target_stage": "CPI-013",
+      "targets": [],
+      "rights": "Proprietary owner source inspected by file path; no complete component or raw visual asset copied.",
+      "optimization": "Use only relevant standalone behavior or CSS primitives, removing seasonal, Redux, masked-image and unsupported native dependencies."
+    },
+    {
+      "path": "src/components/GameTopChip/GameTopChip.css",
+      "decision": "adapt_visual_pattern",
+      "notes": "Compact glass HUD hierarchy informs the standalone header, without copying season/experiment overrides.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/components/GameTopChip/GameTopChip.css",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "reviewed_in": "CPI-011",
+      "target_stage": "CPI-011",
+      "targets": [
+        "apps/mobile/src/infinity-scene.css"
+      ],
+      "rights": "Proprietary owner source inspected by file path; no complete component or raw visual asset copied.",
+      "optimization": "Use only relevant standalone behavior or CSS primitives, removing seasonal, Redux, masked-image and unsupported native dependencies."
+    },
+    {
+      "path": "src/components/ui/StatusPill.tsx",
+      "decision": "reference_not_imported",
+      "notes": "Duplicates GameTopChip vocabulary and relies on Big Eye variants; do not bring in second status system.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/components/ui/StatusPill.tsx",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "reviewed_in": "CPI-011",
+      "target_stage": "CPI-013",
+      "targets": [],
+      "rights": "Proprietary owner source inspected by file path; no complete component or raw visual asset copied.",
+      "optimization": "Use only relevant standalone behavior or CSS primitives, removing seasonal, Redux, masked-image and unsupported native dependencies."
+    },
+    {
+      "path": "src/components/ui/StatusPill.css",
+      "decision": "reference_not_imported",
+      "notes": "The season status palette does not define Infinity SP semantics; do not import.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/components/ui/StatusPill.css",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "reviewed_in": "CPI-011",
+      "target_stage": "CPI-013",
+      "targets": [],
+      "rights": "Proprietary owner source inspected by file path; no complete component or raw visual asset copied.",
+      "optimization": "Use only relevant standalone behavior or CSS primitives, removing seasonal, Redux, masked-image and unsupported native dependencies."
+    },
+    {
+      "path": "src/components/ui/GameBackButton/GameBackButton.tsx",
+      "decision": "reference_for_CPI_013",
+      "notes": "Reuse vector-arrow semantics and accessible naming, but not navigation context.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/components/ui/GameBackButton/GameBackButton.tsx",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "reviewed_in": "CPI-011",
+      "target_stage": "CPI-013",
+      "targets": [],
+      "rights": "Proprietary owner source inspected by file path; no complete component or raw visual asset copied.",
+      "optimization": "Use only relevant standalone behavior or CSS primitives, removing seasonal, Redux, masked-image and unsupported native dependencies."
+    },
+    {
+      "path": "src/components/ui/GameBackButton/GameBackButton.css",
+      "decision": "reference_for_CPI_013",
+      "notes": "Increase source 2rem target to at least 44px and remove !important size assumptions when adapting.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/components/ui/GameBackButton/GameBackButton.css",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "reviewed_in": "CPI-011",
+      "target_stage": "CPI-013",
+      "targets": [],
+      "rights": "Proprietary owner source inspected by file path; no complete component or raw visual asset copied.",
+      "optimization": "Use only relevant standalone behavior or CSS primitives, removing seasonal, Redux, masked-image and unsupported native dependencies."
+    },
+    {
+      "path": "src/screens/HomeHub/HomeHub.css",
+      "decision": "reference_for_CPI_013",
+      "notes": "Preserve safe-area portrait layout and readable menu stack; exclude weather, seasonal backgrounds and show assets.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/screens/HomeHub/HomeHub.css",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "reviewed_in": "CPI-011",
+      "target_stage": "CPI-013",
+      "targets": [],
+      "rights": "Proprietary owner source inspected by file path; no complete component or raw visual asset copied.",
+      "optimization": "Use only relevant standalone behavior or CSS primitives, removing seasonal, Redux, masked-image and unsupported native dependencies."
+    },
+    {
+      "path": "src/components/IntroSplash/IntroSplash.tsx",
+      "decision": "reference_for_CPI_012",
+      "notes": "Reuse bounded image fallback strategy; reject forced 1800ms intro delay in standalone.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/components/IntroSplash/IntroSplash.tsx",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "reviewed_in": "CPI-011",
+      "target_stage": "CPI-012",
+      "targets": [],
+      "rights": "Proprietary owner source inspected by file path; no complete component or raw visual asset copied.",
+      "optimization": "Use only relevant standalone behavior or CSS primitives, removing seasonal, Redux, masked-image and unsupported native dependencies."
+    },
+    {
+      "path": "src/screens/Settings/Settings.css",
+      "decision": "reference_for_CPI_016",
+      "notes": "Settings surface and controls reference only; privacy/account assumptions must be independently designed.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/screens/Settings/Settings.css",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "reviewed_in": "CPI-011",
+      "target_stage": "CPI-016",
+      "targets": [],
+      "rights": "Proprietary owner source inspected by file path; no complete component or raw visual asset copied.",
+      "optimization": "Use only relevant standalone behavior or CSS primitives, removing seasonal, Redux, masked-image and unsupported native dependencies."
+    },
+    {
+      "path": "src/screens/Profile/Profile.css",
+      "decision": "reference_for_CPI_019",
+      "notes": "Profile text hierarchy candidate; exclude avatars, fashion/social state and seasons.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/screens/Profile/Profile.css",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "reviewed_in": "CPI-011",
+      "target_stage": "CPI-019",
+      "targets": [],
+      "rights": "Proprietary owner source inspected by file path; no complete component or raw visual asset copied.",
+      "optimization": "Use only relevant standalone behavior or CSS primitives, removing seasonal, Redux, masked-image and unsupported native dependencies."
+    },
+    {
+      "path": "src/screens/Leaderboard/Leaderboard.css",
+      "decision": "reference_for_CPI_024",
+      "notes": "Tab and record-card hierarchy reference only; leaderboard must consume verified world/continent/country read model.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/screens/Leaderboard/Leaderboard.css",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "reviewed_in": "CPI-011",
+      "target_stage": "CPI-024",
+      "targets": [],
+      "rights": "Proprietary owner source inspected by file path; no complete component or raw visual asset copied.",
+      "optimization": "Use only relevant standalone behavior or CSS primitives, removing seasonal, Redux, masked-image and unsupported native dependencies."
     }
   ],
   "do_not_copy": [
@@ -183,5 +420,32 @@
     "Old privacy disclosures as if they described the new app",
     "pr1509-preview duplicate tree",
     "Whole source repository or its complete dependency list"
+  ],
+  "visual_identity": "Midnight Prism — pending Georgi visual approval",
+  "original_assets": [
+    {
+      "path": "apps/mobile/public/brand/prism-mark.svg",
+      "kind": "new_vector",
+      "format": "SVG 256x256 viewBox",
+      "rights": "New original standalone vector with no third-party fonts/images.",
+      "fallback": "Live brand text and existing CSS atmosphere; no network.",
+      "optimization": "Self-contained transparent SVG; raster native exports to be validated in CPI-012."
+    },
+    {
+      "path": "apps/mobile/public/brand/app-icon-preview.svg",
+      "kind": "new_icon_concept",
+      "format": "SVG 512x512 viewBox",
+      "rights": "New original standalone vector with no third-party fonts/images.",
+      "fallback": "Opaque midnight background; CPI-012 must create platform native icon resources.",
+      "optimization": "Compact text-free vector with critical geometry centered; Android adaptive icon mask/device testing still required."
+    },
+    {
+      "path": "docs/brand/midnight-prism-board.svg",
+      "kind": "original_review_board",
+      "format": "SVG 1080x620 viewBox",
+      "rights": "Original standalone concept board; not a captured UI screenshot.",
+      "fallback": "Live app intro and HUD.",
+      "optimization": "Review-only mock; do not bundle concept board in the app."
+    }
   ]
 }
