@@ -1,15 +1,12 @@
-/** CPI-011: first-boot readiness evidence for the pinned Android API 36 emulator.
- * sys.boot_completed may be set while user-0 BOOT_COMPLETED dispatch is pending.
- * Do not confuse LOCKED_BOOT_COMPLETED, a different user or a generic mention
- * of the action with Android ActivityManager posting the actual user broadcast.
- */
+/** Pinned Android API 36 emulator: sys.boot_completed can precede user-0 boot dispatch. */
+const userBootPosted = /\bI ActivityManager: Posting BOOT_COMPLETED user #0(?:\s|$)/;
+const broadcastIdleMarker = 'All broadcast queues are idle!';
+
 export function androidUserBootPosted(log: string): boolean {
-  return log.split(/\r?\n/).some((line) =>
-    /\bI ActivityManager: Posting BOOT_COMPLETED user #0(?:\s|$)/.test(line),
-  );
+  return log.split(/\r?\n/).some((line) => userBootPosted.test(line));
 }
 
-/** Official 'am wait-for-broadcast-idle' success; command errors must not pass. */
+/** The documented activity-manager command must report an exact idle line. */
 export function androidBroadcastsIdle(output: string): boolean {
-  return output.split(/\r?\n/).some((line) => line.trim() === 'All broadcast queues are idle!');
+  return output.split(/\r?\n/).some((line) => line.trim() === broadcastIdleMarker);
 }

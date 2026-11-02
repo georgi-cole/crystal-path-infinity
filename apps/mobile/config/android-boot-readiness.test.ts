@@ -10,34 +10,34 @@ const prebootLog = [
 ].join('\n');
 
 describe('CPI-011 strict Android first-boot readiness', () => {
-  it('does not mistake a boot property, earlier HOME or ANR for user-0 BOOT_COMPLETED', () => {
+  it('rejects sys.boot_completed, an earlier HOME, an ANR and wrong boot events', () => {
+    const locked = posted.replace('BOOT_COMPLETED', 'LOCKED_BOOT_COMPLETED');
+    const wrongUser = posted.replace('user #0', 'user #10');
+    const wrongLevel = posted.replace('I ActivityManager', 'W ActivityManager');
     expect(androidUserBootPosted(prebootLog)).toBe(false);
     expect(androidUserBootPosted('sys.boot_completed=1')).toBe(false);
-    expect(androidUserBootPosted(posted.replace('BOOT_COMPLETED', 'LOCKED_BOOT_COMPLETED'))).toBe(
-      false,
-    );
-    expect(androidUserBootPosted(posted.replace('user #0', 'user #10'))).toBe(false);
-    expect(androidUserBootPosted(posted.replace('I ActivityManager', 'W ActivityManager'))).toBe(
-      false,
-    );
+    expect(androidUserBootPosted(locked)).toBe(false);
+    expect(androidUserBootPosted(wrongUser)).toBe(false);
+    expect(androidUserBootPosted(wrongLevel)).toBe(false);
   });
 
-  it('recognizes the actual user-0 event, which followed the failed PR launch', () => {
+  it('recognizes the actual user-0 event posted after the failed PR launch', () => {
     expect(androidUserBootPosted(prebootLog + '\n' + posted)).toBe(true);
     expect(androidUserBootPosted(posted + '\n' + prebootLog)).toBe(true);
   });
 
-  it('requires the documented idle acknowledgment, not a command error or a substring', () => {
-    expect(androidBroadcastsIdle('BroadcastQueue: checking...\nAll broadcast queues are idle!\n')).toBe(true);
+  it('requires the idle acknowledgment, not a command error or substring', () => {
+    const successful = 'BroadcastQueue: checking...\nAll broadcast queues are idle!\n';
+    expect(androidBroadcastsIdle(successful)).toBe(true);
     expect(androidBroadcastsIdle('Error: Unknown command: wait-for-broadcast-idle')).toBe(false);
     expect(androidBroadcastsIdle('Not yet: All broadcast queues are idle!')).toBe(false);
     expect(androidBroadcastsIdle('')).toBe(false);
   });
 
-  it('performs both boot gates before launching without weakening lifecycle assertions', () => {
+  it('checks boot before launch and retains strict native lifecycle assertions', () => {
     const script = readFileSync(new URL('../scripts/smoke-native.mjs', import.meta.url), 'utf8');
     const bootMarker = script.indexOf("await waitFor('Android user-0 BOOT_COMPLETED");
-    const idleMarker = script.indexOf("'am', 'wait-for-broadcast-idle'");
+    const idleMarker = script.indexOf("'shell', 'am', 'wait-for-broadcast-idle'");
     const clearMarker = script.indexOf("adbArgs('logcat', '-c')");
     const firstLaunch = script.indexOf("recordLifecycleAction('cold-launch')");
     expect(bootMarker).toBeGreaterThan(0);
