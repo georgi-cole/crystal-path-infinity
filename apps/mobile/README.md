@@ -1,6 +1,6 @@
 # Mobile app foundation — CPI-003
 
-This React 19 / Capacitor 8 app currently displays a minimal branded screen. The designed splash screen, playable renderer and final app icons belong to later tasks; native launcher icons are template placeholders. CPI-007 adds the internal game-core dependency for a tested practice runtime and a local `CpiLifecycle` native plugin. There is no ad SDK, tracking, location or billing integration. Android declares network access; iOS requests no permission purpose strings and declares the in-app elapsed-time API purpose in its privacy manifest.
+This React 19 / Capacitor 8 app has an offline practice renderer (CPI-008–010). CPI-012 generates real Midnight Prism native icon exports and a static native splash, with a separate immediate in-app startup state and retry/offline fallback. The source SVG and native image generation remain independent of a network or commercial image service. CPI-007 adds the internal game-core dependency for a tested practice runtime and a local `CpiLifecycle` native plugin. There is no ad SDK, tracking, location or billing integration. Android declares network access; iOS requests no permission purpose strings and declares the in-app elapsed-time API purpose in its privacy manifest.
 
 Capacitor's bundled `SystemBars` uses light icons on the dark Android shell and native safe-area handling. The screen consumes `env(safe-area-inset-*)`; no separate system-bar dependency or injected CSS-variable fallback is needed. iOS uses its existing dark appearance setting.
 
@@ -86,6 +86,12 @@ npm run native:generate -- --platform ios --environment production --check
 
 The generator restores the app-specific [Swift Package Manager lock](native-locks/Package.resolved), captured from CPI-003's first successful iOS compilation. Its sole package is Capacitor 8.5.3. CI then requires the recorded package versions instead of silently updating resolution.
 
+## Native splash and icon exports (CPI-012)
+
+The committed SVG prism is the editable source. `scripts/brand-assets.mjs` uses a self-contained deterministic, pixel-tested PNG encoder (no third-party render service), and `native:generate` produces and verifies the Android launcher densities (mdpi through xxxhdpi), foreground layers, round variants, themed monochrome vector, and Android 12+ icon/background OS splash. iOS receives an opaque 1024px app icon, 1×/2×/3× launch-mark images and a static centered image on a `#060a18` LaunchScreen storyboard. The generator checks every generated PNG byte-for-byte, including in `--check` mode; manual edits to the ignored native projects are overwritten.
+
+The OS splash does **not** contain an arbitrary fullscreen scene, or a forced delay. It transitions into the in-app Crystal Path intro on the same dark base; local settings/checkpoint reads complete immediately when available, with a 1.5-second *maximum timeout only*. A timeout/error offers Retry or Play offline without deleting an existing save, and no ad/analytics/leaderboard backend is requested on startup. In-app text stays real selectable HTML, not embedded into a bitmap. Full physical-device cold/warm/offline appearance, platform-mask checks, and App Store/Play asset sign-off remain separate acceptance gates. See [CPI-012 decision](../../docs/decisions/CPI-012-native-launch.md).
+
 ## Native smoke checks and CI evidence
 
 [The app workflow](../../.github/workflows/mobile-app.yml) runs **App quality** on every PR: clean install, typecheck, lint, formatting, application/routing tests and all three web builds. A complete Git diff selects the two native jobs for runtime, dependency, toolchain, workflow or unknown changes; known documentation/planning changes skip them explicitly. **App required checks** always runs and requires successful quality plus both native results when selected. It is separate from the CPI-002 spike workflow. The [CPI-004 record](../../docs/decisions/CPI-004-quality-gates.md) covers gate behavior, settings and verification.
@@ -97,7 +103,7 @@ node --experimental-strip-types apps/mobile/scripts/smoke-native.mjs --platform 
 node --experimental-strip-types apps/mobile/scripts/smoke-native.mjs --platform ios
 ```
 
-The script does not compile. Android needs the dedicated accelerated `cpi003-development` AVD with the API 36 Google APIs x86_64 image and emulator port 5554 available; the script wipes that AVD's data. iOS needs an available iPhone device type with the iOS 26.5 runtime; the script creates a fresh named simulator and deletes only that simulator afterward. The workflow contains the setup commands.
+The script does not compile. Android needs the dedicated accelerated `cpi003-development` AVD with the API 36 **AOSP/default x86_64** image and emulator port 5554 available; the script wipes that AVD's data. iOS needs an available iPhone device type with the iOS 26.5 runtime; the script creates a fresh named simulator and deletes only that simulator afterward. The workflow contains the setup commands.
 
 Fresh iOS provisioning has a 900-second boot deadline and a 180-second first native process gate deadline, recorded in `ios-smoke-device.json`. The driver advances as soon as the required observation arrives. These limits accommodate cold OS migration and launch overhead; they add no retries and do not relax lifecycle or runtime-error assertions. The iOS smoke step is capped at 30 minutes. The [CPI-007 decision](../../docs/decisions/CPI-007-clock-lifecycle.md#fresh-ios-simulator-provisioning) records the failed CI evidence that motivated these allowances.
 

@@ -43,7 +43,7 @@ describe('CPI-012 deterministic native icon exports', () => {
       const png = unpackPng(renderBrandPng(64, mode));
       expect(png.alpha(0, 0)).toBe(0);
       expect(png.alpha(32, 8)).toBe(0);
-      expect(png.alpha(32, 32)).toBeGreaterThan(0);
+      expect(png.alpha(25, 32)).toBeGreaterThan(0);
     }
   });
 
