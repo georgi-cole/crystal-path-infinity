@@ -349,13 +349,14 @@ async function android() {
       '-no-boot-anim',
       '-no-snapshot',
       '-wipe-data',
-      // API 36 / Linux SwiftShader can deadlock focus changes when Vulkan
-      // composition is active. Android documents this GLES-only fallback;
-      // keep the real WebView, focus callbacks, and strict ANR detection.
+      // The API 36 headless runner reproduced focus ANRs with gfxstream's
+      // direct SwiftShader GLES path both with and without Vulkan enabled.
+      // Use the supported ANGLE-on-SwiftShader GLES backend; preserve native
+      // WebView rendering, real HOME transitions and ANR failure semantics.
       '-feature',
       '-Vulkan',
       '-gpu',
-      'swiftshader',
+      'swangle',
       '-accel',
       'on',
       '-camera-back',
@@ -730,9 +731,33 @@ async function android() {
       const result = run(adb, commandArgs, { timeout: 15_000, allowFailure: true });
       save(name, String(result.stdout ?? '') + '\n' + String(result.stderr ?? ''));
     }
-    // An actual focus-loss ANR must remain a hard failure. Preserve the
-    // Android-generated thread dump, not merely its one-line logcat reason,
-    // so a Java/UI lockup can be distinguished from emulator compositor load.
+    // The OS trace may be root-only even when /data/anr can be listed.
+    // Collect the readable DropBox copy first, then try adb root on this
+    // disposable AOSP emulator. A production/root-denied image falls back
+    // to the official adb bugreport without bypassing the ANR failure.
+    const dropbox = run(adb, adbArgs('shell', 'dumpsys', 'dropbox', '--print', 'data_app_anr'), {
+      timeout: 25_000,
+      allowFailure: true,
+    });
+    save(
+      'android-failure-dropbox-anr.txt',
+      String(dropbox.stdout ?? '') + '\n' + String(dropbox.stderr ?? ''),
+    );
+    const rootResult = run(adb, adbArgs('root'), { timeout: 20_000, allowFailure: true });
+    save(
+      'android-failure-adb-root.txt',
+      String(rootResult.stdout ?? '') + '\n' + String(rootResult.stderr ?? ''),
+    );
+    if (rootResult.status === 0) {
+      try {
+        await waitFor('failure-only Android root debug connection', 25_000, () =>
+          text(adb, adbArgs('shell', 'id', '-u'), { timeout: 10_000, allowFailure: true }) ===
+          '0',
+        );
+      } catch (rootError) {
+        save('android-failure-root-debug-error.txt', String(rootError));
+      }
+    }
     const anrList = run(adb, adbArgs('shell', 'ls', '-1', '/data/anr'), {
       timeout: 15_000,
       allowFailure: true,
@@ -741,6 +766,7 @@ async function android() {
       'android-failure-anr-index.txt',
       String(anrList.stdout ?? '') + '\n' + String(anrList.stderr ?? ''),
     );
+    let traceCaptured = false;
     if (anrList.status === 0) {
       const traces = String(anrList.stdout ?? '')
         .split(/\r?\n/)
@@ -751,11 +777,27 @@ async function android() {
           timeout: 20_000,
           allowFailure: true,
         });
-        save(
-          'android-failure-anr-trace-' + (index + 1) + '.txt',
-          String(trace.stdout ?? '') + '\n' + String(trace.stderr ?? ''),
-        );
+        const body = String(trace.stdout ?? '') + '\n' + String(trace.stderr ?? '');
+        save('android-failure-anr-trace-' + (index + 1) + '.txt', body);
+        if (trace.status === 0 && body.includes('Cmd line: ' + buildInfo.appId))
+          traceCaptured = true;
       }
+    }
+    if (!traceCaptured) {
+      const report = run(
+        adb,
+        adbArgs('bugreport', join(evidenceRoot, 'android-failure-bugreport.zip')),
+        { timeout: 120_000, allowFailure: true },
+      );
+      save(
+        'android-failure-bugreport-status.txt',
+        JSON.stringify({
+          status: report.status,
+          error: String(report.error ?? ''),
+          stdout: String(report.stdout ?? '').slice(-2000),
+          stderr: String(report.stderr ?? '').slice(-2000),
+        }),
+      );
     }
     const lastAnr = run(adb, adbArgs('shell', 'dumpsys', 'activity', 'lastanr'), {
       timeout: 15_000,

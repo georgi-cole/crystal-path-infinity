@@ -141,3 +141,21 @@ a confirmed fix. Failure evidence now includes the OS ANR thread files from
 `/data/anr` (when readable by shell) plus the last-ANR activity dump.
 If the crash persists, inspect these traces for native UI-thread stalls,
 rather than weakening the gate or assuming an emulator-only cause.
+
+
+## Follow-up: Vulkan disabled still reproduces ANR (run 41514661780)
+
+Android's documented Vulkan-disable flag took effect, but a real focus-loss
+ANR recurred after three low-load Toybox samples (28%, 31%, 26% CPU), so
+Vulkan use alone is **not** the cause. The captured ANR file was visible in
+`/data/anr` but could not be read by an unprivileged shell. Android's official
+ANR guidance specifies `adb root` before reading those files. The failure
+collector now first saves the shell-accessible DropBox ANR, then attempts
+failure-only `adb root` on the disposable AOSP emulator; if no matching app
+trace can be read, it uses `adb bugreport` as a bounded, official fallback.
+No release app or physical user device is rooted.
+
+The next isolated graphics test uses the supported `-gpu swangle` ANGLE-on-
+SwiftShader software GLES backend instead of direct SwiftShader, keeping
+Vulkan disabled and all native lifecycle/ANR assertions unchanged. This is
+still an unverified compatibility experiment, not a claimed resolved ANR.

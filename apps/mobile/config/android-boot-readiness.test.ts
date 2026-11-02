@@ -159,6 +159,9 @@ describe('CPI-011 strict Android first-boot readiness', () => {
   it('disables flaky emulator Vulkan composition without bypassing real native events', () => {
     const script = readFileSync(new URL('../scripts/smoke-native.mjs', import.meta.url), 'utf8');
     expect(script).toContain("'-feature',\n      '-Vulkan'");
+    expect(script).toContain("'-gpu',\n      'swangle'");
+    expect(script).toContain("'android-failure-dropbox-anr.txt'");
+    expect(script).toContain("'android-failure-bugreport.zip'");
     expect(script).toContain("'android-failure-anr-index.txt'");
     expect(script).toContain("'android-failure-anr-trace-'");
     expect(script).toContain("'android-failure-last-anr.txt'");
