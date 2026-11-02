@@ -47,6 +47,7 @@ npm run dev
 | [CPI-005 — игрово ядро](docs/decisions/CPI-005-game-core.md) | Pure transitions, точен endless прогрес, RNG/checkpoint и ефекти/продължавания |
 | [CPI-006 — смърт и прогрес](docs/decisions/CPI-006-death-progress.md) | Callback ownership, еднократни действия, cleanup/recovery и граници 349/350/351 |
 | [CPI-007 — часовник и lifecycle](docs/decisions/CPI-007-clock-lifecycle.md) | Активно време, независими паузи, native foreground snapshots и ранни OS прекъсвания |
+| [CPI-011 — визуална идентичност](docs/decisions/CPI-011-visual-identity.md) | Midnight Prism дизайн, визуални ресурси, права и преглед на UI reuse |
 | [Инспекция](docs/SOURCE_AUDIT.md) | Установено поведение, зависимости и проблеми |
 | [Backlog](docs/BACKLOG.md) | Задачи с зависимости и критерии |
 | [Архитектура](docs/ARCHITECTURE.md) | Клиент, сървър, профили и класации |

@@ -4,6 +4,7 @@ import { App } from './App';
 import { startStartupDiagnostics } from './startup-diagnostics';
 import { getGameplayLifecycle } from './gameplay-lifecycle';
 import './styles.css';
+import './brand-tokens.css';
 
 if (__CPI_BUILD_INFO__.environment === 'development' && import.meta.env.MODE === 'development') {
   startStartupDiagnostics();
