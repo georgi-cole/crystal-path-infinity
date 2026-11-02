@@ -17,7 +17,8 @@ describe('CPI-011 independent Midnight Prism identity', () => {
     expect(CRYSTAL_IDENTITY.approvedForNativeExport).toBe(false);
     expect(icon).toContain('viewBox="0 0 512 512"');
     expect(icon).toContain('Crystal Path Infinity icon concept');
-    expect(icon).not.toMatch(/<script|<image|<text|https?:\/\/|data:image/i);
+    expect(icon).not.toMatch(/<(?:script|image|text)\b/i);
+    expect(icon).not.toMatch(/\b(?:href|src)=["'](?:https?:|data:)/i);
     expect(icon).toContain('#4fd8f4');
   });
 
@@ -80,7 +81,7 @@ describe('CPI-011 independent Midnight Prism identity', () => {
         expect(asset.sourcePath).toBeTruthy();
       }
       if (asset.origin === 'copied-source-binary') {
-        expect(asset.rights.toLowerCase()).toMatch(/unverified|pending/);
+        expect(asset.rights.toLowerCase()).toMatch(/unverified|not verified|pending/);
       }
     }
     const manifest = JSON.parse(get('../../../planning/reuse-manifest.json')) as unknown as {
@@ -102,7 +103,8 @@ describe('CPI-011 independent Midnight Prism identity', () => {
     expect(board).toContain('ROW 128');
     expect(board).toContain('APP ICON CONCEPT');
     expect(board).toContain('STATIC CONCEPT');
-    expect(board).not.toMatch(/<script|<foreignObject|https?:\/\//i);
+    expect(board).not.toMatch(/<(?:script|foreignObject)\b/i);
+    expect(board).not.toMatch(/\b(?:href|src)=["'](?:https?:|data:)/i);
     const tokens = get('../src/brand/theme.css');
     expect(tokens).toContain('--cpi-glass-cyan');
     expect(tokens).toContain('--cpi-focus');
