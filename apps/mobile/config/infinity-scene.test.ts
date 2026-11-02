@@ -43,15 +43,16 @@ function markup(modifiers: Record<string, unknown> = {}) {
   );
 }
 describe('CPI-008 standalone scene', () => {
-  it('bundles the exact original owner-source black-hole PNG, not a CSS approximation', () => {
-    const image = readFileSync(new URL('../src/infinity-black-hole-bg.png', import.meta.url));
-    expect(image.length).toBe(1_896_459);
-    expect(image.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
+  it('bundles source-verified black-hole artwork as high-quality offline WebP', () => {
+    const image = readFileSync(new URL('../src/infinity-black-hole-bg.webp', import.meta.url));
+    expect(image.length).toBe(201_680);
+    expect(image.subarray(0, 4).toString('ascii')).toBe('RIFF');
+    expect(image.subarray(8, 12).toString('ascii')).toBe('WEBP');
     const gitObjectId = createHash('sha1')
-      .update(`blob ${image.length}\0`)
+      .update('blob ' + image.length + '\0')
       .update(image)
       .digest('hex');
-    expect(gitObjectId).toBe('25e9ceb6f98ac43c2bc15354ce8be7b7e7596cd3');
+    expect(gitObjectId).toBe('c8c0458f4f26dcc73a2b42d80663221d629c60a7');
   });
 
   it('renders accessible left/right/hint controls, no season/AI/prize content', () => {
@@ -90,7 +91,7 @@ describe('CPI-008 standalone scene', () => {
     expect(css).toContain('env(safe-area-inset-top');
     expect(css).toMatch(/max-height:\s*650px/);
     expect(css).toContain('prefers-reduced-motion');
-    expect(css).toContain("url('./infinity-black-hole-bg.png')");
+    expect(css).toContain("url('./infinity-black-hole-bg.webp')");
     const railRules = css.match(
       /\.cps-shell--premium \.cps-board::before,\s*\.cps-shell--premium \.cps-board::after\s*\{([^}]+)\}/,
     );
