@@ -11,8 +11,14 @@ export const BRAND_BACKGROUND = '#060a18';
 
 /** Reject active/external SVG resources, without rejecting the standard XML namespace. */
 export function unsafeBrandSvg(svg) {
-  return /<!DOCTYPE|<!ENTITY|<(?:script|image|foreignObject)\b|(?:href|xlink:href)\s*=\s*["']\s*(?:https?:|data:|javascript:)|url\(\s*["']?\s*(?:https?:|data:|javascript:)/i.test(svg);
+  return (
+    /<!DOCTYPE|<!ENTITY/i.test(svg) ||
+    /<(?:script|image|foreignObject)\b/i.test(svg) ||
+    /(?:href|xlink:href)\s*=\s*["']\s*(?:https?:|data:|javascript:)/i.test(svg) ||
+    /url\(\s*["']?\s*(?:https?:|data:|javascript:)/i.test(svg)
+  );
 }
+
 const IMAGE_SIZES = Object.freeze({ mdpi: 1, hdpi: 1.5, xhdpi: 2, xxhdpi: 3, xxxhdpi: 4 });
 const ICE = [130, 223, 241];
 const IRIS = [172, 154, 255];
