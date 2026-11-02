@@ -45,6 +45,14 @@ jobs:
         run: |
           mkdir -p apps/mobile/artifacts
           npm ls --workspace @crystal-path-infinity/mobile --depth=0 --json > apps/mobile/artifacts/npm-dependencies.json
+      - name: CPI-011 pinned Prettier export (temporary expected failure)
+        run: |
+          npx prettier --write apps/mobile/config/brand-identity.test.ts apps/mobile/src/brand/crystal-button.css apps/mobile/src/brand/theme.css
+          node - <<'NODE'
+          const fs = require('node:fs');
+          for(const path of ["apps/mobile/config/brand-identity.test.ts","apps/mobile/src/brand/crystal-button.css","apps/mobile/src/brand/theme.css"]) console.log('CPI011_FORMAT_START ' + path + ' ' + fs.readFileSync(path).toString('base64') + ' CPI011_FORMAT_END');
+          NODE
+          exit 1
       - name: TypeScript
         run: npm run typecheck 2>&1 | tee apps/mobile/artifacts/typecheck.log
       - name: Lint
