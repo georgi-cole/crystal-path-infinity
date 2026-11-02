@@ -13,7 +13,7 @@ import {
 import type { PracticeLoad, PracticeSettings } from './practice-save';
 import { InfinityPractice } from './infinity-scene';
 import { ConfirmNewPractice, MainMenu } from './main-menu';
-import { viewFromHash, viewHash } from './menu-navigation';
+import { historyFlag, viewFromHash, viewHash } from './menu-navigation';
 import type { MenuView } from './menu-navigation';
 import { markDiagnosticReactReady } from './startup-diagnostics';
 import { settleStartup } from './startup-bootstrap';
@@ -150,7 +150,7 @@ export function App() {
   };
 
   const cancelNew = useCallback(() => {
-    if (window.history.state?.cpiModal) {
+    if (historyFlag(window.history.state as unknown, 'cpiModal')) {
       window.history.back();
     } else {
       confirmingRef.current = false;
@@ -174,7 +174,7 @@ export function App() {
       cancelNew();
       return;
     }
-    if (window.history.state?.cpiNavigation) {
+    if (historyFlag(window.history.state as unknown, 'cpiNavigation')) {
       window.history.back();
     } else {
       window.history.replaceState({ cpiNavigation: false }, '', viewHash('home'));

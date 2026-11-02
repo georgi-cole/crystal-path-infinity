@@ -46,3 +46,13 @@ export function rankedServiceState(
   if (maintenance) return 'maintenance';
   return configured ? 'ready' : 'unconfigured';
 }
+
+/** History.state is untrusted across browser restores and deep links. */
+export function historyFlag(value: unknown, flag: 'cpiModal' | 'cpiNavigation'): boolean {
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    flag in value &&
+    (value as Record<string, unknown>)[flag] === true
+  );
+}

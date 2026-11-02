@@ -7,6 +7,7 @@ import { ConfirmNewPractice, MainMenu } from '../src/main-menu';
 import {
   canResumePractice,
   formatRowLabel,
+  historyFlag,
   rankedServiceState,
   viewFromHash,
   viewHash,
@@ -133,6 +134,9 @@ describe('CPI-013 standalone menu and route model', () => {
     expect(viewFromHash('#new-practice')).toBe('practice');
     expect(viewFromHash('#unknown-route')).toBe('home');
     expect(viewFromHash('javascript:alert(1)')).toBe('home');
+    expect(historyFlag(null, 'cpiNavigation')).toBe(false);
+    expect(historyFlag({ cpiNavigation: true }, 'cpiNavigation')).toBe(true);
+    expect(historyFlag({ cpiModal: 'true' }, 'cpiModal')).toBe(false);
     const app = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
     expect(app).toContain("window.addEventListener('popstate'");
     expect(app).toContain("window.addEventListener('hashchange'");
