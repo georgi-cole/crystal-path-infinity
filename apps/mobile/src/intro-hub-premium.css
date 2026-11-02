@@ -1,0 +1,490 @@
+/* CPI-013 visual refinement: Big Eye HomeHub's full-bleed stage and real SVG
+ * button hierarchy, adapted to the standalone Infinity art and navigation.
+ * Source artwork: bbmobilenew-source@6ace929a60410e728928aa51eaf80ba9b5cf2262.
+ */
+
+.cpi-menu-shell {
+  isolation: isolate;
+  overflow: hidden auto;
+  background-color: #030411;
+  background-image:
+    linear-gradient(
+      180deg,
+      rgba(2, 4, 16, 0.66) 0%,
+      rgba(3, 4, 17, 0.2) 27%,
+      rgba(5, 3, 18, 0.49) 59%,
+      rgba(2, 3, 12, 0.92) 100%
+    ),
+    url('./infinity-black-hole-bg.webp');
+  background-size: cover;
+  background-position: center, center 44%;
+  background-repeat: no-repeat;
+  color: #f4f6ff;
+}
+
+.cpi-menu-shell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse at 50% 9%, rgba(202, 163, 255, 0.17), transparent 38%),
+    radial-gradient(ellipse at 12% 70%, rgba(43, 188, 220, 0.13), transparent 43%),
+    linear-gradient(rgba(153, 207, 237, 0.017) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 100% 34px;
+  pointer-events: none;
+}
+
+.cpi-menu-shell .cpi-menu-orbit {
+  display: none;
+}
+
+.cpi-menu-shell .cpi-menu-inner {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 480px);
+  max-width: 480px;
+  box-sizing: border-box;
+  justify-content: center;
+  gap: clamp(0.35rem, 1.2dvh, 0.75rem);
+  padding-inline: max(0.85rem, env(safe-area-inset-left, 0px));
+  padding-top: max(1rem, env(safe-area-inset-top, 0px));
+  padding-bottom: max(0.9rem, env(safe-area-inset-bottom, 0px));
+}
+
+.cpi-menu-header {
+  flex: 0 0 auto;
+  z-index: 4;
+  min-height: 2.55rem;
+}
+
+.cpi-menu-series {
+  font-size: 0.58rem;
+  letter-spacing: 0.18em;
+  color: rgba(219, 248, 255, 0.82);
+}
+
+.cpi-menu-status .cpi-menu-pill {
+  background: rgba(5, 8, 21, 0.6);
+  border-color: rgba(173, 224, 255, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(8px);
+}
+
+.cpi-menu-shell .cpi-menu-hero {
+  position: relative;
+  flex: 0 0 auto;
+  gap: 0;
+  padding: 0.3rem 0 0.25rem;
+  margin-block: clamp(0.1rem, 1.6dvh, 0.9rem);
+}
+
+.cpi-hub-emblem {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: clamp(6.7rem, 17dvh, 9.8rem);
+  height: clamp(6.7rem, 17dvh, 9.8rem);
+  margin-bottom: 0.45rem;
+}
+
+.cpi-hub-emblem::before {
+  content: '';
+  position: absolute;
+  inset: 2%;
+  border: 1px solid rgba(188, 177, 255, 0.36);
+  border-radius: 50%;
+  box-shadow:
+    0 0 32px rgba(160, 99, 246, 0.17),
+    inset 0 0 30px rgba(66, 152, 233, 0.06);
+  transform: rotateX(32deg);
+}
+
+.cpi-hub-emblem-orbit {
+  position: absolute;
+  inset: 21%;
+  border: 1px solid rgba(138, 233, 250, 0.23);
+  border-radius: 50%;
+  transform: rotateX(66deg) rotate(-22deg);
+}
+
+.cpi-menu-shell .cpi-menu-mark {
+  width: 88%;
+  height: 88%;
+  filter:
+    drop-shadow(0 0 18px rgba(91, 194, 255, 0.24))
+    drop-shadow(0 0 45px rgba(169, 90, 246, 0.18));
+}
+
+.cpi-menu-shell .cpi-menu-kicker {
+  font-size: 0.61rem;
+  letter-spacing: 0.23em;
+  color: #a7e8fa;
+  text-shadow: 0 0 12px rgba(66, 205, 255, 0.32);
+}
+
+.cpi-menu-shell .cpi-menu-hero h1 {
+  font-size: clamp(2.65rem, 11.5vw, 4rem);
+  font-weight: 720;
+  line-height: 1.02;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  background: linear-gradient(180deg, #fff 17%, #bde7ff 55%, #b4a8ff 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 5px 15px rgba(5, 3, 20, 0.8));
+}
+
+.cpi-menu-shell .cpi-menu-tagline {
+  margin-top: 0.38rem;
+  font-size: 0.77rem;
+  letter-spacing: 0.04em;
+  color: rgba(236, 238, 255, 0.83);
+}
+
+.cpi-menu-shell .cpi-menu-scoreboard {
+  width: min(90%, 320px);
+  margin-inline: auto;
+  padding: 0.52rem 0.8rem;
+  min-height: 3.2rem;
+  border-radius: 0.7rem;
+  border-color: rgba(156, 176, 255, 0.32);
+  background:
+    linear-gradient(115deg, rgba(16, 19, 48, 0.92), rgba(38, 20, 67, 0.72));
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.13);
+  backdrop-filter: blur(11px) saturate(135%);
+}
+
+.cpi-menu-shell .cpi-menu-scoreboard > div {
+  gap: 0.1rem;
+}
+
+.cpi-menu-shell .cpi-menu-scoreboard .cpi-menu-eyebrow {
+  font-size: 0.54rem;
+  letter-spacing: 0.12em;
+}
+
+.cpi-menu-shell .cpi-menu-score {
+  font-size: 1.15rem;
+  color: #f5fbff;
+  text-shadow: 0 0 12px rgba(128, 203, 253, 0.3);
+}
+
+.cpi-menu-shell .cpi-menu-score-caption {
+  color: rgba(219, 220, 255, 0.72);
+  font-size: 0.57rem;
+  max-width: 5.5rem;
+  line-height: 1.3;
+  text-align: right;
+}
+
+.cpi-menu-shell .cpi-menu-actions {
+  flex: 0 0 auto;
+  width: 100%;
+  align-items: center;
+  gap: clamp(0.15rem, 0.55dvh, 0.45rem);
+  padding-block: 0.15rem;
+  max-height: none;
+}
+
+.cpi-menu-shell .cpi-menu-action {
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
+  width: min(92%, 354px);
+  max-width: 354px;
+  height: clamp(3.5rem, 8dvh, 4.5rem);
+  min-height: 3.4rem;
+  padding: 0 1.6rem 0 1.4rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #fff;
+  flex: 0 0 auto;
+  overflow: visible;
+  transition:
+    transform 160ms ease,
+    filter 160ms ease;
+}
+
+.cpi-menu-action-art {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+  user-select: none;
+  filter: drop-shadow(0 8px 15px rgba(1, 2, 17, 0.56));
+}
+
+.cpi-menu-shell .cpi-menu-action:hover {
+  transform: translateY(-2px) scale(1.025);
+  filter: brightness(1.11);
+  border: 0;
+}
+
+.cpi-menu-shell .cpi-menu-action:active {
+  transform: scale(0.975);
+}
+
+.cpi-menu-shell .cpi-menu-action--primary {
+  width: min(96%, 370px);
+  height: clamp(4rem, 9dvh, 4.9rem);
+  min-height: 3.9rem;
+  padding-left: 1.6rem;
+}
+
+.cpi-menu-shell .cpi-menu-action--secondary {
+  width: min(85%, 310px);
+}
+
+.cpi-menu-shell .cpi-menu-action--quiet {
+  width: min(76%, 270px);
+}
+
+.cpi-menu-shell .cpi-menu-action-icon {
+  width: 2rem;
+  height: 2rem;
+  flex-basis: 2rem;
+  border: 0;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+}
+
+.cpi-menu-shell .cpi-menu-action-icon img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 4px rgba(6, 2, 21, 0.85));
+}
+
+.cpi-menu-shell .cpi-menu-action-title {
+  font-size: clamp(0.89rem, 3.4vw, 1.08rem);
+  font-weight: 820;
+  text-shadow: 0 2px 4px rgba(5, 2, 20, 0.85);
+}
+
+.cpi-menu-shell .cpi-menu-action--primary .cpi-menu-action-title {
+  font-size: clamp(1.13rem, 4.2vw, 1.35rem);
+  letter-spacing: 0.02em;
+}
+
+.cpi-menu-shell .cpi-menu-action-description {
+  font-size: clamp(0.61rem, 2.4vw, 0.71rem);
+  line-height: 1.25;
+  font-weight: 520;
+  color: rgba(235, 231, 255, 0.93);
+  text-shadow: 0 1px 4px #140c2f;
+}
+
+.cpi-menu-shell .cpi-menu-action-chevron {
+  font-size: 1.12rem;
+  color: rgba(245, 236, 255, 0.84);
+  margin-right: 0.25rem;
+}
+
+.cpi-menu-shell .cpi-menu-grid {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.15rem, 0.55dvh, 0.45rem);
+  align-items: center;
+}
+
+.cpi-menu-shell .cpi-menu-grid .cpi-menu-action {
+  width: min(78%, 290px);
+  min-height: 3.3rem;
+  height: clamp(3.35rem, 7.1dvh, 4rem);
+  display: flex;
+  flex-direction: row;
+  text-align: left;
+  justify-content: initial;
+  padding-inline: 1.45rem;
+  gap: 0.6rem;
+}
+
+.cpi-menu-shell .cpi-menu-grid .cpi-menu-action:nth-child(2) {
+  width: min(72%, 270px);
+}
+
+.cpi-menu-shell .cpi-menu-grid .cpi-menu-action:nth-child(3) {
+  width: min(65%, 240px);
+}
+
+.cpi-menu-shell .cpi-menu-grid .cpi-menu-action-icon {
+  flex-basis: 1.55rem;
+  width: 1.55rem;
+  height: 1.55rem;
+}
+
+.cpi-menu-shell .cpi-menu-grid .cpi-menu-action-title {
+  font-size: 0.89rem;
+}
+
+.cpi-menu-shell .cpi-menu-resume {
+  width: min(87%, 318px);
+  background: rgba(3, 21, 39, 0.85);
+  border-color: rgba(113, 209, 221, 0.34);
+  backdrop-filter: blur(10px);
+}
+
+.cpi-hub-utilities {
+  position: absolute;
+  z-index: 4;
+  top: clamp(3.8rem, 8.5dvh, 5.5rem);
+  left: 0.7rem;
+  right: 0.7rem;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.cpi-hub-utility-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.cpi-hub-chip {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0.6rem;
+  background: transparent;
+  color: #fff;
+  pointer-events: auto;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 160ms ease;
+}
+
+.cpi-hub-chip:hover {
+  transform: scale(1.07);
+}
+
+.cpi-hub-chip:active {
+  transform: scale(0.95);
+}
+
+.cpi-hub-chip-shell {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 10px rgba(7, 3, 20, 0.75));
+}
+
+.cpi-hub-chip-glyph {
+  position: relative;
+  z-index: 1;
+  width: 59%;
+  height: 59%;
+  object-fit: contain;
+}
+
+.cpi-hub-chip--inactive .cpi-hub-chip-glyph {
+  opacity: 0.38;
+}
+
+.cpi-menu-shell button:focus-visible {
+  outline: 2px solid #c8b6ff;
+  outline-offset: 3px;
+}
+
+.cpi-menu-shell .cpi-menu-footer {
+  min-height: 1.5rem;
+  border: 0;
+  padding-top: 0;
+  background: transparent;
+  color: rgba(216, 220, 243, 0.64);
+  font-size: 0.58rem;
+}
+
+.cpi-menu-shell .cpi-menu-panel {
+  position: relative;
+  z-index: 2;
+  width: min(100%, 26rem);
+  margin-inline: auto;
+  padding: clamp(1rem, 4dvh, 2rem);
+  border: 1px solid rgba(153, 171, 237, 0.28);
+  border-radius: 1.25rem;
+  background: linear-gradient(148deg, rgba(13, 18, 43, 0.94), rgba(6, 9, 29, 0.92));
+  box-shadow: 0 22px 68px rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(16px);
+}
+
+.cpi-menu-shell .cpi-menu-panel .cpi-menu-action {
+  width: 100%;
+  max-width: 350px;
+}
+
+@media (max-width: 360px) {
+  .cpi-menu-shell .cpi-menu-inner {
+    gap: 0.2rem;
+  }
+
+  .cpi-menu-shell .cpi-menu-hero {
+    margin-block: 0.1rem;
+  }
+
+  .cpi-menu-shell .cpi-menu-action--primary {
+    height: 3.8rem;
+  }
+
+  .cpi-hub-utilities {
+    top: 3.5rem;
+    left: 0.4rem;
+    right: 0.4rem;
+  }
+}
+
+@media (max-height: 690px) {
+  .cpi-menu-shell .cpi-menu-inner {
+    gap: 0.15rem;
+  }
+
+  .cpi-menu-shell .cpi-menu-hero {
+    padding-block: 0;
+    margin: 0;
+  }
+
+  .cpi-hub-emblem {
+    width: 5.5rem;
+    height: 5.5rem;
+  }
+
+  .cpi-menu-shell .cpi-menu-action {
+    height: 3.25rem;
+    min-height: 3.1rem;
+  }
+
+  .cpi-menu-shell .cpi-menu-action--primary {
+    height: 3.8rem;
+    min-height: 3.65rem;
+  }
+
+  .cpi-menu-shell .cpi-menu-grid .cpi-menu-action {
+    height: 3.05rem;
+    min-height: 3rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cpi-menu-shell *,
+  .cpi-menu-shell *::before,
+  .cpi-menu-shell *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
