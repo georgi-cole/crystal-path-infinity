@@ -6,11 +6,11 @@ export const CRYSTAL_AUDIO = Object.freeze({
   death: '/assets/sounds/minigames/minigame_gb_death.mp3',
   record: '/assets/sounds/minigames/minigame_gb_winner.mp3',
   newTurn: '/assets/sounds/minigames/minigame_gb_new_turn.mp3',
-  // An original, offline interim bed; the Big Eye glass_bridge.mp3 still needs clearance/import.
+  // Original offline interim music, NOT the Big Eye glass_bridge.mp3.
   music: '/assets/music/crystal-ambient-interim.wav',
 });
-export type HapticKind = 'step' | 'damage' | 'end';
 
+export type HapticKind = 'step' | 'damage' | 'end';
 export interface AudioMedia {
   loop: boolean;
   volume: number;
@@ -27,13 +27,20 @@ export interface AudioPorts {
 }
 export interface StandaloneAudio {
   setActive(active: boolean): void;
+  /** Explicit OS foreground transition stops every cue, even a death tail. */
+  setForeground(foreground: boolean): void;
   setSettings(settings: PracticeSettings): void;
-  /** Call directly from a user gesture; autoplay rejection never blocks gameplay. */
+  /** Called synchronously from an actual user gesture. Autoplay failures are benign. */
   unlock(): Promise<boolean>;
-  playEvents(events: readonly RunEvent[], state: RunState, options: { foreground: boolean; personalBest: boolean }): void;
+  playEvents(
+    events: readonly RunEvent[],
+    state: RunState,
+    options: { foreground: boolean; personalBest: boolean },
+  ): void;
   dispose(): void;
 }
 
+/** One owner per attempt; no global SoundManager, clocks, score writes or timers. */
 export function createStandaloneAudio(ports: AudioPorts, settings: PracticeSettings): StandaloneAudio {
   const music = ports.createMedia(CRYSTAL_AUDIO.music);
   music.loop = true;
@@ -52,75 +59,94 @@ export function createStandaloneAudio(ports: AudioPorts, settings: PracticeSetti
   }
   let preferences = settings;
   let active = false;
+  let foreground = true;
   let unlocked = false;
   let disposed = false;
   let musicEpoch = 0;
-  let playingMusic = false;
+  let musicPlaying = false;
   let musicStarting: Promise<boolean> | null = null;
+  let startingEpoch: number | null = null;
+  let terminalTail: 'death' | 'record' | null = null;
   let lastStep = '';
   let lastDeath = '';
   let ended = false;
   let introPlayed = false;
 
-  function stopEffects() {
-    for (const media of Object.values(sfx)) {
+  function stopEffects(preserveTerminal = false) {
+    for (const [name, media] of Object.entries(sfx)) {
+      if (preserveTerminal && name === terminalTail) continue;
       media.pause();
       media.currentTime = 0;
     }
+    if (!preserveTerminal) terminalTail = null;
   }
   function stopMusic() {
     musicEpoch += 1;
-    playingMusic = false;
+    musicPlaying = false;
     music.pause();
   }
+  function canPlayMusic() {
+    return !disposed && active && foreground && unlocked && preferences.music;
+  }
   function startMusic(): Promise<boolean> {
-    if (disposed || !active || !unlocked || !preferences.music) return Promise.resolve(false);
-    if (playingMusic && !music.paused) return Promise.resolve(true);
-    if (musicStarting) return musicStarting;
+    if (!canPlayMusic()) return Promise.resolve(false);
+    if (musicPlaying && !music.paused) return Promise.resolve(true);
+    if (musicStarting) {
+      const pending = musicStarting;
+      if (startingEpoch === musicEpoch) return pending;
+      // A pending play from before a pause must settle before the resumed play.
+      return pending.then(() => startMusic());
+    }
     const epoch = musicEpoch;
+    startingEpoch = epoch;
     try {
-      const attempt = music.play();
-      const pending = Promise.resolve(attempt)
+      const request = music.play();
+      const pending = Promise.resolve(request)
         .then(() => {
-          if (disposed || epoch !== musicEpoch || !active || !preferences.music) {
+          if (!canPlayMusic() || epoch !== musicEpoch) {
             music.pause();
             return false;
           }
-          playingMusic = true;
+          musicPlaying = true;
           return true;
         })
         .catch(() => {
-          playingMusic = false;
+          musicPlaying = false;
           return false;
         })
         .finally(() => {
-          if (musicStarting === pending) musicStarting = null;
+          if (musicStarting === pending) {
+            musicStarting = null;
+            startingEpoch = null;
+          }
         });
       musicStarting = pending;
       return pending;
     } catch {
-      playingMusic = false;
+      musicPlaying = false;
+      musicStarting = null;
+      startingEpoch = null;
       return Promise.resolve(false);
     }
   }
-  function cue(name: keyof typeof sfx, rate = 1) {
-    if (disposed || !active || !unlocked || !preferences.soundEffects) return;
+  function cue(name: keyof typeof sfx, playbackRate = 1) {
+    if (disposed || !active || !foreground || !unlocked || !preferences.soundEffects) return;
     const media = sfx[name];
     try {
       media.pause();
       media.currentTime = 0;
-      media.playbackRate = rate;
+      media.playbackRate = playbackRate;
       void Promise.resolve(media.play()).catch(() => {});
     } catch {
-      // Audio interruptions, unsupported codecs and autoplay policy are nonfatal.
+      // Muted platform, codec failure or autoplay rejection may not block a step.
     }
   }
   function pulse(kind: HapticKind) {
-    if (disposed || !active || !preferences.haptics) return;
+    if (disposed || !active || !foreground || !preferences.haptics) return;
     try {
       void Promise.resolve(ports.haptic(kind)).catch(() => {});
     } catch {
-      // Haptics are always optional.
+      // Haptics are an optional accessibility preference.
     }
   }
   return {
@@ -129,6 +155,19 @@ export function createStandaloneAudio(ports: AudioPorts, settings: PracticeSetti
       active = next;
       if (!active) {
         stopMusic();
+        // A fatal/result cue may finish while gameplay stops. OS background
+        // and disposal still stop it immediately.
+        stopEffects(terminalTail !== null && foreground);
+      } else {
+        terminalTail = null;
+        void startMusic();
+      }
+    },
+    setForeground(next) {
+      if (disposed || foreground === next) return;
+      foreground = next;
+      if (!foreground) {
+        stopMusic();
         stopEffects();
       } else {
         void startMusic();
@@ -136,14 +175,14 @@ export function createStandaloneAudio(ports: AudioPorts, settings: PracticeSetti
     },
     setSettings(next) {
       if (disposed) return;
-      const old = preferences;
+      const prior = preferences;
       preferences = next;
       if (!next.music) stopMusic();
-      else if (!old.music) void startMusic();
+      else if (!prior.music) void startMusic();
       if (!next.soundEffects) stopEffects();
     },
     async unlock() {
-      if (disposed || !active) return false;
+      if (disposed || !active || !foreground) return false;
       unlocked = true;
       if (!introPlayed) {
         introPlayed = true;
@@ -153,17 +192,19 @@ export function createStandaloneAudio(ports: AudioPorts, settings: PracticeSetti
       return startMusic();
     },
     playEvents(events, state, options) {
-      if (disposed || !active || !options.foreground) return;
+      if (disposed || !active || !foreground || !options.foreground) return;
       const death = events.find((event) => event.type === 'death');
       if (death?.type === 'death' && lastDeath !== death.death.id) {
         lastDeath = death.death.id;
+        stopEffects();
+        terminalTail = 'death';
         cue('death');
         pulse('end');
-        return; // Never stack a fatal crack, death and record cue.
+        return; // A fatal crack never layers with a death/record cue.
       }
       for (const event of events) {
         if (event.type === 'choice-resolved') {
-          // Constant-size guard: a long endless run never accumulates cue IDs.
+          // One ID only: unlimited rows never mean unlimited deduplication memory.
           const key = state.runId + ':' + state.revivesApplied + ':' + event.row;
           if (lastStep === key) continue;
           lastStep = key;
@@ -176,11 +217,15 @@ export function createStandaloneAudio(ports: AudioPorts, settings: PracticeSetti
           }
         } else if (event.type === 'revive-applied') {
           lastStep = '';
+          terminalTail = null;
           cue('newTurn');
         } else if (event.type === 'run-ended' && !ended) {
           ended = true;
           stopEffects();
-          if (options.personalBest) cue('record');
+          if (options.personalBest) {
+            terminalTail = 'record';
+            cue('record');
+          }
           pulse('end');
         }
       }
