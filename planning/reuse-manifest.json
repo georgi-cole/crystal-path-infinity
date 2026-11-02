@@ -2,7 +2,7 @@
   "source_repository": "georgi-cole/bbmobilenew-source",
   "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
   "inspected_on": "2026-11-01",
-  "status": "cpi012_native_brand_exports_and_bootstrap_integrated_source_audio_rights_pending",
+  "status": "visual_parity_original_black_hole_restored_led_rails_fade_near_tiles_commercial_rights_review_pending",
   "resources": [
     {
       "path": "src/minigames/crystalPathShattered/shatteredLogic.ts",
@@ -47,12 +47,16 @@
     },
     {
       "path": "src/minigames/crystalPathShattered/infinity-black-hole-bg.png",
-      "decision": "reuse_after_rights_check",
-      "notes": "Original bitmap provenance/rights remain separately tracked; it is not silently copied. CPI-008 supplies a bundled CSS-rendered black-hole atmosphere and rings, available offline without a network request. Exact bitmap comparison/replacement remains an asset review.",
+      "decision": "reuse_owner_directed_in_standalone",
+      "notes": "Original premium Infinity black-hole raster copied byte-for-byte from the owner's pinned bbmobilenew-source commit at Georgi's explicit visual-parity request; replaces the CPI-008 radial-gradient approximation. The source game remains unchanged.",
       "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/minigames/crystalPathShattered/infinity-black-hole-bg.png",
       "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
-      "rights": "Proprietary owner source; reference only or pending rights review, not copied into the standalone project.",
-      "optimization": "Do not copy until rights and visual fidelity are reviewed; CSS-rendered offline black-hole fallback retained."
+      "rights": "Owner-proprietary source, reused at Georgi's direction for the new standalone game; confirm any third-party/commercial redistribution rights separately before store release.",
+      "optimization": "Bundled local PNG, no runtime network; preserve original pixels/contrast until physical device review, then compare any future optimized alternative rather than changing artwork silently.",
+      "target_stage": "CPI-011 visual parity corrective follow-up",
+      "target_path": "apps/mobile/src/infinity-black-hole-bg.png",
+      "source_blob_sha": "25e9ceb6f98ac43c2bc15354ce8be7b7e7596cd3",
+      "bytes": 1896459
     },
     {
       "path": "public/assets/sounds/minigames/minigame_gb_safe_step.mp3",

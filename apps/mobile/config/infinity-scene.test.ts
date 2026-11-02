@@ -5,6 +5,7 @@ import { createPracticeCursor, createRun, PRACTICE_RNG } from '@crystal-path-inf
 import { InfinitySceneView } from '../src/infinity-scene';
 import { DEFAULT_PRACTICE_SETTINGS } from '../src/practice-save';
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 
 const noop = () => {};
 function makeState() {
@@ -42,6 +43,17 @@ function markup(modifiers: Record<string, unknown> = {}) {
   );
 }
 describe('CPI-008 standalone scene', () => {
+  it('bundles the exact original owner-source black-hole PNG, not a CSS approximation', () => {
+    const image = readFileSync(new URL('../src/infinity-black-hole-bg.png', import.meta.url));
+    expect(image.length).toBe(1_896_459);
+    expect(image.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
+    const gitObjectId = createHash('sha1')
+      .update(`blob ${image.length}\0`)
+      .update(image)
+      .digest('hex');
+    expect(gitObjectId).toBe('25e9ceb6f98ac43c2bc15354ce8be7b7e7596cd3');
+  });
+
   it('renders accessible left/right/hint controls, no season/AI/prize content', () => {
     const html = markup();
     expect(html).toContain('aria-label="Choose left step"');
@@ -66,6 +78,13 @@ describe('CPI-008 standalone scene', () => {
     expect(css).toContain('env(safe-area-inset-top');
     expect(css).toMatch(/max-height:\s*650px/);
     expect(css).toContain('prefers-reduced-motion');
-    expect(css).not.toContain("url('./infinity-black-hole-bg.png')");
+    expect(css).toContain("url('./infinity-black-hole-bg.png')");
+    const railRules = css.match(
+      /\.cps-shell--premium \.cps-board::before,\s*\.cps-shell--premium \.cps-board::after\s*\{([^}]+)\}/,
+    );
+    expect(railRules?.[1]).toContain('bottom: 43%');
+    expect(railRules?.[1]).toContain('pointer-events: none');
+    expect(railRules?.[1]).toContain('mask-image: linear-gradient(to bottom');
+    expect(railRules?.[1]).toContain('-webkit-mask-image: linear-gradient(to bottom');
   });
 });

@@ -1606,6 +1606,7 @@
 .cps-shell--premium {
   isolation: isolate;
   background-color: #010205;
+  /* Exact source artwork from the user's existing Infinity minigame, bundled offline. */
   background-image:
     linear-gradient(
       180deg,
@@ -1613,22 +1614,8 @@
       rgba(0, 0, 0, 0.12) 48%,
       rgba(0, 0, 0, 0.3) 100%
     ),
-    radial-gradient(
-      ellipse 34% 13% at 50% 78%,
-      #000 0 48%,
-      rgba(8, 6, 22, 0.97) 65%,
-      transparent 100%
-    ),
-    radial-gradient(
-      ellipse 60% 24% at 50% 80%,
-      rgba(141, 72, 167, 0.36) 0 30%,
-      rgba(38, 132, 170, 0.27) 40%,
-      transparent 75%
-    ),
-    radial-gradient(ellipse 90% 50% at 50% 75%, rgba(55, 28, 117, 0.26), #010307 84%);
-  background-position:
-    center,
-    center 100%;
+    url('./infinity-black-hole-bg.png');
+  background-position: center, center 100%;
   background-size: cover;
   background-repeat: no-repeat;
   color: #e7f3f7;
@@ -1863,10 +1850,14 @@
 .cps-shell--premium .cps-board::after {
   content: '';
   position: absolute;
+  /* Stop/fade before the two nearest transparent, tappable bridge rows. */
   top: 4%;
-  bottom: 3%;
+  bottom: 43%;
   width: 3px;
   z-index: 0;
+  pointer-events: none;
+  mask-image: linear-gradient(to bottom, #000 0%, #000 72%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 72%, transparent 100%);
   border-radius: 999px;
   background: linear-gradient(
     180deg,
