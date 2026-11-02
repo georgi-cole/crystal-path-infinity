@@ -57,7 +57,7 @@ describe('CPI-011 independent Midnight Prism identity', () => {
   });
 
   it('tracks original assets, reuse decisions and pending third-party rights accurately', () => {
-    const inventory: {
+    const inventory = JSON.parse(get('../../../planning/visual-assets.json')) as unknown as {
       assets: {
         id: string;
         origin: string;
@@ -65,7 +65,7 @@ describe('CPI-011 independent Midnight Prism identity', () => {
         rights: string;
         fallback: string;
       }[];
-    } = JSON.parse(get('../../../planning/visual-assets.json'));
+    };
     const items = inventory.assets;
     expect(new Set(items.map((item) => item.id)).size).toBe(items.length);
     expect(items.length).toBeGreaterThan(12);
@@ -79,10 +79,10 @@ describe('CPI-011 independent Midnight Prism identity', () => {
         expect(asset.rights.toLowerCase()).toMatch(/unverified|pending/);
       }
     }
-    const manifest: {
+    const manifest = JSON.parse(get('../../../planning/reuse-manifest.json')) as unknown as {
       source_commit: string;
       resources: { path: string }[];
-    } = JSON.parse(get('../../../planning/reuse-manifest.json'));
+    };
     expect(manifest.source_commit).toMatch(/^[0-9a-f]{40}$/);
     expect(manifest.resources.map((item) => item.path)).toContain(
       'src/components/GameButton/GameButton.tsx',
