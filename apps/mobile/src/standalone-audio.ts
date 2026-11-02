@@ -129,8 +129,8 @@ export function createStandaloneAudio(ports: AudioPorts, settings: PracticeSetti
       return Promise.resolve(false);
     }
   }
-  function cue(name: keyof typeof sfx, playbackRate = 1) {
-    if (disposed || !active || !foreground || !unlocked || !preferences.soundEffects) return;
+  function cue(name: keyof typeof sfx, playbackRate = 1, allowInactive = false) {
+    if (disposed || (!active && !allowInactive) || !foreground || !unlocked || !preferences.soundEffects) return;
     const media = sfx[name];
     try {
       media.pause();
@@ -141,8 +141,8 @@ export function createStandaloneAudio(ports: AudioPorts, settings: PracticeSetti
       // Muted platform, codec failure or autoplay rejection may not block a step.
     }
   }
-  function pulse(kind: HapticKind) {
-    if (disposed || !active || !foreground || !preferences.haptics) return;
+  function pulse(kind: HapticKind, allowInactive = false) {
+    if (disposed || (!active && !allowInactive) || !foreground || !preferences.haptics) return;
     try {
       void Promise.resolve(ports.haptic(kind)).catch(() => {});
     } catch {
@@ -192,7 +192,9 @@ export function createStandaloneAudio(ports: AudioPorts, settings: PracticeSetti
       return startMusic();
     },
     playEvents(events, state, options) {
-      if (disposed || !active || !foreground || !options.foreground) return;
+      if (disposed || !foreground || !options.foreground) return;
+      const hasTerminal = events.some((event) => event.type === 'run-ended');
+      if (!active && !hasTerminal) return;
       const death = events.find((event) => event.type === 'death');
       if (death?.type === 'death' && lastDeath !== death.death.id) {
         lastDeath = death.death.id;
@@ -227,9 +229,9 @@ export function createStandaloneAudio(ports: AudioPorts, settings: PracticeSetti
           stopEffects();
           if (options.personalBest) {
             terminalTail = 'record';
-            cue('record');
+            cue('record', 1, true);
           }
-          pulse('end');
+          pulse('end', true);
         }
       }
     },

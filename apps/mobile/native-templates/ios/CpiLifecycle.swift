@@ -1,4 +1,5 @@
 import Capacitor
+import UIKit
 import WebKit
 
 @objc(CpiLifecycle)

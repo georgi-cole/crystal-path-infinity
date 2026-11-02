@@ -40,20 +40,14 @@ function fixture() {
     resolveMusic() { deferred?.(); deferred = undefined; },
   };
 }
-function event<E extends RunEvent['type']>(
-  type: E,
-  fields: Extract<RunEvent, { type: E }>,
-): RunEvent {
-  return { ...fields, type };
-}
 const state = { runId: 'practice-test', revivesApplied: 0 } as RunState;
 const choose = (row: string, wrong: boolean): RunEvent =>
-  event('choice-resolved', {
+  ({
     type: 'choice-resolved', row, side: 'left', wrong, spDelta: wrong ? -20 : 0,
     consumedKind: null, activeTimeMs: 0, observedAt: 0,
   });
 const death = (id: string): RunEvent =>
-  event('death', {
+  ({
     type: 'death',
     death: { id, sequence: 1, cause: 'wrong_tile', fatalRow: '5', activeTimeMs: 0, observedAt: 0 },
     activeTimeMs: 0, observedAt: 0,
@@ -125,15 +119,30 @@ describe('CPI-010 standalone audio ownership', () => {
     await audio.unlock();
     audio.playEvents([choose('350', false)], state, { foreground: true, personalBest: true });
     expect(f.media.get(CRYSTAL_AUDIO.record)?.played).toBe(0);
-    const ending = event('run-ended', {
+    const ending: RunEvent = {
       type: 'run-ended', activeTimeMs: 1, observedAt: 1,
       result: {} as Extract<RunEvent, { type: 'run-ended' }>['result'],
-    });
+    };
     audio.playEvents([ending, ending], state, { foreground: true, personalBest: true });
     audio.playEvents([ending], state, { foreground: true, personalBest: true });
     expect(f.media.get(CRYSTAL_AUDIO.record)?.played).toBe(1);
     audio.setActive(false);
     expect(f.media.get(CRYSTAL_AUDIO.record)?.paused).toBe(false);
+    audio.dispose();
+  });
+
+  it('plays one result cue when the player ends an already-dead attempt', async () => {
+    const f = fixture();
+    const audio = createStandaloneAudio(f.ports, DEFAULT_PRACTICE_SETTINGS);
+    audio.setActive(true);
+    await audio.unlock();
+    audio.setActive(false);
+    const ending: RunEvent = {
+      type: 'run-ended', activeTimeMs: 1, observedAt: 1,
+      result: {} as Extract<RunEvent, { type: 'run-ended' }>['result'],
+    };
+    audio.playEvents([ending, ending], state, { foreground: true, personalBest: true });
+    expect(f.media.get(CRYSTAL_AUDIO.record)?.played).toBe(1);
     audio.dispose();
   });
 

@@ -18,7 +18,9 @@ public class CpiFeedback extends Plugin {
             return;
         }
         getActivity().runOnUiThread(() -> {
-            final View view = getActivity().getWindow().getDecorView();
+            final View view = getActivity() == null || getActivity().getWindow() == null
+                ? null : getActivity().getWindow().getDecorView();
+            if (view == null) { call.resolve(); return; }
             final int feedback = "step".equals(kind)
                 ? HapticFeedbackConstants.KEYBOARD_TAP
                 : "damage".equals(kind)
