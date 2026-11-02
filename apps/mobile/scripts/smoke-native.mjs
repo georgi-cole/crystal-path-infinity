@@ -19,8 +19,11 @@ import { dirname, join, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import {
+  androidAppAnrObserved,
   androidBroadcastsIdle,
   androidHomeLaunchObserved,
+  androidPressureWithinBudget,
+  androidRenderPressure,
   androidUserBootPosted,
 } from '../config/android-boot-readiness.ts';
 import {
@@ -358,6 +361,76 @@ async function android() {
   let logcat;
   let boundary;
   let device;
+
+  /** A real target-app ANR must always fail, regardless of emulator pressure. */
+  function assertNoTargetAnr() {
+    assert.ok(
+      !androidAppAnrObserved(appLog().slice(logOffset), buildInfo.appId),
+      'Android target-app ANR during focus transition; see ActivityManager logs',
+    );
+  }
+
+  function capturePressure() {
+    const cpu = text(adb, adbArgs('shell', 'cat', '/proc/pressure/cpu'), {
+      timeout: 10_000,
+    });
+    const io = text(adb, adbArgs('shell', 'cat', '/proc/pressure/io'), {
+      timeout: 10_000,
+    });
+    return androidRenderPressure(cpu, io);
+  }
+
+  /**
+   * The fresh SwiftShader GPU can be saturated *after* Android boot, broadcast
+   * idle and even a fast native bridge handshake. Require 3 low-stall PSI
+   * samples and no new asset requests before issuing real focus transitions.
+   * This test-only gate does not alter production startup or relax native proof.
+   */
+  async function waitForAndroidGraphicsSettling(stage, quietAssets = false) {
+    const samples = [];
+    const started = Date.now();
+    let lastAssetCount = -1;
+    let lastAssetAt = started;
+    let consecutiveGood = 0;
+    let completed = false;
+    try {
+      await waitFor('Android ' + stage + ' graphics/IO pressure readiness', 120_000, () => {
+        assertRunning(child, 'Android emulator');
+        assertRunning(logcat, 'Android lifecycle log capture');
+        assertNoTargetAnr();
+        const now = Date.now();
+        const currentLog = appLog().slice(logOffset);
+        const resourceCount = (currentLog.match(/D Capacitor: Handling local request:/g) ?? [])
+          .length;
+        if (resourceCount !== lastAssetCount) {
+          lastAssetCount = resourceCount;
+          lastAssetAt = now;
+          consecutiveGood = 0;
+        }
+        const pressure = capturePressure();
+        const resourceQuiet = !quietAssets || now - lastAssetAt >= 4000;
+        consecutiveGood =
+          androidPressureWithinBudget(pressure) && resourceQuiet ? consecutiveGood + 1 : 0;
+        samples.push({
+          at: new Date(now).toISOString(),
+          stage,
+          pressure,
+          resourceCount,
+          quietForMs: now - lastAssetAt,
+          consecutiveGood,
+        });
+        if (samples.length > 180) samples.shift();
+        return consecutiveGood >= 3 && now - started >= (quietAssets ? 6000 : 2500);
+      });
+      completed = true;
+    } finally {
+      save(
+        'android-attempt-' + attempt + '-' + stage + '-graphics-readiness.json',
+        JSON.stringify({ attempt, stage, completed, samples }, null, 2) + '\n',
+      );
+    }
+  }
+
   try {
     await waitFor('Android boot', 360_000, () => {
       assertRunning(child, 'Android emulator');
@@ -492,6 +565,9 @@ async function android() {
         assertRunning(logcat, 'Android lifecycle log capture');
         return hasStartupEvidence();
       });
+      // The initial bridge-ready marker precedes the first GPU/WebView paint.
+      await waitForAndroidGraphicsSettling('foreground', true);
+      recordLifecycleAction('foreground-render-stable');
       const initialPid = text(adb, adbArgs('shell', 'pidof', buildInfo.appId));
       boundary = lifecycleBoundary(readAnalysis());
       recordLifecycleAction('home', { boundary });
@@ -507,6 +583,7 @@ async function android() {
         await waitFor('Android Home key dispatch', 5_000, () => {
           assertRunning(child, 'Android emulator');
           assertRunning(logcat, 'Android lifecycle log capture');
+          assertNoTargetAnr();
           return (
             nativePaused() ||
             androidHomeLaunchObserved(appLog().slice(logOffset), boundary.lineBeforeBackground)
@@ -542,6 +619,7 @@ async function android() {
       await waitFor('Android native pause after Home', 30_000, () => {
         assertRunning(child, 'Android emulator');
         assertRunning(logcat, 'Android lifecycle log capture');
+        assertNoTargetAnr();
         return nativePaused();
       });
       recordLifecycleAction('native-pause-observed');
@@ -549,6 +627,9 @@ async function android() {
         `android-attempt-${attempt}-background-activity.txt`,
         text(adb, adbArgs('shell', 'dumpsys', 'activity', 'activities')),
       );
+      // Do not immediately switch focus back while the OS compositor is busy.
+      await waitForAndroidGraphicsSettling('background');
+      recordLifecycleAction('background-render-stable');
       recordLifecycleAction('resume-existing-activity');
       save(
         `android-attempt-${attempt}-resume.txt`,
@@ -556,6 +637,7 @@ async function android() {
       );
       await waitFor('Android bridge round-trip after real Home/resume', 30_000, () => {
         assertRunning(logcat, 'Android lifecycle log capture');
+        assertNoTargetAnr();
         return hasResumeEvidence(boundary);
       });
       const pid = text(adb, adbArgs('shell', 'pidof', buildInfo.appId));
@@ -601,6 +683,17 @@ async function android() {
     saveAttempt(boundary, true);
     return device;
   } catch (error) {
+    // Attach system focus/load evidence on failure without replacing the error.
+    for (const [name, commandArgs] of [
+      ['android-failure-cpu-pressure.txt', adbArgs('shell', 'cat', '/proc/pressure/cpu')],
+      ['android-failure-io-pressure.txt', adbArgs('shell', 'cat', '/proc/pressure/io')],
+      ['android-failure-window.txt', adbArgs('shell', 'dumpsys', 'window', 'windows')],
+      ['android-failure-activities.txt', adbArgs('shell', 'dumpsys', 'activity', 'activities')],
+      ['android-failure-gfxinfo.txt', adbArgs('shell', 'dumpsys', 'gfxinfo', buildInfo.appId)],
+    ]) {
+      const result = run(adb, commandArgs, { timeout: 15_000, allowFailure: true });
+      save(name, String(result.stdout ?? '') + '\n' + String(result.stderr ?? ''));
+    }
     const screenshot = run(adb, adbArgs('exec-out', 'screencap', '-p'), {
       timeout: 10_000,
       binary: true,
