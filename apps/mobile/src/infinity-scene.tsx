@@ -148,7 +148,7 @@ export function InfinitySceneView({
       </div>
       <div className="cps-content">
         <div className="cpi-scene-toolbar">
-          <span className="cpi-practice-tag">∞ Infinity · Practice preview</span>
+          <span className="cpi-practice-tag">Crystal Path · Offline practice</span>
           <button
             type="button"
             onClick={onPause}
@@ -160,7 +160,15 @@ export function InfinitySceneView({
         </div>
         <header className="cps-header">
           <div className="cps-header-left">
-            <span className="cps-protocol-label">∞ Infinity Protocol</span>
+            <span className="cps-protocol-label">
+              <img
+                className="cpi-scene-brand-mark"
+                src={`${import.meta.env.BASE_URL}brand/prism-mark.svg`}
+                alt=""
+                aria-hidden="true"
+              />
+              Crystal Path · Infinity
+            </span>
             <span className="cps-player-name">Your path</span>
             <span className="cps-row-display">Row {presented.currentRow}</span>
           </div>
