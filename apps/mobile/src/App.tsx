@@ -2,10 +2,14 @@ import { useCallback, useEffect, useState } from 'react';
 import type { RunState } from '@crystal-path-infinity/game-core';
 import {
   clearPracticeCheckpoint,
+  DEFAULT_PRACTICE_SETTINGS,
   readPracticeCheckpoint,
+  readPracticeSettings,
   writePracticeCheckpoint,
+  writePracticeSettings,
 } from './practice-save';
-import type { PracticeLoad } from './practice-save';
+import type { PracticeLoad, PracticeSettings } from './practice-save';
+import { AudioSettingsControls } from './audio-settings-controls';
 import { InfinityPractice } from './infinity-scene';
 import { Capacitor } from '@capacitor/core';
 import { markDiagnosticReactReady } from './startup-diagnostics';
@@ -115,6 +119,24 @@ export function App() {
   const [game, setGame] = useState<{ initial: RunState | null } | null>(null);
   const [saved, setSaved] = useState<PracticeLoad>(loadLocalPractice);
   const [storageWarning, setStorageWarning] = useState<string | null>(null);
+  const [settings, setSettings] = useState<PracticeSettings>(() => {
+    try {
+      return typeof window === 'undefined'
+        ? DEFAULT_PRACTICE_SETTINGS
+        : readPracticeSettings(window.localStorage).settings;
+    } catch {
+      return DEFAULT_PRACTICE_SETTINGS;
+    }
+  });
+  const changeSettings = useCallback((next: PracticeSettings) => {
+    setSettings(next);
+    try {
+      writePracticeSettings(window.localStorage, next);
+      setStorageWarning(null);
+    } catch {
+      setStorageWarning('Sound settings could not be saved on this device.');
+    }
+  }, []);
   const onCheckpoint = useCallback((state: RunState) => {
     try {
       writePracticeCheckpoint(window.localStorage, state);
@@ -168,6 +190,8 @@ export function App() {
           onExit={closePractice}
           initialState={game.initial}
           onCheckpoint={onCheckpoint}
+          settings={settings}
+          onSettingsChange={changeSettings}
         />
         {storageWarning && (
           <div role="alert" className="cpi-storage-warning">
@@ -223,6 +247,7 @@ export function App() {
             {storageWarning}
           </p>
         )}
+        <AudioSettingsControls settings={settings} onChange={changeSettings} />
         <p className="preview-note">
           Offline practice · No account needed · Results are not ranked
         </p>

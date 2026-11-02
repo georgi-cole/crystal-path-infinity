@@ -215,6 +215,9 @@ export function createStandaloneAudio(ports: AudioPorts, settings: PracticeSetti
             cue('safe');
             pulse('step');
           }
+        } else if (event.type === 'mystery-resolved' && event.spDelta < 0) {
+          cue('safe', 0.72);
+          pulse('damage');
         } else if (event.type === 'revive-applied') {
           lastStep = '';
           terminalTail = null;
