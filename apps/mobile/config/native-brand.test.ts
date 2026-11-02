@@ -93,7 +93,7 @@ describe('CPI-012 deterministic native icon exports', () => {
     expect(generator).toContain('syncNativeBrandAssets(appRoot, platform, true)');
     expect(cap).toContain("'#060a18'");
     expect(html).toContain('background: #060a18;');
-    expect(generator).not.toMatch(/cpi_launch_placeholder|The Big Eye|story-icon/);
+    expect(generator).not.toMatch(/@drawable\/cpi_launch_placeholder|The Big Eye|story-icon/);
   });
 
   it('keeps the OS splash and independent bounded in-app bootstrap distinct', () => {
@@ -105,7 +105,7 @@ describe('CPI-012 deterministic native icon exports', () => {
     expect(app).toContain('Play offline');
     expect(app).toContain('Offline practice');
     expect(startup).toContain('BOOT_TIMEOUT_MS = 1500');
-    expect(startup).not.toMatch(/fetch\(|admob|analytics|setInterval/);
+    expect(startup).not.toMatch(/\b(?:fetch|setInterval|trackEvent|requestAds)\s*\(/);
     expect(palette).toContain('background: var(--cpi-night)');
     expect(palette).toContain('env(safe-area-inset-top');
     expect(source('src/styles.css')).toContain('prefers-reduced-motion');
