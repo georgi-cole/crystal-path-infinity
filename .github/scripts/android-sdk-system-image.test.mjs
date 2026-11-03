@@ -7,36 +7,37 @@ import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
 const installer = fileURLToPath(new URL('./android-sdk-system-image.sh', import.meta.url));
-const sdkMock = [
-  '#!/usr/bin/env bash',
-  'set -euo pipefail',
-  '[[ "$#" -eq 2 && "$1" == "--install" && "$2" == "system-images;android-36;default;x86_64" ]] || exit 94',
-  'attempt_file="$ANDROID_HOME/mock-attempts"',
-  'attempt=0',
-  'if [[ -e "$attempt_file" ]]; then attempt="$(cat "$attempt_file")"; fi',
-  'attempt=$((attempt + 1))',
-  'printf "%s" "$attempt" > "$attempt_file"',
-  'image_dir="$ANDROID_HOME/system-images/android-36/default/x86_64"',
-  'case "$CPI_MOCK_SDK_MODE" in',
-  '  corrupt-once|corrupt-always)',
-  '    if [[ "$attempt" -eq 1 || "$CPI_MOCK_SDK_MODE" == "corrupt-always" ]]; then',
-  '      mkdir -p "$image_dir"',
-  '      printf partial > "$image_dir/partial-archive.zip"',
-  '      echo "Warning: Error on ZipFile unknown archive."',
-  '      exit 1',
-  '    fi',
-  '    [[ ! -e "$image_dir/partial-archive.zip" ]] || exit 97',
-  '    ;;',
-  '  fatal) echo "Error: Package not found."; exit 1 ;;',
-  '  incomplete) echo "Installer returned success without image."; exit 0 ;;',
-  '  success) ;;',
-  '  *) exit 93 ;;',
-  'esac',
-  'mkdir -p "$image_dir"',
-  'printf "Pkg.Revision=2\\n" > "$image_dir/source.properties"',
-  'printf "system-image-bytes" > "$image_dir/system.img"',
-  'echo "Installation complete"',
-].join('\n') + '\n';
+const sdkMock =
+  [
+    '#!/usr/bin/env bash',
+    'set -euo pipefail',
+    '[[ "$#" -eq 2 && "$1" == "--install" && "$2" == "system-images;android-36;default;x86_64" ]] || exit 94',
+    'attempt_file="$ANDROID_HOME/mock-attempts"',
+    'attempt=0',
+    'if [[ -e "$attempt_file" ]]; then attempt="$(cat "$attempt_file")"; fi',
+    'attempt=$((attempt + 1))',
+    'printf "%s" "$attempt" > "$attempt_file"',
+    'image_dir="$ANDROID_HOME/system-images/android-36/default/x86_64"',
+    'case "$CPI_MOCK_SDK_MODE" in',
+    '  corrupt-once|corrupt-always)',
+    '    if [[ "$attempt" -eq 1 || "$CPI_MOCK_SDK_MODE" == "corrupt-always" ]]; then',
+    '      mkdir -p "$image_dir"',
+    '      printf partial > "$image_dir/partial-archive.zip"',
+    '      echo "Warning: Error on ZipFile unknown archive."',
+    '      exit 1',
+    '    fi',
+    '    [[ ! -e "$image_dir/partial-archive.zip" ]] || exit 97',
+    '    ;;',
+    '  fatal) echo "Error: Package not found."; exit 1 ;;',
+    '  incomplete) echo "Installer returned success without image."; exit 0 ;;',
+    '  success) ;;',
+    '  *) exit 93 ;;',
+    'esac',
+    'mkdir -p "$image_dir"',
+    'printf "Pkg.Revision=2\\n" > "$image_dir/source.properties"',
+    'printf "system-image-bytes" > "$image_dir/system.img"',
+    'echo "Installation complete"',
+  ].join('\n') + '\n';
 
 function fixture(t, mode) {
   const root = mkdtempSync(join(tmpdir(), 'cpi-sdk-image-'));
@@ -91,7 +92,10 @@ test('three corrupt downloads fail with individual diagnostic logs', (t) => {
   for (let attempt = 1; attempt <= 3; attempt++) {
     assert.match(
       readFileSync(
-        join(f.root, 'apps/mobile/artifacts/android-system-image-install-attempt-' + attempt + '.log'),
+        join(
+          f.root,
+          'apps/mobile/artifacts/android-system-image-install-attempt-' + attempt + '.log',
+        ),
         'utf8',
       ),
       /ZipFile unknown archive/,

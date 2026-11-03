@@ -47,8 +47,6 @@ jobs:
         run: node --test .github/scripts/android-sdk-system-image.test.mjs
       - name: Install the clean workspace
         run: npm ci --ignore-scripts
-      - name: Temporary print canonical SDK test formatter output
-        run: npx prettier .github/scripts/android-sdk-system-image.test.mjs
       - name: Record installed dependencies
         run: |
           mkdir -p apps/mobile/artifacts
