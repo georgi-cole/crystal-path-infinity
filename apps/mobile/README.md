@@ -12,6 +12,10 @@ Generation owns the local Java/Swift templates. Android uses a generated copy of
 
 Native smoke exercises Home and lock/wake before the first JavaScript page on Android, and an early Settings interruption on iOS Simulator. It verifies current page/bridge identity across three Android and two iOS process/WebView starts. The development-only navigation gate uses real OS transitions and observable predicates, with no fixed dwell sleeps or JavaScript error suppression. iOS lock testing and physical devices remain separate gates.
 
+## CPI-018 protected-session foundation
+
+The local native `CpiSecureSession` plugin now provides **refresh-token-only** persistence: iOS Keychain with `WhenUnlockedThisDeviceOnly` (and first-install orphan cleanup), and Android Keystore AES-GCM with backup disabled. The React adapter fails closed on web and never stores account tokens in localStorage or Preferences. It is a security primitive, **not an active account login**: no Supabase request, OTP form, remote account, privacy/parental approval or ranked record is claimed ready in this slice. See [the implementation decision](../../docs/decisions/CPI-018-secure-session.md).
+
 ## CPI-013 navigation and local progress
 
 The new Midnight Prism menu keeps the CPI-012 instant offline bootstrap. Play explains unavailable ranked/auth features rather than fabricating a login or official run. Practice is playable without account or age/analytics response, with safe Resume and explicit New confirmation. Personal best is strictly local and not part of the verified rankings. Profile and Rankings show honest guest/offline/unconfigured states, while Settings contains real persistent music/SFX/haptics/reduced-motion controls.
