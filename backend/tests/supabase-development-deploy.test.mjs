@@ -6,6 +6,7 @@ import {
   CPI017_MIGRATION,
   assertCpi017Audit,
   assertSingleCpi017Preview,
+  explainCpi017ReadOnlyQueryFailure,
 } from '../scripts/check-cpi017-deploy-output.mjs';
 
 const workflow = readFileSync(
@@ -47,6 +48,23 @@ test('read-only SQL catalog checks require success markers, not absent or failed
   assert.throws(() => assertCpi017Audit('CPI017_POSTCHECK_OK', 'not-a-marker'));
 });
 
+test('read-only SQL failures suggest the least-privilege DB Read permission without exposing raw CLI errors', () => {
+  const denied = 'HTTP 403 Forbidden: missing database_read; bearer sbp_fc_NEVER_PRINT_THIS';
+  const advice = explainCpi017ReadOnlyQueryFailure(denied);
+  assert.match(advice, /Database → Read/);
+  assert.match(advice, /CPI_DEV_SUPABASE_ACCESS_TOKEN/);
+  assert.doesNotMatch(advice, /sbp_fc_NEVER_PRINT_THIS/);
+
+  const unknown = explainCpi017ReadOnlyQueryFailure(
+    'opaque failure with password=SECRET_SHOULD_NOT_APPEAR',
+  );
+  assert.match(unknown, /unconfirmed reason/);
+  assert.doesNotMatch(unknown, /SECRET_SHOULD_NOT_APPEAR/);
+
+  assert.match(explainCpi017ReadOnlyQueryFailure('401 Unauthorized'), /authentication failed/);
+  assert.match(explainCpi017ReadOnlyQueryFailure('syntax error at or near SELECT'), /rejected the query/);
+});
+
 test('workflow can never auto-deploy, requires exact project and a typed human confirmation', () => {
   assert.match(workflow, /^on:\n  workflow_dispatch:\n    inputs:/m);
   assert.doesNotMatch(workflow, /^  (?:push|pull_request|schedule):/m);
@@ -75,13 +93,17 @@ test('only one CLI command can mutate remote SQL; all other database checks are 
     .map((line) => line.trim());
   assert.deepEqual(commands, [
     'supabase link --project-ref "$CPI_SUPABASE_DEV_REF"',
-    'supabase db query "$(cat backend/sql/cpi017-deploy-preflight.sql)" --read-only --remote="$CPI_SUPABASE_DEV_REF" > "$output" 2>&1 || {',
+    'if ! supabase db query "$(cat backend/sql/cpi017-deploy-preflight.sql)" --read-only --remote="$CPI_SUPABASE_DEV_REF" > "$output" 2>&1; then',
     'supabase db push --dry-run --remote="$CPI_SUPABASE_DEV_REF" > "$output" 2>&1 || {',
     'supabase db push --yes --remote="$CPI_SUPABASE_DEV_REF"',
-    'supabase db query "$(cat backend/sql/cpi017-deploy-postcheck.sql)" --read-only --remote="$CPI_SUPABASE_DEV_REF" > "$output" 2>&1 || {',
+    'if ! supabase db query "$(cat backend/sql/cpi017-deploy-postcheck.sql)" --read-only --remote="$CPI_SUPABASE_DEV_REF" > "$output" 2>&1; then',
   ]);
   assert.doesNotMatch(workflow, /^\s+supabase\s+(?:db reset|migration repair|seed)/m);
   assert.doesNotMatch(workflow, /--include-(?:roles|seed|all)/);
+  assert.equal(
+    workflow.match(/check-cpi017-deploy-output\.mjs failure "\$output"/g)?.length,
+    2,
+  );
 });
 
 test('preflight and postcheck SQL are read-only, separate, and lack secret-bearing columns', () => {
