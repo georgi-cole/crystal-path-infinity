@@ -11,17 +11,19 @@ function fakeVault() {
   let value: string | null = null;
   const calls: string[] = [];
   const vault: NativeSecureSessionPlugin = {
-    async readRefreshToken() {
+    readRefreshToken() {
       calls.push('read');
-      return { value };
+      return Promise.resolve({ value });
     },
-    async writeRefreshToken(record) {
+    writeRefreshToken(record) {
       calls.push('write');
       value = record.value;
+      return Promise.resolve();
     },
-    async clearRefreshToken() {
+    clearRefreshToken() {
       calls.push('clear');
       value = null;
+      return Promise.resolve();
     },
   };
   return { vault, calls };
@@ -65,11 +67,15 @@ describe('CPI-018 native protected refresh-token contract', () => {
     const store = createProtectedRefreshTokenStore(
       () => true,
       {
-        async readRefreshToken() {
-          return { value: 'bad' };
+        readRefreshToken() {
+          return Promise.resolve({ value: 'bad' });
         },
-        async writeRefreshToken() {},
-        async clearRefreshToken() {},
+        writeRefreshToken() {
+          return Promise.resolve();
+        },
+        clearRefreshToken() {
+          return Promise.resolve();
+        },
       },
     );
     await expect(store.read()).rejects.toThrow('Invalid refresh credential');
@@ -79,14 +85,14 @@ describe('CPI-018 native protected refresh-token contract', () => {
     const store = createProtectedRefreshTokenStore(
       () => true,
       {
-        async readRefreshToken() {
-          throw new Error('key invalidated');
+        readRefreshToken() {
+          return Promise.reject(new Error('key invalidated'));
         },
-        async writeRefreshToken() {
-          throw new Error('store failed');
+        writeRefreshToken() {
+          return Promise.reject(new Error('store failed'));
         },
-        async clearRefreshToken() {
-          throw new Error('clear failed');
+        clearRefreshToken() {
+          return Promise.reject(new Error('clear failed'));
         },
       },
     );
