@@ -1,0 +1,6 @@
+# Local Supabase state created by CLI linking/running; never commit it.
+.branches/
+.temp/
+.env
+.env.*
+!.env.example

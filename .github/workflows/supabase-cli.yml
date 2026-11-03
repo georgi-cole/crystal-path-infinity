@@ -1,0 +1,74 @@
+name: Supabase CLI readiness
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/**'
+      - 'backend/**'
+      - '.github/workflows/supabase-cli.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/**'
+      - 'backend/**'
+      - '.github/workflows/supabase-cli.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cli:
+    name: Prepare and validate Supabase CLI
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.23.4'
+      - name: Install pinned stable Supabase CLI on the GitHub runner
+        uses: supabase/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13 # v3.2.0
+        with:
+          version: '3.0.0'
+      - name: Check CLI installation and migration commands
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(supabase --version)"
+          echo "Supabase CLI version: $version"
+          [[ "$version" == *"3.0.0"* ]] || {
+            echo "Supabase CLI version mismatch" >&2
+            exit 1
+          }
+          supabase migration --help > /dev/null
+          supabase db push --help > /dev/null
+      - name: Validate initialized local config and preserved CPI-017 migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import tomllib
+
+          root = Path('supabase')
+          config = tomllib.loads((root / 'config.toml').read_text(encoding='utf-8'))
+          assert config['project_id'] == 'crystal-path-infinity'
+          api = config['api']
+          assert api['schemas'] == ['public', 'storage']
+          assert 'cpi_private' not in api['schemas']
+          assert 'auth' not in api['schemas']
+          assert 'cpi_private' not in api['extra_search_path']
+          assert 'auth' not in api['extra_search_path']
+          assert 'remotes' not in config, 'Hosted projects must be linked explicitly, never hardcoded'
+          migration = root / 'migrations' / '20261103000100_cpi017_foundation.sql'
+          assert migration.is_file() and migration.stat().st_size > 1000
+          assert 'create schema if not exists cpi_private;' in migration.read_text(encoding='utf-8')
+          print('CLI config is initialized; CPI-017 migration preserved; no remote linked or modified.')
+          PY
+
+# No tokens, database passwords, hosted links, db push, db reset, or remote
+# operations in this workflow. Later development deployment uses a separate,
+# explicitly approved workflow and environment-scoped GitHub secrets.
