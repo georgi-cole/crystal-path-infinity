@@ -7,6 +7,7 @@ const nonNativeFiles = new Set([
   'LICENSE',
   '.github/CODEOWNERS',
   '.github/workflows/planning.yml',
+  '.github/workflows/mobile-spike.yml',
   'scripts/bootstrap_github.py',
   'scripts/validate_plan.py',
   'scripts/test_bootstrap.py',
@@ -24,15 +25,44 @@ function isDocumentationOrPlanning(path) {
     (!path.includes('/') && path.endsWith('.md')) ||
     path.startsWith('docs/') ||
     path.startsWith('planning/') ||
+    path.startsWith('spikes/mobile/') ||
     path.startsWith('.github/ISSUE_TEMPLATE/') ||
     nonNativeFiles.has(path)
   );
 }
 
-/** Native verification is optional only for a known, complete non-runtime diff. */
+/** 
+ * Only known web/game files qualify for a one-launch native smoke. Everything
+ * unclassified (including toolchains, native projects and CI) runs the full
+ * lifecycle suite. Do not infer safety from a .ts/.md extension alone.
+ */
+function classifyFile(path) {
+  if (isDocumentationOrPlanning(path)) return 'none';
+  if (
+    path === 'apps/mobile/index.html' ||
+    path.startsWith('apps/mobile/public/') ||
+    path.startsWith('apps/mobile/src/') ||
+    (path.startsWith('packages/game-core/') && !path.endsWith('/package.json'))
+  ) {
+    // Native bindings, clocks and lifecycle integration can live inside src/.
+    // They must not be downgraded to the ordinary UI smoke profile.
+    if (/(?:^|\\/)(?:native|capacitor|bridge|lifecycle|foreground.clock|platform)[^/]*\\.(?:ts|tsx|js|mjs)$/i.test(path)) {
+      return 'full';
+    }
+    return 'smoke';
+  }
+  return 'full';
+}
+
+const priority = { none: 0, smoke: 1, full: 2 };
+
+/** Choose full for native changes, smoke for known app content, none for docs. */
 export function selectNativeChecks({ eventName, event, repository = '.' }) {
   if (eventName === 'workflow_dispatch') {
-    return { required: true, reason: 'Manual dispatch verifies both native platforms.' };
+    return { mode: 'full', reason: 'Manual dispatch runs the exhaustive native regression.' };
+  }
+  if (eventName === 'schedule') {
+    return { mode: 'full', reason: 'Nightly regression runs the exhaustive native suite.' };
   }
 
   let before;
@@ -47,15 +77,15 @@ export function selectNativeChecks({ eventName, event, repository = '.' }) {
     after = event?.after;
     separator = '..';
   } else {
-    return { required: true, reason: 'Unknown event; native verification is required.' };
+    return { mode: 'full', reason: 'Unknown event; full native verification is required.' };
   }
 
   const validCommit = (value) =>
     typeof value === 'string' && /^[a-f0-9]{40}$/i.test(value) && !/^0+$/.test(value);
   if (!validCommit(before) || !validCommit(after)) {
     return {
-      required: true,
-      reason: 'Missing comparison revision; native verification is required.',
+      mode: 'full',
+      reason: 'Missing comparison revision; full native verification is required.',
     };
   }
 
@@ -73,16 +103,19 @@ export function selectNativeChecks({ eventName, event, repository = '.' }) {
       },
     );
     const paths = output.split('\0').filter(Boolean);
-    const required = paths.some((path) => !isDocumentationOrPlanning(path));
-    return {
-      required,
-      reason: required
-        ? 'Application, dependency, toolchain, workflow, or unclassified files changed.'
-        : 'Complete diff contains only documentation, planning, templates, or quality configuration.',
-      changedFiles: paths.length,
+    const mode = paths.reduce(
+      (result, path) =>
+        priority[classifyFile(path)] > priority[result] ? classifyFile(path) : result,
+      'none',
+    );
+    const reasons = {
+      none: 'Only documentation, planning, isolated spikes, or quality configuration changed.',
+      smoke: 'Known app UI, assets, or game logic changed; one real native launch and resume per platform.',
+      full: 'Native/toolchain/CI or unclassified changes require the exhaustive lifecycle suite.',
     };
+    return { mode, reason: reasons[mode], changedFiles: paths.length };
   } catch {
-    return { required: true, reason: 'Comparison unavailable; native verification is required.' };
+    return { mode: 'full', reason: 'Comparison unavailable; full native verification is required.' };
   }
 }
 
@@ -91,11 +124,11 @@ export function assertAppGate(needs) {
   if (needs?.web?.result !== 'success') {
     throw new Error(`App quality did not succeed: ${needs?.web?.result ?? 'missing'}`);
   }
-  const required = needs.web.outputs?.native_required;
-  if (required !== 'true' && required !== 'false') {
+  const mode = needs.web.outputs?.native_mode;
+  if (!['none', 'smoke', 'full'].includes(mode)) {
     throw new Error('Native-check selection is missing or invalid.');
   }
-  const expected = required === 'true' ? 'success' : 'skipped';
+  const expected = mode === 'none' ? 'skipped' : 'success';
   for (const platform of ['android', 'ios']) {
     if (needs?.[platform]?.result !== expected) {
       throw new Error(
@@ -103,9 +136,9 @@ export function assertAppGate(needs) {
       );
     }
   }
-  return required === 'true'
-    ? 'App quality and both native build/launch jobs passed.'
-    : 'App quality passed; native jobs were intentionally skipped for the reviewed non-runtime diff.';
+  return mode === 'none'
+    ? 'App quality passed; native jobs intentionally skipped for a verified non-runtime diff.'
+    : `App quality and both native build/launch jobs passed (${mode} profile).`;
 }
 
 function main() {
@@ -118,14 +151,14 @@ function main() {
       });
     } catch {
       decision = {
-        required: true,
-        reason: 'Event context unavailable; native verification is required.',
+        mode: 'full',
+        reason: 'Event context unavailable; full native verification is required.',
       };
     }
-    appendFileSync(process.env.GITHUB_OUTPUT, `required=${decision.required}\n`);
+    appendFileSync(process.env.GITHUB_OUTPUT, `mode=${decision.mode}\n`);
     appendFileSync(
       process.env.GITHUB_STEP_SUMMARY,
-      `### Native verification\n\nRequired: **${decision.required}**. ${decision.reason}\n`,
+      `### Native verification\n\nProfile: **${decision.mode}**. ${decision.reason}\n`,
     );
     console.log(JSON.stringify(decision));
   } else if (process.argv[2] === 'gate') {
