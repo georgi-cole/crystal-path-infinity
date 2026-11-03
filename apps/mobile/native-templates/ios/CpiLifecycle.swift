@@ -131,6 +131,7 @@ class CpiBridgeViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(CpiLifecycle())
         bridge?.registerPluginInstance(CpiFeedback())
+        bridge?.registerPluginInstance(CpiSecureSession())
     }
     override func webView(with frame: CGRect, configuration: WKWebViewConfiguration) -> WKWebView {
         CpiWebView(frame: frame, configuration: configuration)

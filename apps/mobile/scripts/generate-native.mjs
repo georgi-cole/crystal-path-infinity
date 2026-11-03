@@ -112,7 +112,7 @@ function verifyPackages() {
         name.startsWith('@capacitor-community/') ||
         (name.startsWith('@capacitor/') && !nativePackages.includes(name)),
     ),
-    'No external native plugin packages are expected; CpiLifecycle is local source',
+    'No external native plugin packages are expected; native plugins are local source',
   );
   return manifest;
 }
@@ -162,6 +162,7 @@ function configureAndroid(info) {
     'MainActivity.java',
     'CpiLifecycle.java',
     'CpiFeedback.java',
+    'CpiSecureSession.java',
     'CpiWebView.java',
   ]) {
     write(
@@ -265,7 +266,9 @@ function configureIOS(info) {
       read('native-templates/ios/CpiLifecycle.swift').replaceAll(
         '__DEVELOPMENT__',
         String(info.environment === 'development'),
-      ),
+      ) +
+      '\n' +
+      read('native-templates/ios/CpiSecureSession.swift'),
   );
   write(
     'ios/App/App/SceneDelegate.swift',
@@ -413,7 +416,7 @@ function verifyNative(platform, info) {
     assert.deepEqual(
       json('android/app/src/main/assets/capacitor.plugins.json'),
       [],
-      'No external native plugins; local CpiLifecycle is registered directly in source',
+      'No external native plugins; local native plugins are registered directly in source',
     );
     assert.ok(read('android/app/src/main/res/values/cpi_colors.xml').includes(background));
     const launchStyle = read('android/app/src/main/res/values/styles.xml');
@@ -462,6 +465,7 @@ function verifyNative(platform, info) {
       'MainActivity.java',
       'CpiLifecycle.java',
       'CpiFeedback.java',
+      'CpiSecureSession.java',
       'CpiWebView.java',
     ]) {
       assert.equal(
@@ -502,13 +506,18 @@ function verifyNative(platform, info) {
     assert.ok(
       read('ios/App/App/AppDelegate.swift').includes('registerPluginInstance(CpiLifecycle())'),
     );
+    assert.ok(
+      read('ios/App/App/AppDelegate.swift').includes('registerPluginInstance(CpiSecureSession())'),
+    );
     assert.ok(read('ios/App/App/SceneDelegate.swift').includes('CpiBridgeViewController()'));
     assert.ok(
       read('ios/App/App/AppDelegate.swift').endsWith(
         read('native-templates/ios/CpiLifecycle.swift').replaceAll(
           '__DEVELOPMENT__',
           String(info.environment === 'development'),
-        ),
+        ) +
+          '\n' +
+          read('native-templates/ios/CpiSecureSession.swift'),
       ),
     );
     assert.equal(
@@ -538,7 +547,10 @@ function verifyNative(platform, info) {
     capacitorVersion,
     background,
     brandAssets,
-    nativeFeaturePlugins: ['CpiLifecycle (local, no device permissions)'],
+    nativeFeaturePlugins: [
+      'CpiLifecycle (local, no device permissions)',
+      'CpiSecureSession (local, device-bound refresh credential only)',
+    ],
     bundledSystemBars: config.plugins.SystemBars,
     productionSigningConfigured: false,
     configuredOnly: true,
