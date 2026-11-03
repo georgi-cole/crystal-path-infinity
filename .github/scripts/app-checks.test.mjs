@@ -190,10 +190,7 @@ test('failure classification never mistakes a target ANR for runner success', ()
   const anr =
     '1793639689.646 621 2636 E ActivityManager: ANR in ' +
     'com.georgicole.crystalpath.infinity.dev (MainActivity)';
-  assert.equal(
-    classifyNativeFailure({ platform: 'android', appLog: anr }).category,
-    'app-anr',
-  );
+  assert.equal(classifyNativeFailure({ platform: 'android', appLog: anr }).category, 'app-anr');
   assert.equal(
     classifyNativeFailure({
       platform: 'android',
@@ -228,5 +225,8 @@ test('failure classification distinguishes lifecycle, compile, setup and unknown
     classifyNativeFailure({ platform: 'android', failure: 'device offline' }).category,
     'emulator-provisioning',
   );
-  assert.equal(classifyNativeFailure({ platform: 'ios', failure: 'unrecognized' }).category, 'unclassified');
+  assert.equal(
+    classifyNativeFailure({ platform: 'ios', failure: 'unrecognized' }).category,
+    'unclassified',
+  );
 });

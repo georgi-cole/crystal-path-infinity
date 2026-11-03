@@ -31,7 +31,7 @@ function isDocumentationOrPlanning(path) {
   );
 }
 
-/** 
+/**
  * Only known web/game files qualify for a one-launch native smoke. Everything
  * unclassified (including toolchains, native projects and CI) runs the full
  * lifecycle suite. Do not infer safety from a .ts/.md extension alone.
@@ -46,7 +46,11 @@ function classifyFile(path) {
   ) {
     // Native bindings, clocks and lifecycle integration can live inside src/.
     // They must not be downgraded to the ordinary UI smoke profile.
-    if (/(?:^|\/)(?:native|capacitor|bridge|lifecycle|foreground.clock|platform)[^/]*\.(?:ts|tsx|js|mjs)$/i.test(path)) {
+    if (
+      /(?:^|\/)(?:native|capacitor|bridge|lifecycle|foreground.clock|platform)[^/]*\.(?:ts|tsx|js|mjs)$/i.test(
+        path,
+      )
+    ) {
       return 'full';
     }
     return 'smoke';
@@ -110,12 +114,16 @@ export function selectNativeChecks({ eventName, event, repository = '.' }) {
     );
     const reasons = {
       none: 'Only documentation, planning, isolated spikes, or quality configuration changed.',
-      smoke: 'Known app UI, assets, or game logic changed; one real native launch and resume per platform.',
+      smoke:
+        'Known app UI, assets, or game logic changed; one real native launch and resume per platform.',
       full: 'Native/toolchain/CI or unclassified changes require the exhaustive lifecycle suite.',
     };
     return { mode, reason: reasons[mode], changedFiles: paths.length };
   } catch {
-    return { mode: 'full', reason: 'Comparison unavailable; full native verification is required.' };
+    return {
+      mode: 'full',
+      reason: 'Comparison unavailable; full native verification is required.',
+    };
   }
 }
 

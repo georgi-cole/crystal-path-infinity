@@ -19,36 +19,58 @@ export function classifyNativeFailure({ platform, failure = '', appLog = '', bui
   if (platform === 'android' && appAnr) {
     return {
       category: 'app-anr',
-      explanation: 'Android reported a genuine ANR against the target application. Inspect captured ANR/WindowManager traces; do not retry blindly.',
+      explanation:
+        'Android reported a genuine ANR against the target application. Inspect captured ANR/WindowManager traces; do not retry blindly.',
     };
   }
-  if (/FATAL EXCEPTION|CPI_NATIVE_DIAGNOSTIC .*"event":"(?:bridge-error|js-error|unhandled-rejection)"|Uncaught (?:TypeError|Error|exception)/i.test(evidence)) {
+  if (
+    /FATAL EXCEPTION|CPI_NATIVE_DIAGNOSTIC .*"event":"(?:bridge-error|js-error|unhandled-rejection)"|Uncaught (?:TypeError|Error|exception)/i.test(
+      evidence,
+    )
+  ) {
     return {
       category: 'app-runtime',
-      explanation: 'Application JavaScript/native runtime error was observed. Review the startup diagnostics and app log.',
+      explanation:
+        'Application JavaScript/native runtime error was observed. Review the startup diagnostics and app log.',
     };
   }
-  if (/Timed out waiting for .*?(?:native pause|bridge round-trip|React|page.load|background|prebridge|Home key|graphics|IO pressure)|Native startup\/lifecycle gate failed/i.test(failure)) {
+  if (
+    /Timed out waiting for .*?(?:native pause|bridge round-trip|React|page.load|background|prebridge|Home key|graphics|IO pressure)|Native startup\/lifecycle gate failed/i.test(
+      failure,
+    )
+  ) {
     return {
       category: 'lifecycle-or-readiness',
-      explanation: 'Native lifecycle/readiness proof did not complete. This could be app behavior or emulator timing; inspect the logs before classifying it as infrastructure.',
+      explanation:
+        'Native lifecycle/readiness proof did not complete. This could be app behavior or emulator timing; inspect the logs before classifying it as infrastructure.',
     };
   }
-  if (/BUILD FAILED|Execution failed for task|error: (?:CompileSwift|SwiftCompile)|xcodebuild: error:/i.test(buildLog)) {
+  if (
+    /BUILD FAILED|Execution failed for task|error: (?:CompileSwift|SwiftCompile)|xcodebuild: error:/i.test(
+      buildLog,
+    )
+  ) {
     return {
       category: 'native-build',
-      explanation: 'The native build reported a compilation or dependency failure. Check the attached build output.',
+      explanation:
+        'The native build reported a compilation or dependency failure. Check the attached build output.',
     };
   }
-  if (/device offline|emulator: ERROR|PANIC:.*AVD|no emulator|could not start|sys.boot_completed|Failed to install.*system.image|Permission denied.*\/dev\/kvm/i.test(failure)) {
+  if (
+    /device offline|emulator: ERROR|PANIC:.*AVD|no emulator|could not start|sys.boot_completed|Failed to install.*system.image|Permission denied.*\/dev\/kvm/i.test(
+      failure,
+    )
+  ) {
     return {
       category: 'emulator-provisioning',
-      explanation: 'Emulator or runner provisioning failed before validated lifecycle completion. Check SDK, KVM, device and boot logs.',
+      explanation:
+        'Emulator or runner provisioning failed before validated lifecycle completion. Check SDK, KVM, device and boot logs.',
     };
   }
   return {
     category: 'unclassified',
-    explanation: 'No conclusive failure signature was found. A reviewer must inspect the step log and uploaded artifacts.',
+    explanation:
+      'No conclusive failure signature was found. A reviewer must inspect the step log and uploaded artifacts.',
   };
 }
 
@@ -92,7 +114,9 @@ export function buildNativeFailureReport(platform) {
 function main() {
   const args = process.argv.slice(2);
   if (args.length !== 2 || args[0] !== '--platform') {
-    throw new Error('Usage: node .github/scripts/native-failure-diagnostics.mjs --platform android|ios');
+    throw new Error(
+      'Usage: node .github/scripts/native-failure-diagnostics.mjs --platform android|ios',
+    );
   }
   mkdirSync(artifactRoot, { recursive: true });
   const report = buildNativeFailureReport(args[1]);
