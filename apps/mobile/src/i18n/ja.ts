@@ -210,4 +210,13 @@ export const ja = {
   'app.playOffline': 'オフラインで遊ぶ',
   'app.startError': '再試行するか、オフライン練習を始められます。',
   'app.saveLeaveConfirm': '保存して退出しますか？挑戦は後で再開できます。終了にはなりません。',
+  'game.effectShield': 'シールド',
+  'game.effectRegen': '再生',
+  'game.effectLucky': '幸運な一歩',
+  'game.effectFragile': '脆弱',
+  'game.effectDrain': 'SP減少',
+  'game.effectInversion': '反転',
+  'menu.tutorialExercise': '安全・失敗の板、ヒントと謎を試す',
+  'menu.tutorialAvailable': '5段階・安全、失敗、ヒント、謎',
+  'game.noticeMysteryDone': '謎を解決しました。左右から選んでください。',
 } satisfies Partial<Record<MessageKey, string>>;

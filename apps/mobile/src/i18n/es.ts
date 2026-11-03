@@ -210,4 +210,13 @@ export const es = {
   'app.playOffline': 'Jugar sin conexión',
   'app.startError': 'Puedes reintentar o comenzar una práctica sin conexión.',
   'app.saveLeaveConfirm': '¿Guardar y salir? La partida podrá reanudarse. Esto NO termina el intento.',
+  'game.effectShield': 'Escudo',
+  'game.effectRegen': 'Regeneración',
+  'game.effectLucky': 'Paso afortunado',
+  'game.effectFragile': 'Fragilidad',
+  'game.effectDrain': 'Drenaje de SP',
+  'game.effectInversion': 'Inversión',
+  'menu.tutorialExercise': 'Prueba cristales seguros y erróneos, pistas y un misterio',
+  'menu.tutorialAvailable': 'Cinco pasos · Seguro, erróneo, pista y misterio',
+  'game.noticeMysteryDone': 'Misterio resuelto. Elige izquierda o derecha.',
 } satisfies Partial<Record<MessageKey, string>>;

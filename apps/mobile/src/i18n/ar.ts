@@ -210,4 +210,13 @@ export const ar = {
   'app.playOffline': 'العب دون اتصال',
   'app.startError': 'يمكنك إعادة المحاولة أو بدء تدريب دون اتصال.',
   'app.saveLeaveConfirm': 'حفظ والخروج؟ ستبقى المحاولة قابلة للاستكمال. هذا لا ينهيها.',
+  'game.effectShield': 'درع',
+  'game.effectRegen': 'تجدد',
+  'game.effectLucky': 'خطوة محظوظة',
+  'game.effectFragile': 'هشاشة',
+  'game.effectDrain': 'استنزاف SP',
+  'game.effectInversion': 'عكس',
+  'menu.tutorialExercise': 'جرّب الخطوات الآمنة والخاطئة والتلميحات والغموض',
+  'menu.tutorialAvailable': 'خمس خطوات · آمن وخاطئ وتلميح وغموض',
+  'game.noticeMysteryDone': 'انتهى الغموض. اختر اليسار أو اليمين.',
 } satisfies Partial<Record<MessageKey, string>>;

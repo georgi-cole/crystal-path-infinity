@@ -210,4 +210,13 @@ export const de = {
   'app.playOffline': 'Offline spielen',
   'app.startError': 'Du kannst es erneut versuchen oder offline trainieren.',
   'app.saveLeaveConfirm': 'Speichern und verlassen? Der Lauf bleibt fortsetzbar. Dadurch wird er NICHT beendet.',
+  'game.effectShield': 'Schild',
+  'game.effectRegen': 'Regeneration',
+  'game.effectLucky': 'Glücksschritt',
+  'game.effectFragile': 'Zerbrechlichkeit',
+  'game.effectDrain': 'SP-Entzug',
+  'game.effectInversion': 'Umkehrung',
+  'menu.tutorialExercise': 'Übe sichere und falsche Glasfelder, Hinweise und Rätsel',
+  'menu.tutorialAvailable': 'Fünf Schritte · Sicher, falsch, Hinweis und Rätsel',
+  'game.noticeMysteryDone': 'Rätsel aufgelöst. Wähle links oder rechts.',
 } satisfies Partial<Record<MessageKey, string>>;

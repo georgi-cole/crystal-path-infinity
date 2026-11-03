@@ -210,4 +210,13 @@ export const ptBR = {
   'app.playOffline': 'Jogar offline',
   'app.startError': 'Você pode tentar novamente ou começar um treino offline.',
   'app.saveLeaveConfirm': 'Salvar e sair? A tentativa ficará disponível para retomar. Isso NÃO a encerra.',
+  'game.effectShield': 'Escudo',
+  'game.effectRegen': 'Regeneração',
+  'game.effectLucky': 'Passo de sorte',
+  'game.effectFragile': 'Fragilidade',
+  'game.effectDrain': 'Drenagem de SP',
+  'game.effectInversion': 'Inversão',
+  'menu.tutorialExercise': 'Experimente vidros seguros e errados, dicas e mistério',
+  'menu.tutorialAvailable': 'Cinco passos · Seguro, errado, dica e mistério',
+  'game.noticeMysteryDone': 'Mistério resolvido. Escolha esquerda ou direita.',
 } satisfies Partial<Record<MessageKey, string>>;

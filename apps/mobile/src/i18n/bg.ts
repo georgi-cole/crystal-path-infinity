@@ -223,4 +223,13 @@ export const bg = {
   'app.playOffline': 'Играй офлайн',
   'app.startError': 'Можеш да опиташ отново или да започнеш офлайн тренировка.',
   'app.saveLeaveConfirm': 'Да запазиш и излезеш ли? Опитът може да се продължи по-късно. Това НЕ го приключва.',
+  'game.effectShield': 'Щит',
+  'game.effectRegen': 'Възстановяване',
+  'game.effectLucky': 'Късметлийска стъпка',
+  'game.effectFragile': 'Крехкост',
+  'game.effectDrain': 'Отнемане на SP',
+  'game.effectInversion': 'Инверсия',
+  'menu.tutorialExercise': 'Пробвай безопасна и грешна стъпка, подсказка и мистерия',
+  'menu.tutorialAvailable': 'Пет стъпки · Правилна, грешна, подсказка и мистерия',
+  'game.noticeMysteryDone': 'Мистерията приключи. Избери ляво или дясно.',
 } satisfies Partial<Record<MessageKey, string>>;

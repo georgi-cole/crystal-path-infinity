@@ -210,4 +210,13 @@ export const fr = {
   'app.playOffline': 'Jouer hors ligne',
   'app.startError': 'Vous pouvez réessayer ou vous entraîner hors ligne.',
   'app.saveLeaveConfirm': 'Sauvegarder et quitter ? La partie pourra être reprise. Cela ne termine PAS la tentative.',
+  'game.effectShield': 'Bouclier',
+  'game.effectRegen': 'Régénération',
+  'game.effectLucky': 'Pas chanceux',
+  'game.effectFragile': 'Fragilité',
+  'game.effectDrain': 'Drain de SP',
+  'game.effectInversion': 'Inversion',
+  'menu.tutorialExercise': 'Essayez les bonnes et mauvaises dalles, les indices et un mystère',
+  'menu.tutorialAvailable': 'Cinq étapes · Bon, mauvais, indice et mystère',
+  'game.noticeMysteryDone': 'Mystère résolu. Choisissez gauche ou droite.',
 } satisfies Partial<Record<MessageKey, string>>;

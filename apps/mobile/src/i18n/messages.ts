@@ -235,6 +235,12 @@ export const en = {
   'app.warningFresh': 'Progress might not be saved because local storage is unavailable.',
   'app.warningOnline': 'Connectivity detected, but ranked services are not connected in this build.',
   'app.warningOffline': 'This device is still offline. Practice remains available.',
+  'game.effectShield': 'Shield',
+  'game.effectRegen': 'Regeneration',
+  'game.effectLucky': 'Lucky step',
+  'game.effectFragile': 'Fragility',
+  'game.effectDrain': 'SP drain',
+  'game.effectInversion': 'Inversion',
 } as const;
 
 export type MessageKey = keyof typeof en;

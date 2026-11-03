@@ -210,4 +210,13 @@ export const zhHans = {
   'app.playOffline': '离线游玩',
   'app.startError': '可以重新尝试或开始离线练习。',
   'app.saveLeaveConfirm': '保存并退出吗？此局可以稍后恢复。这不会结束本局。',
+  'game.effectShield': '护盾',
+  'game.effectRegen': '恢复',
+  'game.effectLucky': '幸运步',
+  'game.effectFragile': '脆弱',
+  'game.effectDrain': 'SP流失',
+  'game.effectInversion': '反转',
+  'menu.tutorialExercise': '尝试安全和错误的玻璃、提示以及神秘格',
+  'menu.tutorialAvailable': '五步 · 安全、错误、提示与神秘格',
+  'game.noticeMysteryDone': '神秘效果已结算，请选择左侧或右侧。',
 } satisfies Partial<Record<MessageKey, string>>;
