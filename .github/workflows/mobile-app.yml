@@ -397,6 +397,11 @@ jobs:
         run: |
           psql -X -v ON_ERROR_STOP=1 -f backend/tests/assertions.sql
           bash backend/tests/negative-access.sh
+      - name: Test profile privacy and immutable regional history
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261104000100_cpi019_profiles_regions.sql
+          psql -X -v ON_ERROR_STOP=1 -f backend/tests/profile-regions.sql
+          bash backend/tests/profile-regions-concurrency.sh
       - name: Validate independent backend environments and public-variable guard
         run: node --test backend/tests/environments.test.mjs
 

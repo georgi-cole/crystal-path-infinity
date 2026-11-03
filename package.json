@@ -5,7 +5,8 @@
   "type": "module",
   "workspaces": [
     "apps/mobile",
-    "packages/game-core"
+    "packages/game-core",
+    "packages/server-core"
   ],
   "engines": {
     "node": ">=22.23.4 <25"
@@ -20,9 +21,9 @@
     "preview": "npm run preview --workspace @crystal-path-infinity/mobile",
     "native:generate": "node --experimental-strip-types apps/mobile/scripts/generate-native.mjs",
     "planning:check": "python3 scripts/validate_plan.py && python3 -m unittest discover -s scripts -p 'test_*.py'",
-    "lint": "eslint apps/mobile packages/game-core .github/scripts eslint.config.mjs prettier.config.mjs --max-warnings 0",
-    "format:check": "prettier --check package.json eslint.config.mjs prettier.config.mjs \"apps/mobile/**/*.{ts,tsx,mjs,css,html,json}\" \"packages/game-core/**/*.{ts,mjs,json}\" \".github/scripts/**/*.mjs\"",
-    "format": "prettier --write package.json eslint.config.mjs prettier.config.mjs \"apps/mobile/**/*.{ts,tsx,mjs,css,html,json}\" \"packages/game-core/**/*.{ts,mjs,json}\" \".github/scripts/**/*.mjs\""
+    "lint": "eslint apps/mobile packages/game-core packages/server-core .github/scripts eslint.config.mjs prettier.config.mjs --max-warnings 0",
+    "format:check": "prettier --check package.json eslint.config.mjs prettier.config.mjs \"apps/mobile/**/*.{ts,tsx,mjs,css,html,json}\" \"packages/game-core/**/*.{ts,mjs,json}\" \".github/scripts/**/*.mjs\" \"packages/server-core/**/*.{ts,mjs,json}\"",
+    "format": "prettier --write package.json eslint.config.mjs prettier.config.mjs \"apps/mobile/**/*.{ts,tsx,mjs,css,html,json}\" \"packages/game-core/**/*.{ts,mjs,json}\" \".github/scripts/**/*.mjs\" \"packages/server-core/**/*.{ts,mjs,json}\""
   },
   "devDependencies": {
     "@capacitor/cli": "8.5.3",

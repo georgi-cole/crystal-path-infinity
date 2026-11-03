@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import { AudioSettingsControls } from './audio-settings-controls';
 import { AccountEntry } from './account/account-entry';
+import { ProfileEditor } from './account/profile-editor';
+import type { ProfileClient } from './account/profile-client';
 import { LanguageSettings, PrivacyAccountSupport } from './locale-settings';
 import { useLanguage } from './language-context';
 import { BridgeTutorial } from './bridge-tutorial';
@@ -220,6 +222,7 @@ export interface MainMenuProps {
   onTutorialProgress: (progress: Exclude<TutorialProgress, 'unseen'>) => void;
   buildLabel?: string;
   warning?: string | null;
+  profileClient?: ProfileClient | null;
 }
 
 function MenuHeader({
@@ -423,6 +426,7 @@ export function MainMenu({
   onTutorialProgress,
   warning,
   buildLabel,
+  profileClient = null,
 }: MainMenuProps) {
   const service = rankedServiceState(online);
   const { t, number } = useLanguage();
@@ -533,8 +537,8 @@ export function MainMenu({
               <strong>{t('menu.asGuest')}</strong>
               <span>{t('menu.noAccount')}</span>
             </div>
-            <p>{t('menu.profileFuture')}</p>
             <AccountEntry online={online} />
+            <ProfileEditor client={profileClient} online={online} />
             <MenuAction
               label={t('menu.practiceUnsigned')}
               icon="practice"
