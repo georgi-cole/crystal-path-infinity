@@ -12,8 +12,8 @@ const artifactRoot = join(repositoryRoot, 'apps/mobile/artifacts');
 export function classifyNativeFailure({ platform, failure = '', appLog = '', buildLog = '' }) {
   const evidence = [failure, appLog, buildLog].join('\n');
   const appId = 'com.georgicole.crystalpath.infinity.dev';
-  const appAnr = evidence.split(/\\r?\\n/).some((line) => {
-    const match = line.match(/E ActivityManager: ANR in ([^\\s(]+)/);
+  const appAnr = evidence.split(/\r?\n/).some((line) => {
+    const match = line.match(/E ActivityManager: ANR in ([^\s(]+)/);
     return match?.[1] === appId;
   });
   if (platform === 'android' && appAnr) {
