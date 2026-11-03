@@ -57,7 +57,7 @@ export function classifyNativeFailure({ platform, failure = '', appLog = '', bui
     };
   }
   if (
-    /device offline|emulator: ERROR|PANIC:.*AVD|no emulator|could not start|sys.boot_completed|Failed to install.*system.image|Permission denied.*\/dev\/kvm/i.test(
+    /device offline|emulator: ERROR|PANIC:.*AVD|no emulator|could not start|sys.boot_completed|Failed to install.*system.image|Permission denied.*\/dev\/kvm|Error on ZipFile unknown archive|ZIP extraction failed|system-image archive was corrupt|SDK installation failed/i.test(
       failure,
     )
   ) {
@@ -91,6 +91,14 @@ export function buildNativeFailureReport(platform) {
     `${platform}-startup-diagnostics.json`,
     `${platform}-native-lifecycle.log`,
     platform === 'android' ? 'android-build.log' : 'ios-build.log',
+    ...(platform === 'android'
+      ? [
+          'android-system-image-install.log',
+          'android-system-image-install-attempt-1.log',
+          'android-system-image-install-attempt-2.log',
+          'android-system-image-install-attempt-3.log',
+        ]
+      : []),
     platform === 'android' ? 'android-failure-last-anr.txt' : 'ios-boot.log',
   ];
   const failure = readEvidence(`${platform}-launch-failure.json`);
@@ -100,7 +108,13 @@ export function buildNativeFailureReport(platform) {
     readEvidence(platform === 'android' ? 'android-failure-last-anr.txt' : 'ios-boot.log'),
   ].join('\n');
   const buildLog = readEvidence(platform === 'android' ? 'android-build.log' : 'ios-build.log');
-  const classified = classifyNativeFailure({ platform, failure, appLog, buildLog });
+  const sdkLog = platform === 'android' ? readEvidence('android-system-image-install.log') : '';
+  const classified = classifyNativeFailure({
+    platform,
+    failure: [failure, sdkLog].filter(Boolean).join('\n'),
+    appLog,
+    buildLog,
+  });
   return {
     schemaVersion: 1,
     platform,

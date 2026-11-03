@@ -242,3 +242,22 @@ test('failure classification distinguishes lifecycle, compile, setup and unknown
     'unclassified',
   );
 });
+
+test('corrupt SDK zip is classified as provisioning, never a passing native result', () => {
+  const failure =
+    'Warning: An error occurred while preparing SDK package Intel x86_64 Atom System Image: Error on ZipFile unknown archive.';
+  assert.equal(
+    classifyNativeFailure({ platform: 'android', failure }).category,
+    'emulator-provisioning',
+  );
+  assert.equal(
+    classifyNativeFailure({
+      platform: 'android',
+      failure,
+      appLog: 'E ActivityManager: ANR in com.georgicole.crystalpath.infinity.dev',
+    }).category,
+    'app-anr',
+  );
+  const needs = results('full', 'success', 'failure', 'success');
+  assert.throws(() => assertAppGate(needs), /must be success/);
+});

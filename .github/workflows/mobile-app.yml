@@ -43,6 +43,8 @@ jobs:
         run: node .github/scripts/app-checks.mjs select
       - name: Test required-check routing and failure handling
         run: node --test .github/scripts/app-checks.test.mjs
+      - name: Test targeted Android SDK download recovery without bypassing native gates
+        run: node --test .github/scripts/android-sdk-system-image.test.mjs
       - name: Install the clean workspace
         run: npm ci --ignore-scripts
       - name: Record installed dependencies
@@ -172,7 +174,7 @@ jobs:
           # even after BOOT_COMPLETED and broadcast idle were observed. Keep
           # actual pause/resume/native clock assertions unchanged; Google Play
           # / rewarded-ad compatibility remains a separate physical/device gate.
-          "$sdk_bin/sdkmanager" --install "system-images;android-36;default;x86_64" </dev/null 2>&1 | tee apps/mobile/artifacts/android-system-image-install.log
+          bash .github/scripts/android-sdk-system-image.sh
           cpi_avd_home="$RUNNER_TEMP/cpi003-avd"
           mkdir -p "$cpi_avd_home"
           export ANDROID_AVD_HOME="$cpi_avd_home"
