@@ -1,0 +1,135 @@
+/* CPI-016: accessibility overrides over all original premium presentation layers.
+ * Semantic result text remains visible; direction never swaps physical bridge
+ * left/right mechanics or changes reducer actions.
+ */
+.cpi-infinity-scene .cpi-sp-danger-copy {
+  margin: 0.2rem 0 0;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba(255, 216, 137, 0.48);
+  border-radius: 0.6rem;
+  color: #ffe4b2;
+  background: rgba(53, 29, 10, 0.88);
+  font-size: 0.8rem;
+  font-weight: 750;
+  line-height: 1.45;
+}
+.cpi-infinity-scene .cpi-sp-danger-copy.is-critical {
+  border-color: rgba(255, 144, 156, 0.72);
+  color: #ffe1e3;
+  background: rgba(67, 16, 28, 0.93);
+}
+.cpi-infinity-scene .cps-tile .cpi-tile-feedback-text {
+  position: absolute;
+  inset-inline: 0.12rem;
+  bottom: 0.16rem;
+  z-index: 5;
+  display: block;
+  max-width: calc(100% - 0.24rem);
+  padding: 0.1rem;
+  border-radius: 0.22rem;
+  color: #fff;
+  background: rgba(0, 9, 28, 0.88);
+  font-size: clamp(0.49rem, 1.65vw, 0.66rem);
+  font-weight: 820;
+  line-height: 1.2;
+  text-align: center;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+.cpi-infinity-scene .cps-tile.is-cracked .cpi-tile-feedback-text {
+  border: 1px solid rgba(255, 190, 192, 0.68);
+}
+.cpi-infinity-scene .cps-tile.is-cleared .cpi-tile-feedback-text,
+.cpi-infinity-scene .cps-tile.is-hinted .cpi-tile-feedback-text {
+  border: 1px solid rgba(146, 250, 225, 0.6);
+}
+.cpi-menu-shell,
+.cpi-tutorial,
+.cpi-infinity-scene,
+.cpi-menu-action-copy,
+.cpi-menu-panel,
+.cpi-run-outcome {
+  overflow-wrap: anywhere;
+}
+.cpi-menu-action-copy {
+  min-width: 0;
+}
+.cpi-menu-action-title,
+.cpi-menu-action-description {
+  white-space: normal;
+}
+.cpi-run-outcome .cpi-overlay-actions button {
+  min-width: 0;
+  min-height: 3rem;
+}
+.cpi-menu-shell .cpi-menu-actions,
+.cpi-menu-shell .cpi-menu-grid {
+  min-width: 0;
+}
+[dir='rtl'] .cpi-menu-shell,
+[dir='rtl'] .cpi-run-outcome,
+[dir='rtl'] .cpi-tutorial {
+  direction: rtl;
+  text-align: start;
+}
+[dir='rtl'] .cpi-menu-action-chevron,
+[dir='rtl'] .cpi-menu-back svg {
+  transform: scaleX(-1);
+}
+/* The rules define actual physical left/right, including in Arabic. */
+.cpi-infinity-scene .cps-board,
+.cpi-infinity-scene .cps-bridge-track,
+.cpi-infinity-scene .cps-row {
+  direction: ltr;
+}
+.cpi-infinity-scene .cps-row-label {
+  unicode-bidi: isolate;
+}
+.cpi-reduced-motion *,
+.cpi-reduced-motion *::before,
+.cpi-reduced-motion *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cpi-menu-shell *,
+  .cpi-menu-shell *::before,
+  .cpi-menu-shell *::after,
+  .cpi-tutorial *,
+  .cpi-tutorial *::before,
+  .cpi-tutorial *::after,
+  .cpi-infinity-scene *,
+  .cpi-infinity-scene *::before,
+  .cpi-infinity-scene *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+@media (max-width: 340px), (max-height: 630px) {
+  .cpi-infinity-scene .cpi-scene-toolbar {
+    flex-wrap: wrap;
+  }
+  .cpi-infinity-scene .cpi-scene-toolbar-actions {
+    flex-wrap: wrap;
+    max-width: 100%;
+  }
+  .cpi-infinity-scene .cpi-run-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cpi-infinity-scene .cpi-result-details {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cpi-menu-inner,
+  .cpi-infinity-scene .cps-content {
+    min-width: 0;
+  }
+}
+@media (min-resolution: 2dppx) {
+  .cpi-language-select,
+  .cpi-menu-action,
+  .cpi-run-outcome button {
+    touch-action: manipulation;
+  }
+}
