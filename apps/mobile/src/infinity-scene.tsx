@@ -457,72 +457,70 @@ export function InfinitySceneView({
               </>
             ) : outcome.phase === 'finished' ? (
               <>
-                <p className="cpi-run-status-label">OFFLINE PRACTICE · NOT VERIFIED</p>
-                <h2 id="cpi-run-outcome-title">Run complete</h2>
+                <p className="cpi-run-status-label">{t('game.practiceUnverified')}</p>
+                <h2 id="cpi-run-outcome-title">{t('game.complete')}</h2>
                 <div className="cpi-result-score">
-                  <span>Rows cleared</span>
-                  <strong>{outcome.clearedRows}</strong>
+                  <span>{t('game.rowsCleared')}</span>
+                  <strong>{clearedRows}</strong>
                 </div>
                 <dl className="cpi-result-details">
                   <div>
-                    <dt>Fatal row</dt>
-                    <dd>{outcome.fatalRow ?? 'None'}</dd>
+                    <dt>{t('game.fatalRow')}</dt>
+                    <dd>{fatalRow ?? t('general.none')}</dd>
                   </div>
                   <div>
-                    <dt>Active time</dt>
+                    <dt>{t('game.activeTime')}</dt>
                     <dd>{outcome.activeTime}</dd>
                   </div>
                   <div>
-                    <dt>Continues applied</dt>
+                    <dt>{t('game.revivesApplied')}</dt>
                     <dd>{outcome.appliedContinues}</dd>
                   </div>
                   <div>
-                    <dt>Personal best · Local</dt>
-                    <dd>{personalBest === null ? 'Not saved' : formatRowLabel(personalBest)}</dd>
+                    <dt>{t('game.bestLocal')}</dt>
+                    <dd>{personalBest === null ? t('general.notSaved') : number(personalBest)}</dd>
                   </div>
                 </dl>
-                {outcome.deathReason && <p>{outcome.deathReason}</p>}
-                {newPersonalBest && <p className="cpi-new-best">New local personal best</p>}
-                <p>Saved practice result only. Official submission and rankings are not live.</p>
+                {localizedDeathReason && <p>{localizedDeathReason}</p>}
+                {newPersonalBest && <p className="cpi-new-best">{t('game.bestNew')}</p>}
+                <p>{t('game.resultLocal')}</p>
                 <div className="cpi-overlay-actions">
                   <button type="button" data-cpi-overlay-primary onClick={onRestart}>
-                    Next run
+                    {t('game.nextRun')}
                   </button>
                   <button type="button" onClick={onViewRankings}>
-                    Rankings (not live)
+                    {t('game.rankingsNotLive')}
                   </button>
                   <button type="button" onClick={onExit}>
-                    Return to menu
+                    {t('game.returnMenu')}
                   </button>
                 </div>
               </>
             ) : outcome.phase === 'dead' || outcome.phase === 'grant-ready' ? (
               <>
-                <h2 id="cpi-run-outcome-title">The bridge gave way</h2>
-                {outcome.deathReason && <p>{outcome.deathReason}</p>}
+                <h2 id="cpi-run-outcome-title">{t('game.deathTitle')}</h2>
+                {localizedDeathReason && <p>{localizedDeathReason}</p>}
                 <div className="cpi-result-score">
-                  <span>Rows cleared</span>
-                  <strong>{outcome.clearedRows}</strong>
+                  <span>{t('game.rowsCleared')}</span>
+                  <strong>{clearedRows}</strong>
                 </div>
-                <p>Fatal row {outcome.fatalRow} does not count toward your score.</p>
+                <p>{t('game.fatalNotCounted', { row: fatalRow ?? t('general.none') })}</p>
                 {outcome.offer ? (
                   <div className="cpi-revive-offer">
                     <strong>
-                      Continue #{outcome.offer.ordinal} · Restore {outcome.offer.restoreSp} SP
+                      {t('game.offerTitle', { index: number(outcome.offer.ordinal), sp: number(outcome.offer.restoreSp) })}
                     </strong>
                     <span>
-                      The restore <strong>sets</strong> SP to {outcome.offer.restoreSp}; it does not
-                      add points. {outcome.offer.grantsRemaining} reward grants remain.
+                      {t('game.offerDetail', { sp: number(outcome.offer.restoreSp), remaining: number(outcome.offer.grantsRemaining) })}
                     </span>
-                    <span>Rewarded continue is not connected in offline practice yet.</span>
+                    <span>{t('game.offerUnavailable')}</span>
                   </div>
                 ) : outcome.phase === 'grant-ready' ? (
                   <p role="status">
-                    A continuation was granted but not applied. No additional ad is available for
-                    this death; ending explicitly forfeits the grant.
+                    {t('game.grantReady')}
                   </p>
                 ) : (
-                  <p>No further continues remain for this attempt.</p>
+                  <p>{t('game.noContinues')}</p>
                 )}
                 <div className="cpi-overlay-actions">
                   <button
@@ -531,7 +529,7 @@ export function InfinitySceneView({
                     disabled={busy}
                     onClick={onRequestEnd}
                   >
-                    End run
+                    {t('general.endRun')}
                   </button>
                   <button type="button" disabled={busy} onClick={onExit}>
                     {t('general.saveLeave')}
@@ -540,16 +538,16 @@ export function InfinitySceneView({
               </>
             ) : (
               <>
-                <h2 id="cpi-run-outcome-title">Paused</h2>
-                <p>The game clock and every timed effect are frozen. The run is not finished.</p>
-                <p>Rows cleared: {outcome.clearedRows}</p>
+                <h2 id="cpi-run-outcome-title">{t('game.paused')}</h2>
+                <p>{t('game.pausedExplanation')}</p>
+                <p>{t('game.pausedRows', { row: clearedRows })}</p>
                 <AudioSettingsControls settings={settings} onChange={onSettingsChange} />
                 <div className="cpi-overlay-actions">
                   <button type="button" data-cpi-overlay-primary disabled={busy} onClick={onPause}>
-                    Resume
+                    {t('general.resume')}
                   </button>
                   <button type="button" disabled={busy} onClick={onRequestEnd}>
-                    End run
+                    {t('general.endRun')}
                   </button>
                   <button type="button" disabled={busy} onClick={onExit}>
                     {t('general.saveLeave')}
