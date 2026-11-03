@@ -36,6 +36,14 @@ Supabase's separate read-only SQL endpoint is experimental and [requires all ent
 
 **Next:** merge the fix PR after CI, then run the **new** read-only preview on `main`. Only a preview that reports **`Hosted CPI-017 catalog preflight passed`** is a green light for a fresh, separately approved deployment run. Do not alter your GitHub secrets simply because the old classifier said “missing Database Read.” The earlier failure was prior to any database-writing step.
 
+## Read-only query-validation failure after PR #63
+
+The [preview run #41667593695](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41667593695) failed at the same exact catalog preflight introduced by PR #63. Project authentication and the `SELECT 1` read-only query **passed**. The more complex SQL then failed, and its raw Management API error was deliberately not printed. The classifier reported query/flags validation, so the precise backend rejection is **not yet verified**. No hosted migration step ran.
+
+The next candidate preflight is a single `SELECT CASE` expression using only `pg_catalog.to_regnamespace('cpi_private')` and `pg_catalog.to_regclass('public.profiles_public')`, with no tables, joins, aliases, subqueries or SQL comments. Both built-ins are explicitly schema-qualified and resolve missing objects to NULL. The same SQL file is shared by the read-only preview and manually approved deployment. If either object exists, preflight returns `CPI017_PRECHECK_FAIL`; ambiguous results or any error still stop deployment. The migration file and deployment approval gates are unchanged.
+
+**After the fix PR is merged, run the read-only preview first.** Do not run deployment until it reports `Hosted CPI-017 catalog preflight passed`. If it still fails, investigate the next failure without touching credentials or authorizing SQL writes.
+
 ## If any check fails
 
 The workflow fails closed before applying if the ref, phrase, reviewed SQL or single pending migration differs. If the **hosted push** fails or the **post-deployment audit** fails, **do not rerun blindly**: inspect the actual remote migration history and the catalog state first, because the SQL may have applied partially or fully. Ask for targeted investigation. Never run `backend/tests/bootstrap.sql` against a hosted Supabase project.

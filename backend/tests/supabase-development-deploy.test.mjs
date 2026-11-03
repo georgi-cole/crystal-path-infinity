@@ -65,7 +65,9 @@ test('read-only SQL failures distinguish PostgreSQL object privilege from PAT au
   assert.match(missingScope, /CPI_DEV_SUPABASE_ACCESS_TOKEN/);
 
   assert.match(explainCpi017ReadOnlyQueryFailure('401 Unauthorized'), /authentication failed/);
-  assert.match(explainCpi017ReadOnlyQueryFailure('syntax error near SELECT'), /rejected the query/);
+  assert.match(explainCpi017ReadOnlyQueryFailure('syntax error near SELECT'), /query validation/);
+  assert.match(explainCpi017ReadOnlyQueryFailure('SQLSTATE 42601 syntax error'), /SQLSTATE 42601/);
+  assert.match(explainCpi017ReadOnlyQueryFailure('All entity references must be schema qualified'), /SQL validation failure/);
 
   const unknown = explainCpi017ReadOnlyQueryFailure('opaque: password=SECRET_UNKNOWN');
   assert.match(unknown, /unconfirmed reason/);
@@ -113,14 +115,15 @@ test('only one CLI command can mutate remote SQL; all other database checks are 
   );
 });
 
-test('hosted preflight uses only fully qualified PostgreSQL catalog entities and no unqualified helper functions', () => {
+test('hosted preflight uses a single read-only SELECT and fully qualified built-ins without catalog table joins', () => {
   const sql = readFileSync(new URL('../sql/cpi017-deploy-preflight.sql', import.meta.url), 'utf8');
-  assert.match(sql, /from pg_catalog\.pg_namespace as namespace/);
-  assert.match(sql, /from pg_catalog\.pg_class as relation/);
-  assert.match(sql, /join pg_catalog\.pg_namespace as namespace/);
-  assert.doesNotMatch(sql, /(?<![.])\bto_reg(?:namespace|class)\s*\(/i);
+  assert.match(sql, /^select case when\n/i);
+  assert.match(sql, /pg_catalog\.to_regnamespace\('cpi_private'\) is null/);
+  assert.match(sql, /pg_catalog\.to_regclass\('public\.profiles_public'\) is null/);
   assert.match(sql, /CPI017_PRECHECK_OK/);
   assert.match(sql, /CPI017_PRECHECK_FAIL/);
+  assert.equal((sql.match(/;/g) ?? []).length, 1, 'exactly one SQL statement');
+  assert.doesNotMatch(sql, /--|\/\*|\bjoin\b|\bfrom\b|\bpg_namespace\b|\bpg_class\b/i);
 
   const post = readFileSync(new URL('../sql/cpi017-deploy-postcheck.sql', import.meta.url), 'utf8');
   for (const builtIn of ['count', 'array_agg', 'has_schema_privilege', 'has_table_privilege']) {

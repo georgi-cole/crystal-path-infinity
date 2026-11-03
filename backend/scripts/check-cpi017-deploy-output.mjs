@@ -62,8 +62,15 @@ export function explainCpi017ReadOnlyQueryFailure(rawOutput) {
   if (/\b401\b|unauthorized|invalid (?:access )?token|expired (?:access )?token/i.test(output)) {
     return 'Hosted read-only SQL authentication failed. Replace or check the project-scoped Supabase PAT in the correct GitHub environment. No migration applied by this step.';
   }
-  if (/syntax error|invalid (?:sql|query)|unrecognized (?:option|flag)|unknown flag|unknown command|schema.qualified|unqualified (?:name|reference|function)/i.test(output)) {
-    return 'Hosted read-only SQL failed because the CLI rejected the query or flags. Inspect the pinned CLI v3 syntax and read-only SQL tests; do not bypass preflight.';
+  if (/all entity references must be schema[- ]qualified|unqualified (?:name|reference|function)|schema[- ]qualified (?:entity|reference)/i.test(output)) {
+    return 'The hosted read-only SQL validator rejected an unqualified entity reference. ' +
+      'The new preflight uses explicitly pg_catalog-qualified built-in functions and no table aliases. ' +
+      'This is a SQL validation failure, not evidence of a missing Supabase access-token permission.';
+  }
+  if (/syntax error|\b42601\b|invalid (?:sql|query)|unrecognized (?:option|flag)|unknown flag|unknown command/i.test(output)) {
+    return 'The hosted read-only SQL request failed SQL syntax or CLI query validation (safe diagnostic: ' +
+      (/\b42601\b/.test(output) ? 'SQLSTATE 42601' : 'query validation') +
+      '). The query requires correction; do not bypass preflight or rotate credentials.';
   }
   if (/connection refused|timed out|timeout|no route to host|network|temporarily unavailable/i.test(output)) {
     return 'Hosted read-only SQL failed because of connectivity or service availability. Check the target project and retry a separate read-only preview first.';
