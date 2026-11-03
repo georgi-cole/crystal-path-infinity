@@ -6,7 +6,7 @@ import { PostgresRankedRepository } from '../../packages/server-core/src/postgre
 import { RankedAuthority, RankedError } from '../../packages/server-core/src/ranked.ts';
 
 /** Exact production SQL adapter and handlers, against a disposable real SQL engine. */
-export async function runServerIntegration(adminPool, runtimePool) {
+export async function runServerIntegration(adminPool, runtimePool, verifyPublished = null) {
   const admin = await adminPool.connect();
   const a = '00000000-0000-4000-8000-000000000451';
   const b = '00000000-0000-4000-8000-000000000452';
@@ -99,6 +99,20 @@ export async function runServerIntegration(adminPool, runtimePool) {
       [start.snapshot.runId],
     );
     assert.equal(ledger.rows[0].count, '2');
+    now += 1000;
+    const cleared = await authority.execute(actor, {
+      runId: start.snapshot.runId,
+      sequence: hints[0].snapshot.nextSequence,
+      idempotencyKey: randomUUID(),
+      leaseToken: hints[0].lease.token,
+      command: {
+        type: 'choose',
+        row: hints[0].snapshot.currentRow,
+        life: 0,
+        side: hints[0].snapshot.current.revealedSafeSide,
+      },
+    });
+    assert.equal(cleared.snapshot.lastClearedRow, '1');
     await assert.rejects(
       authority.execute({ subject: b, deviceId: actor.deviceId }, command),
       (error) => error instanceof RankedError && error.code === 'run-not-found',
@@ -134,11 +148,13 @@ export async function runServerIntegration(adminPool, runtimePool) {
     assert.deepEqual(run.rows[0], {
       server_validated: true,
       status: 'finished',
-      last_cleared_row: '0',
+      last_cleared_row: '1',
       sp: 300,
       hints: 1,
       country_snapshot: 'BG',
     });
+    if (verifyPublished)
+      await verifyPublished({ runId: start.snapshot.runId, subject: a, runtimePool });
     console.log(
       'Profile route + durable ranked adapter: identity, concurrency, exact retry, private state, takeover and finalization passed.',
     );

@@ -3,6 +3,8 @@ import { AudioSettingsControls } from './audio-settings-controls';
 import { AccountEntry } from './account/account-entry';
 import { ProfileEditor } from './account/profile-editor';
 import type { ProfileClient } from './account/profile-client';
+import { LeaderboardView } from './leaderboard/leaderboard-view';
+import type { LeaderboardClient } from './leaderboard/leaderboard-client';
 import { LanguageSettings, PrivacyAccountSupport } from './locale-settings';
 import { useLanguage } from './language-context';
 import { BridgeTutorial } from './bridge-tutorial';
@@ -223,6 +225,9 @@ export interface MainMenuProps {
   buildLabel?: string;
   warning?: string | null;
   profileClient?: ProfileClient | null;
+  leaderboardClient?: LeaderboardClient | null;
+  leaderboardCountries?: readonly { countryCode: string; continentCode: string }[];
+  pendingPersonalResult?: boolean;
 }
 
 function MenuHeader({
@@ -427,6 +432,9 @@ export function MainMenu({
   warning,
   buildLabel,
   profileClient = null,
+  leaderboardClient = null,
+  leaderboardCountries = [],
+  pendingPersonalResult = false,
 }: MainMenuProps) {
   const service = rankedServiceState(online);
   const { t, number } = useLanguage();
@@ -510,20 +518,36 @@ export function MainMenu({
           </MenuPanel>
         ) : view === 'rankings' ? (
           <MenuPanel title={t('general.rankings')} eyebrow={t('menu.rankingsScope')}>
-            <p>{t('menu.rankingsUnavailable')}</p>
-            <div className="cpi-menu-notice" role="status">
-              <strong>
-                {service === 'offline' ? t('menu.offlineRankings') : t('menu.rankingsMissing')}
-              </strong>
-              <span>{t('menu.practiceNotRanked')}</span>
-            </div>
-            <p className="cpi-menu-personal-summary">
-              {t('menu.localBestRow', { row: number(best) })}
-            </p>
-            {!online && (
-              <button className="cpi-menu-text-action" type="button" onClick={onRetryConnection}>
-                {t('menu.recheck')}
-              </button>
+            {leaderboardClient && (
+              <LeaderboardView
+                client={leaderboardClient}
+                online={online}
+                countries={leaderboardCountries}
+                pendingPersonalResult={pendingPersonalResult}
+              />
+            )}
+            {!leaderboardClient && (
+              <>
+                <p>{t('menu.rankingsUnavailable')}</p>
+                <div className="cpi-menu-notice" role="status">
+                  <strong>
+                    {service === 'offline' ? t('menu.offlineRankings') : t('menu.rankingsMissing')}
+                  </strong>
+                  <span>{t('menu.practiceNotRanked')}</span>
+                </div>
+                <p className="cpi-menu-personal-summary">
+                  {t('menu.localBestRow', { row: number(best) })}
+                </p>
+                {!online && (
+                  <button
+                    className="cpi-menu-text-action"
+                    type="button"
+                    onClick={onRetryConnection}
+                  >
+                    {t('menu.recheck')}
+                  </button>
+                )}
+              </>
             )}
             <MenuAction
               label={t('menu.practiceOffline')}

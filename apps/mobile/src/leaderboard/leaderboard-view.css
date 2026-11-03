@@ -1,0 +1,123 @@
+.cpi-leaderboard {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+  color: #eaf7ff;
+}
+
+.cpi-leaderboard p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.cpi-leaderboard-rules,
+.cpi-leaderboard-date {
+  color: #b1c8e2;
+  font-size: 0.875rem;
+}
+
+.cpi-leaderboard-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin: 0;
+  min-width: 0;
+  border: 1px solid #52627e;
+  border-radius: 1rem;
+  padding: 0.75rem;
+}
+
+.cpi-leaderboard-filters label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+}
+
+.cpi-leaderboard-filters input {
+  accent-color: #8eeeff;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.cpi-leaderboard-region {
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+}
+
+.cpi-leaderboard select,
+.cpi-leaderboard button {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  max-width: 100%;
+  border: 1px solid #7d9bb8;
+  border-radius: 0.6rem;
+  background: #14243b;
+  color: #f2fbff;
+  padding: 0.65rem;
+  font: inherit;
+}
+
+.cpi-leaderboard button,
+.cpi-leaderboard summary {
+  cursor: pointer;
+}
+
+.cpi-leaderboard summary {
+  min-height: 2.75rem;
+  padding-block: 0.5rem;
+}
+
+.cpi-leaderboard :focus-visible {
+  outline: 3px solid #b2f5ff;
+  outline-offset: 3px;
+}
+
+.cpi-leaderboard-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #52627e;
+  border-radius: 0.75rem;
+}
+
+.cpi-leaderboard-table {
+  width: 100%;
+  min-width: 19rem;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.875rem;
+}
+
+.cpi-leaderboard-table caption {
+  padding: 0.75rem;
+  text-align: start;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.cpi-leaderboard-table th,
+.cpi-leaderboard-table td {
+  padding: 0.75rem 0.5rem;
+  border-block-start: 1px solid #354b65;
+  text-align: start;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.cpi-leaderboard-table thead {
+  background: #102036;
+}
+
+.cpi-leaderboard-table small {
+  display: block;
+  margin-block-start: 0.25rem;
+  color: #c4d7e9;
+  font-weight: 400;
+}
+
+.cpi-leaderboard-own {
+  background: #163f51;
+}
+
+.cpi-leaderboard-score {
+  max-width: 14rem;
+}
