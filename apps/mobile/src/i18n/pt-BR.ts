@@ -31,21 +31,24 @@ export const ptBR = {
   'menu.tutorialDescription': 'Cinco lições rápidas · Sem pontuação salva',
   'menu.savedPractice': 'Treino salvo · Linha {row}',
   'menu.practiceEyebrow': 'Offline · Todas as idades',
-  'menu.practiceIntro': 'Atravesse a ponte infinita. Treinar não exige conta, idade nem consentimento de análise.',
+  'menu.practiceIntro':
+    'Atravesse a ponte infinita. Treinar não exige conta, idade nem consentimento de análise.',
   'menu.resumeSaved': 'Continuar · Linha {row}',
   'menu.resumeDescription': 'Continue sua tentativa salva',
   'menu.newPractice': 'Novo treino',
   'menu.startRow1': 'Começar na linha 1',
   'menu.practiceLocal': 'O progresso fica neste aparelho e não entra no ranking oficial.',
   'menu.playEyebrow': 'Modo competitivo oficial',
-  'menu.playUnavailable': 'O modo competitivo ainda não está disponível. Conta e configuração de privacidade serão exigidas antes de coletar dados.',
+  'menu.playUnavailable':
+    'O modo competitivo ainda não está disponível. Conta e configuração de privacidade serão exigidas antes de coletar dados.',
   'menu.youOffline': 'Você está offline',
   'menu.servicesMissing': 'Serviços online não conectados',
   'menu.noRankedHere': 'Esta versão não oferece login, ranking ou partidas oficiais.',
   'menu.practiceInstead': 'Treinar em vez disso',
   'menu.practiceNow': 'Jogar agora · Sem conta',
   'menu.rankingsScope': 'Mundo · Continente · País',
-  'menu.rankingsUnavailable': 'O Top 100 verificado aparecerá quando os serviços estiverem conectados. Não exibimos posições ou pontuações inventadas.',
+  'menu.rankingsUnavailable':
+    'O Top 100 verificado aparecerá quando os serviços estiverem conectados. Não exibimos posições ou pontuações inventadas.',
   'menu.offlineRankings': 'Offline · Ranking indisponível',
   'menu.rankingsMissing': 'Ranking ainda não conectado',
   'menu.practiceNotRanked': 'Recordes de treino locais não contam para o ranking.',
@@ -55,7 +58,8 @@ export const ptBR = {
   'menu.profileEyebrow': 'Sessão de visitante',
   'menu.asGuest': 'Jogando como visitante',
   'menu.noAccount': 'Nenhuma conta está vinculada a este aparelho.',
-  'menu.profileFuture': 'Quando as contas estiverem disponíveis, explicaremos o que será público. Informar a idade para análises será opcional; o treino não exige nascimento.',
+  'menu.profileFuture':
+    'Quando as contas estiverem disponíveis, explicaremos o que será público. Informar a idade para análises será opcional; o treino não exige nascimento.',
   'menu.practiceUnsigned': 'Treinar sem entrar',
   'menu.settingsEyebrow': 'Preferências locais',
   'menu.settingsIntro': 'Estas opções funcionam offline e afetam os treinos.',
@@ -67,7 +71,8 @@ export const ptBR = {
   'menu.confirmDiscard': 'Descartar progresso corrompido?',
   'menu.confirmReplace': 'Substituir treino salvo?',
   'menu.discardExplained': 'O progresso não pode ser recuperado. Começar de novo apaga essa cópia.',
-  'menu.replaceExplained': 'Uma nova tentativa substitui o treino incompleto. Seu recorde continua salvo.',
+  'menu.replaceExplained':
+    'Uma nova tentativa substitui o treino incompleto. Seu recorde continua salvo.',
   'menu.keepSaved': 'Manter tentativa salva',
   'menu.startFresh': 'Iniciar novo treino',
   'settings.audioLegend': 'Som e feedback',
@@ -81,31 +86,44 @@ export const ptBR = {
   'settings.language': 'Idioma',
   'settings.system': 'Automático · Idioma do aparelho',
   'settings.languageHelp': 'Escolha o idioma ou siga o aparelho. A troca não reinicia a tentativa.',
-  'settings.languagePreview': 'Traduções em prévia; exigem revisão por falantes nativos antes do lançamento.',
+  'settings.languagePreview':
+    'Traduções em prévia; exigem revisão por falantes nativos antes do lançamento.',
   'settings.privacyTitle': 'Privacidade e dados',
-  'settings.privacyInfo': 'Tentativas, preferências e recordes de treino ficam neste aparelho. Esta versão não conecta contas nem publica resultados oficiais.',
-  'settings.privacyUnavailable': 'Uma política de privacidade publicada ainda não está disponível aqui.',
+  'settings.privacyInfo':
+    'Tentativas, preferências e recordes de treino ficam neste aparelho. Esta versão não conecta contas nem publica resultados oficiais.',
+  'settings.privacyUnavailable':
+    'Uma política de privacidade publicada ainda não está disponível aqui.',
   'settings.accountTitle': 'Conta e exclusão',
-  'settings.accountUnavailable': 'Não há conta conectada. A exclusão estará disponível com o serviço de contas real.',
+  'settings.accountUnavailable':
+    'Não há conta conectada. A exclusão estará disponível com o serviço de contas real.',
   'settings.supportTitle': 'Ajuda e suporte',
-  'settings.supportUnavailable': 'O suporte no aplicativo ainda não está conectado. Nenhuma solicitação pode ser enviada aqui.',
-  'settings.reducedMotionInfo': 'Resultados e avisos continuam visíveis sem tremores de câmera nem movimento intenso do cenário.',
+  'settings.supportUnavailable':
+    'O suporte no aplicativo ainda não está conectado. Nenhuma solicitação pode ser enviada aqui.',
+  'settings.reducedMotionInfo':
+    'Resultados e avisos continuam visíveis sem tremores de câmera nem movimento intenso do cenário.',
   'tutorial.guided': 'Tutorial · {step} / 5',
   'tutorial.notRanked': 'Sem ranking · Sem anúncios',
   'tutorial.safeTitle': 'Dê um passo seguro',
-  'tutorial.safeInstruction': 'Toque em ESQUERDA para passar pela linha 1. Um passo seguro não altera seus SP.',
+  'tutorial.safeInstruction':
+    'Toque em ESQUERDA para passar pela linha 1. Um passo seguro não altera seus SP.',
   'tutorial.wrongTitle': 'Sobreviva a um erro',
-  'tutorial.wrongInstruction': 'Toque em ESQUERDA de novo. Agora perde SP, mas a linha conta se você sobreviver.',
+  'tutorial.wrongInstruction':
+    'Toque em ESQUERDA de novo. Agora perde SP, mas a linha conta se você sobreviver.',
   'tutorial.hintTitle': 'Peça uma dica',
-  'tutorial.hintInstruction': 'Use uma dica para revelar o vidro seguro na linha 3. As dicas são limitadas.',
+  'tutorial.hintInstruction':
+    'Use uma dica para revelar o vidro seguro na linha 3. As dicas são limitadas.',
   'tutorial.hintRevealedTitle': 'Siga a dica',
-  'tutorial.hintRevealedInstruction': 'ESQUERDA é segura. Toque no vidro esquerdo para cruzar a linha 3.',
+  'tutorial.hintRevealedInstruction':
+    'ESQUERDA é segura. Toque no vidro esquerdo para cruzar a linha 3.',
   'tutorial.mysteryTitle': 'Você decide sobre o mistério',
-  'tutorial.mysteryInstruction': 'Experimente o mistério do centro ou ignore. Os efeitos podem ajudar ou atrapalhar.',
+  'tutorial.mysteryInstruction':
+    'Experimente o mistério do centro ou ignore. Os efeitos podem ajudar ou atrapalhar.',
   'tutorial.endTitle': 'Como a tentativa termina',
-  'tutorial.endInstruction': 'Não existe última linha. Você escolhe quando parar. O exemplo fatal começa com 10 SP.',
+  'tutorial.endInstruction':
+    'Não existe última linha. Você escolhe quando parar. O exemplo fatal começa com 10 SP.',
   'tutorial.fatalTitle': 'Linha fatal não conta',
-  'tutorial.fatalInstruction': 'O exemplo zerou os SP na linha 4. A última linha vencida continua sendo a 3.',
+  'tutorial.fatalInstruction':
+    'O exemplo zerou os SP na linha 4. A última linha vencida continua sendo a 3.',
   'tutorial.completeTitle': 'Você conhece a ponte',
   'tutorial.completeInstruction': 'Tutorial concluído. Inicie um treino separado quando quiser.',
   'tutorial.resources': 'Recursos de treino',
@@ -172,14 +190,17 @@ export const ptBR = {
   'game.confirmCleared': 'Sua última linha vencida foi {row}.',
   'game.confirmFatal': 'A linha fatal {row} não será contada.',
   'game.confirmUnfinished': 'A linha atual incompleta não será contada.',
-  'game.confirmForfeit': 'Você tem uma continuação concedida e não usada. Encerrar significa abrir mão dela.',
+  'game.confirmForfeit':
+    'Você tem uma continuação concedida e não usada. Encerrar significa abrir mão dela.',
   'game.confirmLocal': 'Isso encerra o treino local definitivamente, sem enviar resultado oficial.',
   'game.keepAttempt': 'Manter tentativa',
   'game.confirmForfeitButton': 'Encerrar e abrir mão',
   'game.confirmEnd': 'Confirmar encerramento',
   'game.pendingTitle': 'Verificação pendente',
-  'game.pendingExplanation': 'A recompensa ainda não foi verificada. A linha {row} é seu último progresso confirmado, não o resultado final.',
-  'game.pendingRecovery': 'A tentativa pode ser recuperada e não foi publicada. Nenhuma segunda recompensa durante a verificação.',
+  'game.pendingExplanation':
+    'A recompensa ainda não foi verificada. A linha {row} é seu último progresso confirmado, não o resultado final.',
+  'game.pendingRecovery':
+    'A tentativa pode ser recuperada e não foi publicada. Nenhuma segunda recompensa durante a verificação.',
   'game.savePending': 'Salvar e sair · Pendente',
   'game.practiceUnverified': 'TREINO OFFLINE · NÃO VERIFICADO',
   'game.complete': 'Tentativa concluída',
@@ -189,7 +210,8 @@ export const ptBR = {
   'game.revivesApplied': 'Continuações aplicadas',
   'game.bestLocal': 'Recorde pessoal · Local',
   'game.bestNew': 'Novo recorde local',
-  'game.resultLocal': 'Só resultado de treino. Envio oficial e rankings ainda não estão disponíveis.',
+  'game.resultLocal':
+    'Só resultado de treino. Envio oficial e rankings ainda não estão disponíveis.',
   'game.nextRun': 'Próxima tentativa',
   'game.rankingsNotLive': 'Ranking (indisponível)',
   'game.returnMenu': 'Voltar ao menu',
@@ -199,18 +221,22 @@ export const ptBR = {
   'game.deathDrain': 'Um efeito de drenagem esgotou seus SP.',
   'game.fatalNotCounted': 'A linha fatal {row} não vale para a pontuação.',
   'game.offerTitle': 'Continuação nº {index} · Restaurar {sp} SP',
-  'game.offerDetail': 'A restauração define SP como {sp}; não adiciona pontos. Restam {remaining} recompensas.',
+  'game.offerDetail':
+    'A restauração define SP como {sp}; não adiciona pontos. Restam {remaining} recompensas.',
   'game.offerUnavailable': 'Continuações por anúncio ainda não funcionam no treino offline.',
-  'game.grantReady': 'Uma continuação foi concedida, mas não aplicada. Não há outro anúncio; encerrar exige abrir mão explicitamente.',
+  'game.grantReady':
+    'Uma continuação foi concedida, mas não aplicada. Não há outro anúncio; encerrar exige abrir mão explicitamente.',
   'game.noContinues': 'Não há mais continuações disponíveis.',
   'game.paused': 'Pausado',
-  'game.pausedExplanation': 'O relógio e todos os efeitos temporários estão parados. A tentativa não terminou.',
+  'game.pausedExplanation':
+    'O relógio e todos os efeitos temporários estão parados. A tentativa não terminou.',
   'game.pausedRows': 'Linhas vencidas: {row}',
   'app.opening': 'Abrindo seu caminho…',
   'app.retryStart': 'Tentar iniciar novamente',
   'app.playOffline': 'Jogar offline',
   'app.startError': 'Você pode tentar novamente ou começar um treino offline.',
-  'app.saveLeaveConfirm': 'Salvar e sair? A tentativa ficará disponível para retomar. Isso NÃO a encerra.',
+  'app.saveLeaveConfirm':
+    'Salvar e sair? A tentativa ficará disponível para retomar. Isso NÃO a encerra.',
   'game.effectShield': 'Escudo',
   'game.effectRegen': 'Regeneração',
   'game.effectLucky': 'Passo de sorte',

@@ -29,8 +29,12 @@ const supported = new Set<string>(LOCALES.map(({ code }) => code));
 export function matchLanguage(tag: string): LocaleCode | null {
   if (typeof tag !== 'string' || tag.length > 60) return null;
   const normalized = tag.replace(/_/g, '-').toLowerCase();
-  if (normalized === 'zh-hant' || normalized.startsWith('zh-hant-') ||
-      /^(zh-tw|zh-hk|zh-mo)(-|$)/.test(normalized)) return null;
+  if (
+    normalized === 'zh-hant' ||
+    normalized.startsWith('zh-hant-') ||
+    /^(zh-tw|zh-hk|zh-mo)(-|$)/.test(normalized)
+  )
+    return null;
   if (/^zh(?:-hans|-cn|-sg)?(?:-|$)/.test(normalized)) return 'zh-Hans';
   if (/^pt(?:-|$)/.test(normalized)) return 'pt-BR';
   const language = normalized.split('-')[0];
@@ -66,16 +70,15 @@ export function writeLanguageChoice(storage: LanguageStorage, choice: LocaleChoi
   storage.setItem(LANGUAGE_KEY, choice);
 }
 
-export function resolveLocale(choice: LocaleChoice, deviceLanguages: readonly string[]): LocaleCode {
+export function resolveLocale(
+  choice: LocaleChoice,
+  deviceLanguages: readonly string[],
+): LocaleCode {
   return choice === 'system' ? chooseDeviceLanguage(deviceLanguages) : choice;
 }
 
 /** Translation missing in a preview pack falls back to canonical English; never exposes a key. */
-export function translate(
-  locale: LocaleCode,
-  key: MessageKey,
-  params: MessageParams = {},
-): string {
+export function translate(locale: LocaleCode, key: MessageKey, params: MessageParams = {}): string {
   const template = localePacks[locale]?.[key] ?? en[key];
   return template.replace(/\{([A-Za-z][A-Za-z0-9]*)\}/g, (match, name: string) =>
     Object.prototype.hasOwnProperty.call(params, name) ? String(params[name]) : match,
@@ -100,4 +103,3 @@ export function localizeInteger(input: string | number | null, locale: LocaleCod
 export function languageDirection(locale: LocaleCode): 'ltr' | 'rtl' {
   return locale === 'ar' ? 'rtl' : 'ltr';
 }
-

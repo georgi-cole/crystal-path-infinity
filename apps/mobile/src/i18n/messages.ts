@@ -38,22 +38,26 @@ export const en = {
   'menu.tutorialDescription': 'Five short hands-on lessons · No saved score',
   'menu.savedPractice': 'Saved practice · Row {row}',
   'menu.practiceEyebrow': 'Offline · All ages',
-  'menu.practiceIntro': 'Cross the endless bridge. Practice requires no account, age answer or analytics consent.',
+  'menu.practiceIntro':
+    'Cross the endless bridge. Practice requires no account, age answer or analytics consent.',
   'menu.tutorialExercise': 'Try safe and wrong glass, hints and an optional mystery',
   'menu.resumeSaved': 'Resume · Row {row}',
   'menu.resumeDescription': 'Continue your saved local attempt',
   'menu.newPractice': 'New practice',
   'menu.startRow1': 'Start at Row 1',
-  'menu.practiceLocal': 'Practice progress stays on this device. It does not enter the official rankings.',
+  'menu.practiceLocal':
+    'Practice progress stays on this device. It does not enter the official rankings.',
   'menu.playEyebrow': 'Official ranked mode',
-  'menu.playUnavailable': 'Ranked play is not available yet. An official attempt will require an account and the applicable privacy setup before any account details are collected.',
+  'menu.playUnavailable':
+    'Ranked play is not available yet. An official attempt will require an account and the applicable privacy setup before any account details are collected.',
   'menu.youOffline': 'You are offline',
   'menu.servicesMissing': 'Online services not connected',
   'menu.noRankedHere': 'No sign-in, rankings or ranked run can be started from this build.',
   'menu.practiceInstead': 'Practice instead',
   'menu.practiceNow': 'Play now · No account needed',
   'menu.rankingsScope': 'World · Continent · Country',
-  'menu.rankingsUnavailable': 'Verified Top 100 rankings will appear here when ranked services are connected. No placements or sample scores are presented as real.',
+  'menu.rankingsUnavailable':
+    'Verified Top 100 rankings will appear here when ranked services are connected. No placements or sample scores are presented as real.',
   'menu.offlineRankings': 'Offline · Rankings unavailable',
   'menu.rankingsMissing': 'Rankings not connected yet',
   'menu.practiceNotRanked': 'Local practice records do not qualify as ranked results.',
@@ -63,7 +67,8 @@ export const en = {
   'menu.profileEyebrow': 'Guest session',
   'menu.asGuest': 'Playing as guest',
   'menu.noAccount': 'No registered profile or account is attached to this device.',
-  'menu.profileFuture': 'When account services are available, profile setup will explain what becomes public. Your age response for analytics will be optional, and no date of birth is required for practice.',
+  'menu.profileFuture':
+    'When account services are available, profile setup will explain what becomes public. Your age response for analytics will be optional, and no date of birth is required for practice.',
   'menu.practiceUnsigned': 'Practice without signing in',
   'menu.settingsEyebrow': 'Local preferences',
   'menu.settingsIntro': 'These controls are available offline and affect your practice session.',
@@ -75,8 +80,10 @@ export const en = {
   'menu.confirmTitle': 'Confirm new attempt',
   'menu.confirmDiscard': 'Discard damaged save?',
   'menu.confirmReplace': 'Replace saved practice?',
-  'menu.discardExplained': 'The saved checkpoint cannot be recovered. Starting fresh deletes that damaged checkpoint.',
-  'menu.replaceExplained': 'Starting again permanently replaces your unfinished local attempt. Your completed practice record stays.',
+  'menu.discardExplained':
+    'The saved checkpoint cannot be recovered. Starting fresh deletes that damaged checkpoint.',
+  'menu.replaceExplained':
+    'Starting again permanently replaces your unfinished local attempt. Your completed practice record stays.',
   'menu.keepSaved': 'Keep saved attempt',
   'menu.startFresh': 'Start new practice',
   'settings.audioLegend': 'Sound and feedback',
@@ -89,34 +96,46 @@ export const en = {
   'settings.open': 'Open settings',
   'settings.language': 'Language',
   'settings.system': 'Automatic · Device language',
-  'settings.languageHelp': 'Choose a language or follow your device settings. Changing language does not restart the run.',
-  'settings.languagePreview': 'Translations are in preview and require native-speaker review before release.',
+  'settings.languageHelp':
+    'Choose a language or follow your device settings. Changing language does not restart the run.',
+  'settings.languagePreview':
+    'Translations are in preview and require native-speaker review before release.',
   'settings.privacyTitle': 'Privacy and data',
-  'settings.privacyInfo': 'Practice checkpoints, preferences and your local best stay on this device. This build does not connect a player account or upload a ranked result.',
+  'settings.privacyInfo':
+    'Practice checkpoints, preferences and your local best stay on this device. This build does not connect a player account or upload a ranked result.',
   'settings.privacyUnavailable': 'A published privacy policy is not connected in this build.',
   'settings.accountTitle': 'Account and deletion',
-  'settings.accountUnavailable': 'No account is connected. Account deletion becomes available when sign-in and the account service are implemented.',
+  'settings.accountUnavailable':
+    'No account is connected. Account deletion becomes available when sign-in and the account service are implemented.',
   'settings.supportTitle': 'Help and support',
-  'settings.supportUnavailable': 'In-app support is not connected yet. No support request can be submitted here.',
-  'settings.reducedMotionInfo': 'Reduced motion keeps step results and warnings visible without strong camera shake or ambient movement.',
+  'settings.supportUnavailable':
+    'In-app support is not connected yet. No support request can be submitted here.',
+  'settings.reducedMotionInfo':
+    'Reduced motion keeps step results and warnings visible without strong camera shake or ambient movement.',
   'tutorial.guided': 'Guided local demo · {step} / 5',
   'tutorial.notRanked': 'Not ranked · No ads',
   'tutorial.safeTitle': 'Take a safe step',
   'tutorial.safeInstruction': 'Tap LEFT to cross Row 1 safely. A safe step leaves SP unchanged.',
   'tutorial.wrongTitle': 'Survive a wrong step',
-  'tutorial.wrongInstruction': 'Tap LEFT again. This time it is wrong: you lose SP, but if you survive the row still counts.',
+  'tutorial.wrongInstruction':
+    'Tap LEFT again. This time it is wrong: you lose SP, but if you survive the row still counts.',
   'tutorial.hintTitle': 'Ask for a hint',
   'tutorial.hintInstruction': 'Tap Use hint to reveal the safe pane on Row 3. Hints are limited.',
   'tutorial.hintRevealedTitle': 'Follow the hint',
-  'tutorial.hintRevealedInstruction': 'LEFT is revealed as safe. Tap the LEFT glass to cross Row 3.',
+  'tutorial.hintRevealedInstruction':
+    'LEFT is revealed as safe. Tap the LEFT glass to cross Row 3.',
   'tutorial.mysteryTitle': 'Mystery is your choice',
-  'tutorial.mysteryInstruction': 'Try the centre mystery or skip it. Effects can help, hurt, change hints or last for a few seconds.',
+  'tutorial.mysteryInstruction':
+    'Try the centre mystery or skip it. Effects can help, hurt, change hints or last for a few seconds.',
   'tutorial.endTitle': 'How an attempt ends',
-  'tutorial.endInstruction': 'There is no final row. End run is your choice. The optional fatal example starts at 10 SP to demonstrate death.',
+  'tutorial.endInstruction':
+    'There is no final row. End run is your choice. The optional fatal example starts at 10 SP to demonstrate death.',
   'tutorial.fatalTitle': 'A fatal row does not count',
-  'tutorial.fatalInstruction': 'The example dropped SP to zero on Row 4. Its final cleared row is still Row 3.',
+  'tutorial.fatalInstruction':
+    'The example dropped SP to zero on Row 4. Its final cleared row is still Row 3.',
   'tutorial.completeTitle': 'You know the bridge',
-  'tutorial.completeInstruction': 'Tutorial complete. Start a separate local practice run whenever you are ready.',
+  'tutorial.completeInstruction':
+    'Tutorial complete. Start a separate local practice run whenever you are ready.',
   'tutorial.resources': 'Training resources',
   'tutorial.hints': '{count} hints',
   'tutorial.lastCleared': 'Last cleared: Row {row}',
@@ -145,7 +164,8 @@ export const en = {
   'tutorial.notice.wrong': 'Safe! Row 1 counts and your SP remains {sp}.',
   'tutorial.notice.hint': 'Wrong glass cost {damage} SP, but you survived. Row 2 still counts.',
   'tutorial.notice.hintRevealed': 'The safe pane is LEFT. One hint was spent; SP did not change.',
-  'tutorial.notice.mystery': 'Row 3 cleared. The centre mystery is optional, never guaranteed safe.',
+  'tutorial.notice.mystery':
+    'Row 3 cleared. The centre mystery is optional, never guaranteed safe.',
   'tutorial.notice.end': 'Mystery resolved or skipped. Real mysteries can help or hurt.',
   'tutorial.notice.fatal': 'Fatal Row {row} did NOT count. Last cleared remains {cleared}.',
   'tutorial.notice.complete': 'Tutorial complete. No saved practice, ranking, ad or reward.',
@@ -190,14 +210,18 @@ export const en = {
   'game.confirmCleared': 'Your last cleared row is {row}.',
   'game.confirmFatal': 'The fatal row {row} will not count.',
   'game.confirmUnfinished': 'The current unfinished row will not count.',
-  'game.confirmForfeit': 'You have a granted but unused continuation. Ending explicitly forfeits it.',
-  'game.confirmLocal': 'This permanently finishes the local attempt. It does not submit a ranked score.',
+  'game.confirmForfeit':
+    'You have a granted but unused continuation. Ending explicitly forfeits it.',
+  'game.confirmLocal':
+    'This permanently finishes the local attempt. It does not submit a ranked score.',
   'game.keepAttempt': 'Keep attempt',
   'game.confirmForfeitButton': 'End and forfeit grant',
   'game.confirmEnd': 'Confirm End run',
   'game.pendingTitle': 'Verification pending',
-  'game.pendingExplanation': 'Your reward has not been verified. Row {row} is your last confirmed progress, not a final result.',
-  'game.pendingRecovery': 'This attempt remains recoverable and unpublished. No second reward can be requested while verification is pending.',
+  'game.pendingExplanation':
+    'Your reward has not been verified. Row {row} is your last confirmed progress, not a final result.',
+  'game.pendingRecovery':
+    'This attempt remains recoverable and unpublished. No second reward can be requested while verification is pending.',
   'game.savePending': 'Save and leave · Pending',
   'game.practiceUnverified': 'OFFLINE PRACTICE · NOT VERIFIED',
   'game.complete': 'Run complete',
@@ -217,24 +241,30 @@ export const en = {
   'game.deathDrain': 'An active drain depleted your SP.',
   'game.fatalNotCounted': 'Fatal row {row} does not count toward your score.',
   'game.offerTitle': 'Continue #{index} · Restore {sp} SP',
-  'game.offerDetail': 'The restore sets SP to {sp}; it does not add points. {remaining} reward grants remain.',
+  'game.offerDetail':
+    'The restore sets SP to {sp}; it does not add points. {remaining} reward grants remain.',
   'game.offerUnavailable': 'Rewarded continue is not connected in offline practice yet.',
-  'game.grantReady': 'A continuation was granted but not applied. No additional ad is available for this death; ending explicitly forfeits the grant.',
+  'game.grantReady':
+    'A continuation was granted but not applied. No additional ad is available for this death; ending explicitly forfeits the grant.',
   'game.noContinues': 'No further continues remain for this attempt.',
   'game.paused': 'Paused',
-  'game.pausedExplanation': 'The game clock and every timed effect are frozen. The run is not finished.',
+  'game.pausedExplanation':
+    'The game clock and every timed effect are frozen. The run is not finished.',
   'game.pausedRows': 'Rows cleared: {row}',
   'app.opening': 'Opening your path…',
   'app.retryStart': 'Retry startup',
   'app.playOffline': 'Play offline',
   'app.startError': 'You can retry or start offline practice.',
-  'app.saveLeaveConfirm': 'Save and leave practice? Your latest checkpoint stays available to resume. This does NOT end the run.',
+  'app.saveLeaveConfirm':
+    'Save and leave practice? Your latest checkpoint stays available to resume. This does NOT end the run.',
   'app.warningStartup': 'Local startup was unavailable. Practice is playable, but saving may fail.',
   'app.warningSettings': 'Settings could not be saved on this device.',
   'app.warningTutorial': 'Tutorial progress could not be saved on this device.',
-  'app.warningSave': 'Local storage could not save this checkpoint. You can keep playing, but progress might not survive an app restart.',
+  'app.warningSave':
+    'Local storage could not save this checkpoint. You can keep playing, but progress might not survive an app restart.',
   'app.warningFresh': 'Progress might not be saved because local storage is unavailable.',
-  'app.warningOnline': 'Connectivity detected, but ranked services are not connected in this build.',
+  'app.warningOnline':
+    'Connectivity detected, but ranked services are not connected in this build.',
   'app.warningOffline': 'This device is still offline. Practice remains available.',
   'game.effectShield': 'Shield',
   'game.effectRegen': 'Regeneration',

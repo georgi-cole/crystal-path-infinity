@@ -58,9 +58,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     (key: MessageKey, params?: MessageParams) => translate(locale, key, params),
     [locale],
   );
-  const number = useCallback((value: string | number | null) => localizeInteger(value, locale), [
-    locale,
-  ]);
+  const number = useCallback(
+    (value: string | number | null) => localizeInteger(value, locale),
+    [locale],
+  );
 
   return (
     <LanguageContext.Provider value={{ locale, choice, setChoice, warning, t, number }}>

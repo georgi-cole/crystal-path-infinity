@@ -322,7 +322,9 @@ export function App() {
           <p role="status">{t('app.opening')}</p>
         ) : (
           <div className="cpi-bootstrap-failure" role="alert">
-            <p>{bootError} {t('app.startError')}</p>
+            <p>
+              {bootError} {t('app.startError')}
+            </p>
             <div className="cpi-bootstrap-actions">
               <button type="button" onClick={retryBootstrap}>
                 {t('app.retryStart')}

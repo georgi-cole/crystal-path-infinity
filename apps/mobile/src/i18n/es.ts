@@ -31,21 +31,26 @@ export const es = {
   'menu.tutorialDescription': 'Cinco lecciones prácticas · Sin puntuación guardada',
   'menu.savedPractice': 'Práctica guardada · Fila {row}',
   'menu.practiceEyebrow': 'Sin conexión · Todas las edades',
-  'menu.practiceIntro': 'Cruza el puente infinito. La práctica no requiere cuenta, edad ni consentimiento para análisis.',
+  'menu.practiceIntro':
+    'Cruza el puente infinito. La práctica no requiere cuenta, edad ni consentimiento para análisis.',
   'menu.resumeSaved': 'Continuar · Fila {row}',
   'menu.resumeDescription': 'Continúa tu partida guardada',
   'menu.newPractice': 'Nueva práctica',
   'menu.startRow1': 'Empezar en la fila 1',
-  'menu.practiceLocal': 'El progreso se guarda en este dispositivo y no entra en la clasificación oficial.',
+  'menu.practiceLocal':
+    'El progreso se guarda en este dispositivo y no entra en la clasificación oficial.',
   'menu.playEyebrow': 'Modo competitivo oficial',
-  'menu.playUnavailable': 'El modo competitivo aún no está disponible. La cuenta y los permisos de privacidad se configurarán antes de recopilar datos.',
+  'menu.playUnavailable':
+    'El modo competitivo aún no está disponible. La cuenta y los permisos de privacidad se configurarán antes de recopilar datos.',
   'menu.youOffline': 'No tienes conexión',
   'menu.servicesMissing': 'Servicios en línea no conectados',
-  'menu.noRankedHere': 'Esta versión no permite registrarse, competir ni consultar clasificaciones oficiales.',
+  'menu.noRankedHere':
+    'Esta versión no permite registrarse, competir ni consultar clasificaciones oficiales.',
   'menu.practiceInstead': 'Practicar en su lugar',
   'menu.practiceNow': 'Jugar ahora · Sin cuenta',
   'menu.rankingsScope': 'Mundo · Continente · País',
-  'menu.rankingsUnavailable': 'La clasificación verificada de los 100 mejores aparecerá cuando se conecten los servicios. No mostramos resultados ficticios.',
+  'menu.rankingsUnavailable':
+    'La clasificación verificada de los 100 mejores aparecerá cuando se conecten los servicios. No mostramos resultados ficticios.',
   'menu.offlineRankings': 'Sin conexión · Clasificación no disponible',
   'menu.rankingsMissing': 'Clasificaciones no conectadas',
   'menu.practiceNotRanked': 'Los récords de práctica no cuentan para la clasificación.',
@@ -55,7 +60,8 @@ export const es = {
   'menu.profileEyebrow': 'Sesión de invitado',
   'menu.asGuest': 'Jugando como invitado',
   'menu.noAccount': 'No hay ninguna cuenta vinculada a este dispositivo.',
-  'menu.profileFuture': 'Cuando haya cuentas, explicaremos qué datos serán públicos. La edad para análisis será opcional; la práctica no requiere fecha de nacimiento.',
+  'menu.profileFuture':
+    'Cuando haya cuentas, explicaremos qué datos serán públicos. La edad para análisis será opcional; la práctica no requiere fecha de nacimiento.',
   'menu.practiceUnsigned': 'Practicar sin iniciar sesión',
   'menu.settingsEyebrow': 'Preferencias locales',
   'menu.settingsIntro': 'Estos controles funcionan sin conexión y afectan a tus prácticas.',
@@ -66,8 +72,10 @@ export const es = {
   'menu.confirmTitle': 'Confirmar nueva partida',
   'menu.confirmDiscard': '¿Descartar partida dañada?',
   'menu.confirmReplace': '¿Reemplazar la práctica guardada?',
-  'menu.discardExplained': 'No se puede recuperar esta partida. Empezar otra eliminará la copia dañada.',
-  'menu.replaceExplained': 'Una partida nueva reemplaza la práctica pendiente. Tu récord personal se conserva.',
+  'menu.discardExplained':
+    'No se puede recuperar esta partida. Empezar otra eliminará la copia dañada.',
+  'menu.replaceExplained':
+    'Una partida nueva reemplaza la práctica pendiente. Tu récord personal se conserva.',
   'menu.keepSaved': 'Conservar partida',
   'menu.startFresh': 'Empezar nueva práctica',
   'settings.audioLegend': 'Sonido y respuesta',
@@ -80,34 +88,48 @@ export const es = {
   'settings.open': 'Abrir ajustes',
   'settings.language': 'Idioma',
   'settings.system': 'Automático · Idioma del dispositivo',
-  'settings.languageHelp': 'Elige un idioma o usa el del dispositivo. Cambiarlo no reinicia la partida.',
-  'settings.languagePreview': 'Traducciones preliminares; requieren revisión nativa antes del lanzamiento.',
+  'settings.languageHelp':
+    'Elige un idioma o usa el del dispositivo. Cambiarlo no reinicia la partida.',
+  'settings.languagePreview':
+    'Traducciones preliminares; requieren revisión nativa antes del lanzamiento.',
   'settings.privacyTitle': 'Privacidad y datos',
-  'settings.privacyInfo': 'Las partidas, los ajustes y el récord de práctica permanecen en este dispositivo. Esta versión no conecta cuentas ni publica resultados.',
+  'settings.privacyInfo':
+    'Las partidas, los ajustes y el récord de práctica permanecen en este dispositivo. Esta versión no conecta cuentas ni publica resultados.',
   'settings.privacyUnavailable': 'Aún no se ha conectado una política de privacidad publicada.',
   'settings.accountTitle': 'Cuenta y eliminación',
-  'settings.accountUnavailable': 'No hay ninguna cuenta conectada. La eliminación estará disponible cuando funcione el servicio de cuentas.',
+  'settings.accountUnavailable':
+    'No hay ninguna cuenta conectada. La eliminación estará disponible cuando funcione el servicio de cuentas.',
   'settings.supportTitle': 'Ayuda y asistencia',
-  'settings.supportUnavailable': 'La asistencia dentro del juego aún no está conectada. No se pueden enviar solicitudes desde aquí.',
-  'settings.reducedMotionInfo': 'Se mantiene visible el resultado de cada paso sin sacudidas de cámara ni movimiento ambiental intenso.',
+  'settings.supportUnavailable':
+    'La asistencia dentro del juego aún no está conectada. No se pueden enviar solicitudes desde aquí.',
+  'settings.reducedMotionInfo':
+    'Se mantiene visible el resultado de cada paso sin sacudidas de cámara ni movimiento ambiental intenso.',
   'tutorial.guided': 'Tutorial · {step} / 5',
   'tutorial.notRanked': 'Sin clasificación · Sin anuncios',
   'tutorial.safeTitle': 'Da un paso seguro',
-  'tutorial.safeInstruction': 'Pulsa IZQUIERDA para cruzar la fila 1. Un paso seguro no cambia tus SP.',
+  'tutorial.safeInstruction':
+    'Pulsa IZQUIERDA para cruzar la fila 1. Un paso seguro no cambia tus SP.',
   'tutorial.wrongTitle': 'Sobrevive a un paso erróneo',
-  'tutorial.wrongInstruction': 'Pulsa IZQUIERDA otra vez. Esta vez pierdes SP, pero si sobrevives la fila cuenta.',
+  'tutorial.wrongInstruction':
+    'Pulsa IZQUIERDA otra vez. Esta vez pierdes SP, pero si sobrevives la fila cuenta.',
   'tutorial.hintTitle': 'Pide una pista',
-  'tutorial.hintInstruction': 'Usa una pista para revelar el cristal seguro de la fila 3. Las pistas son limitadas.',
+  'tutorial.hintInstruction':
+    'Usa una pista para revelar el cristal seguro de la fila 3. Las pistas son limitadas.',
   'tutorial.hintRevealedTitle': 'Sigue la pista',
-  'tutorial.hintRevealedInstruction': 'IZQUIERDA es segura. Pulsa el cristal izquierdo para cruzar la fila 3.',
+  'tutorial.hintRevealedInstruction':
+    'IZQUIERDA es segura. Pulsa el cristal izquierdo para cruzar la fila 3.',
   'tutorial.mysteryTitle': 'Tú decides sobre el misterio',
-  'tutorial.mysteryInstruction': 'Prueba el misterio central o evítalo. Los efectos pueden ayudar, perjudicar o cambiar las pistas.',
+  'tutorial.mysteryInstruction':
+    'Prueba el misterio central o evítalo. Los efectos pueden ayudar, perjudicar o cambiar las pistas.',
   'tutorial.endTitle': 'Cómo termina una partida',
-  'tutorial.endInstruction': 'No hay última fila. Tú decides cuándo terminar. El ejemplo mortal empieza con 10 SP.',
+  'tutorial.endInstruction':
+    'No hay última fila. Tú decides cuándo terminar. El ejemplo mortal empieza con 10 SP.',
   'tutorial.fatalTitle': 'Una fila mortal no cuenta',
-  'tutorial.fatalInstruction': 'El ejemplo redujo los SP a cero en la fila 4. La última fila superada sigue siendo la 3.',
+  'tutorial.fatalInstruction':
+    'El ejemplo redujo los SP a cero en la fila 4. La última fila superada sigue siendo la 3.',
   'tutorial.completeTitle': 'Ya conoces el puente',
-  'tutorial.completeInstruction': 'Tutorial completo. Inicia una partida de práctica independiente cuando quieras.',
+  'tutorial.completeInstruction':
+    'Tutorial completo. Inicia una partida de práctica independiente cuando quieras.',
   'tutorial.resources': 'Recursos de entrenamiento',
   'tutorial.hints': '{count} pistas',
   'tutorial.lastCleared': 'Última superada: fila {row}',
@@ -125,7 +147,8 @@ export const es = {
   'tutorial.skipMystery': 'Omitir misterio · Sin penalización',
   'tutorial.showFatal': 'Mostrar un paso mortal',
   'tutorial.endTraining': 'Terminar tutorial',
-  'tutorial.completeNotice': 'Completado. La demostración no se guardó como partida ni como puntuación.',
+  'tutorial.completeNotice':
+    'Completado. La demostración no se guardó como partida ni como puntuación.',
   'tutorial.goPractice': 'Ir a Práctica',
   'tutorial.coreRules': 'Reglas básicas',
   'tutorial.ruleSp': 'SP: Los errores cuestan puntos. Cero SP significa muerte.',
@@ -172,14 +195,17 @@ export const es = {
   'game.confirmCleared': 'Tu última fila superada es {row}.',
   'game.confirmFatal': 'La fila mortal {row} no contará.',
   'game.confirmUnfinished': 'La fila actual incompleta no contará.',
-  'game.confirmForfeit': 'Tienes una continuación concedida sin usar. Al terminar renuncias a ella.',
+  'game.confirmForfeit':
+    'Tienes una continuación concedida sin usar. Al terminar renuncias a ella.',
   'game.confirmLocal': 'Esto termina definitivamente la práctica, sin enviar resultados oficiales.',
   'game.keepAttempt': 'Continuar partida',
   'game.confirmForfeitButton': 'Terminar y renunciar',
   'game.confirmEnd': 'Confirmar fin',
   'game.pendingTitle': 'Verificación pendiente',
-  'game.pendingExplanation': 'El premio no se ha verificado. La fila {row} es tu último progreso confirmado, no un resultado final.',
-  'game.pendingRecovery': 'Puedes recuperar esta partida; no se publicará y no puedes pedir otro premio mientras se verifica.',
+  'game.pendingExplanation':
+    'El premio no se ha verificado. La fila {row} es tu último progreso confirmado, no un resultado final.',
+  'game.pendingRecovery':
+    'Puedes recuperar esta partida; no se publicará y no puedes pedir otro premio mientras se verifica.',
   'game.savePending': 'Guardar y salir · Pendiente',
   'game.practiceUnverified': 'PRÁCTICA LOCAL · NO VERIFICADA',
   'game.complete': 'Partida terminada',
@@ -189,7 +215,8 @@ export const es = {
   'game.revivesApplied': 'Continuaciones aplicadas',
   'game.bestLocal': 'Récord personal · Local',
   'game.bestNew': 'Nuevo récord local',
-  'game.resultLocal': 'Solo resultado de práctica. El envío oficial y la clasificación aún no están disponibles.',
+  'game.resultLocal':
+    'Solo resultado de práctica. El envío oficial y la clasificación aún no están disponibles.',
   'game.nextRun': 'Siguiente partida',
   'game.rankingsNotLive': 'Clasificación (no disponible)',
   'game.returnMenu': 'Volver al menú',
@@ -199,18 +226,23 @@ export const es = {
   'game.deathDrain': 'Un efecto de drenaje agotó tus SP.',
   'game.fatalNotCounted': 'La fila mortal {row} no cuenta para tu puntuación.',
   'game.offerTitle': 'Continuación n.º {index} · Recupera {sp} SP',
-  'game.offerDetail': 'La recuperación fija los SP en {sp}; no los suma. Quedan {remaining} premios.',
-  'game.offerUnavailable': 'Las continuaciones con anuncios aún no funcionan en la práctica sin conexión.',
-  'game.grantReady': 'Se concedió una continuación, pero no se aplicó. No hay otro anuncio; terminar implica renunciar expresamente.',
+  'game.offerDetail':
+    'La recuperación fija los SP en {sp}; no los suma. Quedan {remaining} premios.',
+  'game.offerUnavailable':
+    'Las continuaciones con anuncios aún no funcionan en la práctica sin conexión.',
+  'game.grantReady':
+    'Se concedió una continuación, pero no se aplicó. No hay otro anuncio; terminar implica renunciar expresamente.',
   'game.noContinues': 'No quedan más continuaciones.',
   'game.paused': 'Pausado',
-  'game.pausedExplanation': 'El reloj y los efectos temporales están congelados. La partida no ha terminado.',
+  'game.pausedExplanation':
+    'El reloj y los efectos temporales están congelados. La partida no ha terminado.',
   'game.pausedRows': 'Filas superadas: {row}',
   'app.opening': 'Abriendo tu camino…',
   'app.retryStart': 'Reintentar inicio',
   'app.playOffline': 'Jugar sin conexión',
   'app.startError': 'Puedes reintentar o comenzar una práctica sin conexión.',
-  'app.saveLeaveConfirm': '¿Guardar y salir? La partida podrá reanudarse. Esto NO termina el intento.',
+  'app.saveLeaveConfirm':
+    '¿Guardar y salir? La partida podrá reanudarse. Esto NO termina el intento.',
   'game.effectShield': 'Escudo',
   'game.effectRegen': 'Regeneración',
   'game.effectLucky': 'Paso afortunado',

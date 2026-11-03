@@ -55,7 +55,8 @@ export const zhHans = {
   'menu.profileEyebrow': '访客模式',
   'menu.asGuest': '以访客身份游玩',
   'menu.noAccount': '此设备未关联注册账号。',
-  'menu.profileFuture': '账号上线时会说明哪些信息公开。用于统计的年龄回答是自愿的，练习无需出生日期。',
+  'menu.profileFuture':
+    '账号上线时会说明哪些信息公开。用于统计的年龄回答是自愿的，练习无需出生日期。',
   'menu.practiceUnsigned': '无需登录即可练习',
   'menu.settingsEyebrow': '本地偏好设置',
   'menu.settingsIntro': '这些设置离线可用，并会应用于练习。',
@@ -83,7 +84,8 @@ export const zhHans = {
   'settings.languageHelp': '选择语言或使用设备语言。更改语言不会重开本局。',
   'settings.languagePreview': '翻译为预览版本，发布前需母语者审核。',
   'settings.privacyTitle': '隐私与数据',
-  'settings.privacyInfo': '练习存档、偏好设置和最佳成绩仅保存在本设备。当前版本未连接账号，也不会上传官方成绩。',
+  'settings.privacyInfo':
+    '练习存档、偏好设置和最佳成绩仅保存在本设备。当前版本未连接账号，也不会上传官方成绩。',
   'settings.privacyUnavailable': '尚未接入已发布的隐私政策。',
   'settings.accountTitle': '账号与删除',
   'settings.accountUnavailable': '未连接账号。正式账号服务上线后将提供删除账号功能。',

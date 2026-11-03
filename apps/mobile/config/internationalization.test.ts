@@ -26,7 +26,9 @@ describe('CPI-016 internationalization contract', () => {
     expect(new Set(codes).size).toBe(codes.length);
     expect(LOCALES.every(({ name }) => name.length > 0)).toBe(true);
     expect(LOCALES.find(({ code }) => code === 'ar')?.direction).toBe('rtl');
-    expect(LOCALES.filter(({ code }) => code !== 'ar').every(({ direction }) => direction === 'ltr')).toBe(true);
+    expect(
+      LOCALES.filter(({ code }) => code !== 'ar').every(({ direction }) => direction === 'ltr'),
+    ).toBe(true);
   });
 
   it('prioritizes supported system languages, handles regions and rejects unsupported dialect scripts safely', () => {
@@ -52,7 +54,9 @@ describe('CPI-016 internationalization contract', () => {
     const map = new Map<string, string>();
     const storage = {
       getItem: (key: string) => map.get(key) ?? null,
-      setItem: (key: string, value: string) => { map.set(key, value); },
+      setItem: (key: string, value: string) => {
+        map.set(key, value);
+      },
     };
     expect(readLanguageChoice(storage)).toBe('system');
     writeLanguageChoice(storage, 'fr');
@@ -63,7 +67,14 @@ describe('CPI-016 internationalization contract', () => {
     map.set(LANGUAGE_KEY, 'unsupported');
     expect(readLanguageChoice(storage)).toBe('system');
     expect(() => writeLanguageChoice(storage, 'zz' as never)).toThrow();
-    expect(readLanguageChoice({ getItem: () => { throw Error('blocked'); }, setItem: () => {} })).toBe('system');
+    expect(
+      readLanguageChoice({
+        getItem: () => {
+          throw Error('blocked');
+        },
+        setItem: () => {},
+      }),
+    ).toBe('system');
     expect(languageDirection('ar')).toBe('rtl');
     expect(languageDirection('bg')).toBe('ltr');
   });
@@ -72,16 +83,35 @@ describe('CPI-016 internationalization contract', () => {
     const keys = Object.keys(en) as MessageKey[];
     expect(keys.length).toBeGreaterThan(220);
     const essential: MessageKey[] = [
-      'general.play', 'general.practice', 'general.endRun', 'menu.tagline',
-      'menu.playUnavailable', 'menu.rankingsUnavailable', 'menu.profileFuture',
-      'settings.language', 'settings.system', 'settings.privacyTitle',
-      'settings.accountTitle', 'settings.supportTitle',
-      'tutorial.safeTitle', 'tutorial.safeInstruction', 'tutorial.fatalTitle',
-      'tutorial.mysteryInstruction', 'tutorial.ruleSp',
-      'game.spCritical', 'game.deathTitle', 'game.offerTitle',
-      'game.offerDetail', 'game.pendingTitle', 'game.pendingRecovery',
-      'game.confirmTitle', 'game.confirmForfeit', 'game.practiceUnverified',
-      'game.complete', 'game.nextRun', 'game.fatalNotCounted',
+      'general.play',
+      'general.practice',
+      'general.endRun',
+      'menu.tagline',
+      'menu.playUnavailable',
+      'menu.rankingsUnavailable',
+      'menu.profileFuture',
+      'settings.language',
+      'settings.system',
+      'settings.privacyTitle',
+      'settings.accountTitle',
+      'settings.supportTitle',
+      'tutorial.safeTitle',
+      'tutorial.safeInstruction',
+      'tutorial.fatalTitle',
+      'tutorial.mysteryInstruction',
+      'tutorial.ruleSp',
+      'game.spCritical',
+      'game.deathTitle',
+      'game.offerTitle',
+      'game.offerDetail',
+      'game.pendingTitle',
+      'game.pendingRecovery',
+      'game.confirmTitle',
+      'game.confirmForfeit',
+      'game.practiceUnverified',
+      'game.complete',
+      'game.nextRun',
+      'game.fatalNotCounted',
     ];
     for (const code of LOCALES.map((item) => item.code)) {
       const overrides = code === 'en' ? en : localePacks[code];
@@ -101,7 +131,13 @@ describe('CPI-016 internationalization contract', () => {
         );
       }
       for (const key of keys) {
-        const translated = translate(code, key, { row: '1000', sp: 200, count: 5, index: 6, remaining: 4 });
+        const translated = translate(code, key, {
+          row: '1000',
+          sp: 200,
+          count: 5,
+          index: 6,
+          remaining: 4,
+        });
         expect(translated.length).toBeGreaterThan(0);
         expect(translated).not.toBe(key);
         expect(translated).not.toContain('undefined');
@@ -141,7 +177,8 @@ describe('CPI-016 internationalization contract', () => {
     expect(main).toContain('<LanguageProvider>');
     const scene = readFileSync(new URL('../src/infinity-scene.tsx', import.meta.url), 'utf8');
     expect(scene).toContain('cpi-tile-feedback-text');
-    expect(scene).toContain("t('game.spCritical'");
+    expect(scene).toContain("'game.spCritical'");
+    expect(scene).toContain("'game.spLow'");
     expect(scene).toContain('dir="ltr"');
     const css = readFileSync(new URL('../src/global-accessibility.css', import.meta.url), 'utf8');
     expect(css).toContain("[dir='rtl']");

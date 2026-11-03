@@ -31,21 +31,25 @@ export const ja = {
   'menu.tutorialDescription': '5つの短い練習・スコアは保存されません',
   'menu.savedPractice': '保存した練習・{row}列目',
   'menu.practiceEyebrow': 'オフライン・全年齢向け',
-  'menu.practiceIntro': '終わりのない橋を渡ろう。練習にアカウントや年齢の回答、分析への同意は必要ありません。',
+  'menu.practiceIntro':
+    '終わりのない橋を渡ろう。練習にアカウントや年齢の回答、分析への同意は必要ありません。',
   'menu.resumeSaved': '再開・{row}列目',
   'menu.resumeDescription': '保存した挑戦の続きから',
   'menu.newPractice': '新しい練習',
   'menu.startRow1': '1列目から開始',
-  'menu.practiceLocal': '練習の進行状況はこの端末だけに保存され、公式ランキングには反映されません。',
+  'menu.practiceLocal':
+    '練習の進行状況はこの端末だけに保存され、公式ランキングには反映されません。',
   'menu.playEyebrow': '公式ランキングモード',
-  'menu.playUnavailable': 'ランキングモードはまだ利用できません。アカウント情報の収集前に登録とプライバシー設定が必要です。',
+  'menu.playUnavailable':
+    'ランキングモードはまだ利用できません。アカウント情報の収集前に登録とプライバシー設定が必要です。',
   'menu.youOffline': 'オフラインです',
   'menu.servicesMissing': 'オンラインサービス未接続',
   'menu.noRankedHere': 'このビルドではログイン、ランキング、公式プレイは利用できません。',
   'menu.practiceInstead': '練習をプレイ',
   'menu.practiceNow': '今すぐプレイ・登録不要',
   'menu.rankingsScope': '世界・大陸・国',
-  'menu.rankingsUnavailable': 'サービス接続後に確認済みの上位100件を表示します。架空の順位やスコアは表示しません。',
+  'menu.rankingsUnavailable':
+    'サービス接続後に確認済みの上位100件を表示します。架空の順位やスコアは表示しません。',
   'menu.offlineRankings': 'オフライン・ランキング利用不可',
   'menu.rankingsMissing': 'ランキング未接続',
   'menu.practiceNotRanked': '練習の記録は公式ランキングに登録されません。',
@@ -55,7 +59,8 @@ export const ja = {
   'menu.profileEyebrow': 'ゲストセッション',
   'menu.asGuest': 'ゲストとしてプレイ中',
   'menu.noAccount': 'この端末に登録アカウントはありません。',
-  'menu.profileFuture': 'アカウント機能の公開時に公開情報を説明します。分析用の年齢回答は任意で、練習に生年月日は不要です。',
+  'menu.profileFuture':
+    'アカウント機能の公開時に公開情報を説明します。分析用の年齢回答は任意で、練習に生年月日は不要です。',
   'menu.practiceUnsigned': 'ログインせず練習',
   'menu.settingsEyebrow': '端末の設定',
   'menu.settingsIntro': 'これらの設定はオフラインでも練習に適用されます。',
@@ -83,19 +88,24 @@ export const ja = {
   'settings.languageHelp': '言語を選ぶか端末の設定に従います。変更しても挑戦は再開されません。',
   'settings.languagePreview': '翻訳はプレビュー版です。公開前に母語話者による確認が必要です。',
   'settings.privacyTitle': 'プライバシーとデータ',
-  'settings.privacyInfo': '練習のセーブ、設定、自己ベストは端末内に保存されます。このビルドではアカウントや公式スコア送信はありません。',
+  'settings.privacyInfo':
+    '練習のセーブ、設定、自己ベストは端末内に保存されます。このビルドではアカウントや公式スコア送信はありません。',
   'settings.privacyUnavailable': '公開済みのプライバシーポリシーはまだ接続されていません。',
   'settings.accountTitle': 'アカウントと削除',
-  'settings.accountUnavailable': 'アカウント未接続。削除機能は実際のアカウントサービスが利用可能になると追加されます。',
+  'settings.accountUnavailable':
+    'アカウント未接続。削除機能は実際のアカウントサービスが利用可能になると追加されます。',
   'settings.supportTitle': 'ヘルプとサポート',
-  'settings.supportUnavailable': 'アプリ内サポートはまだ接続されていません。ここから問い合わせは送れません。',
-  'settings.reducedMotionInfo': '画面の大きな揺れや背景の動きを減らしても、結果と警告は表示されます。',
+  'settings.supportUnavailable':
+    'アプリ内サポートはまだ接続されていません。ここから問い合わせは送れません。',
+  'settings.reducedMotionInfo':
+    '画面の大きな揺れや背景の動きを減らしても、結果と警告は表示されます。',
   'tutorial.guided': 'ガイド付き練習・{step}/5',
   'tutorial.notRanked': 'ランキング対象外・広告なし',
   'tutorial.safeTitle': '安全な一歩を進む',
   'tutorial.safeInstruction': '左をタップして1列目を安全に渡ります。安全な一歩ではSPは減りません。',
   'tutorial.wrongTitle': '間違えても生き残る',
-  'tutorial.wrongInstruction': 'もう一度左をタップ。今回はSPを失いますが、生き残ればその列は記録されます。',
+  'tutorial.wrongInstruction':
+    'もう一度左をタップ。今回はSPを失いますが、生き残ればその列は記録されます。',
   'tutorial.hintTitle': 'ヒントを使う',
   'tutorial.hintInstruction': 'ヒントで3列目の安全な板を明かしましょう。ヒントには限りがあります。',
   'tutorial.hintRevealedTitle': 'ヒントに従う',
@@ -103,7 +113,8 @@ export const ja = {
   'tutorial.mysteryTitle': '謎の板は自由に選べる',
   'tutorial.mysteryInstruction': '中央の謎の板を試すか飛ばします。効果は助けにも危険にもなります。',
   'tutorial.endTitle': '挑戦の終わり方',
-  'tutorial.endInstruction': '最後の列はありません。自分で挑戦を終了できます。死亡例は10 SPから始まります。',
+  'tutorial.endInstruction':
+    '最後の列はありません。自分で挑戦を終了できます。死亡例は10 SPから始まります。',
   'tutorial.fatalTitle': '死亡した列は記録されない',
   'tutorial.fatalInstruction': '4列目でSPがゼロになりました。最後に越えた列は3列目です。',
   'tutorial.completeTitle': '橋の基本を覚えた！',
@@ -178,8 +189,10 @@ export const ja = {
   'game.confirmForfeitButton': '放棄して終了',
   'game.confirmEnd': '終了を確定',
   'game.pendingTitle': '確認待ち',
-  'game.pendingExplanation': '報酬は未確認です。{row}列目が最後に確定した進行で、最終結果ではありません。',
-  'game.pendingRecovery': 'この挑戦は復元でき、公開されません。確認中に二度目の報酬は要求できません。',
+  'game.pendingExplanation':
+    '報酬は未確認です。{row}列目が最後に確定した進行で、最終結果ではありません。',
+  'game.pendingRecovery':
+    'この挑戦は復元でき、公開されません。確認中に二度目の報酬は要求できません。',
   'game.savePending': '保存して退出・確認待ち',
   'game.practiceUnverified': 'オフライン練習・未検証',
   'game.complete': '挑戦終了',
@@ -199,9 +212,11 @@ export const ja = {
   'game.deathDrain': '減少効果でSPがなくなりました。',
   'game.fatalNotCounted': '死亡した{row}列目はスコアに数えません。',
   'game.offerTitle': '復活#{index}・{sp} SPに回復',
-  'game.offerDetail': '回復後のSPは{sp}に設定され、加算されません。残り{remaining}回分の枠があります。',
+  'game.offerDetail':
+    '回復後のSPは{sp}に設定され、加算されません。残り{remaining}回分の枠があります。',
   'game.offerUnavailable': '練習では広告による復活はまだ利用できません。',
-  'game.grantReady': '復活権は付与されましたが未使用です。追加の広告はありません。終了には明示的な放棄が必要です。',
+  'game.grantReady':
+    '復活権は付与されましたが未使用です。追加の広告はありません。終了には明示的な放棄が必要です。',
   'game.noContinues': 'この挑戦に残りの復活はありません。',
   'game.paused': '一時停止中',
   'game.pausedExplanation': '時計と時間制限のある効果は停止しています。挑戦は終了していません。',

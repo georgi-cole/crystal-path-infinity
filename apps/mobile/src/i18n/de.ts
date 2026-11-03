@@ -31,21 +31,26 @@ export const de = {
   'menu.tutorialDescription': 'Fünf kurze Übungen · Kein gespeichertes Ergebnis',
   'menu.savedPractice': 'Gespeichertes Training · Reihe {row}',
   'menu.practiceEyebrow': 'Offline · Alle Altersgruppen',
-  'menu.practiceIntro': 'Überquere die endlose Brücke. Für Training sind weder Konto noch Altersangabe oder Analyse-Einwilligung nötig.',
+  'menu.practiceIntro':
+    'Überquere die endlose Brücke. Für Training sind weder Konto noch Altersangabe oder Analyse-Einwilligung nötig.',
   'menu.resumeSaved': 'Fortsetzen · Reihe {row}',
   'menu.resumeDescription': 'Gespeicherten Lauf fortsetzen',
   'menu.newPractice': 'Neues Training',
   'menu.startRow1': 'Bei Reihe 1 beginnen',
-  'menu.practiceLocal': 'Der Fortschritt bleibt auf diesem Gerät und zählt nicht für offizielle Ranglisten.',
+  'menu.practiceLocal':
+    'Der Fortschritt bleibt auf diesem Gerät und zählt nicht für offizielle Ranglisten.',
   'menu.playEyebrow': 'Offizieller Ranglistenmodus',
-  'menu.playUnavailable': 'Der Ranglistenmodus ist noch nicht verfügbar. Vor der Erhebung von Kontodaten sind ein Konto und die nötigen Datenschutzeinstellungen erforderlich.',
+  'menu.playUnavailable':
+    'Der Ranglistenmodus ist noch nicht verfügbar. Vor der Erhebung von Kontodaten sind ein Konto und die nötigen Datenschutzeinstellungen erforderlich.',
   'menu.youOffline': 'Du bist offline',
   'menu.servicesMissing': 'Online-Dienste nicht verbunden',
-  'menu.noRankedHere': 'In dieser Version sind Anmeldung, Ranglisten und gewertete Läufe nicht möglich.',
+  'menu.noRankedHere':
+    'In dieser Version sind Anmeldung, Ranglisten und gewertete Läufe nicht möglich.',
   'menu.practiceInstead': 'Stattdessen trainieren',
   'menu.practiceNow': 'Jetzt spielen · Ohne Konto',
   'menu.rankingsScope': 'Welt · Kontinent · Land',
-  'menu.rankingsUnavailable': 'Die verifizierten Top 100 erscheinen, sobald Online-Dienste verbunden sind. Es werden keine erfundenen Ergebnisse angezeigt.',
+  'menu.rankingsUnavailable':
+    'Die verifizierten Top 100 erscheinen, sobald Online-Dienste verbunden sind. Es werden keine erfundenen Ergebnisse angezeigt.',
   'menu.offlineRankings': 'Offline · Ranglisten nicht verfügbar',
   'menu.rankingsMissing': 'Ranglisten noch nicht verbunden',
   'menu.practiceNotRanked': 'Lokale Trainingsrekorde gelten nicht als Ranglistenergebnisse.',
@@ -55,7 +60,8 @@ export const de = {
   'menu.profileEyebrow': 'Gastsitzung',
   'menu.asGuest': 'Du spielst als Gast',
   'menu.noAccount': 'Mit diesem Gerät ist kein Konto verbunden.',
-  'menu.profileFuture': 'Sobald Konten verfügbar sind, erklären wir, welche Daten öffentlich werden. Altersangaben für Analysen sind freiwillig; für Training ist kein Geburtsdatum nötig.',
+  'menu.profileFuture':
+    'Sobald Konten verfügbar sind, erklären wir, welche Daten öffentlich werden. Altersangaben für Analysen sind freiwillig; für Training ist kein Geburtsdatum nötig.',
   'menu.practiceUnsigned': 'Ohne Anmeldung trainieren',
   'menu.settingsEyebrow': 'Lokale Einstellungen',
   'menu.settingsIntro': 'Diese Einstellungen funktionieren offline und gelten für dein Training.',
@@ -66,8 +72,10 @@ export const de = {
   'menu.confirmTitle': 'Neuen Lauf bestätigen',
   'menu.confirmDiscard': 'Beschädigten Spielstand löschen?',
   'menu.confirmReplace': 'Gespeicherten Lauf ersetzen?',
-  'menu.discardExplained': 'Der Spielstand kann nicht wiederhergestellt werden. Ein neuer Lauf löscht ihn.',
-  'menu.replaceExplained': 'Ein neuer Lauf ersetzt den unvollendeten Versuch. Dein persönlicher Rekord bleibt erhalten.',
+  'menu.discardExplained':
+    'Der Spielstand kann nicht wiederhergestellt werden. Ein neuer Lauf löscht ihn.',
+  'menu.replaceExplained':
+    'Ein neuer Lauf ersetzt den unvollendeten Versuch. Dein persönlicher Rekord bleibt erhalten.',
   'menu.keepSaved': 'Spielstand behalten',
   'menu.startFresh': 'Neues Training starten',
   'settings.audioLegend': 'Ton und Feedback',
@@ -80,34 +88,48 @@ export const de = {
   'settings.open': 'Einstellungen öffnen',
   'settings.language': 'Sprache',
   'settings.system': 'Automatisch · Gerätesprache',
-  'settings.languageHelp': 'Wähle eine Sprache oder verwende die Gerätesprache. Der laufende Versuch wird nicht neu gestartet.',
-  'settings.languagePreview': 'Vorläufige Übersetzungen: Eine Prüfung durch Muttersprachler ist vor Veröffentlichung nötig.',
+  'settings.languageHelp':
+    'Wähle eine Sprache oder verwende die Gerätesprache. Der laufende Versuch wird nicht neu gestartet.',
+  'settings.languagePreview':
+    'Vorläufige Übersetzungen: Eine Prüfung durch Muttersprachler ist vor Veröffentlichung nötig.',
   'settings.privacyTitle': 'Datenschutz und Daten',
-  'settings.privacyInfo': 'Trainingsstände, Einstellungen und lokale Rekorde bleiben auf diesem Gerät. Diese Version verbindet weder Konten noch offizielle Ranglisten.',
-  'settings.privacyUnavailable': 'Eine veröffentlichte Datenschutzerklärung ist hier noch nicht verknüpft.',
+  'settings.privacyInfo':
+    'Trainingsstände, Einstellungen und lokale Rekorde bleiben auf diesem Gerät. Diese Version verbindet weder Konten noch offizielle Ranglisten.',
+  'settings.privacyUnavailable':
+    'Eine veröffentlichte Datenschutzerklärung ist hier noch nicht verknüpft.',
   'settings.accountTitle': 'Konto und Löschung',
-  'settings.accountUnavailable': 'Kein Konto verbunden. Die Kontolöschung wird mit der echten Kontofunktion verfügbar.',
+  'settings.accountUnavailable':
+    'Kein Konto verbunden. Die Kontolöschung wird mit der echten Kontofunktion verfügbar.',
   'settings.supportTitle': 'Hilfe und Support',
-  'settings.supportUnavailable': 'Support im Spiel ist noch nicht angebunden. Hier können keine Anfragen gesendet werden.',
-  'settings.reducedMotionInfo': 'Ergebnisse und Warnungen bleiben sichtbar, ohne starke Kamerabewegung oder Hintergrundanimation.',
+  'settings.supportUnavailable':
+    'Support im Spiel ist noch nicht angebunden. Hier können keine Anfragen gesendet werden.',
+  'settings.reducedMotionInfo':
+    'Ergebnisse und Warnungen bleiben sichtbar, ohne starke Kamerabewegung oder Hintergrundanimation.',
   'tutorial.guided': 'Tutorial · {step} / 5',
   'tutorial.notRanked': 'Nicht gewertet · Keine Werbung',
   'tutorial.safeTitle': 'Einen sicheren Schritt machen',
-  'tutorial.safeInstruction': 'Tippe LINKS, um Reihe 1 sicher zu überqueren. Ein sicherer Schritt kostet keine SP.',
+  'tutorial.safeInstruction':
+    'Tippe LINKS, um Reihe 1 sicher zu überqueren. Ein sicherer Schritt kostet keine SP.',
   'tutorial.wrongTitle': 'Einen Fehler überleben',
-  'tutorial.wrongInstruction': 'Tippe erneut LINKS. Jetzt verlierst du SP, doch eine überlebte Reihe zählt.',
+  'tutorial.wrongInstruction':
+    'Tippe erneut LINKS. Jetzt verlierst du SP, doch eine überlebte Reihe zählt.',
   'tutorial.hintTitle': 'Einen Hinweis nutzen',
-  'tutorial.hintInstruction': 'Nutze einen Hinweis für das sichere Feld in Reihe 3. Hinweise sind begrenzt.',
+  'tutorial.hintInstruction':
+    'Nutze einen Hinweis für das sichere Feld in Reihe 3. Hinweise sind begrenzt.',
   'tutorial.hintRevealedTitle': 'Dem Hinweis folgen',
   'tutorial.hintRevealedInstruction': 'LINKS ist sicher. Tippe links, um Reihe 3 zu überqueren.',
   'tutorial.mysteryTitle': 'Du entscheidest über das Rätsel',
-  'tutorial.mysteryInstruction': 'Probiere das mittlere Rätsel aus oder überspringe es. Effekte können helfen oder schaden.',
+  'tutorial.mysteryInstruction':
+    'Probiere das mittlere Rätsel aus oder überspringe es. Effekte können helfen oder schaden.',
   'tutorial.endTitle': 'So endet ein Lauf',
-  'tutorial.endInstruction': 'Es gibt keine letzte Reihe. Du entscheidest, wann du aufhörst. Das tödliche Beispiel beginnt mit 10 SP.',
+  'tutorial.endInstruction':
+    'Es gibt keine letzte Reihe. Du entscheidest, wann du aufhörst. Das tödliche Beispiel beginnt mit 10 SP.',
   'tutorial.fatalTitle': 'Tödliche Reihen zählen nicht',
-  'tutorial.fatalInstruction': 'Das Beispiel brachte SP in Reihe 4 auf null. Die letzte überquerte Reihe bleibt 3.',
+  'tutorial.fatalInstruction':
+    'Das Beispiel brachte SP in Reihe 4 auf null. Die letzte überquerte Reihe bleibt 3.',
   'tutorial.completeTitle': 'Du kennst die Brücke',
-  'tutorial.completeInstruction': 'Tutorial abgeschlossen. Starte einen eigenen Trainingslauf, wenn du bereit bist.',
+  'tutorial.completeInstruction':
+    'Tutorial abgeschlossen. Starte einen eigenen Trainingslauf, wenn du bereit bist.',
   'tutorial.resources': 'Trainingsressourcen',
   'tutorial.hints': '{count} Hinweise',
   'tutorial.lastCleared': 'Zuletzt überquert: Reihe {row}',
@@ -125,7 +147,8 @@ export const de = {
   'tutorial.skipMystery': 'Rätsel überspringen · Ohne Strafe',
   'tutorial.showFatal': 'Tödlichen Fehltritt zeigen',
   'tutorial.endTraining': 'Tutorial beenden',
-  'tutorial.completeNotice': 'Abgeschlossen. Die Demo wurde weder als Lauf noch als Ergebnis gespeichert.',
+  'tutorial.completeNotice':
+    'Abgeschlossen. Die Demo wurde weder als Lauf noch als Ergebnis gespeichert.',
   'tutorial.goPractice': 'Zum Training',
   'tutorial.coreRules': 'Grundregeln',
   'tutorial.ruleSp': 'SP: Fehler kosten Punkte. Null SP bedeutet Tod.',
@@ -166,20 +189,25 @@ export const de = {
   'game.noticeChoose': 'Wähle deinen nächsten Schritt. Zerbrochenes Glas bleibt hinter dir.',
   'game.footer': 'Lokales Training · Nicht gewertet · Kein Zielfeld',
   'game.clockTitle': 'Uhr benötigt Aufmerksamkeit',
-  'game.clockRecover': 'Fortschritt kann wiederhergestellt werden. Kein Endergebnis wurde gesendet.',
+  'game.clockRecover':
+    'Fortschritt kann wiederhergestellt werden. Kein Endergebnis wurde gesendet.',
   'game.retryClock': 'Uhr erneut versuchen',
   'game.confirmTitle': 'Diesen Lauf beenden?',
   'game.confirmCleared': 'Deine letzte überquerte Reihe ist {row}.',
   'game.confirmFatal': 'Die tödliche Reihe {row} zählt nicht.',
   'game.confirmUnfinished': 'Die aktuelle unvollständige Reihe zählt nicht.',
-  'game.confirmForfeit': 'Du hast eine gewährte, aber ungenutzte Fortsetzung. Beim Beenden verfällt sie ausdrücklich.',
-  'game.confirmLocal': 'Damit wird das lokale Training endgültig beendet, ohne ein Ranglistenergebnis zu senden.',
+  'game.confirmForfeit':
+    'Du hast eine gewährte, aber ungenutzte Fortsetzung. Beim Beenden verfällt sie ausdrücklich.',
+  'game.confirmLocal':
+    'Damit wird das lokale Training endgültig beendet, ohne ein Ranglistenergebnis zu senden.',
   'game.keepAttempt': 'Lauf behalten',
   'game.confirmForfeitButton': 'Beenden und verzichten',
   'game.confirmEnd': 'Ende bestätigen',
   'game.pendingTitle': 'Prüfung ausstehend',
-  'game.pendingExplanation': 'Deine Belohnung ist nicht verifiziert. Reihe {row} ist der letzte bestätigte Fortschritt, kein Endergebnis.',
-  'game.pendingRecovery': 'Der Lauf kann wiederhergestellt werden und bleibt unveröffentlicht. Während der Prüfung keine zweite Belohnung.',
+  'game.pendingExplanation':
+    'Deine Belohnung ist nicht verifiziert. Reihe {row} ist der letzte bestätigte Fortschritt, kein Endergebnis.',
+  'game.pendingRecovery':
+    'Der Lauf kann wiederhergestellt werden und bleibt unveröffentlicht. Während der Prüfung keine zweite Belohnung.',
   'game.savePending': 'Speichern und verlassen · Ausstehend',
   'game.practiceUnverified': 'OFFLINE-TRAINING · NICHT VERIFIZIERT',
   'game.complete': 'Lauf abgeschlossen',
@@ -189,7 +217,8 @@ export const de = {
   'game.revivesApplied': 'Fortsetzungen angewendet',
   'game.bestLocal': 'Persönlicher Rekord · Lokal',
   'game.bestNew': 'Neuer lokaler Rekord',
-  'game.resultLocal': 'Nur lokales Trainingsergebnis. Offizielle Abgabe und Ranglisten sind nicht aktiv.',
+  'game.resultLocal':
+    'Nur lokales Trainingsergebnis. Offizielle Abgabe und Ranglisten sind nicht aktiv.',
   'game.nextRun': 'Nächster Lauf',
   'game.rankingsNotLive': 'Rangliste (noch inaktiv)',
   'game.returnMenu': 'Zurück zum Menü',
@@ -199,18 +228,22 @@ export const de = {
   'game.deathDrain': 'Ein Entzugseffekt verbrauchte alle SP.',
   'game.fatalNotCounted': 'Die tödliche Reihe {row} zählt nicht.',
   'game.offerTitle': 'Fortsetzung Nr. {index} · {sp} SP wiederherstellen',
-  'game.offerDetail': 'Die Wiederherstellung setzt SP auf {sp}, statt sie zu addieren. {remaining} Rechte übrig.',
+  'game.offerDetail':
+    'Die Wiederherstellung setzt SP auf {sp}, statt sie zu addieren. {remaining} Rechte übrig.',
   'game.offerUnavailable': 'Werbe-Fortsetzungen sind im Offline-Training noch nicht verfügbar.',
-  'game.grantReady': 'Eine Fortsetzung wurde gewährt, aber nicht angewendet. Keine weitere Werbung; Beenden verzichtet ausdrücklich.',
+  'game.grantReady':
+    'Eine Fortsetzung wurde gewährt, aber nicht angewendet. Keine weitere Werbung; Beenden verzichtet ausdrücklich.',
   'game.noContinues': 'Keine Fortsetzungen mehr verfügbar.',
   'game.paused': 'Pausiert',
-  'game.pausedExplanation': 'Die Uhr und alle zeitlichen Effekte stehen still. Der Lauf ist nicht beendet.',
+  'game.pausedExplanation':
+    'Die Uhr und alle zeitlichen Effekte stehen still. Der Lauf ist nicht beendet.',
   'game.pausedRows': 'Überquerte Reihen: {row}',
   'app.opening': 'Dein Weg wird geöffnet…',
   'app.retryStart': 'Start erneut versuchen',
   'app.playOffline': 'Offline spielen',
   'app.startError': 'Du kannst es erneut versuchen oder offline trainieren.',
-  'app.saveLeaveConfirm': 'Speichern und verlassen? Der Lauf bleibt fortsetzbar. Dadurch wird er NICHT beendet.',
+  'app.saveLeaveConfirm':
+    'Speichern und verlassen? Der Lauf bleibt fortsetzbar. Dadurch wird er NICHT beendet.',
   'game.effectShield': 'Schild',
   'game.effectRegen': 'Regeneration',
   'game.effectLucky': 'Glücksschritt',

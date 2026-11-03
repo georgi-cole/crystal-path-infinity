@@ -126,7 +126,13 @@ export function InfinitySceneView({
   const fatalRow = rawFatalRow === null ? null : number(rawFatalRow);
   const deathCause = state.result?.deathCause ?? state.death?.cause ?? null;
   const localizedDeathReason = deathCause
-    ? t(deathCause === 'wrong_tile' ? 'game.deathWrong' : deathCause === 'mystery' ? 'game.deathMystery' : 'game.deathDrain')
+    ? t(
+        deathCause === 'wrong_tile'
+          ? 'game.deathWrong'
+          : deathCause === 'mystery'
+            ? 'game.deathMystery'
+            : 'game.deathDrain',
+      )
     : null;
   const overlayVisible = paused || confirmEnd || outcome.phase !== 'playing' || !!error;
   const catastrophic = state.death?.cause === 'wrong_tile' && state.status !== 'playing';
@@ -246,7 +252,9 @@ export function InfinitySceneView({
               {t('game.run')}
             </span>
             <span className="cps-player-name">{t('game.yourPath')}</span>
-            <span className="cps-row-display">{t('general.row', { row: number(presented.currentRow) })}</span>
+            <span className="cps-row-display">
+              {t('general.row', { row: number(presented.currentRow) })}
+            </span>
           </div>
           <div className="cps-header-right">
             <span className="cps-hints-display">
@@ -278,7 +286,10 @@ export function InfinitySceneView({
           <span className="cpi-energy-marker" style={{ left: `${spPct}%` }} aria-hidden="true" />
         </div>
         {state.sp <= 140 && state.status === 'playing' && (
-          <p className={'cpi-sp-danger-copy ' + (state.sp <= 60 ? 'is-critical' : 'is-low')} role="status">
+          <p
+            className={'cpi-sp-danger-copy ' + (state.sp <= 60 ? 'is-critical' : 'is-low')}
+            role="status"
+          >
             {t(state.sp <= 60 ? 'game.spCritical' : 'game.spLow', { sp: number(state.sp) })}
           </p>
         )}
@@ -386,9 +397,7 @@ export function InfinitySceneView({
         <p className="visually-hidden" role="status" aria-live="polite">
           {notice}
         </p>
-        <p className="cpi-scene-footer">
-          {t('game.footer')}
-        </p>
+        <p className="cpi-scene-footer">{t('game.footer')}</p>
       </div>
       {overlayVisible && (
         <div className="cpi-overlay">
@@ -416,20 +425,13 @@ export function InfinitySceneView({
               <>
                 <h2 id="cpi-run-outcome-title">{t('game.confirmTitle')}</h2>
                 <p>
-                  {t('game.confirmCleared', { row: clearedRows })}
-                  {' '}
+                  {t('game.confirmCleared', { row: clearedRows })}{' '}
                   {fatalRow !== null
                     ? t('game.confirmFatal', { row: fatalRow })
                     : t('game.confirmUnfinished')}
                 </p>
-                {outcome.forfeitsGrant && (
-                  <p role="alert">
-                    {t('game.confirmForfeit')}
-                  </p>
-                )}
-                <p>
-                  {t('game.confirmLocal')}
-                </p>
+                {outcome.forfeitsGrant && <p role="alert">{t('game.confirmForfeit')}</p>}
+                <p>{t('game.confirmLocal')}</p>
                 <div className="cpi-overlay-actions">
                   <button
                     type="button"
@@ -452,12 +454,8 @@ export function InfinitySceneView({
             ) : outcome.phase === 'verification-pending' ? (
               <>
                 <h2 id="cpi-run-outcome-title">{t('game.pendingTitle')}</h2>
-                <p>
-                  {t('game.pendingExplanation', { row: clearedRows })}
-                </p>
-                <p role="status">
-                  {t('game.pendingRecovery')}
-                </p>
+                <p>{t('game.pendingExplanation', { row: clearedRows })}</p>
+                <p role="status">{t('game.pendingRecovery')}</p>
                 <div className="cpi-overlay-actions">
                   <button type="button" data-cpi-overlay-primary onClick={onExit}>
                     {t('game.savePending')}
@@ -517,17 +515,21 @@ export function InfinitySceneView({
                 {outcome.offer ? (
                   <div className="cpi-revive-offer">
                     <strong>
-                      {t('game.offerTitle', { index: number(outcome.offer.ordinal), sp: number(outcome.offer.restoreSp) })}
+                      {t('game.offerTitle', {
+                        index: number(outcome.offer.ordinal),
+                        sp: number(outcome.offer.restoreSp),
+                      })}
                     </strong>
                     <span>
-                      {t('game.offerDetail', { sp: number(outcome.offer.restoreSp), remaining: number(outcome.offer.grantsRemaining) })}
+                      {t('game.offerDetail', {
+                        sp: number(outcome.offer.restoreSp),
+                        remaining: number(outcome.offer.grantsRemaining),
+                      })}
                     </span>
                     <span>{t('game.offerUnavailable')}</span>
                   </div>
                 ) : outcome.phase === 'grant-ready' ? (
-                  <p role="status">
-                    {t('game.grantReady')}
-                  </p>
+                  <p role="status">{t('game.grantReady')}</p>
                 ) : (
                   <p>{t('game.noContinues')}</p>
                 )}
@@ -828,9 +830,7 @@ function InfinityRun({
       const runtime = runtimeRef.current;
       if (
         (runtime?.getState().status ?? state.status) === 'playing' &&
-        !window.confirm(
-          t('app.saveLeaveConfirm'),
-        )
+        !window.confirm(t('app.saveLeaveConfirm'))
       ) {
         onExitCancelled();
         return;

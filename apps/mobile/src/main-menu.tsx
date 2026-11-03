@@ -148,7 +148,9 @@ function HubUtilityControls({
             key={key}
             type="button"
             className={'cpi-hub-chip' + (settings[key] ? '' : ' cpi-hub-chip--inactive')}
-            aria-label={t(settings[key] ? 'settings.disable' : 'settings.enable', { setting: label.toLowerCase() })}
+            aria-label={t(settings[key] ? 'settings.disable' : 'settings.enable', {
+              setting: label.toLowerCase(),
+            })}
             aria-pressed={settings[key]}
             onClick={() => onSettingsChange({ ...settings, [key]: !settings[key] })}
           >
@@ -232,7 +234,12 @@ function MenuHeader({
   return (
     <header className="cpi-menu-header">
       {view !== 'home' ? (
-        <button className="cpi-menu-back" type="button" onClick={onBack} aria-label={t('general.back')}>
+        <button
+          className="cpi-menu-back"
+          type="button"
+          onClick={onBack}
+          aria-label={t('general.back')}
+        >
           <Glyph name="arrow" />
           <span>{t('general.back')}</span>
         </button>
@@ -322,9 +329,21 @@ function MenuHome({
           </div>
         )}
         <div className="cpi-menu-grid">
-          <MenuAction label={t('general.rankings')} icon="ranking" onClick={() => onOpen('rankings')} />
-          <MenuAction label={t('general.profile')} icon="profile" onClick={() => onOpen('profile')} />
-          <MenuAction label={t('general.settings')} icon="settings" onClick={() => onOpen('settings')} />
+          <MenuAction
+            label={t('general.rankings')}
+            icon="ranking"
+            onClick={() => onOpen('rankings')}
+          />
+          <MenuAction
+            label={t('general.profile')}
+            icon="profile"
+            onClick={() => onOpen('profile')}
+          />
+          <MenuAction
+            label={t('general.settings')}
+            icon="settings"
+            onClick={() => onOpen('settings')}
+          />
         </div>
       </nav>
     </>
@@ -373,9 +392,7 @@ export function ConfirmNewPractice({
       >
         <p className="cpi-menu-eyebrow">{t('menu.confirmTitle')}</p>
         <h2 id="cpi-new-title">{damaged ? t('menu.confirmDiscard') : t('menu.confirmReplace')}</h2>
-        <p id="cpi-new-copy">
-          {damaged ? t('menu.discardExplained') : t('menu.replaceExplained')}
-        </p>
+        <p id="cpi-new-copy">{damaged ? t('menu.discardExplained') : t('menu.replaceExplained')}</p>
         <div className="cpi-menu-dialog-actions">
           <button className="cpi-menu-dialog-cancel" type="button" onClick={onCancel}>
             {t('menu.keepSaved')}
@@ -409,7 +426,10 @@ export function MainMenu({
   const service = rankedServiceState(online);
   const { t, number } = useLanguage();
   return (
-    <main className={"cpi-menu-shell" + (settings.reducedMotion ? " cpi-reduced-motion" : "")} data-testid="app-ready">
+    <main
+      className={'cpi-menu-shell' + (settings.reducedMotion ? ' cpi-reduced-motion' : '')}
+      data-testid="app-ready"
+    >
       <div className="cpi-menu-orbit" aria-hidden="true" />
       <div className="cpi-menu-inner">
         <MenuHeader view={view} online={online} onBack={onBack} />

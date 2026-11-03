@@ -14,7 +14,10 @@ const COPY: Record<TutorialStep, TutorialCopy> = {
   safe: { title: 'tutorial.safeTitle', instruction: 'tutorial.safeInstruction' },
   wrong: { title: 'tutorial.wrongTitle', instruction: 'tutorial.wrongInstruction' },
   hint: { title: 'tutorial.hintTitle', instruction: 'tutorial.hintInstruction' },
-  'hint-revealed': { title: 'tutorial.hintRevealedTitle', instruction: 'tutorial.hintRevealedInstruction' },
+  'hint-revealed': {
+    title: 'tutorial.hintRevealedTitle',
+    instruction: 'tutorial.hintRevealedInstruction',
+  },
   mystery: { title: 'tutorial.mysteryTitle', instruction: 'tutorial.mysteryInstruction' },
   end: { title: 'tutorial.endTitle', instruction: 'tutorial.endInstruction' },
   fatal: { title: 'tutorial.fatalTitle', instruction: 'tutorial.fatalInstruction' },
@@ -65,7 +68,10 @@ export function BridgeTutorial({
               : step === 'end'
                 ? t('tutorial.notice.end')
                 : step === 'fatal'
-                  ? t('tutorial.notice.fatal', { row: number(run.currentRow), cleared: number(run.lastClearedRow) })
+                  ? t('tutorial.notice.fatal', {
+                      row: number(run.currentRow),
+                      cleared: number(run.lastClearedRow),
+                    })
                   : t('tutorial.notice.complete');
 
   useEffect(() => {
@@ -87,7 +93,9 @@ export function BridgeTutorial({
       aria-labelledby="cpi-tutorial-title"
     >
       <div className="cpi-tutorial-topline">
-        <span className="cpi-menu-eyebrow">{t('tutorial.guided', { step: number(STEP_NUMBER[step]) })}</span>
+        <span className="cpi-menu-eyebrow">
+          {t('tutorial.guided', { step: number(STEP_NUMBER[step]) })}
+        </span>
         <span className="cpi-tutorial-proof">{t('tutorial.notRanked')}</span>
       </div>
       <h1 id="cpi-tutorial-title" data-menu-heading data-tutorial-heading tabIndex={-1}>
@@ -101,17 +109,15 @@ export function BridgeTutorial({
         <span>
           <strong>{run.sp}</strong> / 400 SP
         </span>
-        <span>
-          {t('tutorial.hints', { count: number(run.hints) })}
-        </span>
-        <span>
-          {t('tutorial.lastCleared', { row: number(run.lastClearedRow) })}
-        </span>
+        <span>{t('tutorial.hints', { count: number(run.hints) })}</span>
+        <span>{t('tutorial.lastCleared', { row: number(run.lastClearedRow) })}</span>
       </div>
 
       {!didFinish && (
         <section className="cpi-tutorial-bridge" aria-label={t('tutorial.bridge')}>
-          <div className="cpi-tutorial-row-caption">{t('tutorial.currentRow', { row: number(run.currentRow) })}</div>
+          <div className="cpi-tutorial-row-caption">
+            {t('tutorial.currentRow', { row: number(run.currentRow) })}
+          </div>
           <div className="cpi-tutorial-glass">
             <button
               type="button"
