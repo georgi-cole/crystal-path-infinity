@@ -53,6 +53,7 @@ jobs:
           }
           supabase migration --help > /dev/null
           supabase db push --help > /dev/null
+          supabase db query --help > /dev/null
       - name: Validate initialized local config and preserved CPI-017 migrations
         shell: bash
         run: |
