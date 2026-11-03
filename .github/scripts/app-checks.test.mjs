@@ -71,6 +71,9 @@ test('native bridge, lifecycle, toolchain and workflow changes always select ful
   const f = fixture(t);
   const paths = [
     'apps/mobile/src/native-clock.ts',
+    'apps/mobile/src/native/storage.ts',
+    'apps/mobile/src/platform/android.ts',
+    'apps/mobile/src/integration/webview-adapter.ts',
     'apps/mobile/src/lifecycle.test.ts',
     'apps/mobile/scripts/smoke-native.mjs',
     'apps/mobile/config/native-smoke.ts',
