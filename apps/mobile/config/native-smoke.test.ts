@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { getBuildInfo } from './environments';
 import {
   analyzeNativeLog,
@@ -504,5 +505,32 @@ describe('Android runtime process attribution', () => {
     const analysis = analyzeNativeLog(lines.join('\n'), build);
     expect(analysis.errors).toEqual([]);
     expect(analysis.externalRuntimeErrors).toHaveLength(3);
+  });
+});
+
+describe('iOS cold-start launch-service preflight', () => {
+  it('proves a real system-app launch before the first CPI native process, without skipping lifecycle gates', () => {
+    const source = readFileSync(
+      new URL('../scripts/smoke-native.mjs', import.meta.url),
+      'utf8',
+    );
+    const iosHarness = source.slice(source.indexOf('async function ios()'));
+    const systemProbe = iosHarness.indexOf("['simctl', 'launch', udid, 'com.apple.Preferences']");
+    const systemTerminate = iosHarness.indexOf(
+      "['simctl', 'terminate', udid, 'com.apple.Preferences']",
+    );
+    const firstGameAttempt = iosHarness.indexOf(
+      'for (attempt = 1; attempt <= iosColdStarts; attempt += 1)',
+    );
+    const actualLaunch = iosHarness.indexOf("'--console-pty'");
+
+    expect(systemProbe).toBeGreaterThan(0);
+    expect(systemTerminate).toBeGreaterThan(systemProbe);
+    expect(firstGameAttempt).toBeGreaterThan(systemTerminate);
+    expect(actualLaunch).toBeGreaterThan(firstGameAttempt);
+    expect(iosHarness).toContain("'iOS native prebridge navigation gate'");
+    expect(iosHarness).toContain("'iOS React, page-load, and native bridge readiness'");
+    expect(iosHarness).toContain("'iOS bridge round-trip after app background/resume'");
+    expect(iosHarness).toContain('assertHealthyLaunch()');
   });
 });
