@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react';
 import { AudioSettingsControls } from './audio-settings-controls';
+import { LanguageSettings, PrivacyAccountSupport } from './locale-settings';
+import { useLanguage } from './i18n';
 import { BridgeTutorial } from './bridge-tutorial';
 import type { TutorialProgress } from './tutorial-progress';
 import type { PracticeLoad, PracticeSettings } from './practice-save';
-import { canResumePractice, formatRowLabel, rankedServiceState } from './menu-navigation';
+import { canResumePractice, rankedServiceState } from './menu-navigation';
 import type { MenuView } from './menu-navigation';
 import './main-menu.css';
 import './intro-hub-premium.css';
@@ -132,20 +134,21 @@ function HubUtilityControls({
   onSettingsChange,
   onOpen,
 }: Pick<MainMenuProps, 'settings' | 'onSettingsChange' | 'onOpen'>) {
+  const { t } = useLanguage();
   return (
-    <div className="cpi-hub-utilities" aria-label="Intro hub utilities">
+    <div className="cpi-hub-utilities" aria-label={t('settings.audioLegend')}>
       <div className="cpi-hub-utility-stack">
         {(
           [
-            { key: 'music', icon: 'music_v2.svg', label: 'Music' },
-            { key: 'soundEffects', icon: 'sound_v2.svg', label: 'Sound effects' },
+            { key: 'music', icon: 'music_v2.svg', label: t('settings.music') },
+            { key: 'soundEffects', icon: 'sound_v2.svg', label: t('settings.sfx') },
           ] as const
         ).map(({ key, icon, label }) => (
           <button
             key={key}
             type="button"
             className={'cpi-hub-chip' + (settings[key] ? '' : ' cpi-hub-chip--inactive')}
-            aria-label={(settings[key] ? 'Disable ' : 'Enable ') + label.toLowerCase()}
+            aria-label={t(settings[key] ? 'settings.disable' : 'settings.enable', { setting: label.toLowerCase() })}
             aria-pressed={settings[key]}
             onClick={() => onSettingsChange({ ...settings, [key]: !settings[key] })}
           >
@@ -167,7 +170,7 @@ function HubUtilityControls({
       <button
         type="button"
         className="cpi-hub-chip"
-        aria-label="Open settings"
+        aria-label={t('settings.open')}
         onClick={() => onOpen('settings')}
       >
         <img
@@ -225,22 +228,23 @@ function MenuHeader({
   online: boolean;
   onBack: () => void;
 }) {
+  const { t } = useLanguage();
   return (
     <header className="cpi-menu-header">
       {view !== 'home' ? (
-        <button className="cpi-menu-back" type="button" onClick={onBack} aria-label="Back">
+        <button className="cpi-menu-back" type="button" onClick={onBack} aria-label={t('general.back')}>
           <Glyph name="arrow" />
-          <span>Back</span>
+          <span>{t('general.back')}</span>
         </button>
       ) : (
         <span className="cpi-menu-series">
           Crystal Path <span aria-hidden="true">/</span> Infinity
         </span>
       )}
-      <div className="cpi-menu-status" aria-label="Current status">
-        <StatusPill>Guest</StatusPill>
+      <div className="cpi-menu-status" aria-label={t('menu.status')}>
+        <StatusPill>{t('general.guest')}</StatusPill>
         <StatusPill tone={online ? 'neutral' : 'offline'}>
-          {online ? 'Ranked not live' : 'Offline'}
+          {online ? t('general.rankedUnavailable') : t('general.offline')}
         </StatusPill>
       </div>
     </header>
@@ -256,6 +260,7 @@ function MenuHome({
   tutorialProgress,
 }: Pick<MainMenuProps, 'saved' | 'best' | 'onOpen' | 'onResume' | 'onNew' | 'tutorialProgress'>) {
   const canResume = canResumePractice(saved);
+  const { t, number } = useLanguage();
   return (
     <>
       <section className="cpi-menu-hero" aria-labelledby="menu-title">
@@ -267,38 +272,38 @@ function MenuHome({
             alt=""
           />
         </div>
-        <p className="cpi-menu-kicker">Crystal Path · Infinity Protocol</p>
+        <p className="cpi-menu-kicker">{t('menu.kicker')}</p>
         <h1 id="menu-title" data-menu-heading tabIndex={-1}>
           Infinity
         </h1>
-        <p className="cpi-menu-tagline">The bridge has no end.</p>
+        <p className="cpi-menu-tagline">{t('menu.tagline')}</p>
       </section>
 
-      <section className="cpi-menu-scoreboard" aria-label="Your progress">
+      <section className="cpi-menu-scoreboard" aria-label={t('menu.progress')}>
         <div>
-          <span className="cpi-menu-eyebrow">Personal best · Practice only</span>
-          <strong className="cpi-menu-score">Row {formatRowLabel(best)}</strong>
+          <span className="cpi-menu-eyebrow">{t('menu.personalBest')}</span>
+          <strong className="cpi-menu-score">{t('general.row', { row: number(best) })}</strong>
         </div>
-        <span className="cpi-menu-score-caption">Not a ranked score</span>
+        <span className="cpi-menu-score-caption">{t('menu.notRanked')}</span>
       </section>
 
-      <nav className="cpi-menu-actions" aria-label="Main menu">
+      <nav className="cpi-menu-actions" aria-label={t('menu.main')}>
         <MenuAction
-          label="Play"
-          description="Ranked mode · Account needed"
+          label={t('general.play')}
+          description={t('menu.playDescription')}
           icon="play"
           variant="primary"
           onClick={() => onOpen('play')}
         />
         <MenuAction
-          label="Practice"
-          description="Unlimited offline play · No account"
+          label={t('general.practice')}
+          description={t('menu.practiceDescription')}
           icon="practice"
           onClick={() => onOpen('practice')}
         />
         <MenuAction
-          label={tutorialProgress === 'completed' ? 'Replay tutorial' : 'Learn the bridge'}
-          description="Five short hands-on lessons · No saved score"
+          label={tutorialProgress === 'completed' ? t('menu.replay') : t('menu.learn')}
+          description={t('menu.tutorialDescription')}
           icon="practice"
           variant="quiet"
           onClick={() => onOpen('tutorial')}
@@ -306,20 +311,20 @@ function MenuHome({
         {canResume && saved.status === 'ready' && (
           <div className="cpi-menu-resume">
             <span className="cpi-menu-resume-copy">
-              Saved practice · Row {formatRowLabel(saved.state.currentRow)}
+              {t('menu.savedPractice', { row: number(saved.state.currentRow) })}
             </span>
             <button type="button" onClick={onResume}>
-              Resume
+              {t('general.resume')}
             </button>
             <button className="cpi-menu-resume-new" type="button" onClick={onNew}>
-              New
+              {t('general.new')}
             </button>
           </div>
         )}
         <div className="cpi-menu-grid">
-          <MenuAction label="Rankings" icon="ranking" onClick={() => onOpen('rankings')} />
-          <MenuAction label="Profile" icon="profile" onClick={() => onOpen('profile')} />
-          <MenuAction label="Settings" icon="settings" onClick={() => onOpen('settings')} />
+          <MenuAction label={t('general.rankings')} icon="ranking" onClick={() => onOpen('rankings')} />
+          <MenuAction label={t('general.profile')} icon="profile" onClick={() => onOpen('profile')} />
+          <MenuAction label={t('general.settings')} icon="settings" onClick={() => onOpen('settings')} />
         </div>
       </nav>
     </>
@@ -431,7 +436,7 @@ export function MainMenu({
               consent.
             </p>
             <MenuAction
-              label={tutorialProgress === 'completed' ? 'Replay tutorial' : 'Learn the bridge'}
+              label={tutorialProgress === 'completed' ? t('menu.replay') : t('menu.learn')}
               description="Try safe and wrong glass, hints and an optional mystery"
               icon="practice"
               onClick={() => onOpen('tutorial')}
