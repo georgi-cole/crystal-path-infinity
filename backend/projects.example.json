@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "projects": {
+    "development": {
+      "projectRef": "REPLACE_DEVELOPMENT",
+      "apiUrl": "https://REPLACE_DEVELOPMENT.supabase.co"
+    },
+    "staging": {
+      "projectRef": "REPLACE_STAGING",
+      "apiUrl": "https://REPLACE_STAGING.supabase.co"
+    },
+    "production": {
+      "projectRef": "REPLACE_PRODUCTION",
+      "apiUrl": "https://REPLACE_PRODUCTION.supabase.co"
+    }
+  }
+}

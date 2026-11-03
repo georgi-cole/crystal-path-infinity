@@ -125,6 +125,11 @@ export function selectNativeChecks({ eventName, event, repository = '.' }) {
 
 /** A skipped native job is valid only after successful quality and explicit selection. */
 export function assertAppGate(needs) {
+  if (needs?.database?.result !== 'success') {
+    throw new Error(
+      `Backend schema/security checks did not succeed: ${needs?.database?.result ?? 'missing'}`,
+    );
+  }
   if (needs?.web?.result !== 'success') {
     throw new Error(`App quality did not succeed: ${needs?.web?.result ?? 'missing'}`);
   }
@@ -141,8 +146,8 @@ export function assertAppGate(needs) {
     }
   }
   return mode === 'none'
-    ? 'App quality passed; native jobs intentionally skipped for a verified non-runtime diff.'
-    : `App quality and both native build/launch jobs passed (${mode} profile).`;
+    ? 'Backend security and App quality passed; native jobs intentionally skipped for a verified non-runtime diff.'
+    : `Backend security, App quality and both native build/launch jobs passed (${mode} profile).`;
 }
 
 function main() {
