@@ -409,7 +409,7 @@ export function MainMenu({
   const service = rankedServiceState(online);
   const { t, number } = useLanguage();
   return (
-    <main className="cpi-menu-shell" data-testid="app-ready">
+    <main className={"cpi-menu-shell" + (settings.reducedMotion ? " cpi-reduced-motion" : "")} data-testid="app-ready">
       <div className="cpi-menu-orbit" aria-hidden="true" />
       <div className="cpi-menu-inner">
         <MenuHeader view={view} online={online} onBack={onBack} />
