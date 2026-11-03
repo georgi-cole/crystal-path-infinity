@@ -6,6 +6,7 @@ on:
       - 'supabase/**'
       - '.github/workflows/supabase-development-preview.yml'
       - '.github/workflows/supabase-development-deploy.yml'
+      - '.github/workflows/supabase-development-audit.yml'
       - 'backend/**'
       - '.github/workflows/supabase-cli.yml'
   push:
@@ -14,6 +15,7 @@ on:
       - 'supabase/**'
       - '.github/workflows/supabase-development-preview.yml'
       - '.github/workflows/supabase-development-deploy.yml'
+      - '.github/workflows/supabase-development-audit.yml'
       - 'backend/**'
       - '.github/workflows/supabase-cli.yml'
   workflow_dispatch:
@@ -41,6 +43,8 @@ jobs:
         run: node --test backend/tests/supabase-development-preview.test.mjs
       - name: Test fail-closed CPI-017 database deployment approval and audits
         run: node --test backend/tests/supabase-development-deploy.test.mjs
+      - name: Test read-only deployed CPI-017 audit query and permission contracts
+        run: node --test backend/tests/cpi017-hosted-audit.test.mjs
       - name: Check CLI installation and migration commands
         shell: bash
         run: |

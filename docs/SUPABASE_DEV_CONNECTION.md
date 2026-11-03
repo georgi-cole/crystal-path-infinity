@@ -24,7 +24,13 @@ This is a public project identifier, **not** an access token, database password,
 
 The workflow is **manual-only**, with an explicit main-branch check, environment-scoped secrets and read-only GitHub permissions. There is no `--yes`, `db reset`, `migration repair`, remote seeding or CI auto-deployment, including on PR merges. Static security assertions run in the existing Supabase CLI readiness workflow.
 
-## Before applying the migration
+## Current deployment status — 3 November 2026
+
+The CPI-017 foundation migration **was applied** to the owner-designated development project `jbyguybxhezjhdbenevh` in [run #41672961735](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41672961735). The CLI explicitly reported `Applying migration ...` and `Finished supabase db push.` The job's failure came **afterward**, in its hosted read-only security audit. Do not repeat the one-time deployment or rerun a previous deployment job.
+
+Continue with the separate manual-only **CPI-017 Development Security Audit (read-only)** workflow after its PR is merged. The workflow never calls `db push`. It checks the live schema and privileges and fails closed on any SQL rejection. See [the updated postdeployment status and audit runbook](SUPABASE_DEV_DEPLOY.md).
+
+## Historical deployment instructions (already completed)
 
 Review the dry-run output for the exact development project ID and CPI-017 migration. The next action is an explicitly approved, **manual-only** CPI-017 schema deployment. Follow [the exact project and confirmation instructions](SUPABASE_DEV_DEPLOY.md). **Merging its PR does not deploy anything.** Deploying SQL is not reversible by simply rerunning a dry-run.
 
