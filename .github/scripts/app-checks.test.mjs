@@ -68,7 +68,6 @@ test('ordinary UI/assets/game engine changes select single-launch smoke', (t) =>
 });
 
 test('native bridge, lifecycle, toolchain and workflow changes always select full', (t) => {
-  const f = fixture(t);
   const paths = [
     'apps/mobile/src/native-clock.ts',
     'apps/mobile/src/native/storage.ts',
@@ -85,6 +84,7 @@ test('native bridge, lifecycle, toolchain and workflow changes always select ful
     'package-lock.json',
   ];
   for (const path of paths) {
+    const f = fixture(t);
     f.put(path, 'native CI impact\n');
     assert.equal(f.select(f.commit()).mode, 'full', path);
   }
