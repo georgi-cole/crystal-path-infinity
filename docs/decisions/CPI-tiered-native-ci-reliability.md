@@ -87,3 +87,11 @@ successful-run rate and the **false-failure rate** on known-good code. The
 initial operational target is 98–99% success on known-good changes—not a
 guarantee or an excuse to ignore genuine ANRs. Reevaluate timeout or emulator
 configuration only with supporting diagnostics rather than rerunning until green.
+
+## Android SDK system-image ZIP recovery (3 November 2026)
+
+[PR #67](https://github.com/georgi-cole/crystal-path-infinity/pull/67) encountered an infrastructure download failure **after** the development APK compiled: Android's `sdkmanager` rejected the Android 16 AOSP x86_64 system-image ZIP (`Error on ZipFile unknown archive`). The aggregate correctly failed because the emulator never launched. This was not a failed application build.
+
+The Android provisioning step now invokes `.github/scripts/android-sdk-system-image.sh`, a single-purpose installer for exactly `system-images;android-36;default;x86_64`. A verified ZIP/extraction error permits up to **three** attempts with a short bounded delay; between attempts only an **incomplete** copy of that exact image may be deleted. An unrecognized SDK error, completed-but-invalid installation, or three corrupt downloads is always fatal. Every attempt is saved in the CI artifact with a combined log, and the failure classifier now recognizes the SDK corruption signature. Focus/boot/ANR/pause/resume tests still execute once under the same strict profile and are **never retried, skipped, or marked successful** by this remediation.
+
+Five mocked-SDK integration cases check success without retries, recovery from the exact corrupt ZIP, three-attempt exhaustion, non-archive immediate failure, and sdkmanager success without a valid image. This is a preventive CI robustness change, **not** a claim that GitHub's SDK mirror or network is always healthy. Full Android + iOS CI must still pass on the PR head before merge.

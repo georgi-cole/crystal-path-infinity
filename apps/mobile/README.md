@@ -16,6 +16,12 @@ Native smoke exercises Home and lock/wake before the first JavaScript page on An
 
 The local native `CpiSecureSession` plugin now provides **refresh-token-only** persistence: iOS Keychain with `WhenUnlockedThisDeviceOnly` (and first-install orphan cleanup), and Android Keystore AES-GCM with backup disabled. The React adapter fails closed on web and never stores account tokens in localStorage or Preferences. It is a security primitive, **not an active account login**: no Supabase request, OTP form, remote account, privacy/parental approval or ranked record is claimed ready in this slice. See [the implementation decision](../../docs/decisions/CPI-018-secure-session.md).
 
+## CPI-018 privacy-gated account intake (phase 2)
+
+The profile now includes a **fail-closed account eligibility and one-time-code flow**. It has no email field until a trusted server grants a short-lived, policy-versioned eligibility permit; parental-review/unknown answers never implicitly count as adult permission. Requests go only to the explicitly configured HTTPS `VITE_ACCOUNT_API_BASE_URL` with fixed `/eligibility`, `/otp/request`, and `/otp/verify` endpoints; the client never calls Supabase's public `/auth/v1/otp` directly or saves user data to practice. The backend must **revalidate permits for every OTP request** and enforce jurisdiction-appropriate privacy and guardian requirements. The UI is disabled by default because the production-grade server, consent policies, and Auth hooks are not deployed yet.
+
+OTP verification ends in an explicit *not signed in* state until a later session-owner/revocation PR is complete. It never creates a verified ranked result. See [the gated-OTP decision](../../docs/decisions/CPI-018-privacy-otp.md).
+
 ## CPI-013 navigation and local progress
 
 The new Midnight Prism menu keeps the CPI-012 instant offline bootstrap. Play explains unavailable ranked/auth features rather than fabricating a login or official run. Practice is playable without account or age/analytics response, with safe Resume and explicit New confirmation. Personal best is strictly local and not part of the verified rankings. Profile and Rankings show honest guest/offline/unconfigured states, while Settings contains real persistent music/SFX/haptics/reduced-motion controls.
