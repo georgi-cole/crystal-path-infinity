@@ -29,6 +29,7 @@ function fixture() {
   let proofHashes = new Set<string>();
   let backup: { state: State; proofHashes: Set<string> } | null = null;
   const query = vi.fn<SqlConnection['query']>().mockImplementation(async (sql, values = []) => {
+    await Promise.resolve();
     if (sql === 'begin') backup = { state, proofHashes: new Set(proofHashes) };
     else if (sql === 'commit') backup = null;
     else if (sql === 'rollback' && backup) {
@@ -218,11 +219,11 @@ describe('CPI-031 trusted account lifecycle', () => {
     const response = await f.handler(request('delete'));
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual(status('deleted'));
-    expect(f.revokeAllSessions).toHaveBeenCalledWith({
+    expect(f.revokeAllSessions.mock.calls[0]?.[0]).toMatchObject({
       subject: A,
       operationId: REQUEST,
-      signal: expect.any(AbortSignal),
     });
+    expect(f.revokeAllSessions.mock.calls[0]?.[0].signal).toBeInstanceOf(AbortSignal);
     expect(f.query).toHaveBeenCalledWith(expect.stringContaining('complete_account_deletion'), [
       A,
       REQUEST,
