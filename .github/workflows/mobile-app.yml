@@ -47,6 +47,8 @@ jobs:
         run: node --test .github/scripts/android-sdk-system-image.test.mjs
       - name: Install the clean workspace
         run: npm ci --ignore-scripts
+      - name: Temporary CPI-018 Android test canonical formatter diagnostic
+        run: npx prettier apps/mobile/config/android-boot-readiness.test.ts
       - name: Record installed dependencies
         run: |
           mkdir -p apps/mobile/artifacts
