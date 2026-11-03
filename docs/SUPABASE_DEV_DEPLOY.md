@@ -11,7 +11,7 @@ The reviewed migration creates one public `profiles_public` table (opaque public
 ## What you do in GitHub
 
 1. Review and merge the PR containing `.github/workflows/supabase-development-deploy.yml` only once its **Supabase CLI readiness**, PostgreSQL security, planning and application checks have passed. **Merging does not deploy SQL.**
-2. Open **GitHub → georgi-cole/crystal-path-infinity → Settings → Environments → `cpi-development`**. Confirm the two secrets already used by the successful preview are present: `CPI_DEV_SUPABASE_ACCESS_TOKEN` and `CPI_DEV_SUPABASE_DB_PASSWORD`. Restrict this environment to `main`; configure **required reviewers** where available. If you configure approvals, consider disabling administrator bypass for genuine separation. GitHub's limitations may prevent a lone initiator from self-approving if self-review is prohibited. Do not share credentials in chat.
+2. Open **GitHub → georgi-cole/crystal-path-infinity → Settings → Environments → `cpi-development`**. Confirm the two secrets already used by the successful preview are present: `CPI_DEV_SUPABASE_ACCESS_TOKEN` and `CPI_DEV_SUPABASE_DB_PASSWORD`. The scoped Supabase PAT must include **Database → Read** as well as **Project Settings → Read, API Keys → Read and API Key Secrets → Read**. The previous read-only preview did **not** test that extra permission. Restrict this environment to `main`; configure **required reviewers** where available. If you configure approvals, consider disabling administrator bypass for genuine separation. GitHub's limitations may prevent a lone initiator from self-approving if self-review is prohibited. Do not share credentials in chat.
 3. Open **Actions → CPI-017 Development Database Deployment → Run workflow** and select **`main`**.
 4. Enter both required form inputs **exactly**:
    - **Project reference:** `jbyguybxhezjhdbenevh`
@@ -21,6 +21,12 @@ The reviewed migration creates one public `profiles_public` table (opaque public
 7. After the push, the workflow runs a **read-only** catalog audit: 10 forced-RLS private tables, a forced-RLS public profile, only five safe public columns, no `anon`/`authenticated` access to private schema, no mobile privilege to write SP, scores or revives, and trusted server privileges. The output should say `CPI-017 development schema deployed and catalog privileges verified.`
 
 Supabase CLI v3 requires `--yes` for a hosted write in non-interactive CI. This command appears **only** after the two typed inputs, reviewed SQL hash, optional GitHub environment gate, live schema preflight and second dry run have succeeded. No seed, `db reset`, `migration repair`, arbitrary SQL or production project routing is present. Its project is pinned in the workflow; no user-supplied URL or unreviewed database identifier can be used for deployment.
+
+## Important: the initial deployment failed before SQL
+
+GitHub [run #41641182310](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41641182310) passed the branch/SQL integrity checks and linked to `jbyguybxhezjhdbenevh`, but the read-only `supabase db query` command exited nonzero. The workflow suppressed its raw CLI error, so **missing Database → Read permission is the leading diagnosis, not yet conclusively verified**. All subsequent steps, including `db push --yes`, were skipped.
+
+**Before running the deployment again**, generate a replacement fine-grained Supabase token scoped to `jbyguybxhezjhdbenevh` with Project Settings, API Keys, API Key Secrets and Database **Read** permissions. Replace only GitHub **Settings → Environments → cpi-development → CPI_DEV_SUPABASE_ACCESS_TOKEN**, leave the Postgres password unchanged, and revoke the superseded token after the replacement works. Don't share either token in chat. After the workflow fix has merged, run the **read-only Supabase Development Connection Preview** on `main` first; it now tests actual SQL Read access. Proceed to a new manual deployment invocation only once that preview passes.
 
 ## If any check fails
 

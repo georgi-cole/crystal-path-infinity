@@ -115,10 +115,10 @@ jobs:
           set -euo pipefail
           output="$(mktemp)"
           trap 'rm -f "$output"' EXIT
-          supabase db query "$(cat backend/sql/cpi017-deploy-preflight.sql)" --read-only --remote="$CPI_SUPABASE_DEV_REF" > "$output" 2>&1 || {
-            echo "::error::Read-only schema preflight could not complete. No migration applied."
+          if ! supabase db query "$(cat backend/sql/cpi017-deploy-preflight.sql)" --read-only --remote="$CPI_SUPABASE_DEV_REF" > "$output" 2>&1; then
+            node backend/scripts/check-cpi017-deploy-output.mjs failure "$output"
             exit 1
-          }
+          fi
           node backend/scripts/check-cpi017-deploy-output.mjs audit "$output" CPI017_PRECHECK_OK
       - name: Preview and require exactly the single CPI-017 migration
         shell: bash
@@ -146,10 +146,11 @@ jobs:
           set -euo pipefail
           output="$(mktemp)"
           trap 'rm -f "$output"' EXIT
-          supabase db query "$(cat backend/sql/cpi017-deploy-postcheck.sql)" --read-only --remote="$CPI_SUPABASE_DEV_REF" > "$output" 2>&1 || {
-            echo "::error::Post-deployment read-only audit could not complete. Inspect remote migration history before any retry."
+          if ! supabase db query "$(cat backend/sql/cpi017-deploy-postcheck.sql)" --read-only --remote="$CPI_SUPABASE_DEV_REF" > "$output" 2>&1; then
+            node backend/scripts/check-cpi017-deploy-output.mjs failure "$output"
+            echo "::error::Migration might already be applied. Inspect remote migration history before any retry."
             exit 1
-          }
+          fi
           node backend/scripts/check-cpi017-deploy-output.mjs audit "$output" CPI017_POSTCHECK_OK
           echo "CPI-017 development schema deployed and catalog privileges verified."
           echo "Real anon/account A/B HTTP RLS checks and backup restore drill are still required."

@@ -60,6 +60,19 @@ jobs:
               exit 1
             }
           fi
+      - name: Check Management API Database Read scope with one harmless SQL query
+        shell: bash
+        run: |
+          set -euo pipefail
+          output="$(mktemp)"
+          trap 'rm -f "$output"' EXIT
+          # Unlike db push --dry-run, db query uses the Supabase Management
+          # read-only SQL API. The scoped PAT must include Database → Read.
+          if ! supabase db query "select 1 as cpi_readonly_probe" --read-only --remote="$CPI_SUPABASE_DEV_REF" > "$output" 2>&1; then
+            node backend/scripts/check-cpi017-deploy-output.mjs failure "$output"
+            exit 1
+          fi
+          echo "Supabase Database Read scope confirmed with read-only SQL."
       - name: Read-only preview of pending CPI-017 migration
         shell: bash
         run: |
