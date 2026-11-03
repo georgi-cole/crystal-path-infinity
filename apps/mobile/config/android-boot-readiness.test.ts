@@ -191,4 +191,17 @@ describe('CPI-011 strict Android first-boot readiness', () => {
     expect(workflow).toContain('system-images/android-36/default/x86_64/source.properties');
     expect(workflow).toContain('cpi003-development');
   });
+  it('uses one strict lifecycle in smoke and retains three full Android launches', () => {
+    const script = readFileSync(new URL('../scripts/smoke-native.mjs', import.meta.url), 'utf8');
+    expect(script).toContain("const androidColdStarts = profile === 'full' ? 3 : 1");
+    expect(script).toContain("const iosColdStarts = profile === 'full' ? 2 : 1");
+    expect(script).toContain('attempt <= androidColdStarts');
+    expect(script).toContain('attempt <= iosColdStarts');
+    expect(script).toContain("profile === 'full' && attempt <= 2");
+    expect(script).toContain('diagnosticReports.length !== requiredAttempts');
+    expect(script).toContain('item.observationComplete');
+    expect(script).toContain("waitFor('Android native pause after Home', 30_000");
+    expect(script).toContain("waitFor('Android bridge round-trip after real Home/resume', 30_000");
+    expect(script).toContain('assertNoTargetAnr()');
+  });
 });

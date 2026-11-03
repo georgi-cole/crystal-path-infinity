@@ -40,10 +40,16 @@ const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const evidenceRoot = join(appRoot, 'artifacts');
 const args = process.argv.slice(2);
 assert.ok(
-  args.length === 2 && args[0] === '--platform' && ['android', 'ios'].includes(args[1]),
-  'Usage: node scripts/smoke-native.mjs --platform android|ios',
+  (args.length === 2 || (args.length === 4 && args[2] === '--profile')) &&
+    args[0] === '--platform' &&
+    ['android', 'ios'].includes(args[1]) &&
+    (args.length === 2 || ['smoke', 'full'].includes(args[3])),
+  'Usage: node scripts/smoke-native.mjs --platform android|ios [--profile smoke|full]',
 );
 const platform = args[1];
+const profile = args.length === 4 ? args[3] : 'full';
+const androidColdStarts = profile === 'full' ? 3 : 1;
+const iosColdStarts = profile === 'full' ? 2 : 1;
 mkdirSync(evidenceRoot, { recursive: true });
 // A failed repeat must never leave a previous invocation's success evidence.
 for (const suffix of [
@@ -210,7 +216,7 @@ function recordLifecycleAction(action, details = {}) {
 }
 function saveAttempt(boundary, observationComplete = false) {
   const analysis = readAnalysis();
-  const prebridge = platform === 'android' ? attempt <= 2 : attempt === 1;
+  const prebridge = profile === 'full' && (platform === 'android' ? attempt <= 2 : attempt === 1);
   const report = {
     attempt,
     observedAt: new Date().toISOString(),
@@ -255,6 +261,7 @@ function saveDiagnostics() {
   const report = {
     schemaVersion: 1,
     platform,
+    profile,
     buildInfo,
     observedAt: new Date().toISOString(),
     lifecycleActions,
@@ -283,6 +290,15 @@ function assertHealthyLaunch() {
   const problems = diagnosticReports.flatMap((item) =>
     item.problems.map((problem) => `Attempt ${item.attempt}: ${problem}`),
   );
+  const requiredAttempts = platform === 'android' ? androidColdStarts : iosColdStarts;
+  if (
+    diagnosticReports.length !== requiredAttempts ||
+    diagnosticReports.some((item) => !item.observationComplete)
+  ) {
+    problems.push(
+      `Required ${requiredAttempts} fully observed cold launches (${profile}); got ${diagnosticReports.filter((item) => item.observationComplete).length}`,
+    );
+  }
   const owners = diagnosticReports.map(
     (item) =>
       item.diagnostics.find(
@@ -536,9 +552,10 @@ async function android() {
       ),
       'android-app.log',
     );
-    // The observed startup race was intermittent. Three cold process starts
-    // reuse this one emulator and preserve every attempt rather than retrying green.
-    for (attempt = 1; attempt <= 3; attempt += 1) {
+    // Ordinary PRs prove one complete real lifecycle. Native and nightly runs
+    // preserve all three cold starts, including prebridge Home/lock evidence.
+    // This is never a retry-after-failure: every required attempt must pass.
+    for (attempt = 1; attempt <= androidColdStarts; attempt += 1) {
       boundary = undefined;
       if (attempt > 1) {
         recordLifecycleAction('force-stop-between-cold-starts');
@@ -562,12 +579,12 @@ async function android() {
           `${buildInfo.appId}/.MainActivity`,
           '--ez',
           'cpi_prebridge_gate',
-          String(attempt <= 2),
+          String(profile === 'full' && attempt <= 2),
         ),
       );
       save(`android-attempt-${attempt}-launch.txt`, launch);
       if (attempt === 1) save('android-launch.txt', launch);
-      if (attempt <= 2) {
+      if (profile === 'full' && attempt <= 2) {
         await waitFor('Android native prebridge navigation gate', 30_000, () =>
           readAnalysis().prebridgeGates.some((gate) => gate.stage === 'waiting'),
         );
@@ -702,12 +719,14 @@ async function android() {
         androidVersion: text(adb, adbArgs('shell', 'getprop', 'ro.build.version.release')),
         pid,
         screenshot: 'android-launch.png',
-        coldStartAttempts: 3,
+        coldStartAttempts: androidColdStarts,
         lifecycleAction:
-          'Home and lock before the first JS page; three recreated processes/WebViews; Home/resume after readiness on every attempt',
+          profile === 'full'
+            ? 'Home and lock before first JS page; three recreated processes/WebViews; real Home/resume on every attempt'
+            : 'One real cold start, native bridge and Home/resume with process identity preserved',
       };
     }
-    attempt = 3;
+    attempt = androidColdStarts;
     const dump = run(adb, adbArgs('shell', 'uiautomator', 'dump', '/sdcard/cpi003-window.xml'), {
       timeout: 30_000,
       allowFailure: true,
@@ -897,7 +916,7 @@ async function ios() {
       ],
       { timeout: 120_000 },
     );
-    for (attempt = 1; attempt <= 2; attempt += 1) {
+    for (attempt = 1; attempt <= iosColdStarts; attempt += 1) {
       boundary = undefined;
       observationComplete = false;
       logOffset = appLog().length;
@@ -911,13 +930,13 @@ async function ios() {
           '--terminate-running-process',
           udid,
           buildInfo.appId,
-          ...(attempt === 1 ? ['--cpi-prebridge-gate'] : []),
+          ...(profile === 'full' && attempt === 1 ? ['--cpi-prebridge-gate'] : []),
         ],
         'ios-app.log',
         true,
         attempt > 1,
       );
-      if (attempt === 1) {
+      if (profile === 'full' && attempt === 1) {
         await waitFor(
           'iOS native prebridge navigation gate',
           provisioningBudgetsMs.firstNativeProcess,
@@ -984,7 +1003,7 @@ async function ios() {
       await stopLog(child);
       saveAttempt(boundary, true);
     }
-    attempt = 2;
+    attempt = iosColdStarts;
     return {
       kind: 'iOS Simulator',
       name: device.name,
@@ -993,9 +1012,11 @@ async function ios() {
       udid,
       runtime,
       screenshot: 'ios-launch.png',
-      coldStartAttempts: 2,
+      coldStartAttempts: iosColdStarts,
       lifecycleAction:
-        'Settings interruption before first page; two recreated processes/WebViews; Settings/resume after readiness on both attempts',
+        profile === 'full'
+          ? 'Settings interruption before first JS page; two recreated WebViews; Settings/resume on both attempts'
+          : 'One real cold start, native bridge and Settings/background/resume',
     };
   } catch (error) {
     run(
@@ -1023,6 +1044,7 @@ try {
   const report = {
     schemaVersion: 1,
     platform,
+    profile,
     buildInfo,
     device,
     committedScreenMarkerObserved: true,
@@ -1041,7 +1063,7 @@ try {
 } catch (error) {
   save(
     `${platform}-launch-failure.json`,
-    `${JSON.stringify({ platform, error: error.message }, null, 2)}\n`,
+    `${JSON.stringify({ platform, profile, error: error.message }, null, 2)}\n`,
   );
   console.error(`Native launch smoke failed: ${error.message}`);
   process.exitCode = 1;
