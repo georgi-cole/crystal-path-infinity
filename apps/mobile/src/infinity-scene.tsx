@@ -601,6 +601,7 @@ function InfinityRun({
   settings,
   onSettingsChange,
 }: InfinityRunProps) {
+  const { t } = useLanguage();
   const [initial] = useState(() => initialState ?? makeInitialRun());
   const [initialAudioSettings] = useState(settings);
   const lastCommittedActiveMs = useRef(-500);
@@ -819,7 +820,7 @@ function InfinityRun({
       if (
         (runtime?.getState().status ?? state.status) === 'playing' &&
         !window.confirm(
-          'Save and leave practice? Your latest checkpoint stays available to resume. This does NOT end the run.',
+          t('app.saveLeaveConfirm'),
         )
       ) {
         onExitCancelled();
@@ -839,7 +840,7 @@ function InfinityRun({
     } finally {
       exitLock.current = false;
     }
-  }, [state.status, paused, onCheckpoint, onExit, onExitCancelled]);
+  }, [state.status, paused, onCheckpoint, onExit, onExitCancelled, t]);
 
   const handledExitRequest = useRef(0);
   useEffect(() => {
