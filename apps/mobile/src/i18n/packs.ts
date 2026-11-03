@@ -14,7 +14,7 @@ import { ar } from './ar';
  * been reviewed. Never advertise a fallback-only language in the selector.
  * Locale keys and interpolation contract are validated in CI.
  */
-export const localePacks = {
+export const localePacks: Partial<Record<LocaleCode, Partial<Record<MessageKey, string>>>> = {
   bg,
   es,
   fr,
