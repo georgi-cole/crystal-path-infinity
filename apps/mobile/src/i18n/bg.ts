@@ -230,7 +230,4 @@ export const bg = {
   'game.effectFragile': 'Крехкост',
   'game.effectDrain': 'Отнемане на SP',
   'game.effectInversion': 'Инверсия',
-  'menu.tutorialExercise': 'Пробвай безопасна и грешна стъпка, подсказка и мистерия',
-  'menu.tutorialAvailable': 'Пет стъпки · Правилна, грешна, подсказка и мистерия',
-  'game.noticeMysteryDone': 'Мистерията приключи. Избери ляво или дясно.',
 } satisfies Partial<Record<MessageKey, string>>;
