@@ -1,0 +1,155 @@
+name: CPI-017 Development Database Deployment
+
+# Never deploy on a push, a pull request, a schedule, or a merge.
+# Only a typed manual confirmation on main can authorize a hosted mutation.
+on:
+  workflow_dispatch:
+    inputs:
+      project_ref:
+        description: "Type the development Supabase project reference"
+        required: true
+        type: string
+      confirmation:
+        description: "Type APPLY CPI-017 TO DEVELOPMENT (exactly)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cpi017-development-database-deployment
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: Confirm exact project and reviewed migration
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    env:
+      REQUESTED_PROJECT_REF: ${{ inputs.project_ref }}
+      REQUESTED_CONFIRMATION: ${{ inputs.confirmation }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Require typed approval, correct repository and main
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REPOSITORY" == 'georgi-cole/crystal-path-infinity' ]] || exit 1
+          [[ "$GITHUB_REF" == 'refs/heads/main' ]] || exit 1
+          [[ "$REQUESTED_PROJECT_REF" == 'jbyguybxhezjhdbenevh' ]] || {
+            echo "::error::The requested project is not the approved CPI development project."
+            exit 1
+          }
+          [[ "$REQUESTED_CONFIRMATION" == 'APPLY CPI-017 TO DEVELOPMENT' ]] || {
+            echo "::error::Explicit CPI-017 development deployment confirmation is required."
+            exit 1
+          }
+      - name: Reject any new or changed migration before credentials are unlocked
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t sql_files < <(find supabase/migrations -maxdepth 1 -type f -name '*.sql' | sort)
+          [[ "${#sql_files[@]}" -eq 1 && "${sql_files[0]}" == 'supabase/migrations/20261103000100_cpi017_foundation.sql' ]] || {
+            echo "::error::Migration set changed; obtain new human review before applying anything."
+            exit 1
+          }
+          [[ "$(git hash-object "${sql_files[0]}")" == 'accc66e9e1a539c9527852f95595dacbe39959a7' ]] || {
+            echo "::error::The CPI-017 SQL content differs from the reviewed migration."
+            exit 1
+          }
+          [[ ! -f supabase/roles.sql && ! -f supabase/seed.sql ]] || {
+            echo "::error::Unexpected Supabase roles/seed file; manual review required."
+            exit 1
+          }
+          echo "Approved source: CPI-017 reviewed SQL and no additional migrations."
+  deploy:
+    name: Apply only CPI-017 after approval and audit
+    needs: preflight
+    environment: cpi-development
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CPI_SUPABASE_DEV_REF: jbyguybxhezjhdbenevh
+      SUPABASE_PROJECT_ID: jbyguybxhezjhdbenevh
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.CPI_DEV_SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.CPI_DEV_SUPABASE_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.23.4'
+      - name: Refuse to connect without scoped development credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF" == 'refs/heads/main' ]] || exit 1
+          [[ "$CPI_SUPABASE_DEV_REF" == 'jbyguybxhezjhdbenevh' ]] || exit 1
+          [[ "$SUPABASE_PROJECT_ID" == "$CPI_SUPABASE_DEV_REF" ]] || exit 1
+          if [[ -z "$SUPABASE_ACCESS_TOKEN" || -z "$SUPABASE_DB_PASSWORD" ]]; then
+            echo "::error::Missing cpi-development environment secrets. No deployment attempted."
+            exit 1
+          fi
+      - name: Install pinned Supabase CLI 3.0.0 on hosted runner
+        uses: supabase/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13 # v3.2.0
+        with:
+          version: '3.0.0'
+      - name: Link to the exact development project
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase link --project-ref "$CPI_SUPABASE_DEV_REF"
+          [[ -f supabase/.temp/project-ref ]] || exit 1
+          [[ "$(tr -d '\r\n' < supabase/.temp/project-ref)" == "$CPI_SUPABASE_DEV_REF" ]] || {
+            echo "::error::Unexpected Supabase project link. Aborting before SQL."
+            exit 1
+          }
+      - name: Preflight read-only schema emptiness check
+        shell: bash
+        run: |
+          set -euo pipefail
+          output="$(mktemp)"
+          trap 'rm -f "$output"' EXIT
+          supabase db query "$(cat backend/sql/cpi017-deploy-preflight.sql)" --read-only --remote="$CPI_SUPABASE_DEV_REF" > "$output" 2>&1 || {
+            echo "::error::Read-only schema preflight could not complete. No migration applied."
+            exit 1
+          }
+          node backend/scripts/check-cpi017-deploy-output.mjs audit "$output" CPI017_PRECHECK_OK
+      - name: Preview and require exactly the single CPI-017 migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          output="$(mktemp)"
+          trap 'rm -f "$output"' EXIT
+          supabase db push --dry-run --remote="$CPI_SUPABASE_DEV_REF" > "$output" 2>&1 || {
+            echo "::error::Supabase dry-run failed; no schema deployment attempted."
+            exit 1
+          }
+          node backend/scripts/check-cpi017-deploy-output.mjs preview "$output"
+      - name: Apply one previously reviewed CPI-017 migration to development
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$CPI_SUPABASE_DEV_REF" == 'jbyguybxhezjhdbenevh' ]] || exit 1
+          # The only step in this workflow allowed to modify hosted SQL.
+          # CLI v3 requires --yes in non-interactive CI; both typed inputs and
+          # the cpi-development environment gate precede this command.
+          supabase db push --yes --remote="$CPI_SUPABASE_DEV_REF"
+      - name: Verify the applied schema and locked-down grants (read-only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          output="$(mktemp)"
+          trap 'rm -f "$output"' EXIT
+          supabase db query "$(cat backend/sql/cpi017-deploy-postcheck.sql)" --read-only --remote="$CPI_SUPABASE_DEV_REF" > "$output" 2>&1 || {
+            echo "::error::Post-deployment read-only audit could not complete. Inspect remote migration history before any retry."
+            exit 1
+          }
+          node backend/scripts/check-cpi017-deploy-output.mjs audit "$output" CPI017_POSTCHECK_OK
+          echo "CPI-017 development schema deployed and catalog privileges verified."
+          echo "Real anon/account A/B HTTP RLS checks and backup restore drill are still required."
