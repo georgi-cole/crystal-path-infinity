@@ -923,11 +923,9 @@ async function ios() {
     // Verify the *OS launch service* using Settings before attempting CPI.
     // This is not a retry of the game or a substitute for its native proof.
     console.log('Checking iOS system-app launch readiness before the first CPI cold start.');
-    const controlLaunch = text(
-      'xcrun',
-      ['simctl', 'launch', udid, 'com.apple.Preferences'],
-      { timeout: 120_000 },
-    );
+    const controlLaunch = text('xcrun', ['simctl', 'launch', udid, 'com.apple.Preferences'], {
+      timeout: 120_000,
+    });
     save('ios-launchservice-control.txt', controlLaunch + '\n');
     assert.match(
       controlLaunch,

@@ -509,11 +509,8 @@ describe('Android runtime process attribution', () => {
 });
 
 describe('iOS cold-start launch-service preflight', () => {
-  it('proves a real system-app launch before the first CPI native process, without skipping lifecycle gates', () => {
-    const source = readFileSync(
-      new URL('../scripts/smoke-native.mjs', import.meta.url),
-      'utf8',
-    );
+  it('checks simulator system-app readiness without skipping any native lifecycle gates', () => {
+    const source = readFileSync(new URL('../scripts/smoke-native.mjs', import.meta.url), 'utf8');
     const iosHarness = source.slice(source.indexOf('async function ios()'));
     const systemProbe = iosHarness.indexOf("['simctl', 'launch', udid, 'com.apple.Preferences']");
     const systemTerminate = iosHarness.indexOf(
