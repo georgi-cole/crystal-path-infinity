@@ -19,7 +19,8 @@ describe('CPI-018 trusted OTP gateway boundary', () => {
   it('sends no email to public Supabase Auth and never leaks it to URL or referrer', async () => {
     const observed: Array<{ url: string; options: RequestInit }> = [];
     const fake: typeof fetch = (input, init) => {
-      observed.push({ url: String(input), options: init ?? {} });
+      const url = input instanceof Request ? input.url : input instanceof URL ? input.href : input;
+      observed.push({ url, options: init ?? {} });
       return Promise.resolve(
         new Response(JSON.stringify({ status: 'accepted', expiresAt: 2_000_000_000_000 }), {
           status: 200,

@@ -90,7 +90,7 @@ export function validAccountEmail(email: unknown): email is string {
     email.length >= 3 &&
     email.length <= 254 &&
     email === email.trim() &&
-    !/[\s\x00-\x1f\x7f]/.test(email) &&
+    !Array.from(email).some((char) => char.charCodeAt(0) < 33 || char.charCodeAt(0) === 127) &&
     /^[^@]+@[^@]+\.[^@]+$/.test(email)
   );
 }

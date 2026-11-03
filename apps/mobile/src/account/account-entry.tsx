@@ -12,17 +12,16 @@ import './account-entry.css';
  */
 export function AccountEntry({ online }: { online: boolean }) {
   const { t } = useLanguage();
+  const configuredOrigin: unknown = import.meta.env.VITE_ACCOUNT_API_BASE_URL;
   const gateway = useMemo(
-    () => createOtpGateway(import.meta.env.VITE_ACCOUNT_API_BASE_URL),
-    [],
+    () => createOtpGateway(typeof configuredOrigin === 'string' ? configuredOrigin : undefined),
+    [configuredOrigin],
   );
   const flow = useMemo(() => (gateway ? new AccountOtpFlow(gateway) : null), [gateway]);
   const [state, setState] = useState(() => flow?.snapshot() ?? null);
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const mounted = useRef(true);
-  const onlineRef = useRef(online);
-  onlineRef.current = online;
 
   useEffect(() => {
     mounted.current = true;
@@ -33,12 +32,18 @@ export function AccountEntry({ online }: { online: boolean }) {
   }, [flow]);
 
   useEffect(() => {
-    if (!online) {
-      flow?.offline();
+    flow?.cancel();
+    if (!online) flow?.offline();
+    let active = true;
+    void Promise.resolve().then(() => {
+      if (!active) return;
       setEmail('');
       setCode('');
       setState(flow?.snapshot() ?? null);
-    }
+    });
+    return () => {
+      active = false;
+    };
   }, [flow, online]);
 
   function sync() {
@@ -46,21 +51,21 @@ export function AccountEntry({ online }: { online: boolean }) {
   }
   async function evaluate() {
     if (!flow) return;
-    const pending = flow.checkEligibility(onlineRef.current);
+    const pending = flow.checkEligibility(online);
     sync();
     await pending;
     sync();
   }
   async function send() {
     if (!flow) return;
-    const pending = flow.requestCode(email, onlineRef.current);
+    const pending = flow.requestCode(email, online);
     sync();
     await pending;
     sync();
   }
   async function verify() {
     if (!flow) return;
-    const pending = flow.verifyCode(code, onlineRef.current);
+    const pending = flow.verifyCode(code, online);
     sync();
     await pending;
     setCode('');
