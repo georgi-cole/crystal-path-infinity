@@ -141,6 +141,7 @@ export const zhHans = {
   'game.run': '无限 / 本局',
   'game.hints': '提示',
   'game.sp': '生存点数',
+  'game.spAccessible': '生存点数',
   'game.spCritical': '危险：SP仅剩{sp}。再犯错可能结束本局。',
   'game.spLow': 'SP偏低：{sp}',
   'game.spHealthy': 'SP：{sp}',

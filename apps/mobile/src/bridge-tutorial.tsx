@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { applyTutorialAction, createTutorialSession } from './bridge-tutorial-model';
+import { STARTING_SP } from '@crystal-path-infinity/game-core';
 import type { TutorialAction, TutorialStep } from './bridge-tutorial-model';
 import { useLanguage } from './i18n';
 import type { MessageKey } from './i18n/messages';
@@ -56,7 +57,7 @@ export function BridgeTutorial({
       : step === 'wrong'
         ? t('tutorial.notice.wrong', { sp: number(run.sp) })
         : step === 'hint'
-          ? t('tutorial.notice.hint', { damage: number(300 - run.sp) })
+          ? t('tutorial.notice.hint', { damage: number(STARTING_SP - run.sp) })
           : step === 'hint-revealed'
             ? t('tutorial.notice.hintRevealed')
             : step === 'mystery'

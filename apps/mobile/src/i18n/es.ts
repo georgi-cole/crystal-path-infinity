@@ -141,6 +141,7 @@ export const es = {
   'game.run': 'INFINITO / PARTIDA',
   'game.hints': 'PISTAS',
   'game.sp': 'PUNTOS DE SUPERVIVENCIA',
+  'game.spAccessible': 'Puntos de supervivencia',
   'game.spCritical': 'SP críticos: {sp}. Otro error podría acabar la partida.',
   'game.spLow': 'SP bajos: {sp}.',
   'game.spHealthy': 'SP: {sp}.',

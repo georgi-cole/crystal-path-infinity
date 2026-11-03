@@ -153,6 +153,7 @@ export const bg = {
   'game.run': 'БЕЗКРАЙНОСТ / ОПИТ',
   'game.hints': 'ПОДСКАЗКИ',
   'game.sp': 'ТОЧКИ ЗА ОЦЕЛЯВАНЕ',
+  'game.spAccessible': 'Точки за оцеляване',
   'game.spCritical': 'Критични SP: {sp}. Следваща грешка може да прекрати опита.',
   'game.spLow': 'Ниски SP: {sp}.',
   'game.spHealthy': 'SP: {sp}.',

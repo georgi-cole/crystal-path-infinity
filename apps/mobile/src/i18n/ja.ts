@@ -141,6 +141,7 @@ export const ja = {
   'game.run': '無限 / 挑戦',
   'game.hints': 'ヒント',
   'game.sp': 'サバイバルポイント',
+  'game.spAccessible': 'サバイバルポイント',
   'game.spCritical': '危険：SP {sp}。次の失敗で終了する可能性があります。',
   'game.spLow': 'SPが少ない：{sp}',
   'game.spHealthy': 'SP：{sp}',

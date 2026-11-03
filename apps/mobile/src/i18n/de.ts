@@ -141,6 +141,7 @@ export const de = {
   'game.run': 'UNENDLICH / LAUF',
   'game.hints': 'HINWEISE',
   'game.sp': 'ÜBERLEBENSPUNKTE',
+  'game.spAccessible': 'Überlebenspunkte',
   'game.spCritical': 'Kritische SP: {sp}. Ein Fehler kann den Lauf beenden.',
   'game.spLow': 'Wenige SP: {sp}.',
   'game.spHealthy': 'SP: {sp}.',

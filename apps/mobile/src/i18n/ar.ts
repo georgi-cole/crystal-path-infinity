@@ -141,6 +141,7 @@ export const ar = {
   'game.run': 'اللانهاية / المحاولة',
   'game.hints': 'تلميحات',
   'game.sp': 'نقاط البقاء',
+  'game.spAccessible': 'نقاط البقاء',
   'game.spCritical': 'نقاط SP حرجة: {sp}. قد تنهي غلطة أخرى المحاولة.',
   'game.spLow': 'نقاط SP منخفضة: {sp}.',
   'game.spHealthy': 'SP: {sp}.',

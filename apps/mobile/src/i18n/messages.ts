@@ -158,6 +158,7 @@ export const en = {
   'game.run': 'INFINITY / RUN',
   'game.hints': 'HINTS',
   'game.sp': 'SURVIVAL POINTS',
+  'game.spAccessible': 'Survival points',
   'game.spCritical': 'Critical SP: {sp}. One more mistake may end this run.',
   'game.spLow': 'Low SP: {sp}.',
   'game.spHealthy': 'SP: {sp}.',

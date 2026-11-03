@@ -141,6 +141,7 @@ export const ptBR = {
   'game.run': 'INFINITO / TENTATIVA',
   'game.hints': 'DICAS',
   'game.sp': 'PONTOS DE SOBREVIVÊNCIA',
+  'game.spAccessible': 'Pontos de sobrevivência',
   'game.spCritical': 'SP críticos: {sp}. Outro erro pode encerrar a tentativa.',
   'game.spLow': 'SP baixos: {sp}.',
   'game.spHealthy': 'SP: {sp}.',

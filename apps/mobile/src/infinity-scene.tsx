@@ -264,7 +264,7 @@ export function InfinitySceneView({
         <div
           className={`cps-sp-bar-main cpi-energy-meter ${state.sp <= 60 ? 'is-low' : ''}`}
           role="meter"
-          aria-label={t('game.sp')}
+          aria-label={t('game.spAccessible')}
           aria-valuemin={0}
           aria-valuemax={MAX_SP}
           aria-valuenow={state.sp}

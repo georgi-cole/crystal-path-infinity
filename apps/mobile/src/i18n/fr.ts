@@ -141,6 +141,7 @@ export const fr = {
   'game.run': 'INFINI / PARTIE',
   'game.hints': 'INDICES',
   'game.sp': 'POINTS DE SURVIE',
+  'game.spAccessible': 'Points de survie',
   'game.spCritical': 'SP critiques : {sp}. Une erreur peut mettre fin à la partie.',
   'game.spLow': 'SP faibles : {sp}.',
   'game.spHealthy': 'SP : {sp}.',

@@ -128,9 +128,14 @@ function browserLanguages(): readonly string[] {
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [choice, setStoredChoice] = useState<LocaleChoice>(() =>
-    typeof window === 'undefined' ? 'system' : readLanguageChoice(window.localStorage),
-  );
+  const [choice, setStoredChoice] = useState<LocaleChoice>(() => {
+    if (typeof window === 'undefined') return 'system';
+    try {
+      return readLanguageChoice(window.localStorage);
+    } catch {
+      return 'system';
+    }
+  });
   const [deviceLanguages, setDeviceLanguages] = useState<readonly string[]>(browserLanguages);
   const [warning, setWarning] = useState(false);
   const locale = resolveLocale(choice, deviceLanguages);
