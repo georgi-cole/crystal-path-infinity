@@ -29,7 +29,7 @@ test('no remote write, reset, seeding, or automatic confirmation is possible', (
     .map((line) => line.trim());
   assert.deepEqual(commands, [
     'supabase link --project-ref "$CPI_SUPABASE_DEV_REF"',
-    'supabase db query "select 1 as cpi_readonly_probe" --read-only --remote="$CPI_SUPABASE_DEV_REF" > "$output" 2>&1; then',
+    'if ! supabase db query "select 1 as cpi_readonly_probe" --read-only --remote="$CPI_SUPABASE_DEV_REF" > "$output" 2>&1; then',
     'supabase db push --dry-run --remote="$CPI_SUPABASE_DEV_REF"',
   ]);
   assert.doesNotMatch(yaml, /^\s+supabase\s+(?:db reset|migration repair|seed)/m);
