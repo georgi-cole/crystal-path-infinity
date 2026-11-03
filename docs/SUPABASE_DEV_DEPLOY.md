@@ -42,6 +42,8 @@ The [preview run #41667593695](https://github.com/georgi-cole/crystal-path-infin
 
 The next candidate preflight is a single `SELECT CASE` expression using only `pg_catalog.to_regnamespace('cpi_private')` and `pg_catalog.to_regclass('public.profiles_public')`, with no tables, joins, aliases, subqueries or SQL comments. Both built-ins are explicitly schema-qualified and resolve missing objects to NULL. The same SQL file is shared by the read-only preview and manually approved deployment. If either object exists, preflight returns `CPI017_PRECHECK_FAIL`; ambiguous results or any error still stop deployment. The migration file and deployment approval gates are unchanged.
 
+If the revised preflight is still rejected by the Supabase read-only endpoint, the preview now runs two **separate, read-only** diagnostic probes for the explicitly qualified `pg_catalog.to_regnamespace` and `pg_catalog.to_regclass` functions. It logs only static accepted/rejected notices, never raw API output or token values, and the workflow **still fails closed**. These probes help isolate the cause without another blind SQL change.
+
 **After the fix PR is merged, run the read-only preview first.** Do not run deployment until it reports `Hosted CPI-017 catalog preflight passed`. If it still fails, investigate the next failure without touching credentials or authorizing SQL writes.
 
 ## If any check fails

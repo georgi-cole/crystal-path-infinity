@@ -42,5 +42,11 @@ test('no remote write, reset, seeding, or automatic confirmation is possible', (
     yaml.match(/check-cpi017-deploy-output\.mjs failure "\$output"/g)?.length,
     2,
   );
+  assert.match(yaml, /for probe in namespace_function relation_function/);
+  assert.match(yaml, /probe_sql="select pg_catalog\.to_regnamespace\('cpi_private'\) is null/);
+  assert.match(yaml, /probe_sql="select pg_catalog\.to_regclass\('public\.profiles_public'\) is null/);
+  assert.match(yaml, /if supabase db query "\$probe_sql" --read-only --remote="\$CPI_SUPABASE_DEV_REF"/);
+  assert.match(yaml, /CPI017 isolated \$probe: rejected/);
+  assert.doesNotMatch(yaml, /supabase db (?:reset|query .*--yes|push --yes)/);
   assert.match(yaml, /check-cpi017-deploy-output\.mjs failure "\$output"/);
 });

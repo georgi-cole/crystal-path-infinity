@@ -82,6 +82,27 @@ jobs:
           # This is exactly the SQL used by the gated deployment. A green
           # select-1 query is not proof that catalog inspection is permitted.
           if ! supabase db query "$(cat backend/sql/cpi017-deploy-preflight.sql)" --read-only --remote="$CPI_SUPABASE_DEV_REF" > "$output" 2>&1; then
+            # Diagnostic probes are SELECT-only and deliberately discard all
+            # CLI output. They cannot turn a failed preflight into a success.
+            # Keep each probe separate to tell whether the read-only endpoint
+            # refuses function calls or the combined CASE expression.
+            probe_output="$(mktemp)"
+            trap 'rm -f "$output" "$probe_output"' EXIT
+            for probe in namespace_function relation_function; do
+              case "$probe" in
+                namespace_function)
+                  probe_sql="select pg_catalog.to_regnamespace('cpi_private') is null as namespace_absent"
+                  ;;
+                relation_function)
+                  probe_sql="select pg_catalog.to_regclass('public.profiles_public') is null as relation_absent"
+                  ;;
+              esac
+              if supabase db query "$probe_sql" --read-only --remote="$CPI_SUPABASE_DEV_REF" > "$probe_output" 2>&1; then
+                echo "::notice::CPI017 isolated $probe: accepted by hosted read-only SQL endpoint."
+              else
+                echo "::notice::CPI017 isolated $probe: rejected by hosted read-only SQL endpoint."
+              fi
+            done
             node backend/scripts/check-cpi017-deploy-output.mjs failure "$output"
             exit 1
           fi
