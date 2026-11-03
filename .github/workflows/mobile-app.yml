@@ -413,6 +413,11 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261104000300_cpi023_leaderboards.sql
           psql -X -v ON_ERROR_STOP=1 -f backend/tests/leaderboards.sql
           node --experimental-strip-types backend/tests/leaderboard-integration.mjs
+      - name: Test account export, revocation recovery and deletion
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261104000400_cpi031_account_lifecycle.sql
+          psql -X -v ON_ERROR_STOP=1 -f backend/tests/account-lifecycle.sql
+          node --experimental-strip-types backend/tests/account-lifecycle-integration.mjs
       - name: Validate independent backend environments and public-variable guard
         run: node --test backend/tests/environments.test.mjs
 
