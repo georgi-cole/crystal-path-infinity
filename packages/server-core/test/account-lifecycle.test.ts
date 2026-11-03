@@ -68,6 +68,25 @@ function fixture() {
           },
         ],
       };
+    else if (sql.includes('export_own_name_reports'))
+      return {
+        rows: [
+          {
+            report_export: {
+              reports: [
+                {
+                  id: '31700000-0000-4000-8000-000000000001',
+                  targetPublicId: '31800000-0000-4000-8000-000000000001',
+                  reason: 'spam',
+                  pending: true,
+                  createdAt: new Date(NOW).toISOString(),
+                },
+              ],
+              next: null,
+            },
+          },
+        ],
+      };
     return { rows: [] };
   });
   const release = vi.fn<SqlConnection['release']>();
@@ -131,12 +150,15 @@ describe('CPI-031 trusted account lifecycle', () => {
       parental: null,
       run: null,
       result: null,
+      report: '31900000-0000-4000-8000-000000000001',
     };
     const response = await f.handler(request('export', { cursor }));
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({
       schemaVersion: 1,
       profile: { username: 'prism_a' },
+      reports: [{ reason: 'spam', pending: true }],
+      next: { report: null },
     });
     expect(f.verifyReauthentication).toHaveBeenCalledWith({
       subject: A,
@@ -162,7 +184,54 @@ describe('CPI-031 trusted account lifecycle', () => {
       null,
     ]);
     expect(f.query).toHaveBeenLastCalledWith('commit');
+    expect(f.query).toHaveBeenCalledWith(expect.stringContaining('export_own_name_reports'), [
+      A,
+      cursor.report,
+    ]);
     expect(response.headers.get('cache-control')).toBe('no-store');
+  });
+  it('never silently omits reports or forwards private extras in report export pages', async () => {
+    const f = fixture();
+    const original = f.query.getMockImplementation()!;
+    f.query.mockImplementation((sql, values) =>
+      sql.includes('export_own_name_reports')
+        ? Promise.resolve({
+            rows: [
+              {
+                report_export: {
+                  reports: [
+                    {
+                      id: '31700000-0000-4000-8000-000000000001',
+                      targetPublicId: '31800000-0000-4000-8000-000000000001',
+                      reason: 'spam',
+                      pending: false,
+                      createdAt: new Date(NOW).toISOString(),
+                      reporter_user_id: B,
+                      email: 'secret@example.invalid',
+                    },
+                  ],
+                  next: null,
+                },
+              },
+            ],
+          })
+        : original(sql, values),
+    );
+    const response = await f.handler(request('export'));
+    expect(response.status).toBe(200);
+    const text = await response.text();
+    expect(text).toContain('"reports"');
+    expect(text).not.toContain('secret@example.invalid');
+    expect(text).not.toContain('reporter_user_id');
+    const unavailable = fixture();
+    const base = unavailable.query.getMockImplementation()!;
+    unavailable.query.mockImplementation((sql, values) =>
+      sql.includes('export_own_name_reports')
+        ? Promise.reject(new Error('function is unavailable'))
+        : base(sql, values),
+    );
+    expect((await unavailable.handler(request('export'))).status).toBe(503);
+    expect(unavailable.query).toHaveBeenLastCalledWith('rollback');
   });
   it('requires subject, purpose, nonce and genuinely fresh reauthentication instead of caller assertions', async () => {
     for (const invalid of [

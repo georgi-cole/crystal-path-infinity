@@ -54,6 +54,47 @@ function json(value: unknown): unknown {
   if (typeof value === 'string') return JSON.parse(value) as unknown;
   return value;
 }
+function reportExport(value: unknown): { reports: object[]; next: string | null } {
+  const raw = json(value);
+  if (
+    !object(raw) ||
+    !Array.isArray(raw.reports) ||
+    raw.reports.length > 100 ||
+    (raw.next !== null && (typeof raw.next !== 'string' || !uuid.test(raw.next)))
+  )
+    throw new Error('Invalid report export');
+  const reports: object[] = [];
+  for (const item of raw.reports) {
+    if (
+      !object(item) ||
+      typeof item.id !== 'string' ||
+      !uuid.test(item.id) ||
+      typeof item.targetPublicId !== 'string' ||
+      !uuid.test(item.targetPublicId) ||
+      typeof item.reason !== 'string' ||
+      ![
+        'impersonation',
+        'hate_or_harassment',
+        'sexual_content',
+        'personal_information',
+        'spam',
+      ].includes(item.reason) ||
+      typeof item.pending !== 'boolean' ||
+      typeof item.createdAt !== 'string' ||
+      item.createdAt.length > 40 ||
+      !Number.isFinite(Date.parse(item.createdAt))
+    )
+      throw new Error('Invalid report export');
+    reports.push({
+      id: item.id,
+      targetPublicId: item.targetPublicId,
+      reason: item.reason,
+      pending: item.pending,
+      createdAt: item.createdAt,
+    });
+  }
+  return { reports, next: raw.next };
+}
 function deletionStatus(value: unknown): AccountDeletionStatus {
   const candidate = json(value);
   if (
@@ -276,10 +317,22 @@ export function createAccountLifecycleHandler(options: AccountLifecycleOptions) 
         !proofPattern.test(input.reauthProof)
       )
         return reply({ code: 'invalid_request' }, 400);
-      const cursor = input.cursor ?? { consent: null, parental: null, run: null, result: null };
+      const cursor = input.cursor ?? {
+        consent: null,
+        parental: null,
+        run: null,
+        result: null,
+        report: null,
+      };
       if (
         !object(cursor) ||
-        Object.keys(cursor).length !== 4 ||
+        (Object.keys(cursor).length !== 4 && Object.keys(cursor).length !== 5) ||
+        Object.keys(cursor).some(
+          (key) => !['consent', 'parental', 'run', 'result', 'report'].includes(key),
+        ) ||
+        (cursor.report !== undefined &&
+          cursor.report !== null &&
+          (typeof cursor.report !== 'string' || !uuid.test(cursor.report))) ||
         !['consent', 'parental', 'run', 'result'].every(
           (key) =>
             cursor[key] === null || (typeof cursor[key] === 'string' && uuid.test(cursor[key])),
@@ -326,8 +379,20 @@ export function createAccountLifecycleHandler(options: AccountLifecycleOptions) 
             [actor.subject, cursor.consent, cursor.parental, cursor.run, cursor.result],
           );
           const data = json(result.rows[0]?.account_export);
-          if (!object(data) || data.schemaVersion !== 1) throw new Error('Invalid account export');
-          return data;
+          if (!object(data) || data.schemaVersion !== 1 || !object(data.next))
+            throw new Error('Invalid account export');
+          // Mandatory after CPI-025: a missing/failed report export rolls the
+          // whole page back instead of silently omitting user-owned data.
+          const ownReports = await connection.query(
+            'select cpi_private.export_own_name_reports($1::uuid,$2::uuid) as report_export',
+            [actor.subject, cursor.report ?? null],
+          );
+          const reports = reportExport(ownReports.rows[0]?.report_export);
+          return {
+            ...data,
+            reports: reports.reports,
+            next: { ...data.next, report: reports.next },
+          };
         }
         const result = await connection.query(
           'select cpi_private.prepare_account_deletion($1::uuid) as status',
