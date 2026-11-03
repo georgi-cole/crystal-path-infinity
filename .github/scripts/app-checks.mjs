@@ -46,7 +46,7 @@ function classifyFile(path) {
   ) {
     // Native bindings, clocks and lifecycle integration can live inside src/.
     // They must not be downgraded to the ordinary UI smoke profile.
-    if (/(?:^|\\/)(?:native|capacitor|bridge|lifecycle|foreground.clock|platform)[^/]*\\.(?:ts|tsx|js|mjs)$/i.test(path)) {
+    if (/(?:^|\/)(?:native|capacitor|bridge|lifecycle|foreground.clock|platform)[^/]*\.(?:ts|tsx|js|mjs)$/i.test(path)) {
       return 'full';
     }
     return 'smoke';
