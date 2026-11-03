@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import test from 'node:test';
 import { assertAppGate, selectNativeChecks } from './app-checks.mjs';
+import { classifyNativeFailure } from './native-failure-diagnostics.mjs';
 
 function fixture(t) {
   const repository = mkdtempSync(join(tmpdir(), 'cpi-app-checks-'));
@@ -183,4 +184,49 @@ test('aggregate rejects missing profile, masked native failures and improper ski
     () => assertAppGate(results('none', 'success', 'success', 'skipped')),
     /must be skipped/,
   );
+});
+
+test('failure classification never mistakes a target ANR for runner success', () => {
+  const anr =
+    '1793639689.646 621 2636 E ActivityManager: ANR in ' +
+    'com.georgicole.crystalpath.infinity.dev (MainActivity)';
+  assert.equal(
+    classifyNativeFailure({ platform: 'android', appLog: anr }).category,
+    'app-anr',
+  );
+  assert.equal(
+    classifyNativeFailure({
+      platform: 'android',
+      failure: 'Timed out waiting for Android native pause after Home (30s)',
+      appLog: anr,
+    }).category,
+    'app-anr',
+  );
+  assert.equal(
+    classifyNativeFailure({
+      platform: 'android',
+      appLog: 'E ActivityManager: ANR in com.android.launcher3',
+    }).category,
+    'unclassified',
+  );
+});
+
+test('failure classification distinguishes lifecycle, compile, setup and unknown', () => {
+  assert.equal(
+    classifyNativeFailure({
+      platform: 'android',
+      failure: 'Timed out waiting for Android native pause after Home (30s)',
+    }).category,
+    'lifecycle-or-readiness',
+  );
+  assert.equal(
+    classifyNativeFailure({ platform: 'ios', buildLog: 'xcodebuild: error: SwiftCompile' })
+      .category,
+    'native-build',
+  );
+  assert.equal(
+    classifyNativeFailure({ platform: 'android', failure: 'device offline' }).category,
+    'emulator-provisioning',
+  );
+  assert.equal(classifyNativeFailure({ platform: 'ios', failure: 'unrecognized' }).category, 'unclassified');
 });
