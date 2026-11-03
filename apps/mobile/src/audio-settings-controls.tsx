@@ -1,5 +1,5 @@
 import type { PracticeSettings } from './practice-save';
-import { useLanguage } from './i18n';
+import { useLanguage } from './language-context';
 
 export function AudioSettingsControls({
   settings,

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { AudioSettingsControls } from './audio-settings-controls';
 import { LanguageSettings, PrivacyAccountSupport } from './locale-settings';
-import { useLanguage } from './i18n';
+import { useLanguage } from './language-context';
 import { BridgeTutorial } from './bridge-tutorial';
 import type { TutorialProgress } from './tutorial-progress';
 import type { PracticeLoad, PracticeSettings } from './practice-save';

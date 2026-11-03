@@ -18,7 +18,7 @@ import type { StandaloneAudio } from './standalone-audio';
 import { optionalHaptic } from './optional-haptic';
 import { readPracticePersonalBest, recordPracticePersonalBest } from './practice-save';
 import { presentRunOutcome } from './run-outcome';
-import { useLanguage } from './i18n';
+import { useLanguage } from './language-context';
 import type { PracticeSettings } from './practice-save';
 import { AudioSettingsControls } from './audio-settings-controls';
 import { createPracticeRuntime, schedulePracticeTick } from './practice-runtime';

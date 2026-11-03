@@ -1,4 +1,5 @@
-import { LANGUAGE_KEY, LOCALES, useLanguage } from './i18n';
+import { LANGUAGE_KEY, LOCALES } from './i18n';
+import { useLanguage } from './language-context';
 import type { LocaleChoice } from './i18n';
 import './locale-settings.css';
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { applyTutorialAction, createTutorialSession } from './bridge-tutorial-model';
 import { STARTING_SP } from '@crystal-path-infinity/game-core';
 import type { TutorialAction, TutorialStep } from './bridge-tutorial-model';
-import { useLanguage } from './i18n';
+import { useLanguage } from './language-context';
 import type { MessageKey } from './i18n/messages';
 import './bridge-tutorial.css';
 

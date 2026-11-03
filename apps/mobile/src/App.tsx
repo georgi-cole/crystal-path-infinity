@@ -19,7 +19,7 @@ import type { TutorialProgress } from './tutorial-progress';
 import type { MenuView } from './menu-navigation';
 import { markDiagnosticReactReady } from './startup-diagnostics';
 import { settleStartup } from './startup-bootstrap';
-import { useLanguage } from './i18n';
+import { useLanguage } from './language-context';
 
 const build = __CPI_BUILD_INFO__;
 const showBuildDetails = build.environment !== 'production';

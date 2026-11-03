@@ -1,7 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
-import { LanguageProvider } from './i18n';
+import { LanguageProvider } from './language-provider';
 import { startStartupDiagnostics } from './startup-diagnostics';
 import { getGameplayLifecycle } from './gameplay-lifecycle';
 import './styles.css';
