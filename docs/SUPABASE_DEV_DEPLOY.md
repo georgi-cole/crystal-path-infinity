@@ -28,6 +28,14 @@ GitHub [run #41641182310](https://github.com/georgi-cole/crystal-path-infinity/a
 
 **Before running the deployment again**, generate a replacement fine-grained Supabase token scoped to `jbyguybxhezjhdbenevh` with Project Settings, API Keys, API Key Secrets and Database **Read** permissions. Replace only GitHub **Settings → Environments → cpi-development → CPI_DEV_SUPABASE_ACCESS_TOKEN**, leave the Postgres password unchanged, and revoke the superseded token after the replacement works. Don't share either token in chat. After the workflow fix has merged, run the **read-only Supabase Development Connection Preview** on `main` first; it now tests actual SQL Read access. Proceed to a new manual deployment invocation only once that preview passes.
 
+## Read-only preflight repair after failed run #41645758506
+
+The [new deployment run](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41645758506) used the updated workflow and still failed before any SQL deployment. The [read-only preview](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41645161639) on the same commit successfully executed `SELECT 1` and listed the CPI-017 migration. Therefore a blanket missing Database Read scope is **not a supported conclusion**. Our previous failure classifier also wrongly grouped PostgreSQL `permission denied` with token authorization errors.
+
+Supabase's separate read-only SQL endpoint is experimental and [requires all entity references to be schema-qualified](https://supabase.com/docs/reference/api/v1-read-only-query). The earlier preflight used unqualified Postgres catalog helper functions. The revised preflight uses only explicitly qualified catalog relations, and the read-only preview now **executes the exact same schema preflight** before claiming readiness. The post-deployment catalog audit also qualifies its PostgreSQL built-in helpers.
+
+**Next:** merge the fix PR after CI, then run the **new** read-only preview on `main`. Only a preview that reports **`Hosted CPI-017 catalog preflight passed`** is a green light for a fresh, separately approved deployment run. Do not alter your GitHub secrets simply because the old classifier said “missing Database Read.” The earlier failure was prior to any database-writing step.
+
 ## If any check fails
 
 The workflow fails closed before applying if the ref, phrase, reviewed SQL or single pending migration differs. If the **hosted push** fails or the **post-deployment audit** fails, **do not rerun blindly**: inspect the actual remote migration history and the catalog state first, because the SQL may have applied partially or fully. Ask for targeted investigation. Never run `backend/tests/bootstrap.sql` against a hosted Supabase project.

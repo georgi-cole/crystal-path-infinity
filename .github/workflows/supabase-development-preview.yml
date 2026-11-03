@@ -73,6 +73,20 @@ jobs:
             exit 1
           fi
           echo "Supabase Database Read scope confirmed with read-only SQL."
+      - name: Run the exact deployment catalog preflight (read-only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          output="$(mktemp)"
+          trap 'rm -f "$output"' EXIT
+          # This is exactly the SQL used by the gated deployment. A green
+          # select-1 query is not proof that catalog inspection is permitted.
+          if ! supabase db query "$(cat backend/sql/cpi017-deploy-preflight.sql)" --read-only --remote="$CPI_SUPABASE_DEV_REF" > "$output" 2>&1; then
+            node backend/scripts/check-cpi017-deploy-output.mjs failure "$output"
+            exit 1
+          fi
+          node backend/scripts/check-cpi017-deploy-output.mjs audit "$output" CPI017_PRECHECK_OK
+          echo "Hosted CPI-017 catalog preflight passed; no database changes made."
       - name: Read-only preview of pending CPI-017 migration
         shell: bash
         run: |

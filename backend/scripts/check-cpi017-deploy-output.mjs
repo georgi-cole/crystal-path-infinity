@@ -39,19 +39,36 @@ export function explainCpi017ReadOnlyQueryFailure(rawOutput) {
     'Supabase project-scoped PAT needs Database → Read, alongside Project Settings → Read, ' +
     'API Keys → Read and API Key Secrets → Read. Update only the GitHub cpi-development ' +
     'environment secret CPI_DEV_SUPABASE_ACCESS_TOKEN (never share it in logs/chat).';
-  if (/\b403\b|forbidden|insufficient[-_ ]scope|missing permissions?|\bdatabase_read\b|permission denied|access denied/i.test(output)) {
-    return 'Hosted read-only SQL was denied by Supabase. ' + scopes + ' No migration applied by this step.';
+  // Do NOT infer a missing Management API PAT scope from generic PostgreSQL
+  // "permission denied" text. Supabase's SQL service uses a separate
+  // supabase_read_only_user role with its own object-level privileges.
+  if (/permission denied for (?:schema|table|relation|function|sequence)|\bSQLSTATE\s*42501\b|\b42501\b/i.test(output)) {
+    return 'The PostgreSQL read-only SQL role was denied an object or catalog reference. ' +
+      'The basic SELECT probe can still succeed with the same token. Ensure all query ' +
+      'entity references are schema-qualified; do not rotate the PAT based on this error. ' +
+      'CPI-017 migration remains blocked.';
+  }
+  if (/missing_permissions[^\n]*database_read|\bdatabase_read\b[^\n]*missing|insufficient[-_ ]scope/i.test(output)) {
+    return 'Supabase explicitly reported missing Database → Read permission. ' + scopes +
+      ' CPI-017 migration remains blocked.';
+  }
+  if (/\b403\b|forbidden|access denied/i.test(output)) {
+    return 'Supabase returned a forbidden response for this SQL query. ' +
+      'A successful read-only SELECT 1 probe shows the token can access SQL; it does ' +
+      'not establish whether this query was rejected by SQL or service-level permissions. ' +
+      'Review schema qualification and catalog access before changing credentials. ' +
+      'CPI-017 migration remains blocked.';
   }
   if (/\b401\b|unauthorized|invalid (?:access )?token|expired (?:access )?token/i.test(output)) {
     return 'Hosted read-only SQL authentication failed. Replace or check the project-scoped Supabase PAT in the correct GitHub environment. No migration applied by this step.';
   }
-  if (/syntax error|invalid (?:sql|query)|unrecognized (?:option|flag)|unknown flag|unknown command/i.test(output)) {
+  if (/syntax error|invalid (?:sql|query)|unrecognized (?:option|flag)|unknown flag|unknown command|schema.qualified|unqualified (?:name|reference|function)/i.test(output)) {
     return 'Hosted read-only SQL failed because the CLI rejected the query or flags. Inspect the pinned CLI v3 syntax and read-only SQL tests; do not bypass preflight.';
   }
   if (/connection refused|timed out|timeout|no route to host|network|temporarily unavailable/i.test(output)) {
     return 'Hosted read-only SQL failed because of connectivity or service availability. Check the target project and retry a separate read-only preview first.';
   }
-  return 'Hosted read-only SQL failed for an unconfirmed reason. ' + scopes + ' The raw CLI error was deliberately withheld to avoid credential leakage; do not bypass preflight.';
+  return 'Hosted read-only SQL failed for an unconfirmed reason. The raw CLI error was withheld to avoid leaking credentials; use the updated read-only preview to diagnose the exact catalog preflight, and do not deploy or change the token based on this message alone.';
 }
 
 export function assertCpi017Audit(rawOutput, marker) {
