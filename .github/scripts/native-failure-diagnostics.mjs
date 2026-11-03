@@ -12,10 +12,11 @@ const artifactRoot = join(repositoryRoot, 'apps/mobile/artifacts');
 export function classifyNativeFailure({ platform, failure = '', appLog = '', buildLog = '' }) {
   const evidence = [failure, appLog, buildLog].join('\n');
   const appId = 'com.georgicole.crystalpath.infinity.dev';
-  const appAnr = new RegExp(
-    String.raw`(?:^|\\n)[^\\n]*E ActivityManager: ANR in ${appId.replaceAll('.', String.raw`\\.`)}(?:[ (]|$)`,
-  );
-  if (platform === 'android' && appAnr.test(evidence)) {
+  const appAnr = evidence.split(/\\r?\\n/).some((line) => {
+    const match = line.match(/E ActivityManager: ANR in ([^\\s(]+)/);
+    return match?.[1] === appId;
+  });
+  if (platform === 'android' && appAnr) {
     return {
       category: 'app-anr',
       explanation: 'Android reported a genuine ANR against the target application. Inspect captured ANR/WindowManager traces; do not retry blindly.',
@@ -102,7 +103,7 @@ function main() {
   const summary =
     `### ${report.platform.toUpperCase()} CI failure triage\n\n` +
     `Classification: **${report.category}**. ${report.explanation}\n\n` +
-    `Evidence files: ${report.evidenceFiles.length ? report.evidenceFiles.map((f) => `\\`${f}\\``).join(', ') : 'none captured yet'}.\n\n` +
+    `Evidence files: ${report.evidenceFiles.length ? report.evidenceFiles.join(', ') : 'none captured yet'}.\n\n` +
     'This diagnostic does **not** suppress or excuse the failed native required check.\n';
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);
   console.log(JSON.stringify(report, null, 2));
