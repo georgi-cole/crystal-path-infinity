@@ -5,6 +5,10 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # Scheduled regressions run the full multi-launch Android and iOS profile.
+  # Keep required PR checks independent: a scheduled failure never becomes a PR skip.
+  schedule:
+    - cron: '23 2 * * *'
 
 permissions:
   contents: read
@@ -23,7 +27,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 12
     outputs:
-      native_required: ${{ steps.native.outputs.required }}
+      native_mode: ${{ steps.native.outputs.mode }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -34,7 +38,7 @@ jobs:
           node-version: '22.23.4'
           cache: npm
           cache-dependency-path: package-lock.json
-      - name: Select native verification from the complete diff
+      - name: Select native verification profile from the complete diff
         id: native
         run: node .github/scripts/app-checks.mjs select
       - name: Test required-check routing and failure handling
@@ -83,9 +87,11 @@ jobs:
   android:
     name: Development Android build and emulator launch
     needs: web
-    if: ${{ needs.web.outputs.native_required == 'true' }}
+    if: ${{ needs.web.outputs.native_mode == 'smoke' || needs.web.outputs.native_mode == 'full' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+    env:
+      NATIVE_PROFILE: ${{ needs.web.outputs.native_mode }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -213,7 +219,10 @@ jobs:
           cp "$ANDROID_HOME/system-images/android-36/default/x86_64/source.properties" apps/mobile/artifacts/android-system-image.properties
       - name: Open the minimum screen on Android Emulator
         timeout-minutes: 12
-        run: node --experimental-strip-types apps/mobile/scripts/smoke-native.mjs --platform android
+        run: node --experimental-strip-types apps/mobile/scripts/smoke-native.mjs --platform android --profile "$NATIVE_PROFILE"
+      - name: Classify Android failure without changing its result
+        if: ${{ failure() }}
+        run: node .github/scripts/native-failure-diagnostics.mjs --platform android
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
@@ -234,11 +243,12 @@ jobs:
   ios:
     name: Development iOS build and simulator launch
     needs: web
-    if: ${{ needs.web.outputs.native_required == 'true' }}
+    if: ${{ needs.web.outputs.native_mode == 'smoke' || needs.web.outputs.native_mode == 'full' }}
     runs-on: macos-26
     timeout-minutes: 45
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      NATIVE_PROFILE: ${{ needs.web.outputs.native_mode }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -301,7 +311,10 @@ jobs:
       - name: Open the minimum screen on iOS Simulator
         # Allow bounded first-boot migration and process startup on a fresh simulator.
         timeout-minutes: 30
-        run: node --experimental-strip-types apps/mobile/scripts/smoke-native.mjs --platform ios
+        run: node --experimental-strip-types apps/mobile/scripts/smoke-native.mjs --platform ios --profile "$NATIVE_PROFILE"
+      - name: Classify iOS failure without changing its result
+        if: ${{ failure() }}
+        run: node .github/scripts/native-failure-diagnostics.mjs --platform ios
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
@@ -339,7 +352,10 @@ jobs:
 
 # Stable required context: App required checks. Never put workflow-level path
 # filters on this workflow; native jobs are conditional and the aggregate checks
-# that a skip was explicitly selected after successful App quality.
+# that 'none' was explicitly selected after successful App quality. Full means
+# all original prebridge cold launches; smoke remains strict (one real launch,
+# native pause/resume, bridge round-trip, screenshot, zero runtime errors).
+# Scheduled/manual dispatches run full regardless of source diff.
 # Commands: developer.android.com/tools/adb and tools/avdmanager;
 # developer.android.com/studio/run/emulator-commandline and emulator-acceleration;
 # Apple's installed `xcrun simctl help` and Xcode command-line tool reference.
