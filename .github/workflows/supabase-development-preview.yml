@@ -1,0 +1,70 @@
+name: Supabase Development Connection Preview
+
+# Manual and main-only. Never provide database credentials to PR runs.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cpi-supabase-development-preview
+  cancel-in-progress: false
+
+jobs:
+  preview:
+    name: Connect development and preview migration (read-only)
+    if: ${{ github.ref == 'refs/heads/main' }}
+    environment: cpi-development
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      # Project reference is public, not a credential. Pinned to development.
+      CPI_SUPABASE_DEV_REF: jbyguybxhezjhdbenevh
+      SUPABASE_PROJECT_ID: jbyguybxhezjhdbenevh
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.CPI_DEV_SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.CPI_DEV_SUPABASE_DB_PASSWORD }}
+    steps:
+      - name: Checkout approved main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validate pinned development target and environment credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF" == 'refs/heads/main' ]] || exit 1
+          [[ "$CPI_SUPABASE_DEV_REF" == 'jbyguybxhezjhdbenevh' ]] || exit 1
+          [[ "$SUPABASE_PROJECT_ID" == "$CPI_SUPABASE_DEV_REF" ]] || exit 1
+          if [[ -z "$SUPABASE_ACCESS_TOKEN" || -z "$SUPABASE_DB_PASSWORD" ]]; then
+            echo "::error::Add CPI_DEV_SUPABASE_ACCESS_TOKEN and CPI_DEV_SUPABASE_DB_PASSWORD to the cpi-development GitHub environment. Do not put them in source code or chat."
+            exit 1
+          fi
+          test -f supabase/config.toml
+          test -f supabase/migrations/20261103000100_cpi017_foundation.sql
+          echo "Approved target: Crystal Path development ($CPI_SUPABASE_DEV_REF)."
+      - name: Install pinned Supabase CLI on GitHub runner
+        uses: supabase/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13 # v3.2.0
+        with:
+          version: '3.0.0'
+      - name: Link only to the approved development project
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Link records only disposable local CLI state; no hosted DB schema mutation.
+          supabase link --project-ref "$CPI_SUPABASE_DEV_REF"
+          if [[ -f supabase/.temp/project-ref ]]; then
+            linked="$(tr -d '\r\n' < supabase/.temp/project-ref)"
+            [[ "$linked" == "$CPI_SUPABASE_DEV_REF" ]] || {
+              echo "::error::Linked project differs from the approved development target."
+              exit 1
+            }
+          fi
+      - name: Read-only preview of pending CPI-017 migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Target: $CPI_SUPABASE_DEV_REF (development only)."
+          # Explicit CLI v3 target, --dry-run and no --yes: nothing is applied.
+          supabase db push --dry-run --remote="$CPI_SUPABASE_DEV_REF"
+          echo "Preview complete. No migration was deployed."

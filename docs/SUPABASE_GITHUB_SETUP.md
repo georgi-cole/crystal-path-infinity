@@ -10,15 +10,11 @@ The `project_id = "crystal-path-infinity"` value is **only a local workspace ide
 
 The CLI version is pinned to the current stable v3 line rather than using floating `latest`. Supabase CLI v3 differs from old examples: hosted database commands must explicitly specify `--remote`, and writes require explicit approval (`--yes` in unattended CI). This workflow deliberately contains **no hosted writes**.
 
-## Next step: connect your development project (separately)
+## Next step: development connection preview (GitHub-only)
 
-Once the repository workflow is green, we can prepare a **development-only GitHub Actions** workflow for a read-only migration preview. For that step, you will set the following through GitHub **Settings → Secrets and variables → Actions** or a protected **development** environment:
+The development Supabase Project Reference has been supplied and pinned to **`jbyguybxhezjhdbenevh`** in a new workflow. After merging its PR, set up the **`cpi-development` GitHub environment** and add two GitHub Environment secrets in your browser; instructions are in [Step 4: Supabase development connection](SUPABASE_DEV_CONNECTION.md).
 
-- A GitHub *variable* holding the **development Supabase project reference** (a non-secret identifier).
-- A GitHub *secret* for a narrowly scoped `SUPABASE_ACCESS_TOKEN` used by the official CLI.
-- Only if required by the validated connection route, an environment-scoped `SUPABASE_DB_PASSWORD` secret.
-
-Never paste passwords, access tokens, service-role keys or connection strings into a chat message, source file, a PR comment or the mobile app. Never point the CLI at The Big Eye project, staging or production during this development step. Deploy the CPI-017 SQL only after confirming the target reference and viewing the **dry-run** output; hosted deployment requires a separate approval and workflow.
+Run **Actions → Supabase Development Connection Preview → Run workflow** from `main`. It checks the project and outputs a dry-run migration preview **without applying any migration**. No installation, token entry, CLI commands or Git checkout is needed on your personal computer.
 
 ## Files
 
@@ -26,5 +22,6 @@ Never paste passwords, access tokens, service-role keys or connection strings in
 - `supabase/.gitignore`: keeps CLI local state and environment files out of Git.
 - `supabase/migrations/20261103000100_cpi017_foundation.sql`: existing backend migration (unchanged).
 - `.github/workflows/supabase-cli.yml`: installs and checks the CLI on GitHub-hosted infrastructure.
+- `.github/workflows/supabase-development-preview.yml`: connects manually to the pinned development project and previews migrations only.
 
 Official references: [Supabase CLI setup](https://supabase.com/docs/guides/local-development/cli/getting-started) and [Supabase CLI v3 changes](https://supabase.com/docs/guides/local-development/cli/migrating-to-v3).

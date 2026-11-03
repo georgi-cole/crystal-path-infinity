@@ -4,12 +4,14 @@ on:
   pull_request:
     paths:
       - 'supabase/**'
+      - '.github/workflows/supabase-development-preview.yml'
       - 'backend/**'
       - '.github/workflows/supabase-cli.yml'
   push:
     branches: [main]
     paths:
       - 'supabase/**'
+      - '.github/workflows/supabase-development-preview.yml'
       - 'backend/**'
       - '.github/workflows/supabase-cli.yml'
   workflow_dispatch:
@@ -33,6 +35,8 @@ jobs:
         uses: supabase/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13 # v3.2.0
         with:
           version: '3.0.0'
+      - name: Verify development preview cannot use credentials or write to hosted DB
+        run: node --test backend/tests/supabase-development-preview.test.mjs
       - name: Check CLI installation and migration commands
         shell: bash
         run: |
