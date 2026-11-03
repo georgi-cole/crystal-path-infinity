@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react';
 import { AudioSettingsControls } from './audio-settings-controls';
+import { LanguageSettings, PrivacyAccountSupport } from './locale-settings';
+import { useLanguage } from './language-context';
 import { BridgeTutorial } from './bridge-tutorial';
 import type { TutorialProgress } from './tutorial-progress';
 import type { PracticeLoad, PracticeSettings } from './practice-save';
-import { canResumePractice, formatRowLabel, rankedServiceState } from './menu-navigation';
+import { canResumePractice, rankedServiceState } from './menu-navigation';
 import type { MenuView } from './menu-navigation';
 import './main-menu.css';
 import './intro-hub-premium.css';
@@ -132,20 +134,23 @@ function HubUtilityControls({
   onSettingsChange,
   onOpen,
 }: Pick<MainMenuProps, 'settings' | 'onSettingsChange' | 'onOpen'>) {
+  const { t } = useLanguage();
   return (
-    <div className="cpi-hub-utilities" aria-label="Intro hub utilities">
+    <div className="cpi-hub-utilities" aria-label={t('settings.audioLegend')}>
       <div className="cpi-hub-utility-stack">
         {(
           [
-            { key: 'music', icon: 'music_v2.svg', label: 'Music' },
-            { key: 'soundEffects', icon: 'sound_v2.svg', label: 'Sound effects' },
+            { key: 'music', icon: 'music_v2.svg', label: t('settings.music') },
+            { key: 'soundEffects', icon: 'sound_v2.svg', label: t('settings.sfx') },
           ] as const
         ).map(({ key, icon, label }) => (
           <button
             key={key}
             type="button"
             className={'cpi-hub-chip' + (settings[key] ? '' : ' cpi-hub-chip--inactive')}
-            aria-label={(settings[key] ? 'Disable ' : 'Enable ') + label.toLowerCase()}
+            aria-label={t(settings[key] ? 'settings.disable' : 'settings.enable', {
+              setting: label.toLowerCase(),
+            })}
             aria-pressed={settings[key]}
             onClick={() => onSettingsChange({ ...settings, [key]: !settings[key] })}
           >
@@ -167,7 +172,7 @@ function HubUtilityControls({
       <button
         type="button"
         className="cpi-hub-chip"
-        aria-label="Open settings"
+        aria-label={t('settings.open')}
         onClick={() => onOpen('settings')}
       >
         <img
@@ -225,22 +230,28 @@ function MenuHeader({
   online: boolean;
   onBack: () => void;
 }) {
+  const { t } = useLanguage();
   return (
     <header className="cpi-menu-header">
       {view !== 'home' ? (
-        <button className="cpi-menu-back" type="button" onClick={onBack} aria-label="Back">
+        <button
+          className="cpi-menu-back"
+          type="button"
+          onClick={onBack}
+          aria-label={t('general.back')}
+        >
           <Glyph name="arrow" />
-          <span>Back</span>
+          <span>{t('general.back')}</span>
         </button>
       ) : (
         <span className="cpi-menu-series">
           Crystal Path <span aria-hidden="true">/</span> Infinity
         </span>
       )}
-      <div className="cpi-menu-status" aria-label="Current status">
-        <StatusPill>Guest</StatusPill>
+      <div className="cpi-menu-status" aria-label={t('menu.status')}>
+        <StatusPill>{t('general.guest')}</StatusPill>
         <StatusPill tone={online ? 'neutral' : 'offline'}>
-          {online ? 'Ranked not live' : 'Offline'}
+          {online ? t('general.rankedUnavailable') : t('general.offline')}
         </StatusPill>
       </div>
     </header>
@@ -256,6 +267,7 @@ function MenuHome({
   tutorialProgress,
 }: Pick<MainMenuProps, 'saved' | 'best' | 'onOpen' | 'onResume' | 'onNew' | 'tutorialProgress'>) {
   const canResume = canResumePractice(saved);
+  const { t, number } = useLanguage();
   return (
     <>
       <section className="cpi-menu-hero" aria-labelledby="menu-title">
@@ -267,38 +279,38 @@ function MenuHome({
             alt=""
           />
         </div>
-        <p className="cpi-menu-kicker">Crystal Path · Infinity Protocol</p>
+        <p className="cpi-menu-kicker">{t('menu.kicker')}</p>
         <h1 id="menu-title" data-menu-heading tabIndex={-1}>
           Infinity
         </h1>
-        <p className="cpi-menu-tagline">The bridge has no end.</p>
+        <p className="cpi-menu-tagline">{t('menu.tagline')}</p>
       </section>
 
-      <section className="cpi-menu-scoreboard" aria-label="Your progress">
+      <section className="cpi-menu-scoreboard" aria-label={t('menu.progress')}>
         <div>
-          <span className="cpi-menu-eyebrow">Personal best · Practice only</span>
-          <strong className="cpi-menu-score">Row {formatRowLabel(best)}</strong>
+          <span className="cpi-menu-eyebrow">{t('menu.personalBest')}</span>
+          <strong className="cpi-menu-score">{t('general.row', { row: number(best) })}</strong>
         </div>
-        <span className="cpi-menu-score-caption">Not a ranked score</span>
+        <span className="cpi-menu-score-caption">{t('menu.notRanked')}</span>
       </section>
 
-      <nav className="cpi-menu-actions" aria-label="Main menu">
+      <nav className="cpi-menu-actions" aria-label={t('menu.main')}>
         <MenuAction
-          label="Play"
-          description="Ranked mode · Account needed"
+          label={t('general.play')}
+          description={t('menu.playDescription')}
           icon="play"
           variant="primary"
           onClick={() => onOpen('play')}
         />
         <MenuAction
-          label="Practice"
-          description="Unlimited offline play · No account"
+          label={t('general.practice')}
+          description={t('menu.practiceDescription')}
           icon="practice"
           onClick={() => onOpen('practice')}
         />
         <MenuAction
-          label={tutorialProgress === 'completed' ? 'Replay tutorial' : 'Learn the bridge'}
-          description="Five short hands-on lessons · No saved score"
+          label={tutorialProgress === 'completed' ? t('menu.replay') : t('menu.learn')}
+          description={t('menu.tutorialDescription')}
           icon="practice"
           variant="quiet"
           onClick={() => onOpen('tutorial')}
@@ -306,20 +318,32 @@ function MenuHome({
         {canResume && saved.status === 'ready' && (
           <div className="cpi-menu-resume">
             <span className="cpi-menu-resume-copy">
-              Saved practice · Row {formatRowLabel(saved.state.currentRow)}
+              {t('menu.savedPractice', { row: number(saved.state.currentRow) })}
             </span>
             <button type="button" onClick={onResume}>
-              Resume
+              {t('general.resume')}
             </button>
             <button className="cpi-menu-resume-new" type="button" onClick={onNew}>
-              New
+              {t('general.new')}
             </button>
           </div>
         )}
         <div className="cpi-menu-grid">
-          <MenuAction label="Rankings" icon="ranking" onClick={() => onOpen('rankings')} />
-          <MenuAction label="Profile" icon="profile" onClick={() => onOpen('profile')} />
-          <MenuAction label="Settings" icon="settings" onClick={() => onOpen('settings')} />
+          <MenuAction
+            label={t('general.rankings')}
+            icon="ranking"
+            onClick={() => onOpen('rankings')}
+          />
+          <MenuAction
+            label={t('general.profile')}
+            icon="profile"
+            onClick={() => onOpen('profile')}
+          />
+          <MenuAction
+            label={t('general.settings')}
+            icon="settings"
+            onClick={() => onOpen('settings')}
+          />
         </div>
       </nav>
     </>
@@ -356,6 +380,7 @@ export function ConfirmNewPractice({
   onConfirm: () => void;
 }) {
   const damaged = saved.status === 'corrupt';
+  const { t } = useLanguage();
   return (
     <div className="cpi-menu-modal" role="presentation">
       <section
@@ -365,19 +390,15 @@ export function ConfirmNewPractice({
         aria-labelledby="cpi-new-title"
         aria-describedby="cpi-new-copy"
       >
-        <p className="cpi-menu-eyebrow">Confirm new attempt</p>
-        <h2 id="cpi-new-title">{damaged ? 'Discard damaged save?' : 'Replace saved practice?'}</h2>
-        <p id="cpi-new-copy">
-          {damaged
-            ? 'The saved checkpoint cannot be recovered. Starting fresh deletes that damaged checkpoint.'
-            : 'Starting again permanently replaces your unfinished local attempt. Your completed practice record stays.'}
-        </p>
+        <p className="cpi-menu-eyebrow">{t('menu.confirmTitle')}</p>
+        <h2 id="cpi-new-title">{damaged ? t('menu.confirmDiscard') : t('menu.confirmReplace')}</h2>
+        <p id="cpi-new-copy">{damaged ? t('menu.discardExplained') : t('menu.replaceExplained')}</p>
         <div className="cpi-menu-dialog-actions">
           <button className="cpi-menu-dialog-cancel" type="button" onClick={onCancel}>
-            Keep saved attempt
+            {t('menu.keepSaved')}
           </button>
           <button className="cpi-menu-dialog-confirm" type="button" onClick={onConfirm}>
-            Start new practice
+            {t('menu.startFresh')}
           </button>
         </div>
       </section>
@@ -403,8 +424,12 @@ export function MainMenu({
   buildLabel,
 }: MainMenuProps) {
   const service = rankedServiceState(online);
+  const { t, number } = useLanguage();
   return (
-    <main className="cpi-menu-shell" data-testid="app-ready">
+    <main
+      className={'cpi-menu-shell' + (settings.reducedMotion ? ' cpi-reduced-motion' : '')}
+      data-testid="app-ready"
+    >
       <div className="cpi-menu-orbit" aria-hidden="true" />
       <div className="cpi-menu-inner">
         <MenuHeader view={view} online={online} onBack={onBack} />
@@ -425,21 +450,18 @@ export function MainMenu({
             />
           </>
         ) : view === 'practice' ? (
-          <MenuPanel title="Practice" eyebrow="Offline · All ages">
-            <p>
-              Cross the endless bridge. Practice requires no account, age answer or analytics
-              consent.
-            </p>
+          <MenuPanel title={t('general.practice')} eyebrow={t('menu.practiceEyebrow')}>
+            <p>{t('menu.practiceIntro')}</p>
             <MenuAction
-              label={tutorialProgress === 'completed' ? 'Replay tutorial' : 'Learn the bridge'}
-              description="Try safe and wrong glass, hints and an optional mystery"
+              label={tutorialProgress === 'completed' ? t('menu.replay') : t('menu.learn')}
+              description={t('menu.tutorialExercise')}
               icon="practice"
               onClick={() => onOpen('tutorial')}
             />
             {canResumePractice(saved) && saved.status === 'ready' && (
               <MenuAction
-                label={'Resume · Row ' + formatRowLabel(saved.state.currentRow)}
-                description="Continue your saved local attempt"
+                label={t('menu.resumeSaved', { row: number(saved.state.currentRow) })}
+                description={t('menu.resumeDescription')}
                 icon="play"
                 variant="primary"
                 onClick={onResume}
@@ -447,14 +469,12 @@ export function MainMenu({
             )}
             {saved.status === 'corrupt' && <p role="alert">{saved.message}</p>}
             <MenuAction
-              label="New practice"
-              description="Start at Row 1"
+              label={t('menu.newPractice')}
+              description={t('menu.startRow1')}
               icon="practice"
               onClick={onNew}
             />
-            <p className="cpi-menu-fine-print">
-              Practice progress stays on this device. It does not enter the official rankings.
-            </p>
+            <p className="cpi-menu-fine-print">{t('menu.practiceLocal')}</p>
           </MenuPanel>
         ) : view === 'tutorial' ? (
           <BridgeTutorial
@@ -467,89 +487,76 @@ export function MainMenu({
             reducedMotion={settings.reducedMotion}
           />
         ) : view === 'play' ? (
-          <MenuPanel title="Play" eyebrow="Official ranked mode">
-            <p>
-              Ranked play is not available yet. An official attempt will require an account and the
-              applicable privacy setup before any account details are collected.
-            </p>
+          <MenuPanel title={t('general.play')} eyebrow={t('menu.playEyebrow')}>
+            <p>{t('menu.playUnavailable')}</p>
             <div className="cpi-menu-notice" role="status">
               <strong>
-                {service === 'offline' ? 'You are offline' : 'Online services not connected'}
+                {service === 'offline' ? t('menu.youOffline') : t('menu.servicesMissing')}
               </strong>
-              <span>No sign-in, rankings or ranked run can be started from this build.</span>
+              <span>{t('menu.noRankedHere')}</span>
             </div>
             <MenuAction
-              label="Practice instead"
-              description="Play now · No account needed"
+              label={t('menu.practiceInstead')}
+              description={t('menu.practiceNow')}
               icon="practice"
               variant="primary"
               onClick={() => onOpen('practice')}
             />
           </MenuPanel>
         ) : view === 'rankings' ? (
-          <MenuPanel title="Rankings" eyebrow="World · Continent · Country">
-            <p>
-              Verified Top 100 rankings will appear here when ranked services are connected. No
-              placements or sample scores are presented as real.
-            </p>
+          <MenuPanel title={t('general.rankings')} eyebrow={t('menu.rankingsScope')}>
+            <p>{t('menu.rankingsUnavailable')}</p>
             <div className="cpi-menu-notice" role="status">
               <strong>
-                {service === 'offline'
-                  ? 'Offline · Rankings unavailable'
-                  : 'Rankings not connected yet'}
+                {service === 'offline' ? t('menu.offlineRankings') : t('menu.rankingsMissing')}
               </strong>
-              <span>Local practice records do not qualify as ranked results.</span>
+              <span>{t('menu.practiceNotRanked')}</span>
             </div>
             <p className="cpi-menu-personal-summary">
-              Local personal best: Row {formatRowLabel(best)}
+              {t('menu.localBestRow', { row: number(best) })}
             </p>
             {!online && (
               <button className="cpi-menu-text-action" type="button" onClick={onRetryConnection}>
-                Recheck connection
+                {t('menu.recheck')}
               </button>
             )}
             <MenuAction
-              label="Practice offline"
+              label={t('menu.practiceOffline')}
               icon="practice"
               onClick={() => onOpen('practice')}
             />
           </MenuPanel>
         ) : view === 'profile' ? (
-          <MenuPanel title="Profile" eyebrow="Guest session">
+          <MenuPanel title={t('general.profile')} eyebrow={t('menu.profileEyebrow')}>
             <div className="cpi-menu-notice" role="status">
-              <strong>Playing as guest</strong>
-              <span>No registered profile or account is attached to this device.</span>
+              <strong>{t('menu.asGuest')}</strong>
+              <span>{t('menu.noAccount')}</span>
             </div>
-            <p>
-              When account services are available, profile setup will explain what becomes public.
-              Your age response for analytics will be optional, and no date of birth is required for
-              practice.
-            </p>
+            <p>{t('menu.profileFuture')}</p>
             <MenuAction
-              label="Practice without signing in"
+              label={t('menu.practiceUnsigned')}
               icon="practice"
               onClick={() => onOpen('practice')}
             />
           </MenuPanel>
         ) : (
-          <MenuPanel title="Settings" eyebrow="Local preferences">
-            <p>These controls are available offline and affect your practice session.</p>
+          <MenuPanel title={t('general.settings')} eyebrow={t('menu.settingsEyebrow')}>
+            <p>{t('menu.settingsIntro')}</p>
             <AudioSettingsControls settings={settings} onChange={onSettingsChange} />
             <MenuAction
-              label={tutorialProgress === 'completed' ? 'Replay tutorial' : 'Open tutorial'}
+              label={tutorialProgress === 'completed' ? t('menu.replay') : t('menu.openTutorial')}
               description={
                 tutorialProgress === 'completed'
-                  ? 'Completed · Run the lessons again'
+                  ? t('menu.tutorialDone')
                   : tutorialProgress === 'skipped'
-                    ? 'Skipped · Learn the bridge any time'
-                    : 'Five steps · Safe, wrong, hints and mystery'
+                    ? t('menu.tutorialSkipped')
+                    : t('menu.tutorialAvailable')
               }
               icon="practice"
               onClick={() => onOpen('tutorial')}
             />
-            <p className="cpi-menu-fine-print">
-              Language, privacy and account controls will be added in their dedicated tasks.
-            </p>
+            <LanguageSettings />
+            <PrivacyAccountSupport />
           </MenuPanel>
         )}
         {warning && (
@@ -559,7 +566,7 @@ export function MainMenu({
         )}
         <footer className="cpi-menu-footer">
           <span>Crystal Path: Infinity</span>
-          <span>Offline practice available</span>
+          <span>{t('menu.footerOffline')}</span>
           {buildLabel && <span>{buildLabel}</span>}
         </footer>
       </div>

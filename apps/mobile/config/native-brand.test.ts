@@ -116,10 +116,10 @@ describe('CPI-012 deterministic native icon exports', () => {
     const startup = source('src/startup-bootstrap.ts');
     const palette = source('src/brand-tokens.css');
     expect(app).toContain("bootPhase !== 'ready'");
-    expect(app).toContain('Retry startup');
-    expect(app).toContain('Play offline');
+    expect(app).toContain("t('app.retryStart')");
+    expect(app).toContain("t('app.playOffline')");
     expect(app).toContain('<MainMenu');
-    expect(menu).toContain('Offline practice');
+    expect(menu).toContain("t('menu.footerOffline')");
     expect(startup).toContain('BOOT_TIMEOUT_MS = 1500');
     expect(startup).not.toMatch(/\b(?:fetch|setInterval|trackEvent|requestAds)\s*\(/);
     expect(palette).toContain('background: var(--cpi-night)');

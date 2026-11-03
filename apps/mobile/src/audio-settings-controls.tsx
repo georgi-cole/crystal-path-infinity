@@ -1,4 +1,5 @@
 import type { PracticeSettings } from './practice-save';
+import { useLanguage } from './language-context';
 
 export function AudioSettingsControls({
   settings,
@@ -7,15 +8,16 @@ export function AudioSettingsControls({
   settings: PracticeSettings;
   onChange: (next: PracticeSettings) => void;
 }) {
+  const { t } = useLanguage();
   const toggles: { key: keyof PracticeSettings; label: string }[] = [
-    { key: 'music', label: 'Music' },
-    { key: 'soundEffects', label: 'Sound effects' },
-    { key: 'haptics', label: 'Haptic feedback' },
-    { key: 'reducedMotion', label: 'Reduce motion' },
+    { key: 'music', label: t('settings.music') },
+    { key: 'soundEffects', label: t('settings.sfx') },
+    { key: 'haptics', label: t('settings.haptics') },
+    { key: 'reducedMotion', label: t('settings.reducedMotion') },
   ];
   return (
     <fieldset className="cpi-sound-options">
-      <legend>Sound and feedback</legend>
+      <legend>{t('settings.audioLegend')}</legend>
       {toggles.map(({ key, label }) => (
         <label className="cpi-sound-toggle" key={key}>
           <input

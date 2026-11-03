@@ -19,6 +19,7 @@ import type { TutorialProgress } from './tutorial-progress';
 import type { MenuView } from './menu-navigation';
 import { markDiagnosticReactReady } from './startup-diagnostics';
 import { settleStartup } from './startup-bootstrap';
+import { useLanguage } from './language-context';
 
 const build = __CPI_BUILD_INFO__;
 const showBuildDetails = build.environment !== 'production';
@@ -42,6 +43,7 @@ interface GameOwner {
 }
 
 export function App() {
+  const { t } = useLanguage();
   const [game, setGame] = useState<GameOwner | null>(null);
   const gameRef = useRef<GameOwner | null>(null);
   const gameSequence = useRef(0);
@@ -317,16 +319,18 @@ export function App() {
         />
         <h1 id="bootstrap-brand">Crystal Path: Infinity</h1>
         {bootPhase === 'loading' ? (
-          <p role="status">Opening your path…</p>
+          <p role="status">{t('app.opening')}</p>
         ) : (
           <div className="cpi-bootstrap-failure" role="alert">
-            <p>{bootError} You can retry or start offline practice.</p>
+            <p>
+              {bootError} {t('app.startError')}
+            </p>
             <div className="cpi-bootstrap-actions">
               <button type="button" onClick={retryBootstrap}>
-                Retry startup
+                {t('app.retryStart')}
               </button>
               <button type="button" onClick={openOfflinePractice}>
-                Play offline
+                {t('app.playOffline')}
               </button>
             </div>
           </div>

@@ -18,18 +18,27 @@ import type { StandaloneAudio } from './standalone-audio';
 import { optionalHaptic } from './optional-haptic';
 import { readPracticePersonalBest, recordPracticePersonalBest } from './practice-save';
 import { presentRunOutcome } from './run-outcome';
-import { formatRowLabel } from './menu-navigation';
+import { useLanguage } from './language-context';
 import type { PracticeSettings } from './practice-save';
 import { AudioSettingsControls } from './audio-settings-controls';
 import { createPracticeRuntime, schedulePracticeTick } from './practice-runtime';
 import type { PracticePauseLease, PracticeRuntime } from './practice-runtime';
 import { presentInfinityScene } from './infinity-presentation';
-import type { PresentedRow } from './infinity-presentation';
+import type { PresentedEffect, PresentedRow } from './infinity-presentation';
+import type { MessageKey } from './i18n/messages';
 import './infinity-scene.css';
 import './infinity-hud-premium.css';
 import './run-outcome.css';
 
 const particles = Array.from({ length: 6 }, (_, index) => index);
+const EFFECT_MESSAGE: Record<PresentedEffect['kind'], MessageKey> = {
+  shield_5s: 'game.effectShield',
+  regen_5s: 'game.effectRegen',
+  lucky_5s: 'game.effectLucky',
+  fragility_5s: 'game.effectFragile',
+  drain_5s: 'game.effectDrain',
+  inversion_5s: 'game.effectInversion',
+};
 const DEFAULT_VISUAL_SKIN = {
   id: 'infinity-glass-v1',
   shell: 'cps-shell--premium',
@@ -109,8 +118,22 @@ export function InfinitySceneView({
   settings,
   onSettingsChange,
 }: InfinitySceneViewProps) {
+  const { t, number } = useLanguage();
   const presented = presentInfinityScene(state);
   const outcome = presentRunOutcome(state);
+  const clearedRows = number(state.result?.lastClearedRow ?? state.lastClearedRow);
+  const rawFatalRow = state.result?.fatalRow ?? state.death?.fatalRow ?? null;
+  const fatalRow = rawFatalRow === null ? null : number(rawFatalRow);
+  const deathCause = state.result?.deathCause ?? state.death?.cause ?? null;
+  const localizedDeathReason = deathCause
+    ? t(
+        deathCause === 'wrong_tile'
+          ? 'game.deathWrong'
+          : deathCause === 'mystery'
+            ? 'game.deathMystery'
+            : 'game.deathDrain',
+      )
+    : null;
   const overlayVisible = paused || confirmEnd || outcome.phase !== 'playing' || !!error;
   const catastrophic = state.death?.cause === 'wrong_tile' && state.status !== 'playing';
   const current = presented.rows.find((row) => row.phase === 'current');
@@ -121,20 +144,20 @@ export function InfinitySceneView({
   const notice =
     error ??
     (outcome.phase === 'verification-pending'
-      ? 'Reward verification is pending. This attempt is not finished.'
+      ? t('game.noticePending')
       : outcome.phase === 'dead' || outcome.phase === 'grant-ready'
-        ? 'The bridge gave way. The fatal row did not count.'
+        ? t('game.noticeDead')
         : outcome.phase === 'finished'
-          ? 'Practice ended. Your local result is ready.'
+          ? t('game.noticeFinished')
           : !ready
-            ? 'Preparing the bridge…'
+            ? t('game.noticePreparing')
             : paused
-              ? 'Active time is paused.'
+              ? t('game.noticePaused')
               : current?.mysteryAvailable
-                ? 'A mystery is available. Choose a side or risk the centre.'
+                ? t('game.noticeMystery')
                 : state.current.mysteryOutcome
-                  ? 'Mystery resolved. Choose left or right.'
-                  : 'Choose your next step. Cracked glass stays behind you.');
+                  ? t('game.noticeMysteryDone')
+                  : t('game.noticeChoose'));
 
   return (
     <main
@@ -171,7 +194,7 @@ export function InfinitySceneView({
         <div className="cpi-scene-toolbar">
           <span className="cpi-practice-tag">
             <span className="cpi-practice-indicator" aria-hidden="true" />
-            LOCAL · INFINITY PROTOCOL
+            {t('game.local')}
           </span>
           <div className="cpi-scene-toolbar-actions">
             <button
@@ -179,7 +202,7 @@ export function InfinitySceneView({
               className="cps-hint-btn cpi-hud-control cpi-hint-control"
               onClick={onHint}
               disabled={!interactive || state.hints === 0}
-              aria-label={`Use hint, ${state.hints} remaining`}
+              aria-label={t('game.hintButton', { count: number(state.hints) })}
             >
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path d="M12 2.8 14.5 9.5 21.2 12 14.5 14.5 12 21.2 9.5 14.5 2.8 12 9.5 9.5Z" />
@@ -192,16 +215,16 @@ export function InfinitySceneView({
               className="cpi-end-control cpi-hud-control"
               onClick={onRequestEnd}
               disabled={!ready || busy || !!error || !outcome.canEnd}
-              aria-label="End run"
+              aria-label={t('general.endRun')}
             >
-              End run
+              {t('general.endRun')}
             </button>
             <button
               type="button"
               className="cpi-pause-control cpi-hud-control"
               onClick={onPause}
               disabled={!ready || busy || !!error || state.status !== 'playing'}
-              aria-label={paused ? 'Resume game' : 'Pause game'}
+              aria-label={paused ? t('game.resumeGame') : t('game.pauseGame')}
             >
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 {paused ? (
@@ -213,7 +236,7 @@ export function InfinitySceneView({
                   </>
                 )}
               </svg>
-              <span>{paused ? 'Resume' : 'Pause'}</span>
+              <span>{paused ? t('general.resume') : t('game.pause')}</span>
             </button>
           </div>
         </div>
@@ -226,17 +249,19 @@ export function InfinitySceneView({
                 alt=""
                 aria-hidden="true"
               />
-              INFINITY / RUN
+              {t('game.run')}
             </span>
-            <span className="cps-player-name">Your path</span>
-            <span className="cps-row-display">Row {formatRowLabel(presented.currentRow)}</span>
+            <span className="cps-player-name">{t('game.yourPath')}</span>
+            <span className="cps-row-display">
+              {t('general.row', { row: number(presented.currentRow) })}
+            </span>
           </div>
           <div className="cps-header-right">
             <span className="cps-hints-display">
-              <span className="cpi-hud-small-label">HINTS</span> {state.hints}
+              <span className="cpi-hud-small-label">{t('game.hints')}</span> {state.hints}
             </span>
             <div className="cps-sp-display">
-              <span className="cps-sp-label">SURVIVAL POINTS</span>
+              <span className="cps-sp-label">{t('game.sp')}</span>
               <span className={`cps-sp-value ${spClass}`}>
                 {state.sp}
                 <span className="cpi-hud-sp-unit"> SP</span>
@@ -247,7 +272,7 @@ export function InfinitySceneView({
         <div
           className={`cps-sp-bar-main cpi-energy-meter ${state.sp <= 60 ? 'is-low' : ''}`}
           role="meter"
-          aria-label="Survival points"
+          aria-label={t('game.spAccessible')}
           aria-valuemin={0}
           aria-valuemax={MAX_SP}
           aria-valuenow={state.sp}
@@ -260,28 +285,36 @@ export function InfinitySceneView({
           </div>
           <span className="cpi-energy-marker" style={{ left: `${spPct}%` }} aria-hidden="true" />
         </div>
-        <div className="cpi-run-metrics" aria-label="Run progress and continuation counters">
+        {state.sp <= 140 && state.status === 'playing' && (
+          <p
+            className={'cpi-sp-danger-copy ' + (state.sp <= 60 ? 'is-critical' : 'is-low')}
+            role="status"
+          >
+            {t(state.sp <= 60 ? 'game.spCritical' : 'game.spLow', { sp: number(state.sp) })}
+          </p>
+        )}
+        <div className="cpi-run-metrics" aria-label={t('menu.progress')}>
           <span>
-            Cleared <strong>{outcome.clearedRows}</strong>
+            {t('game.cleared')} <strong>{clearedRows}</strong>
           </span>
           <span>
-            Continues used <strong>{outcome.appliedContinues} / 10</strong>
+            {t('game.used')} <strong>{number(outcome.appliedContinues)} / 10</strong>
           </span>
           <span>
-            Grants earned <strong>{outcome.grantedContinues} / 10</strong>
+            {t('game.granted')} <strong>{number(outcome.grantedContinues)} / 10</strong>
           </span>
           <span>
-            Grant quota left <strong>{outcome.grantsRemaining}</strong>
+            {t('game.quota')} <strong>{number(outcome.grantsRemaining)}</strong>
           </span>
         </div>
         {presented.effects.length > 0 && (
-          <div className="cps-effects" aria-label="Active effects">
+          <div className="cps-effects" aria-label={t('game.effects')}>
             {presented.effects.map((effect, i) => (
               <span
                 key={effect.kind + ':' + i}
                 className={`cps-effect ${effect.positive ? 'is-pos' : 'is-neg'}`}
               >
-                <span className="cps-effect-name">{effect.name}</span>
+                <span className="cps-effect-name">{t(EFFECT_MESSAGE[effect.kind])}</span>
                 <span className="cps-effect-timer">{(effect.remainingMs / 1000).toFixed(1)}s</span>
                 <span
                   className="cps-effect-bar"
@@ -292,7 +325,7 @@ export function InfinitySceneView({
             ))}
           </div>
         )}
-        <section className="cps-board" aria-label="Endless crystal bridge">
+        <section className="cps-board" aria-label={t('game.bridge')} dir="ltr">
           <div className="cps-bridge-track">
             {presented.rows.map((row) => (
               <div
@@ -303,16 +336,25 @@ export function InfinitySceneView({
                 <button
                   type="button"
                   className={tileClass(row, 'left', feedback)}
-                  aria-label={`Row ${row.label} left tile`}
+                  aria-label={t('game.leftTile', { row: number(row.label) })}
                   onClick={() => onChoose('left')}
                   disabled={!interactive || row.phase !== 'current'}
-                />
+                >
+                  {row.phase === 'past' && row.chosen === 'left' && (
+                    <span className="cpi-tile-feedback-text">
+                      {t(row.wrong ? 'game.wrongTile' : 'game.safeTile')}
+                    </span>
+                  )}
+                  {row.phase === 'current' && row.hint === 'left' && (
+                    <span className="cpi-tile-feedback-text">{t('game.hintedTile')}</span>
+                  )}
+                </button>
                 <div className="cps-center">
                   {row.hasMystery && (
                     <button
                       type="button"
                       className="cps-tile cps-tile-center"
-                      aria-label={`Row ${row.label} mystery tile`}
+                      aria-label={t('game.mysteryTile', { row: number(row.label) })}
                       onClick={onMystery}
                       disabled={!interactive || !row.mysteryAvailable}
                     >
@@ -323,12 +365,21 @@ export function InfinitySceneView({
                 <button
                   type="button"
                   className={tileClass(row, 'right', feedback)}
-                  aria-label={`Row ${row.label} right tile`}
+                  aria-label={t('game.rightTile', { row: number(row.label) })}
                   onClick={() => onChoose('right')}
                   disabled={!interactive || row.phase !== 'current'}
-                />
+                >
+                  {row.phase === 'past' && row.chosen === 'right' && (
+                    <span className="cpi-tile-feedback-text">
+                      {t(row.wrong ? 'game.wrongTile' : 'game.safeTile')}
+                    </span>
+                  )}
+                  {row.phase === 'current' && row.hint === 'right' && (
+                    <span className="cpi-tile-feedback-text">{t('game.hintedTile')}</span>
+                  )}
+                </button>
                 <span className="cps-row-label" aria-hidden="true">
-                  {row.label}
+                  {number(row.label)}
                 </span>
               </div>
             ))}
@@ -346,9 +397,7 @@ export function InfinitySceneView({
         <p className="visually-hidden" role="status" aria-live="polite">
           {notice}
         </p>
-        <p className="cpi-scene-footer">
-          Local practice · Not a ranked score · No fixed finish line
-        </p>
+        <p className="cpi-scene-footer">{t('game.footer')}</p>
       </div>
       {overlayVisible && (
         <div className="cpi-overlay">
@@ -360,35 +409,29 @@ export function InfinitySceneView({
           >
             {error ? (
               <>
-                <h2 id="cpi-run-outcome-title">Clock needs attention</h2>
+                <h2 id="cpi-run-outcome-title">{t('game.clockTitle')}</h2>
                 <p role="alert">{error}</p>
-                <p>Progress remains recoverable. No final score was submitted.</p>
+                <p>{t('game.clockRecover')}</p>
                 <div className="cpi-overlay-actions">
                   <button type="button" data-cpi-overlay-primary onClick={onRetry}>
-                    Retry clock
+                    {t('game.retryClock')}
                   </button>
                   <button type="button" onClick={onExit}>
-                    Save and leave
+                    {t('general.saveLeave')}
                   </button>
                 </div>
               </>
             ) : confirmEnd && outcome.canEnd ? (
               <>
-                <h2 id="cpi-run-outcome-title">End this run?</h2>
+                <h2 id="cpi-run-outcome-title">{t('game.confirmTitle')}</h2>
                 <p>
-                  Your last cleared row is <strong>{outcome.clearedRows}</strong>.
-                  {outcome.fatalRow !== null
-                    ? ' The fatal row ' + outcome.fatalRow + ' will not count.'
-                    : ' The current unfinished row will not count.'}
+                  {t('game.confirmCleared', { row: clearedRows })}{' '}
+                  {fatalRow !== null
+                    ? t('game.confirmFatal', { row: fatalRow })
+                    : t('game.confirmUnfinished')}
                 </p>
-                {outcome.forfeitsGrant && (
-                  <p role="alert">
-                    You have a granted but unused continuation. Ending explicitly forfeits it.
-                  </p>
-                )}
-                <p>
-                  This permanently finishes the local attempt. It does not submit a ranked score.
-                </p>
+                {outcome.forfeitsGrant && <p role="alert">{t('game.confirmForfeit')}</p>}
+                <p>{t('game.confirmLocal')}</p>
                 <div className="cpi-overlay-actions">
                   <button
                     type="button"
@@ -396,7 +439,7 @@ export function InfinitySceneView({
                     disabled={busy}
                     onClick={onCancelEnd}
                   >
-                    Keep attempt
+                    {t('game.keepAttempt')}
                   </button>
                   <button
                     type="button"
@@ -404,95 +447,91 @@ export function InfinitySceneView({
                     onClick={onEnd}
                     className="cpi-run-danger-action"
                   >
-                    {outcome.forfeitsGrant ? 'End and forfeit grant' : 'Confirm End run'}
+                    {outcome.forfeitsGrant ? t('game.confirmForfeitButton') : t('game.confirmEnd')}
                   </button>
                 </div>
               </>
             ) : outcome.phase === 'verification-pending' ? (
               <>
-                <h2 id="cpi-run-outcome-title">Verification pending</h2>
-                <p>
-                  Your reward has not been verified. Row {outcome.clearedRows} is your last
-                  confirmed progress, not a final result.
-                </p>
-                <p role="status">
-                  This attempt remains recoverable and unpublished. No second reward can be
-                  requested while verification is pending.
-                </p>
+                <h2 id="cpi-run-outcome-title">{t('game.pendingTitle')}</h2>
+                <p>{t('game.pendingExplanation', { row: clearedRows })}</p>
+                <p role="status">{t('game.pendingRecovery')}</p>
                 <div className="cpi-overlay-actions">
                   <button type="button" data-cpi-overlay-primary onClick={onExit}>
-                    Save and leave · Pending
+                    {t('game.savePending')}
                   </button>
                 </div>
               </>
             ) : outcome.phase === 'finished' ? (
               <>
-                <p className="cpi-run-status-label">OFFLINE PRACTICE · NOT VERIFIED</p>
-                <h2 id="cpi-run-outcome-title">Run complete</h2>
+                <p className="cpi-run-status-label">{t('game.practiceUnverified')}</p>
+                <h2 id="cpi-run-outcome-title">{t('game.complete')}</h2>
                 <div className="cpi-result-score">
-                  <span>Rows cleared</span>
-                  <strong>{outcome.clearedRows}</strong>
+                  <span>{t('game.rowsCleared')}</span>
+                  <strong>{clearedRows}</strong>
                 </div>
                 <dl className="cpi-result-details">
                   <div>
-                    <dt>Fatal row</dt>
-                    <dd>{outcome.fatalRow ?? 'None'}</dd>
+                    <dt>{t('game.fatalRow')}</dt>
+                    <dd>{fatalRow ?? t('general.none')}</dd>
                   </div>
                   <div>
-                    <dt>Active time</dt>
+                    <dt>{t('game.activeTime')}</dt>
                     <dd>{outcome.activeTime}</dd>
                   </div>
                   <div>
-                    <dt>Continues applied</dt>
+                    <dt>{t('game.revivesApplied')}</dt>
                     <dd>{outcome.appliedContinues}</dd>
                   </div>
                   <div>
-                    <dt>Personal best · Local</dt>
-                    <dd>{personalBest === null ? 'Not saved' : formatRowLabel(personalBest)}</dd>
+                    <dt>{t('game.bestLocal')}</dt>
+                    <dd>{personalBest === null ? t('general.notSaved') : number(personalBest)}</dd>
                   </div>
                 </dl>
-                {outcome.deathReason && <p>{outcome.deathReason}</p>}
-                {newPersonalBest && <p className="cpi-new-best">New local personal best</p>}
-                <p>Saved practice result only. Official submission and rankings are not live.</p>
+                {localizedDeathReason && <p>{localizedDeathReason}</p>}
+                {newPersonalBest && <p className="cpi-new-best">{t('game.bestNew')}</p>}
+                <p>{t('game.resultLocal')}</p>
                 <div className="cpi-overlay-actions">
                   <button type="button" data-cpi-overlay-primary onClick={onRestart}>
-                    Next run
+                    {t('game.nextRun')}
                   </button>
                   <button type="button" onClick={onViewRankings}>
-                    Rankings (not live)
+                    {t('game.rankingsNotLive')}
                   </button>
                   <button type="button" onClick={onExit}>
-                    Return to menu
+                    {t('game.returnMenu')}
                   </button>
                 </div>
               </>
             ) : outcome.phase === 'dead' || outcome.phase === 'grant-ready' ? (
               <>
-                <h2 id="cpi-run-outcome-title">The bridge gave way</h2>
-                {outcome.deathReason && <p>{outcome.deathReason}</p>}
+                <h2 id="cpi-run-outcome-title">{t('game.deathTitle')}</h2>
+                {localizedDeathReason && <p>{localizedDeathReason}</p>}
                 <div className="cpi-result-score">
-                  <span>Rows cleared</span>
-                  <strong>{outcome.clearedRows}</strong>
+                  <span>{t('game.rowsCleared')}</span>
+                  <strong>{clearedRows}</strong>
                 </div>
-                <p>Fatal row {outcome.fatalRow} does not count toward your score.</p>
+                <p>{t('game.fatalNotCounted', { row: fatalRow ?? t('general.none') })}</p>
                 {outcome.offer ? (
                   <div className="cpi-revive-offer">
                     <strong>
-                      Continue #{outcome.offer.ordinal} · Restore {outcome.offer.restoreSp} SP
+                      {t('game.offerTitle', {
+                        index: number(outcome.offer.ordinal),
+                        sp: number(outcome.offer.restoreSp),
+                      })}
                     </strong>
                     <span>
-                      The restore <strong>sets</strong> SP to {outcome.offer.restoreSp}; it does not
-                      add points. {outcome.offer.grantsRemaining} reward grants remain.
+                      {t('game.offerDetail', {
+                        sp: number(outcome.offer.restoreSp),
+                        remaining: number(outcome.offer.grantsRemaining),
+                      })}
                     </span>
-                    <span>Rewarded continue is not connected in offline practice yet.</span>
+                    <span>{t('game.offerUnavailable')}</span>
                   </div>
                 ) : outcome.phase === 'grant-ready' ? (
-                  <p role="status">
-                    A continuation was granted but not applied. No additional ad is available for
-                    this death; ending explicitly forfeits the grant.
-                  </p>
+                  <p role="status">{t('game.grantReady')}</p>
                 ) : (
-                  <p>No further continues remain for this attempt.</p>
+                  <p>{t('game.noContinues')}</p>
                 )}
                 <div className="cpi-overlay-actions">
                   <button
@@ -501,28 +540,28 @@ export function InfinitySceneView({
                     disabled={busy}
                     onClick={onRequestEnd}
                   >
-                    End run
+                    {t('general.endRun')}
                   </button>
                   <button type="button" disabled={busy} onClick={onExit}>
-                    Save and leave
+                    {t('general.saveLeave')}
                   </button>
                 </div>
               </>
             ) : (
               <>
-                <h2 id="cpi-run-outcome-title">Paused</h2>
-                <p>The game clock and every timed effect are frozen. The run is not finished.</p>
-                <p>Rows cleared: {outcome.clearedRows}</p>
+                <h2 id="cpi-run-outcome-title">{t('game.paused')}</h2>
+                <p>{t('game.pausedExplanation')}</p>
+                <p>{t('game.pausedRows', { row: clearedRows })}</p>
                 <AudioSettingsControls settings={settings} onChange={onSettingsChange} />
                 <div className="cpi-overlay-actions">
                   <button type="button" data-cpi-overlay-primary disabled={busy} onClick={onPause}>
-                    Resume
+                    {t('general.resume')}
                   </button>
                   <button type="button" disabled={busy} onClick={onRequestEnd}>
-                    End run
+                    {t('general.endRun')}
                   </button>
                   <button type="button" disabled={busy} onClick={onExit}>
-                    Save and leave
+                    {t('general.saveLeave')}
                   </button>
                 </div>
               </>
@@ -573,6 +612,7 @@ function InfinityRun({
   settings,
   onSettingsChange,
 }: InfinityRunProps) {
+  const { t } = useLanguage();
   const [initial] = useState(() => initialState ?? makeInitialRun());
   const [initialAudioSettings] = useState(settings);
   const lastCommittedActiveMs = useRef(-500);
@@ -790,9 +830,7 @@ function InfinityRun({
       const runtime = runtimeRef.current;
       if (
         (runtime?.getState().status ?? state.status) === 'playing' &&
-        !window.confirm(
-          'Save and leave practice? Your latest checkpoint stays available to resume. This does NOT end the run.',
-        )
+        !window.confirm(t('app.saveLeaveConfirm'))
       ) {
         onExitCancelled();
         return;
@@ -811,7 +849,7 @@ function InfinityRun({
     } finally {
       exitLock.current = false;
     }
-  }, [state.status, paused, onCheckpoint, onExit, onExitCancelled]);
+  }, [state.status, paused, onCheckpoint, onExit, onExitCancelled, t]);
 
   const handledExitRequest = useRef(0);
   useEffect(() => {
