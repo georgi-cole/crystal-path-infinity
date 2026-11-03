@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
+import { LanguageProvider } from './i18n';
 import { startStartupDiagnostics } from './startup-diagnostics';
 import { getGameplayLifecycle } from './gameplay-lifecycle';
 import './styles.css';
@@ -19,6 +20,8 @@ if (!root) throw new Error('The application root is missing.');
 
 createRoot(root).render(
   <StrictMode>
-    <App />
+    <LanguageProvider>
+      <App />
+    </LanguageProvider>
   </StrictMode>,
 );
