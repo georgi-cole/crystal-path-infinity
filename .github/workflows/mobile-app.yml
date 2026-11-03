@@ -45,13 +45,6 @@ jobs:
         run: node --test .github/scripts/app-checks.test.mjs
       - name: Install the clean workspace
         run: npm ci --ignore-scripts
-      - name: CPI-018 temporary canonical formatting diagnostic
-        run: |
-          for path in apps/mobile/src/account/otp-flow.ts apps/mobile/src/account/otp-gateway.ts apps/mobile/src/account/account-entry.tsx apps/mobile/config/account-intake.test.ts apps/mobile/config/account-gateway.test.ts; do
-            echo "CPI018_FORMAT_BEGIN:$path"
-            npx prettier "$path"
-            echo "CPI018_FORMAT_END:$path"
-          done
       - name: Record installed dependencies
         run: |
           mkdir -p apps/mobile/artifacts

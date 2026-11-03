@@ -9,9 +9,7 @@ export interface EligibilityPermit {
   policyVersion: string;
   expiresAt: number;
 }
-export type EligibilityDecision =
-  | EligibilityPermit
-  | { status: 'parental_review' | 'unavailable' };
+export type EligibilityDecision = EligibilityPermit | { status: 'parental_review' | 'unavailable' };
 
 export interface OtpGateway {
   eligibility(): Promise<unknown>;
@@ -32,13 +30,7 @@ export type AccountFlowStep =
   | 'offline';
 
 export type AccountFlowProblem =
-  | 'invalid_email'
-  | 'invalid_code'
-  | 'expired'
-  | 'rate_limited'
-  | 'retry'
-  | 'cooldown'
-  | null;
+  'invalid_email' | 'invalid_code' | 'expired' | 'rate_limited' | 'retry' | 'cooldown' | null;
 
 export interface AccountFlowSnapshot {
   step: AccountFlowStep;

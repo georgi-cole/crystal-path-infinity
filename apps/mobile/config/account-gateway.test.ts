@@ -53,7 +53,9 @@ describe('CPI-018 trusted OTP gateway boundary', () => {
 
   it('never forwards service errors or response bodies to the UI', async () => {
     const fake: typeof fetch = () =>
-      Promise.resolve(new Response(JSON.stringify({ email: 'private@example.org' }), { status: 429 }));
+      Promise.resolve(
+        new Response(JSON.stringify({ email: 'private@example.org' }), { status: 429 }),
+      );
     const gateway = createOtpGateway('https://account.example.net/v1/account', fake);
     await expect(gateway?.requestCode('private@example.org', 'ticket')).rejects.toMatchObject({
       kind: 'rate_limited',
