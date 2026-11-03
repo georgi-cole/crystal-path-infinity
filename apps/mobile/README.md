@@ -20,7 +20,13 @@ The local native `CpiSecureSession` plugin now provides **refresh-token-only** p
 
 The profile now includes a **fail-closed account eligibility and one-time-code flow**. It has no email field until a trusted server grants a short-lived, policy-versioned eligibility permit; parental-review/unknown answers never implicitly count as adult permission. Requests go only to the explicitly configured HTTPS `VITE_ACCOUNT_API_BASE_URL` with fixed `/eligibility`, `/otp/request`, and `/otp/verify` endpoints; the client never calls Supabase's public `/auth/v1/otp` directly or saves user data to practice. The backend must **revalidate permits for every OTP request** and enforce jurisdiction-appropriate privacy and guardian requirements. The UI is disabled by default because the production-grade server, consent policies, and Auth hooks are not deployed yet.
 
-OTP verification ends in an explicit *not signed in* state until a later session-owner/revocation PR is complete. It never creates a verified ranked result. See [the gated-OTP decision](../../docs/decisions/CPI-018-privacy-otp.md).
+OTP verification still ends in an explicit *not signed in* state until the approved backend issues an exchange ticket and implements server-side session revocation. It never creates a verified ranked result. See [the gated-OTP decision](../../docs/decisions/CPI-018-privacy-otp.md).
+
+## CPI-018 session lifecycle (phase 3)
+
+The new injected `AccountSessionOwner` provides a tested contract for explicit native session restoration, rotating refresh credentials, memory-only bearer access, logout and server revocation. A verified OTP **alone** is not a session. The owner rejects subject switching and stale post-logout account responses, and reports incomplete remote revocation without pretending the account is safely logged out everywhere. The new `createSessionTransport` prepares fixed HTTPS `/session/*` endpoints but initiates no requests until invoked by an approved caller.
+
+**This layer is not wired into the Profile UX or startup**, and real account registration, email delivery, parental review, Supabase session issuance, server token-family revocation, cross-device validation and ranked endpoints remain unavailable. No app key, hosted database write or new Supabase migration is involved. See [the session lifecycle contract](../../docs/decisions/CPI-018-session-owner.md).
 
 ## CPI-013 navigation and local progress
 
