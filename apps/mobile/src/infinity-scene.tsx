@@ -24,12 +24,21 @@ import { AudioSettingsControls } from './audio-settings-controls';
 import { createPracticeRuntime, schedulePracticeTick } from './practice-runtime';
 import type { PracticePauseLease, PracticeRuntime } from './practice-runtime';
 import { presentInfinityScene } from './infinity-presentation';
-import type { PresentedRow } from './infinity-presentation';
+import type { PresentedEffect, PresentedRow } from './infinity-presentation';
+import type { MessageKey } from './i18n/messages';
 import './infinity-scene.css';
 import './infinity-hud-premium.css';
 import './run-outcome.css';
 
 const particles = Array.from({ length: 6 }, (_, index) => index);
+const EFFECT_MESSAGE: Record<PresentedEffect['kind'], MessageKey> = {
+  shield_5s: 'game.effectShield',
+  regen_5s: 'game.effectRegen',
+  lucky_5s: 'game.effectLucky',
+  fragility_5s: 'game.effectFragile',
+  drain_5s: 'game.effectDrain',
+  inversion_5s: 'game.effectInversion',
+};
 const DEFAULT_VISUAL_SKIN = {
   id: 'infinity-glass-v1',
   shell: 'cps-shell--premium',
@@ -294,7 +303,7 @@ export function InfinitySceneView({
                 key={effect.kind + ':' + i}
                 className={`cps-effect ${effect.positive ? 'is-pos' : 'is-neg'}`}
               >
-                <span className="cps-effect-name">{effect.name}</span>
+                <span className="cps-effect-name">{t(EFFECT_MESSAGE[effect.kind])}</span>
                 <span className="cps-effect-timer">{(effect.remainingMs / 1000).toFixed(1)}s</span>
                 <span
                   className="cps-effect-bar"
@@ -359,7 +368,7 @@ export function InfinitySceneView({
                   )}
                 </button>
                 <span className="cps-row-label" aria-hidden="true">
-                  {row.label}
+                  {number(row.label)}
                 </span>
               </div>
             ))}
