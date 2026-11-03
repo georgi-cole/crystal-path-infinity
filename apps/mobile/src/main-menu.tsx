@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { AudioSettingsControls } from './audio-settings-controls';
+import { AccountEntry } from './account/account-entry';
 import { LanguageSettings, PrivacyAccountSupport } from './locale-settings';
 import { useLanguage } from './language-context';
 import { BridgeTutorial } from './bridge-tutorial';
@@ -533,6 +534,7 @@ export function MainMenu({
               <span>{t('menu.noAccount')}</span>
             </div>
             <p>{t('menu.profileFuture')}</p>
+            <AccountEntry online={online} />
             <MenuAction
               label={t('menu.practiceUnsigned')}
               icon="practice"
