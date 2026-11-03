@@ -25,7 +25,7 @@ test('target is fixed to the supplied development ref and credentials come only 
 test('no remote write, reset, seeding, or automatic confirmation is possible', () => {
   const commands = yaml
     .split('\n')
-    .filter((line) => /^\s+supabase\s/.test(line))
+    .filter((line) => /^\s+(?:if ! )?supabase\s/.test(line))
     .map((line) => line.trim());
   assert.deepEqual(commands, [
     'supabase link --project-ref "$CPI_SUPABASE_DEV_REF"',

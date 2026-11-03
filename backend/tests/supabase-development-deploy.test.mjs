@@ -89,7 +89,7 @@ test('reviewed SQL is hash-pinned and not replaced by new/additional migrations'
 test('only one CLI command can mutate remote SQL; all other database checks are read-only', () => {
   const commands = workflow
     .split('\n')
-    .filter((line) => /^\s+supabase\s/.test(line))
+    .filter((line) => /^\s+(?:if ! )?supabase\s/.test(line))
     .map((line) => line.trim());
   assert.deepEqual(commands, [
     'supabase link --project-ref "$CPI_SUPABASE_DEV_REF"',
