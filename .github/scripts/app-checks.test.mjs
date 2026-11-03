@@ -147,6 +147,7 @@ test('nightly and manual select full; unknown or missing git context fails close
 });
 
 const results = (mode, quality = 'success', android = 'success', ios = 'success') => ({
+  database: { result: 'success' },
   web: { result: quality, outputs: { native_mode: mode } },
   android: { result: android },
   ios: { result: ios },
@@ -187,6 +188,14 @@ test('aggregate rejects missing profile, masked native failures and improper ski
     () => assertAppGate(results('none', 'success', 'success', 'skipped')),
     /must be skipped/,
   );
+});
+
+test('aggregate fails closed if PostgreSQL schema, grants or adversarial role tests fail', () => {
+  for (const status of ['failure', 'cancelled', 'skipped', undefined]) {
+    const needs = results('none', 'success', 'skipped', 'skipped');
+    needs.database.result = status;
+    assert.throws(() => assertAppGate(needs), /Backend schema\/security checks did not succeed/);
+  }
 });
 
 test('failure classification never mistakes a target ANR for runner success', () => {

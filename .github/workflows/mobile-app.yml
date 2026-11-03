@@ -332,10 +332,59 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
+  database:
+    name: Backend schema and access controls
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: cpi_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: cpi_ci_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d cpi_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: '5432'
+      PGDATABASE: cpi_ci
+      PGUSER: postgres
+      PGPASSWORD: cpi_ci_only
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.23.4'
+      - name: PostgreSQL client
+        run: |
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install --yes --no-install-recommends postgresql-client
+          fi
+          psql --version
+      - name: Apply migration to isolated empty PostgreSQL
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -f backend/tests/bootstrap.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261103000100_cpi017_foundation.sql
+      - name: Assert RLS, grants, privacy boundaries and server-only writes
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -f backend/tests/assertions.sql
+          bash backend/tests/negative-access.sh
+      - name: Validate independent backend environments and public-variable guard
+        run: node --test backend/tests/environments.test.mjs
+
   required:
     name: App required checks
     if: ${{ always() }}
-    needs: [web, android, ios]
+    needs: [web, android, ios, database]
     runs-on: ubuntu-24.04
     timeout-minutes: 3
     steps:
@@ -345,11 +394,12 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22.23.4'
-      - name: Require quality and every selected native result
+      - name: Require backend security, quality and every selected native result
         env:
           APP_CHECK_RESULTS: ${{ toJSON(needs) }}
         run: node .github/scripts/app-checks.mjs gate
 
+# The backend security job always runs, independent of the native smoke/full/none profile.
 # Stable required context: App required checks. Never put workflow-level path
 # filters on this workflow; native jobs are conditional and the aggregate checks
 # that 'none' was explicitly selected after successful App quality. Full means
