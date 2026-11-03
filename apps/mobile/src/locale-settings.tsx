@@ -45,7 +45,9 @@ export function LanguageSettings() {
   );
 }
 
-export function PrivacyAccountSupport() {
+export function PrivacyAccountSupport({
+  accountAvailable = false,
+}: { accountAvailable?: boolean } = {}) {
   const { t } = useLanguage();
   return (
     <div className="cpi-settings-destinations">
@@ -56,7 +58,7 @@ export function PrivacyAccountSupport() {
       </section>
       <section className="cpi-settings-section" aria-labelledby="cpi-account-heading">
         <h2 id="cpi-account-heading">{t('settings.accountTitle')}</h2>
-        <p>{t('settings.accountUnavailable')}</p>
+        <p>{t(accountAvailable ? 'settings.accountAvailable' : 'settings.accountUnavailable')}</p>
       </section>
       <section className="cpi-settings-section" aria-labelledby="cpi-support-heading">
         <h2 id="cpi-support-heading">{t('settings.supportTitle')}</h2>

@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useLanguage } from '../language-context';
-import { ageBandFromInput } from './profile-client';
+import { ageBandFromInput, profileForAccount } from './profile-client';
 import type {
   OwnerProfile,
   ProfileClient,
@@ -19,13 +19,22 @@ export function ProfileEditor({
   online: boolean;
 }) {
   const { t, locale } = useLanguage();
+  const readScope = useCallback(() => client?.accountScope?.() ?? null, [client]);
+  const subscribeScope = useCallback(
+    (observer: () => void) => client?.subscribeAccountScope?.(observer) ?? (() => undefined),
+    [client],
+  );
+  const accountScope = useSyncExternalStore(subscribeScope, readScope, readScope);
   const [loaded, setLoaded] = useState<{
     client: ProfileClient | null;
+    accountScope: object | null;
     owner: OwnerProfile | null;
-  }>({ client: null, owner: null });
+  }>({ client: null, accountScope: null, owner: null });
   // Identity is checked during render, before an effect can clear old state.
-  // The caller replaces this client when the verified account changes.
-  const owner = loaded.client === client ? loaded.owner : null;
+  const owner =
+    loaded.client === client
+      ? profileForAccount(loaded.owner, loaded.accountScope, accountScope)
+      : null;
   const [username, setUsername] = useState('');
   const [country, setCountry] = useState('');
   const [age, setAge] = useState('');
@@ -45,19 +54,23 @@ export function ProfileEditor({
     void Promise.resolve().then(async () => {
       if (controller.signal.aborted) return;
       setAge('');
-      setLoaded({ client, owner: null });
+      setUsername('');
+      setCountry('');
+      setAnalytics('keep');
+      setLoaded({ client, accountScope, owner: null });
       setProblem(null);
       setPhase('loading');
-      if (!client || !online) return;
+      if (!client || !online || !accountScope) return;
       let result: ProfileResult;
       try {
         result = await client.load(controller.signal);
       } catch {
         result = { ok: false, problem: 'unavailable' };
       }
-      if (controller.signal.aborted || generation !== epoch.current) return;
+      if (controller.signal.aborted || generation !== epoch.current || readScope() !== accountScope)
+        return;
       if (result.ok) {
-        setLoaded({ client, owner: result.value });
+        setLoaded({ client, accountScope, owner: result.value });
         setUsername(result.value.profile?.username ?? '');
         setCountry(result.value.profile?.countryCode ?? '');
         setAnalytics('keep');
@@ -73,7 +86,7 @@ export function ProfileEditor({
       request.current = null;
       epoch.current = {};
     };
-  }, [client, online, attempt]);
+  }, [client, online, attempt, accountScope, readScope]);
 
   async function save() {
     if (!client || !online || !owner || phase === 'saving') return;
@@ -105,9 +118,10 @@ export function ProfileEditor({
     } catch {
       result = { ok: false, problem: 'unavailable' };
     }
-    if (controller.signal.aborted || generation !== epoch.current) return;
+    if (controller.signal.aborted || generation !== epoch.current || readScope() !== accountScope)
+      return;
     if (result.ok) {
-      setLoaded({ client, owner: result.value });
+      setLoaded({ client, accountScope, owner: result.value });
       setUsername(result.value.profile?.username ?? '');
       setCountry(result.value.profile?.countryCode ?? '');
       setAnalytics('keep');
@@ -129,14 +143,16 @@ export function ProfileEditor({
     analytics_not_allowed: t('profile.analyticsUnavailable'),
     age_invalid: t('profile.ageInvalid'),
   };
-  const visiblePhase = loaded.client === client && online && client ? phase : 'loading';
-  const visibleProblem = loaded.client === client && online && client ? problem : null;
+  const currentIdentity =
+    loaded.client === client && loaded.accountScope === accountScope && accountScope !== null;
+  const visiblePhase = currentIdentity && online && client ? phase : 'loading';
+  const visibleProblem = currentIdentity && online && client ? problem : null;
   const names = new Intl.DisplayNames([locale], { type: 'region' });
   return (
     <section className="cpi-profile-editor" aria-labelledby="cpi-profile-title">
       <h2 id="cpi-profile-title">{t('profile.title')}</h2>
       <p>{t('profile.pseudonym')}</p>
-      {!client ? (
+      {!client || !accountScope ? (
         <p role="status">{t('profile.signInFirst')}</p>
       ) : !online ? (
         <p role="status">{t('profile.offline')}</p>

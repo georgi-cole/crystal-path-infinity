@@ -83,6 +83,9 @@ describe('PostgreSQL ranked transaction adapter', () => {
       call.text.includes('insert into cpi_private.ranked_receipts'),
     )!;
     expect(insert.text).toContain('on conflict (id) do update');
+    expect(insert.text).toContain(
+      'coalesce((select created_at from cpi_private.ranked_runs where id=$1::uuid and user_id=$2::uuid),$14::timestamptz)',
+    );
     expect(insert.text).toContain("existing.status<>'finished'");
     expect(insert.text).not.toContain(subject);
     expect(insert.values?.[1]).toBe(subject);
@@ -105,6 +108,48 @@ describe('PostgreSQL ranked transaction adapter', () => {
     expect(connection.calls.at(-1)?.text).toBe('rollback');
     expect(connection.calls.some((call) => call.text === 'commit')).toBe(false);
     expect(connection.releases).toEqual([undefined]);
+  });
+
+  it('publishes a finished authoritative result in the same transaction and rolls back if publication fails', async () => {
+    const { connection, start, authority, actor } = fixture();
+    const started = await start();
+    const insert = connection.calls.find((call) =>
+      call.text.includes('insert into cpi_private.ranked_runs'),
+    )!;
+    connection.active = JSON.parse(String(insert.values?.[4]));
+    connection.calls.length = 0;
+    await authority.execute(actor, {
+      runId,
+      sequence: '1',
+      idempotencyKey: '00000000-0000-4000-8000-000000000124',
+      leaseToken: started.lease.token,
+      command: { type: 'end' },
+    });
+    const published = connection.calls.findIndex((call) =>
+      call.text.includes('publish_ranked_result'),
+    );
+    assertBeforeCommit();
+    function assertBeforeCommit() {
+      expect(published).toBeGreaterThan(
+        connection.calls.findIndex((call) =>
+          call.text.includes('insert into cpi_private.ranked_runs'),
+        ),
+      );
+      expect(published).toBeLessThan(connection.calls.findIndex((call) => call.text === 'commit'));
+    }
+    connection.calls.length = 0;
+    connection.fail = 'publish_ranked_result';
+    await expect(
+      authority.execute(actor, {
+        runId,
+        sequence: '1',
+        idempotencyKey: '00000000-0000-4000-8000-000000000125',
+        leaseToken: started.lease.token,
+        command: { type: 'end' },
+      }),
+    ).rejects.toThrow('injected-database-failure');
+    expect(connection.calls.at(-1)?.text).toBe('rollback');
+    expect(connection.calls.some((call) => call.text === 'commit')).toBe(false);
   });
 
   it('discards a connection when rollback itself fails and preserves the original failure', async () => {

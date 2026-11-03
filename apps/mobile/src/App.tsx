@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { RunState } from '@crystal-path-infinity/game-core';
 import { Capacitor } from '@capacitor/core';
 import {
@@ -20,6 +20,24 @@ import type { MenuView } from './menu-navigation';
 import { markDiagnosticReactReady } from './startup-diagnostics';
 import { settleStartup } from './startup-bootstrap';
 import { useLanguage } from './language-context';
+import type { AccountSessionOwner } from './account/session-owner';
+import type { ProfileClient } from './account/profile-client';
+import type { LeaderboardClient } from './leaderboard/leaderboard-client';
+import type { NameReportClient } from './leaderboard/name-report-client';
+import type { RankedClient } from './ranked/ranked-client';
+import type { AccountControlsClient } from './account/account-controls-model';
+
+/** Supplied only by an approved account host; shipped builds inject nothing. */
+export interface ApprovedAccountServices {
+  session?: Pick<AccountSessionOwner, 'accountScope' | 'subscribeAccountScope'>;
+  profileClient?: ProfileClient | null;
+  leaderboardClient?: LeaderboardClient | null;
+  nameReportClient?: NameReportClient | null;
+  rankedClient?: RankedClient | null;
+  accountControlsClient?: AccountControlsClient | null;
+  countries?: readonly { countryCode: string; continentCode: string }[];
+  pendingPersonalResult?: boolean;
+}
 
 const build = __CPI_BUILD_INFO__;
 const showBuildDetails = build.environment !== 'production';
@@ -42,8 +60,13 @@ interface GameOwner {
   token: number;
 }
 
-export function App() {
+export function App({ services }: { services?: ApprovedAccountServices }) {
   const { t } = useLanguage();
+  const accountScope = useSyncExternalStore(
+    (listener) => services?.session?.subscribeAccountScope(listener) ?? (() => {}),
+    () => services?.session?.accountScope() ?? null,
+    () => null,
+  );
   const [game, setGame] = useState<GameOwner | null>(null);
   const gameRef = useRef<GameOwner | null>(null);
   const gameSequence = useRef(0);
@@ -383,6 +406,15 @@ export function App() {
           onTutorialProgress={onTutorialProgress}
           buildLabel={buildLabel}
           warning={storageWarning}
+          profileClient={accountScope ? services?.profileClient : null}
+          leaderboardClient={services?.leaderboardClient}
+          leaderboardCountries={services?.countries}
+          pendingPersonalResult={services?.pendingPersonalResult}
+          rankedClient={accountScope ? services?.rankedClient : null}
+          accountControlsClient={accountScope ? services?.accountControlsClient : null}
+          accountScope={accountScope}
+          accountConnected={accountScope !== null}
+          nameReportClient={accountScope ? services?.nameReportClient : null}
         />
       </div>
       {confirmNew && (

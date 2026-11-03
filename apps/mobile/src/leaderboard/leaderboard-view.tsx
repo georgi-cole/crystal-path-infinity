@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { useLanguage } from '../language-context';
 import {
   CONTINENTS,
   LeaderboardCache,
   leaderboardKey,
+  leaderboardForAccount,
   validLeaderboardQuery,
 } from './leaderboard-client';
 import type {
@@ -13,6 +14,8 @@ import type {
   LeaderboardSnapshot,
 } from './leaderboard-client';
 import './leaderboard-view.css';
+import { NameReportButton } from './name-report';
+import type { NameReportClient } from './name-report-client';
 
 const continentKeys = {
   AF: 'leaderboard.continentAF',
@@ -28,10 +31,14 @@ export function LeaderboardTable({
   entries,
   caption,
   ownPublicId,
+  reportClient = null,
+  online = true,
 }: {
   entries: readonly LeaderboardEntry[];
   caption: string;
   ownPublicId?: string;
+  reportClient?: NameReportClient | null;
+  online?: boolean;
 }) {
   const { t, number, locale } = useLanguage();
   const countries = new Intl.DisplayNames([locale], { type: 'region' });
@@ -61,6 +68,12 @@ export function LeaderboardTable({
                     ? (countries.of(item.countryCode) ?? item.countryCode)
                     : t('leaderboard.countryUnknown')}
                 </small>
+                <NameReportButton
+                  client={reportClient}
+                  targetPublicId={item.publicId}
+                  username={item.username}
+                  online={online}
+                />
               </th>
               <td className="cpi-leaderboard-score" dir="auto">
                 {number(item.lastClearedRow)}
@@ -76,6 +89,7 @@ export function LeaderboardTable({
 
 interface ViewState {
   cache: LeaderboardCache;
+  accountScope: object | null;
   key: string;
   phase: 'loading' | 'ready' | 'error';
   data: LeaderboardSnapshot | null;
@@ -89,6 +103,7 @@ export function LeaderboardView({
   mappingVersion = 'cpi-regions-2026-11-v1',
   countries = [],
   pendingPersonalResult = false,
+  reportClient = null,
 }: {
   client: LeaderboardClient | null;
   online: boolean;
@@ -96,6 +111,7 @@ export function LeaderboardView({
   mappingVersion?: string;
   countries?: readonly { countryCode: string; continentCode: string }[];
   pendingPersonalResult?: boolean;
+  reportClient?: NameReportClient | null;
 }) {
   const { t, number, locale } = useLanguage();
   const [scope, setScope] = useState<LeaderboardQuery['scope']>('world');
@@ -103,6 +119,12 @@ export function LeaderboardView({
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<ViewState | null>(null);
   const cache = useMemo(() => (client ? new LeaderboardCache(client) : null), [client]);
+  const readScope = useCallback(() => client?.accountScope?.() ?? null, [client]);
+  const subscribeScope = useCallback(
+    (observer: () => void) => client?.subscribeAccountScope?.(observer) ?? (() => undefined),
+    [client],
+  );
+  const accountScope = useSyncExternalStore(subscribeScope, readScope, readScope);
   const query = useMemo<LeaderboardQuery>(
     () => ({
       rulesetVersion,
@@ -120,25 +142,33 @@ export function LeaderboardView({
     const controller = new AbortController();
     void Promise.resolve().then(async () => {
       if (controller.signal.aborted) return;
-      setState({ cache, key, phase: 'loading', data: cache.peek(query) });
+      setState({ cache, accountScope, key, phase: 'loading', data: cache.peek(query) });
       try {
         const data = await cache.read(query, controller.signal);
-        if (!controller.signal.aborted) setState({ cache, key, phase: 'ready', data });
+        if (!controller.signal.aborted && readScope() === accountScope)
+          setState({ cache, accountScope, key, phase: 'ready', data });
       } catch {
         if (!controller.signal.aborted)
-          setState({ cache, key, phase: 'error', data: cache.peek(query) });
+          setState({ cache, accountScope, key, phase: 'error', data: cache.peek(query) });
       }
     });
     return () => controller.abort();
-  }, [cache, online, valid, key, query, attempt]);
+  }, [cache, online, valid, key, query, attempt, accountScope, readScope]);
 
   // Never display the previous filter or previous client's results while a
   // new effect is starting. Offline snapshots contain no own-account links.
   const current = state?.cache === cache && state.key === key ? state : null;
-  const data = online ? (current?.data ?? null) : (cache?.peek(query) ?? null);
+  const candidate = online ? (current?.data ?? null) : (cache?.peek(query) ?? null);
+  const data = candidate
+    ? leaderboardForAccount(candidate, current?.accountScope ?? null, accountScope)
+    : null;
   const countryNames = new Intl.DisplayNames([locale], { type: 'region' });
   const own = online && current?.phase === 'ready' ? data?.own : null;
-  const ownKnown = online && current?.phase === 'ready';
+  const ownKnown =
+    online &&
+    current?.phase === 'ready' &&
+    accountScope !== null &&
+    current.accountScope === accountScope;
   const date = data
     ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(
         new Date(data.updatedAt),
@@ -226,6 +256,8 @@ export function LeaderboardView({
                       entries={data.top100}
                       caption={t('leaderboard.top')}
                       ownPublicId={own?.publicId}
+                      reportClient={reportClient}
+                      online={online}
                     />
                   )}
                   <h2>{t('leaderboard.own')}</h2>
@@ -234,6 +266,8 @@ export function LeaderboardView({
                       entries={[own]}
                       caption={t('leaderboard.own')}
                       ownPublicId={own.publicId}
+                      reportClient={reportClient}
+                      online={online}
                     />
                   ) : (
                     <p>{t(ownKnown ? 'leaderboard.noOwn' : 'leaderboard.ownUnavailable')}</p>
@@ -243,6 +277,8 @@ export function LeaderboardView({
                       entries={data.neighbors}
                       caption={t('leaderboard.nearby')}
                       ownPublicId={own.publicId}
+                      reportClient={reportClient}
+                      online={online}
                     />
                   )}
                 </>

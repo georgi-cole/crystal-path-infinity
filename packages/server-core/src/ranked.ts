@@ -90,6 +90,8 @@ export interface RankedReply {
     readonly expiresAt: number;
   };
 }
+export type RankedActiveLookup =
+  { readonly status: 'none' } | { readonly status: 'active'; readonly runId: string };
 
 export interface RankedReceipt {
   readonly key: string;
@@ -397,6 +399,18 @@ export class RankedAuthority {
           ).state
         : record.state;
     return { ...record, state, clockUpdatedAt: now };
+  }
+
+  /** Authenticated recovery discovery; no lease rotation, clock change or private state. */
+  async active(actor: RankedActor, body: unknown): Promise<RankedActiveLookup> {
+    actorIdentity(actor);
+    object(body, []);
+    return this.repository.transaction(actor.subject, async (transaction) => {
+      const record = await transaction.getActiveRun();
+      if (!record) return { status: 'none' };
+      const owned = this.owned(record, actor);
+      return { status: 'active', runId: owned.state.runId };
+    });
   }
 
   async start(actor: RankedActor, body: unknown): Promise<RankedReply> {

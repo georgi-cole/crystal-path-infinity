@@ -407,12 +407,10 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261104000200_cpi021_ranked_authority.sql
           psql -X -v ON_ERROR_STOP=1 -f backend/tests/ranked-storage.sql
           npm ci --ignore-scripts
-          node --experimental-strip-types backend/tests/server-integration.mjs
       - name: Test verified publication and scoped leaderboard reads
         run: |
           psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261104000300_cpi023_leaderboards.sql
           psql -X -v ON_ERROR_STOP=1 -f backend/tests/leaderboards.sql
-          node --experimental-strip-types backend/tests/leaderboard-integration.mjs
       - name: Test account export, revocation recovery and deletion
         run: |
           psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261104000400_cpi031_account_lifecycle.sql
@@ -427,6 +425,7 @@ jobs:
           node --experimental-strip-types backend/tests/server-integration.mjs
           node --experimental-strip-types backend/tests/leaderboard-integration.mjs
           node --experimental-strip-types backend/tests/moderation-integration.mjs
+          node --experimental-strip-types backend/tests/ranked-client-integration.mjs
       - name: Validate independent backend environments and public-variable guard
         run: node --test backend/tests/environments.test.mjs
 

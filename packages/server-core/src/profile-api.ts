@@ -83,7 +83,7 @@ export function createProfileHandler(options: ProfileApiOptions) {
       if (!/^Bearer [\x21-\x7e]{16,8192}$/.test(header))
         return reply({ code: 'account_required' }, 401);
       const actor = await options.authenticate(header.slice(7));
-      if (!actor?.profileAllowed || !/^[0-9a-f-]{36}$/i.test(actor.subject))
+      if (actor?.profileAllowed !== true || !/^[0-9a-f-]{36}$/i.test(actor.subject))
         return reply({ code: 'account_required' }, 401);
       if (!(await options.rateLimit(request, actor.subject)))
         return reply({ code: 'rate_limited' }, 429);

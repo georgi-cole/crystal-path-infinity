@@ -1,4 +1,5 @@
 import type { SqlConnection, SqlPool } from './database.ts';
+import { createMountedPath } from './server-route.ts';
 
 export const NAME_REPORT_REASONS = [
   'impersonation',
@@ -25,6 +26,8 @@ export interface VerifiedModerator {
   readonly canReview: boolean;
 }
 export interface ModerationApiOptions {
+  /** Explicit fixed service mount, e.g. '/cpi'; default is the root namespace. */
+  readonly basePath?: string;
   readonly database: SqlPool;
   readonly authenticateReporter: (accessToken: string) => Promise<VerifiedReporter | null>;
   readonly authenticateModerator: (accessToken: string) => Promise<VerifiedModerator | null>;
@@ -162,6 +165,7 @@ const PUBLIC_ERRORS: Readonly<Record<string, { code: string; status: number }>> 
 
 /** No mobile role flag can grant staff access; the host must provide separate trusted verification. */
 export function createModerationHandler(options: ModerationApiOptions) {
+  const mountedPath = createMountedPath(options.basePath);
   return async (request: Request): Promise<Response> => {
     let origin: string | null = null;
     let connection: SqlConnection | null = null;
@@ -173,7 +177,9 @@ export function createModerationHandler(options: ModerationApiOptions) {
       const url = new URL(request.url);
       if (url.protocol !== 'https:' || url.search || url.hash)
         return reply({ code: 'invalid_request' }, 400, origin);
-      const route = /^\/moderation\/(report|queue|review)$/.exec(url.pathname)?.[1];
+      const route = /^\/moderation\/(report|queue|review)$/.exec(
+        mountedPath(url.pathname) ?? '',
+      )?.[1];
       if (!route) return reply({ code: 'not_found' }, 404, origin);
       if (request.method === 'OPTIONS') {
         const headers = (request.headers.get('access-control-request-headers') ?? '')

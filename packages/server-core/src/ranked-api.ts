@@ -1,5 +1,6 @@
 import { RankedError } from './ranked.ts';
 import type { RankedAuthority } from './ranked.ts';
+import { createMountedPath } from './server-route.ts';
 
 export interface VerifiedRankedAccount {
   readonly subject: string;
@@ -10,7 +11,8 @@ export interface VerifiedRankedAccount {
 }
 
 export interface RankedApiOptions {
-  readonly authority: Pick<RankedAuthority, 'start' | 'execute' | 'recover'>;
+  readonly basePath?: string;
+  readonly authority: Pick<RankedAuthority, 'start' | 'execute' | 'recover' | 'active'>;
   readonly authenticate: (accessToken: string) => Promise<VerifiedRankedAccount | null>;
   readonly allowOrigin: (origin: string | null) => boolean;
   /** Shared durable limits must cover both pre-authentication and per-account traffic. */
@@ -87,6 +89,7 @@ async function readBody(request: Request): Promise<unknown> {
 
 /** Framework-neutral trusted HTTP boundary. No token issuer or deployment is configured. */
 export function createRankedHandler(options: RankedApiOptions) {
+  const mountedPath = createMountedPath(options.basePath);
   return async (request: Request): Promise<Response> => {
     let allowedOrigin: string | null = null;
     try {
@@ -97,7 +100,9 @@ export function createRankedHandler(options: RankedApiOptions) {
       if (url.protocol !== 'https:' || url.search !== '' || url.hash !== '') {
         return response({ code: 'invalid_request' }, 400, allowedOrigin);
       }
-      const route = /^\/ranked\/(start|action|recover)$/.exec(url.pathname)?.[1];
+      const route = /^\/ranked\/(start|action|recover|active)$/.exec(
+        mountedPath(url.pathname) ?? '',
+      )?.[1];
       if (!route) return response({ code: 'not_found' }, 404, allowedOrigin);
       if (request.method === 'OPTIONS') {
         const headers = (request.headers.get('access-control-request-headers') ?? '')
@@ -121,7 +126,7 @@ export function createRankedHandler(options: RankedApiOptions) {
         return response({ code: 'account_required' }, 401, allowedOrigin);
       const account = await options.authenticate(authorization.slice(7));
       if (
-        !account?.rankedAllowed ||
+        account?.rankedAllowed !== true ||
         !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
           account.subject,
         ) ||
@@ -143,7 +148,9 @@ export function createRankedHandler(options: RankedApiOptions) {
           ? await options.authority.start(actor, body)
           : route === 'action'
             ? await options.authority.execute(actor, body)
-            : await options.authority.recover(actor, body);
+            : route === 'recover'
+              ? await options.authority.recover(actor, body)
+              : await options.authority.active(actor, body);
       return response(result, 200, allowedOrigin);
     } catch (error) {
       const code =

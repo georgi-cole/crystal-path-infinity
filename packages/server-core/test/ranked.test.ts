@@ -134,6 +134,22 @@ function setup(options: { heartbeatWindowMs?: number } = {}) {
 }
 
 describe('ranked authority trust boundary', () => {
+  it('discovers only the authenticated account active run without rotating its lease or changing time', async () => {
+    const fixture = setup();
+    expect(await fixture.authority.active(A, {})).toEqual({ status: 'none' });
+    const started = await fixture.start();
+    const before = structuredClone(fixture.record(started));
+    fixture.advance(100_000);
+    expect(await fixture.authority.active(A, {})).toEqual({
+      status: 'active',
+      runId: started.snapshot.runId,
+    });
+    expect(await fixture.authority.active(OTHER, {})).toEqual({ status: 'none' });
+    expect(fixture.record(started)).toEqual(before);
+    await expect(fixture.authority.active(A, { subject: OTHER.subject })).rejects.toMatchObject({
+      code: 'invalid-request',
+    });
+  });
   it('uses private independent cryptographic streams and publishes only a bounded projection', async () => {
     const fixture = setup();
     const started = await fixture.start();

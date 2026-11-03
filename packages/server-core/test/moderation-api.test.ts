@@ -28,7 +28,7 @@ function queue() {
     next: null,
   };
 }
-function fixture() {
+function fixture(overrides: Partial<ModerationApiOptions> = {}) {
   const query = vi.fn<SqlConnection['query']>().mockImplementation((sql, values = []) =>
     Promise.resolve({
       rows: [
@@ -65,6 +65,7 @@ function fixture() {
     authenticateModerator,
     rateLimit,
     allowOrigin: (candidate) => candidate === origin,
+    ...overrides,
   });
   return {
     handler,
@@ -76,14 +77,23 @@ function fixture() {
     rateLimit,
   };
 }
-function request(route = 'report', input: unknown = report, token = reporterToken) {
-  return new Request('https://api.example.invalid/moderation/' + route, {
+function request(route = 'report', input: unknown = report, token = reporterToken, basePath = '') {
+  return new Request('https://api.example.invalid' + basePath + '/moderation/' + route, {
     method: 'POST',
     headers: { origin, authorization: 'Bearer ' + token, 'content-type': 'application/json' },
     body: JSON.stringify(input),
   });
 }
 describe('CPI-025 authenticated minimal reports and separate staff authority', () => {
+  it('supports an explicit client-compatible mount without accepting another namespace', async () => {
+    const f = fixture({ basePath: '/cpi' });
+    expect((await f.handler(request('report', report, reporterToken, '/cpi'))).status).toBe(200);
+    expect((await f.handler(request())).status).toBe(404);
+    expect((await f.handler(request('report', report, reporterToken, '/cpi-other'))).status).toBe(
+      404,
+    );
+    expect(() => fixture({ basePath: '/cpi/../other' })).toThrow('Invalid server base path');
+  });
   it('binds reporter identity to the verified bearer and submits only an allowlisted reason/public target', async () => {
     const f = fixture();
     const response = await f.handler(request());
