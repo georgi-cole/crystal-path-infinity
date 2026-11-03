@@ -52,39 +52,41 @@ describe('CPI-018 native protected refresh-token contract', () => {
     expect(calls).toEqual(['read', 'write', 'read', 'clear', 'read']);
   });
 
-  it.each(['', 'abc', 'has spaces and control chars', 'new\nline'.repeat(3), 'A'.repeat(4097), 1, null])(
-    'rejects an unsafe refresh token before native write: %j',
-    async (value) => {
+  it.each([
+    '',
+    'abc',
+    'has spaces and control chars',
+    'new\nline'.repeat(3),
+    'A'.repeat(4097),
+    1,
+    null,
+  ])('rejects an unsafe refresh token before native write: %j', async (value) => {
       const { vault, calls } = fakeVault();
       const store = createProtectedRefreshTokenStore(() => true, vault);
       expect(() => validateRefreshToken(value)).toThrow('Invalid refresh credential');
       await expect(store.write(value as string)).rejects.toThrow('Invalid refresh credential');
       expect(calls).toEqual([]);
-    },
-  );
+  });
 
   it('refuses malformed credentials returned by an untrusted or corrupted vault', async () => {
-    const store = createProtectedRefreshTokenStore(
-      () => true,
-      {
-        readRefreshToken() {
-          return Promise.resolve({ value: 'bad' });
-        },
-        writeRefreshToken() {
-          return Promise.resolve();
-        },
-        clearRefreshToken() {
-          return Promise.resolve();
-        },
+    const store = createProtectedRefreshTokenStore(() => true, {
+      readRefreshToken() {
+        return Promise.resolve({ value: 'bad' });
       },
-    );
+      writeRefreshToken() {
+        return Promise.resolve();
+      },
+      clearRefreshToken() {
+        return Promise.resolve();
+      },
+    });
     await expect(store.read()).rejects.toThrow('Invalid refresh credential');
   });
 
-  it('propagates storage failures without guessing a session or downgrading to plaintext', async () => {
-    const store = createProtectedRefreshTokenStore(
-      () => true,
-      {
+  it(
+    'propagates storage failures without guessing a session or downgrading to plaintext',
+    async () => {
+      const store = createProtectedRefreshTokenStore(() => true, {
         readRefreshToken() {
           return Promise.reject(new Error('key invalidated'));
         },
@@ -94,10 +96,10 @@ describe('CPI-018 native protected refresh-token contract', () => {
         clearRefreshToken() {
           return Promise.reject(new Error('clear failed'));
         },
-      },
-    );
-    await expect(store.read()).rejects.toThrow('key invalidated');
-    await expect(store.write(TOKEN)).rejects.toThrow('store failed');
-    await expect(store.clear()).rejects.toThrow('clear failed');
-  });
+      });
+      await expect(store.read()).rejects.toThrow('key invalidated');
+      await expect(store.write(TOKEN)).rejects.toThrow('store failed');
+      await expect(store.clear()).rejects.toThrow('clear failed');
+    },
+  );
 });
