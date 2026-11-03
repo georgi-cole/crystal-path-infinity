@@ -916,6 +916,30 @@ async function ios() {
       ],
       { timeout: 120_000 },
     );
+    // A fresh simulator can report bootstatus=Finished while SpringBoard /
+    // FrontBoard is still unable to start the first app. In the failed CPI-017
+    // run, bootstatus spent 5 min migrating system data, install succeeded,
+    // and the CPI process produced zero native logs for the full 180s gate.
+    // Verify the *OS launch service* using Settings before attempting CPI.
+    // This is not a retry of the game or a substitute for its native proof.
+    console.log('Checking iOS system-app launch readiness before the first CPI cold start.');
+    const controlLaunch = text('xcrun', ['simctl', 'launch', udid, 'com.apple.Preferences'], {
+      timeout: 120_000,
+    });
+    save('ios-launchservice-control.txt', controlLaunch + '\n');
+    assert.match(
+      controlLaunch,
+      /com\.apple\.Preferences:\s*[1-9]\d*/,
+      'iOS launch service did not return a Settings process identifier',
+    );
+    recordLifecycleAction('ios-system-app-launch-confirmed');
+    // Terminating the probe returns the simulator to its normal Home screen,
+    // so the next launch is still CPI's genuine first native process.
+    await delay(2000);
+    text('xcrun', ['simctl', 'terminate', udid, 'com.apple.Preferences'], {
+      timeout: 30_000,
+    });
+    recordLifecycleAction('ios-system-app-terminated');
     for (attempt = 1; attempt <= iosColdStarts; attempt += 1) {
       boundary = undefined;
       observationComplete = false;

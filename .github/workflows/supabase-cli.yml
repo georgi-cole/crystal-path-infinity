@@ -5,6 +5,7 @@ on:
     paths:
       - 'supabase/**'
       - '.github/workflows/supabase-development-preview.yml'
+      - '.github/workflows/supabase-development-deploy.yml'
       - 'backend/**'
       - '.github/workflows/supabase-cli.yml'
   push:
@@ -12,6 +13,7 @@ on:
     paths:
       - 'supabase/**'
       - '.github/workflows/supabase-development-preview.yml'
+      - '.github/workflows/supabase-development-deploy.yml'
       - 'backend/**'
       - '.github/workflows/supabase-cli.yml'
   workflow_dispatch:
@@ -37,6 +39,8 @@ jobs:
           version: '3.0.0'
       - name: Verify development preview cannot use credentials or write to hosted DB
         run: node --test backend/tests/supabase-development-preview.test.mjs
+      - name: Test fail-closed CPI-017 database deployment approval and audits
+        run: node --test backend/tests/supabase-development-deploy.test.mjs
       - name: Check CLI installation and migration commands
         shell: bash
         run: |
@@ -49,6 +53,7 @@ jobs:
           }
           supabase migration --help > /dev/null
           supabase db push --help > /dev/null
+          supabase db query --help > /dev/null
       - name: Validate initialized local config and preserved CPI-017 migrations
         shell: bash
         run: |

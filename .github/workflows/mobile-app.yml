@@ -373,7 +373,12 @@ jobs:
       - name: Apply migration to isolated empty PostgreSQL
         run: |
           psql -X -v ON_ERROR_STOP=1 -f backend/tests/bootstrap.sql
+          # Test the same read-only preflight SQL used on hosted development.
+          test "$(psql -X -v ON_ERROR_STOP=1 -qAt -f backend/sql/cpi017-deploy-preflight.sql | tr -d '[:space:]')" = CPI017_PRECHECK_OK
           psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261103000100_cpi017_foundation.sql
+          # The remote post-deployment catalog audit must pass against a new
+          # PostgreSQL 17 database before any hosted execution is offered.
+          test "$(psql -X -v ON_ERROR_STOP=1 -qAt -f backend/sql/cpi017-deploy-postcheck.sql | tr -d '[:space:]')" = CPI017_POSTCHECK_OK
       - name: Assert RLS, grants, privacy boundaries and server-only writes
         run: |
           psql -X -v ON_ERROR_STOP=1 -f backend/tests/assertions.sql
