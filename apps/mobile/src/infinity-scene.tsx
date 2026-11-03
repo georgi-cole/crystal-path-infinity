@@ -18,7 +18,7 @@ import type { StandaloneAudio } from './standalone-audio';
 import { optionalHaptic } from './optional-haptic';
 import { readPracticePersonalBest, recordPracticePersonalBest } from './practice-save';
 import { presentRunOutcome } from './run-outcome';
-import { formatRowLabel } from './menu-navigation';
+import { useLanguage } from './i18n';
 import type { PracticeSettings } from './practice-save';
 import { AudioSettingsControls } from './audio-settings-controls';
 import { createPracticeRuntime, schedulePracticeTick } from './practice-runtime';
@@ -109,8 +109,16 @@ export function InfinitySceneView({
   settings,
   onSettingsChange,
 }: InfinitySceneViewProps) {
+  const { t, number } = useLanguage();
   const presented = presentInfinityScene(state);
   const outcome = presentRunOutcome(state);
+  const clearedRows = number(state.result?.lastClearedRow ?? state.lastClearedRow);
+  const rawFatalRow = state.result?.fatalRow ?? state.death?.fatalRow ?? null;
+  const fatalRow = rawFatalRow === null ? null : number(rawFatalRow);
+  const deathCause = state.result?.deathCause ?? state.death?.cause ?? null;
+  const localizedDeathReason = deathCause
+    ? t(deathCause === 'wrong_tile' ? 'game.deathWrong' : deathCause === 'mystery' ? 'game.deathMystery' : 'game.deathDrain')
+    : null;
   const overlayVisible = paused || confirmEnd || outcome.phase !== 'playing' || !!error;
   const catastrophic = state.death?.cause === 'wrong_tile' && state.status !== 'playing';
   const current = presented.rows.find((row) => row.phase === 'current');
@@ -121,20 +129,20 @@ export function InfinitySceneView({
   const notice =
     error ??
     (outcome.phase === 'verification-pending'
-      ? 'Reward verification is pending. This attempt is not finished.'
+      ? t('game.noticePending')
       : outcome.phase === 'dead' || outcome.phase === 'grant-ready'
-        ? 'The bridge gave way. The fatal row did not count.'
+        ? t('game.noticeDead')
         : outcome.phase === 'finished'
-          ? 'Practice ended. Your local result is ready.'
+          ? t('game.noticeFinished')
           : !ready
-            ? 'Preparing the bridge…'
+            ? t('game.noticePreparing')
             : paused
-              ? 'Active time is paused.'
+              ? t('game.noticePaused')
               : current?.mysteryAvailable
-                ? 'A mystery is available. Choose a side or risk the centre.'
+                ? t('game.noticeMystery')
                 : state.current.mysteryOutcome
-                  ? 'Mystery resolved. Choose left or right.'
-                  : 'Choose your next step. Cracked glass stays behind you.');
+                  ? t('game.noticeMysteryDone')
+                  : t('game.noticeChoose'));
 
   return (
     <main
@@ -171,7 +179,7 @@ export function InfinitySceneView({
         <div className="cpi-scene-toolbar">
           <span className="cpi-practice-tag">
             <span className="cpi-practice-indicator" aria-hidden="true" />
-            LOCAL · INFINITY PROTOCOL
+            {t('game.local')}
           </span>
           <div className="cpi-scene-toolbar-actions">
             <button
@@ -179,7 +187,7 @@ export function InfinitySceneView({
               className="cps-hint-btn cpi-hud-control cpi-hint-control"
               onClick={onHint}
               disabled={!interactive || state.hints === 0}
-              aria-label={`Use hint, ${state.hints} remaining`}
+              aria-label={t('game.hintButton', { count: number(state.hints) })}
             >
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path d="M12 2.8 14.5 9.5 21.2 12 14.5 14.5 12 21.2 9.5 14.5 2.8 12 9.5 9.5Z" />
@@ -192,16 +200,16 @@ export function InfinitySceneView({
               className="cpi-end-control cpi-hud-control"
               onClick={onRequestEnd}
               disabled={!ready || busy || !!error || !outcome.canEnd}
-              aria-label="End run"
+              aria-label={t('general.endRun')}
             >
-              End run
+              {t('general.endRun')}
             </button>
             <button
               type="button"
               className="cpi-pause-control cpi-hud-control"
               onClick={onPause}
               disabled={!ready || busy || !!error || state.status !== 'playing'}
-              aria-label={paused ? 'Resume game' : 'Pause game'}
+              aria-label={paused ? t('game.resumeGame') : t('game.pauseGame')}
             >
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 {paused ? (
@@ -213,7 +221,7 @@ export function InfinitySceneView({
                   </>
                 )}
               </svg>
-              <span>{paused ? 'Resume' : 'Pause'}</span>
+              <span>{paused ? t('general.resume') : t('game.pause')}</span>
             </button>
           </div>
         </div>
@@ -226,17 +234,17 @@ export function InfinitySceneView({
                 alt=""
                 aria-hidden="true"
               />
-              INFINITY / RUN
+              {t('game.run')}
             </span>
-            <span className="cps-player-name">Your path</span>
-            <span className="cps-row-display">Row {formatRowLabel(presented.currentRow)}</span>
+            <span className="cps-player-name">{t('game.yourPath')}</span>
+            <span className="cps-row-display">{t('general.row', { row: number(presented.currentRow) })}</span>
           </div>
           <div className="cps-header-right">
             <span className="cps-hints-display">
-              <span className="cpi-hud-small-label">HINTS</span> {state.hints}
+              <span className="cpi-hud-small-label">{t('game.hints')}</span> {state.hints}
             </span>
             <div className="cps-sp-display">
-              <span className="cps-sp-label">SURVIVAL POINTS</span>
+              <span className="cps-sp-label">{t('game.sp')}</span>
               <span className={`cps-sp-value ${spClass}`}>
                 {state.sp}
                 <span className="cpi-hud-sp-unit"> SP</span>
@@ -247,7 +255,7 @@ export function InfinitySceneView({
         <div
           className={`cps-sp-bar-main cpi-energy-meter ${state.sp <= 60 ? 'is-low' : ''}`}
           role="meter"
-          aria-label="Survival points"
+          aria-label={t('game.sp')}
           aria-valuemin={0}
           aria-valuemax={MAX_SP}
           aria-valuenow={state.sp}
@@ -260,22 +268,27 @@ export function InfinitySceneView({
           </div>
           <span className="cpi-energy-marker" style={{ left: `${spPct}%` }} aria-hidden="true" />
         </div>
-        <div className="cpi-run-metrics" aria-label="Run progress and continuation counters">
+        {state.sp <= 140 && state.status === 'playing' && (
+          <p className={'cpi-sp-danger-copy ' + (state.sp <= 60 ? 'is-critical' : 'is-low')} role="status">
+            {t(state.sp <= 60 ? 'game.spCritical' : 'game.spLow', { sp: number(state.sp) })}
+          </p>
+        )}
+        <div className="cpi-run-metrics" aria-label={t('menu.progress')}>
           <span>
-            Cleared <strong>{outcome.clearedRows}</strong>
+            {t('game.cleared')} <strong>{clearedRows}</strong>
           </span>
           <span>
-            Continues used <strong>{outcome.appliedContinues} / 10</strong>
+            {t('game.used')} <strong>{number(outcome.appliedContinues)} / 10</strong>
           </span>
           <span>
-            Grants earned <strong>{outcome.grantedContinues} / 10</strong>
+            {t('game.granted')} <strong>{number(outcome.grantedContinues)} / 10</strong>
           </span>
           <span>
-            Grant quota left <strong>{outcome.grantsRemaining}</strong>
+            {t('game.quota')} <strong>{number(outcome.grantsRemaining)}</strong>
           </span>
         </div>
         {presented.effects.length > 0 && (
-          <div className="cps-effects" aria-label="Active effects">
+          <div className="cps-effects" aria-label={t('game.effects')}>
             {presented.effects.map((effect, i) => (
               <span
                 key={effect.kind + ':' + i}
@@ -292,7 +305,7 @@ export function InfinitySceneView({
             ))}
           </div>
         )}
-        <section className="cps-board" aria-label="Endless crystal bridge">
+        <section className="cps-board" aria-label={t('game.bridge')} dir="ltr">
           <div className="cps-bridge-track">
             {presented.rows.map((row) => (
               <div
@@ -303,7 +316,7 @@ export function InfinitySceneView({
                 <button
                   type="button"
                   className={tileClass(row, 'left', feedback)}
-                  aria-label={`Row ${row.label} left tile`}
+                  aria-label={t('game.leftTile', { row: number(row.label) })}
                   onClick={() => onChoose('left')}
                   disabled={!interactive || row.phase !== 'current'}
                 />
@@ -312,7 +325,7 @@ export function InfinitySceneView({
                     <button
                       type="button"
                       className="cps-tile cps-tile-center"
-                      aria-label={`Row ${row.label} mystery tile`}
+                      aria-label={t('game.mysteryTile', { row: number(row.label) })}
                       onClick={onMystery}
                       disabled={!interactive || !row.mysteryAvailable}
                     >
@@ -323,7 +336,7 @@ export function InfinitySceneView({
                 <button
                   type="button"
                   className={tileClass(row, 'right', feedback)}
-                  aria-label={`Row ${row.label} right tile`}
+                  aria-label={t('game.rightTile', { row: number(row.label) })}
                   onClick={() => onChoose('right')}
                   disabled={!interactive || row.phase !== 'current'}
                 />
