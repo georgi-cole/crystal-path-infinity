@@ -1,0 +1,59 @@
+name: CPI-017 Development Security Audit (read-only)
+
+# The CPI-017 migration has already been applied to this development project.
+# This workflow NEVER pushes a migration or runs mutating SQL.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cpi017-development-postdeploy-readonly-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    name: Verify deployed CPI-017 schema and security (read-only)
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' }}
+    environment: cpi-development
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CPI_SUPABASE_DEV_REF: jbyguybxhezjhdbenevh
+      SUPABASE_PROJECT_ID: jbyguybxhezjhdbenevh
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.CPI_DEV_SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.CPI_DEV_SUPABASE_DB_PASSWORD }}
+    steps:
+      - name: Checkout approved main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validate approved development target and protected credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REPOSITORY" == 'georgi-cole/crystal-path-infinity' ]] || exit 1
+          [[ "$GITHUB_REF" == 'refs/heads/main' ]] || exit 1
+          [[ "$CPI_SUPABASE_DEV_REF" == 'jbyguybxhezjhdbenevh' ]] || exit 1
+          [[ "$SUPABASE_PROJECT_ID" == "$CPI_SUPABASE_DEV_REF" ]] || exit 1
+          if [[ -z "$SUPABASE_ACCESS_TOKEN" || -z "$SUPABASE_DB_PASSWORD" ]]; then
+            echo "::error::Missing scoped cpi-development Supabase credentials."
+            exit 1
+          fi
+      - name: Install pinned Supabase CLI 3.0.0
+        uses: supabase/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13 # v3.2.0
+        with:
+          version: '3.0.0'
+      - name: Link to development project (local CLI state only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase link --project-ref "$CPI_SUPABASE_DEV_REF"
+          [[ -f supabase/.temp/project-ref ]] || exit 1
+          [[ "$(tr -d '\r\n' < supabase/.temp/project-ref)" == "$CPI_SUPABASE_DEV_REF" ]] || exit 1
+      - name: Audit live table existence, forced RLS and role grants using SELECT only
+        shell: bash
+        run: |
+          set -euo pipefail
+          node backend/scripts/cpi017-hosted-audit.mjs
