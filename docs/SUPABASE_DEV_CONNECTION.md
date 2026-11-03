@@ -24,7 +24,7 @@ The workflow is **manual-only**, with an explicit main-branch check, environment
 
 ## Before applying the migration
 
-Review the dry-run output for the exact development project ID and CPI-017 migration. We will prepare a **separate, approved deployment action** once you confirm the preview. Deploying SQL is not reversible by simply rerunning a dry-run.
+Review the dry-run output for the exact development project ID and CPI-017 migration. The next action is an explicitly approved, **manual-only** CPI-017 schema deployment. Follow [the exact project and confirmation instructions](SUPABASE_DEV_DEPLOY.md). **Merging its PR does not deploy anything.** Deploying SQL is not reversible by simply rerunning a dry-run.
 
 Also verify your **hosted Supabase Data API → Exposed schemas** excludes `cpi_private` and `auth`. Local `supabase/config.toml` does not automatically change that hosted setting. The CPI-017 PostgreSQL tests are disposable simulated roles and do not replace later live Supabase negative access tests.
 
