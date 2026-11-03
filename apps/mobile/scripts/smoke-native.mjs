@@ -727,12 +727,18 @@ async function android() {
       };
     }
     attempt = androidColdStarts;
-    const dump = run(adb, adbArgs('shell', 'uiautomator', 'dump', '/sdcard/cpi003-window.xml'), {
-      timeout: 30_000,
+    // A diagnostic UIAutomator process can crash during its own accessibility
+    // traversal (UiAutomation Bad file descriptor), contaminating the strict
+    // AndroidRuntime log after the final verified CPI launch. Capture the OS
+    // window state passively instead; screenshots and every real lifecycle
+    // assertion above remain required and unchanged.
+    const windowSnapshot = run(adb, adbArgs('shell', 'dumpsys', 'window', 'windows'), {
+      timeout: 15_000,
       allowFailure: true,
     });
-    if (dump.status === 0)
-      save('android-window.xml', text(adb, adbArgs('shell', 'cat', '/sdcard/cpi003-window.xml')));
+    if (windowSnapshot.status === 0 && windowSnapshot.stdout) {
+      save('android-window.txt', String(windowSnapshot.stdout));
+    }
     assertRunning(logcat, 'Android lifecycle log capture');
     recordLifecycleAction('observation-complete');
     await stopLog(logcat);
