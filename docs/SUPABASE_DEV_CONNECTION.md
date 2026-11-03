@@ -18,6 +18,7 @@ This is a public project identifier, **not** an access token, database password,
 - Install the pinned Supabase CLI 3.0.0 on GitHub's hosted runner.
 - Link the runner's disposable local Supabase directory to **only that development project**.
 - Verify Database → Read permission with `supabase db query "select 1 as cpi_readonly_probe" --read-only --remote=jbyguybxhezjhdbenevh`.
+- Run the **exact CPI-017 schema emptiness check** using `backend/sql/cpi017-deploy-preflight.sql` through the same Supabase read-only SQL endpoint. The workflow must emit `Hosted CPI-017 catalog preflight passed` or fail closed. This catches catalog/SQL-permission problems that a plain `SELECT 1` cannot detect.
 - Run `supabase db push --dry-run --remote=jbyguybxhezjhdbenevh`. The command **prints migrations that would be applied but never runs them**. The CPI-017 foundation migration is `20261103000100_cpi017_foundation.sql`.
 - Finish with “Preview complete. No migration was deployed.” No account table, leaderboard or backend feature becomes live from the preview.
 

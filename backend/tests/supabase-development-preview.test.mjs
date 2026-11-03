@@ -30,10 +30,17 @@ test('no remote write, reset, seeding, or automatic confirmation is possible', (
   assert.deepEqual(commands, [
     'supabase link --project-ref "$CPI_SUPABASE_DEV_REF"',
     'if ! supabase db query "select 1 as cpi_readonly_probe" --read-only --remote="$CPI_SUPABASE_DEV_REF" > "$output" 2>&1; then',
+    'if ! supabase db query "$(cat backend/sql/cpi017-deploy-preflight.sql)" --read-only --remote="$CPI_SUPABASE_DEV_REF" > "$output" 2>&1; then',
     'supabase db push --dry-run --remote="$CPI_SUPABASE_DEV_REF"',
   ]);
   assert.doesNotMatch(yaml, /^\s+supabase\s+(?:db reset|migration repair|seed)/m);
   assert.doesNotMatch(yaml, /\bSUPABASE_YES\b|^\s+supabase\s+db push --remote/m);
   assert.match(yaml, /Supabase Database Read scope confirmed with read-only SQL/);
+  assert.match(yaml, /Run the exact deployment catalog preflight \(read-only\)/);
+  assert.match(yaml, /check-cpi017-deploy-output\.mjs audit "\$output" CPI017_PRECHECK_OK/);
+  assert.equal(
+    yaml.match(/check-cpi017-deploy-output\.mjs failure "\$output"/g)?.length,
+    2,
+  );
   assert.match(yaml, /check-cpi017-deploy-output\.mjs failure "\$output"/);
 });

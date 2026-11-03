@@ -48,21 +48,28 @@ test('read-only SQL catalog checks require success markers, not absent or failed
   assert.throws(() => assertCpi017Audit('CPI017_POSTCHECK_OK', 'not-a-marker'));
 });
 
-test('read-only SQL failures suggest the least-privilege DB Read permission without exposing raw CLI errors', () => {
-  const denied = 'HTTP 403 Forbidden: missing database_read; bearer sbp_fc_NEVER_PRINT_THIS';
-  const advice = explainCpi017ReadOnlyQueryFailure(denied);
-  assert.match(advice, /Database → Read/);
-  assert.match(advice, /CPI_DEV_SUPABASE_ACCESS_TOKEN/);
-  assert.doesNotMatch(advice, /sbp_fc_NEVER_PRINT_THIS/);
+test('read-only SQL failures distinguish PostgreSQL object privilege from PAT authorization without leaking secrets', () => {
+  const sqlError = 'error SQLSTATE 42501 permission denied for schema pg_catalog; bearer sbp_fc_NEVER_PRINT_THIS';
+  const sqlAdvice = explainCpi017ReadOnlyQueryFailure(sqlError);
+  assert.match(sqlAdvice, /PostgreSQL read-only SQL role/);
+  assert.doesNotMatch(sqlAdvice, /sbp_fc_NEVER_PRINT_THIS/);
+  assert.doesNotMatch(sqlAdvice, /rotate the PAT to fix/i);
 
-  const unknown = explainCpi017ReadOnlyQueryFailure(
-    'opaque failure with password=SECRET_SHOULD_NOT_APPEAR',
-  );
-  assert.match(unknown, /unconfirmed reason/);
-  assert.doesNotMatch(unknown, /SECRET_SHOULD_NOT_APPEAR/);
+  const forbidden = explainCpi017ReadOnlyQueryFailure('HTTP 403 Forbidden; bearer SECRET_SHOULD_NOT_APPEAR');
+  assert.match(forbidden, /forbidden response/);
+  assert.doesNotMatch(forbidden, /SECRET_SHOULD_NOT_APPEAR/);
+  assert.doesNotMatch(forbidden, /explicitly reported missing/);
+
+  const missingScope = explainCpi017ReadOnlyQueryFailure('{"missing_permissions":["database_read"]}');
+  assert.match(missingScope, /explicitly reported missing Database/);
+  assert.match(missingScope, /CPI_DEV_SUPABASE_ACCESS_TOKEN/);
 
   assert.match(explainCpi017ReadOnlyQueryFailure('401 Unauthorized'), /authentication failed/);
-  assert.match(explainCpi017ReadOnlyQueryFailure('syntax error at or near SELECT'), /rejected the query/);
+  assert.match(explainCpi017ReadOnlyQueryFailure('syntax error near SELECT'), /rejected the query/);
+
+  const unknown = explainCpi017ReadOnlyQueryFailure('opaque: password=SECRET_UNKNOWN');
+  assert.match(unknown, /unconfirmed reason/);
+  assert.doesNotMatch(unknown, /SECRET_UNKNOWN/);
 });
 
 test('workflow can never auto-deploy, requires exact project and a typed human confirmation', () => {
@@ -104,6 +111,22 @@ test('only one CLI command can mutate remote SQL; all other database checks are 
     workflow.match(/check-cpi017-deploy-output\.mjs failure "\$output"/g)?.length,
     2,
   );
+});
+
+test('hosted preflight uses only fully qualified PostgreSQL catalog entities and no unqualified helper functions', () => {
+  const sql = readFileSync(new URL('../sql/cpi017-deploy-preflight.sql', import.meta.url), 'utf8');
+  assert.match(sql, /from pg_catalog\.pg_namespace as namespace/);
+  assert.match(sql, /from pg_catalog\.pg_class as relation/);
+  assert.match(sql, /join pg_catalog\.pg_namespace as namespace/);
+  assert.doesNotMatch(sql, /(?<![.])\bto_reg(?:namespace|class)\s*\(/i);
+  assert.match(sql, /CPI017_PRECHECK_OK/);
+  assert.match(sql, /CPI017_PRECHECK_FAIL/);
+
+  const post = readFileSync(new URL('../sql/cpi017-deploy-postcheck.sql', import.meta.url), 'utf8');
+  for (const builtIn of ['count', 'array_agg', 'has_schema_privilege', 'has_table_privilege']) {
+    assert.match(post, new RegExp('pg_catalog\\.' + builtIn + '\\('));
+  }
+  assert.match(post, /information_schema\.columns/);
 });
 
 test('preflight and postcheck SQL are read-only, separate, and lack secret-bearing columns', () => {
