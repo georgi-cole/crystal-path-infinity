@@ -319,7 +319,16 @@ export function InfinitySceneView({
                   aria-label={t('game.leftTile', { row: number(row.label) })}
                   onClick={() => onChoose('left')}
                   disabled={!interactive || row.phase !== 'current'}
-                />
+                >
+                  {row.phase === 'past' && row.chosen === 'left' && (
+                    <span className="cpi-tile-feedback-text">
+                      {t(row.wrong ? 'game.wrongTile' : 'game.safeTile')}
+                    </span>
+                  )}
+                  {row.phase === 'current' && row.hint === 'left' && (
+                    <span className="cpi-tile-feedback-text">{t('game.hintedTile')}</span>
+                  )}
+                </button>
                 <div className="cps-center">
                   {row.hasMystery && (
                     <button
@@ -339,7 +348,16 @@ export function InfinitySceneView({
                   aria-label={t('game.rightTile', { row: number(row.label) })}
                   onClick={() => onChoose('right')}
                   disabled={!interactive || row.phase !== 'current'}
-                />
+                >
+                  {row.phase === 'past' && row.chosen === 'right' && (
+                    <span className="cpi-tile-feedback-text">
+                      {t(row.wrong ? 'game.wrongTile' : 'game.safeTile')}
+                    </span>
+                  )}
+                  {row.phase === 'current' && row.hint === 'right' && (
+                    <span className="cpi-tile-feedback-text">{t('game.hintedTile')}</span>
+                  )}
+                </button>
                 <span className="cps-row-label" aria-hidden="true">
                   {row.label}
                 </span>
@@ -360,7 +378,7 @@ export function InfinitySceneView({
           {notice}
         </p>
         <p className="cpi-scene-footer">
-          Local practice · Not a ranked score · No fixed finish line
+          {t('game.footer')}
         </p>
       </div>
       {overlayVisible && (
@@ -373,34 +391,35 @@ export function InfinitySceneView({
           >
             {error ? (
               <>
-                <h2 id="cpi-run-outcome-title">Clock needs attention</h2>
+                <h2 id="cpi-run-outcome-title">{t('game.clockTitle')}</h2>
                 <p role="alert">{error}</p>
-                <p>Progress remains recoverable. No final score was submitted.</p>
+                <p>{t('game.clockRecover')}</p>
                 <div className="cpi-overlay-actions">
                   <button type="button" data-cpi-overlay-primary onClick={onRetry}>
-                    Retry clock
+                    {t('game.retryClock')}
                   </button>
                   <button type="button" onClick={onExit}>
-                    Save and leave
+                    {t('general.saveLeave')}
                   </button>
                 </div>
               </>
             ) : confirmEnd && outcome.canEnd ? (
               <>
-                <h2 id="cpi-run-outcome-title">End this run?</h2>
+                <h2 id="cpi-run-outcome-title">{t('game.confirmTitle')}</h2>
                 <p>
-                  Your last cleared row is <strong>{outcome.clearedRows}</strong>.
-                  {outcome.fatalRow !== null
-                    ? ' The fatal row ' + outcome.fatalRow + ' will not count.'
-                    : ' The current unfinished row will not count.'}
+                  {t('game.confirmCleared', { row: clearedRows })}
+                  {' '}
+                  {fatalRow !== null
+                    ? t('game.confirmFatal', { row: fatalRow })
+                    : t('game.confirmUnfinished')}
                 </p>
                 {outcome.forfeitsGrant && (
                   <p role="alert">
-                    You have a granted but unused continuation. Ending explicitly forfeits it.
+                    {t('game.confirmForfeit')}
                   </p>
                 )}
                 <p>
-                  This permanently finishes the local attempt. It does not submit a ranked score.
+                  {t('game.confirmLocal')}
                 </p>
                 <div className="cpi-overlay-actions">
                   <button
@@ -409,7 +428,7 @@ export function InfinitySceneView({
                     disabled={busy}
                     onClick={onCancelEnd}
                   >
-                    Keep attempt
+                    {t('game.keepAttempt')}
                   </button>
                   <button
                     type="button"
@@ -417,24 +436,22 @@ export function InfinitySceneView({
                     onClick={onEnd}
                     className="cpi-run-danger-action"
                   >
-                    {outcome.forfeitsGrant ? 'End and forfeit grant' : 'Confirm End run'}
+                    {outcome.forfeitsGrant ? t('game.confirmForfeitButton') : t('game.confirmEnd')}
                   </button>
                 </div>
               </>
             ) : outcome.phase === 'verification-pending' ? (
               <>
-                <h2 id="cpi-run-outcome-title">Verification pending</h2>
+                <h2 id="cpi-run-outcome-title">{t('game.pendingTitle')}</h2>
                 <p>
-                  Your reward has not been verified. Row {outcome.clearedRows} is your last
-                  confirmed progress, not a final result.
+                  {t('game.pendingExplanation', { row: clearedRows })}
                 </p>
                 <p role="status">
-                  This attempt remains recoverable and unpublished. No second reward can be
-                  requested while verification is pending.
+                  {t('game.pendingRecovery')}
                 </p>
                 <div className="cpi-overlay-actions">
                   <button type="button" data-cpi-overlay-primary onClick={onExit}>
-                    Save and leave · Pending
+                    {t('game.savePending')}
                   </button>
                 </div>
               </>
@@ -517,7 +534,7 @@ export function InfinitySceneView({
                     End run
                   </button>
                   <button type="button" disabled={busy} onClick={onExit}>
-                    Save and leave
+                    {t('general.saveLeave')}
                   </button>
                 </div>
               </>
@@ -535,7 +552,7 @@ export function InfinitySceneView({
                     End run
                   </button>
                   <button type="button" disabled={busy} onClick={onExit}>
-                    Save and leave
+                    {t('general.saveLeave')}
                   </button>
                 </div>
               </>
