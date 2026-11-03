@@ -379,6 +379,18 @@ jobs:
           # The remote post-deployment catalog audit must pass against a new
           # PostgreSQL 17 database before any hosted execution is offered.
           test "$(psql -X -v ON_ERROR_STOP=1 -qAt -f backend/sql/cpi017-deploy-postcheck.sql | tr -d '[:space:]')" = CPI017_POSTCHECK_OK
+          # Execute the hosted audit SELECTs on isolated PostgreSQL first.
+          temporary_audit_sql="$(mktemp)"
+          trap 'rm -f "$temporary_audit_sql"' EXIT
+          node backend/scripts/cpi017-hosted-audit.mjs --emit-local-sql > "$temporary_audit_sql"
+          expected="$(node --input-type=module -e "import { buildAuditChecks } from './backend/scripts/cpi017-hosted-audit.mjs'; console.log(buildAuditChecks().length)")"
+          results="$(psql -X -v ON_ERROR_STOP=1 -qAt -f "$temporary_audit_sql")"
+          actual="$(printf '%s\n' "$results" | grep -Ec '^CPI017_AUDIT_[A-Z0-9_]+_OK$')"
+          [[ "$actual" -eq "$expected" ]] || {
+            echo "::error::Only $actual of $expected isolated CPI-017 security queries passed."
+            exit 1
+          }
+          echo "All $expected isolated CPI-017 security queries passed against PostgreSQL 17."
       - name: Assert RLS, grants, privacy boundaries and server-only writes
         run: |
           psql -X -v ON_ERROR_STOP=1 -f backend/tests/assertions.sql
