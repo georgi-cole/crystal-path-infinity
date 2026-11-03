@@ -191,29 +191,26 @@ describe('CPI-011 strict Android first-boot readiness', () => {
     expect(workflow).toContain('system-images/android-36/default/x86_64/source.properties');
     expect(workflow).toContain('cpi003-development');
   });
-  it(
-    'collects passive window evidence without starting a separate crashing UIAutomator process',
-    () => {
-      const script = readFileSync(new URL('../scripts/smoke-native.mjs', import.meta.url), 'utf8');
-      const start = script.indexOf('async function android()');
-      const end = script.indexOf('async function ios()');
-      expect(start).toBeGreaterThan(0);
-      expect(end).toBeGreaterThan(start);
-      const androidHarness = script.slice(start, end);
-      expect(androidHarness).not.toContain("'uiautomator'");
-      expect(androidHarness).not.toContain('android-window.xml');
-      expect(androidHarness).toContain("adbArgs('shell', 'dumpsys', 'window', 'windows')");
-      expect(androidHarness).toContain("save('android-window.txt', String(windowSnapshot.stdout))");
-      expect(androidHarness).toContain("assertPng(screenshot)");
-      expect(androidHarness).toContain("saveAttempt(boundary, true)");
-      expect(androidHarness).toContain("assertRunning(logcat, 'Android lifecycle log capture')");
-      expect(androidHarness).toContain("assertNoTargetAnr()");
-      expect(androidHarness).toContain("waitFor('Android native pause after Home', 30_000");
-      expect(androidHarness).toContain(
-        "waitFor('Android bridge round-trip after real Home/resume', 30_000",
-      );
-    },
-  );
+  it('collects passive window evidence without starting a separate crashing UIAutomator process', () => {
+    const script = readFileSync(new URL('../scripts/smoke-native.mjs', import.meta.url), 'utf8');
+    const start = script.indexOf('async function android()');
+    const end = script.indexOf('async function ios()');
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    const androidHarness = script.slice(start, end);
+    expect(androidHarness).not.toContain("'uiautomator'");
+    expect(androidHarness).not.toContain('android-window.xml');
+    expect(androidHarness).toContain("adbArgs('shell', 'dumpsys', 'window', 'windows')");
+    expect(androidHarness).toContain("save('android-window.txt', String(windowSnapshot.stdout))");
+    expect(androidHarness).toContain('assertPng(screenshot)');
+    expect(androidHarness).toContain('saveAttempt(boundary, true)');
+    expect(androidHarness).toContain("assertRunning(logcat, 'Android lifecycle log capture')");
+    expect(androidHarness).toContain('assertNoTargetAnr()');
+    expect(androidHarness).toContain("waitFor('Android native pause after Home', 30_000");
+    expect(androidHarness).toContain(
+      "waitFor('Android bridge round-trip after real Home/resume', 30_000",
+    );
+  });
   it('uses one strict lifecycle in smoke and retains three full Android launches', () => {
     const script = readFileSync(new URL('../scripts/smoke-native.mjs', import.meta.url), 'utf8');
     expect(script).toContain("const androidColdStarts = profile === 'full' ? 3 : 1");
