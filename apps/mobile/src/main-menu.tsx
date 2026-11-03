@@ -434,7 +434,7 @@ export function MainMenu({
             <p>{t('menu.practiceIntro')}</p>
             <MenuAction
               label={tutorialProgress === 'completed' ? t('menu.replay') : t('menu.learn')}
-              description={t('menu.tutorialExercise')}"
+              description={t('menu.tutorialExercise')}
               icon="practice"
               onClick={() => onOpen('tutorial')}
             />
