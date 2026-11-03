@@ -199,14 +199,14 @@ describe('CPI-018 authenticated session ownership without a live account', () =>
     const pending = new Promise<string>((resolve) => {
       settle = resolve;
     });
-    let signal: AbortSignal | null = null;
+    const signals: AbortSignal[] = [];
     const operation = owner.withAccountRequest((lease) => {
-      signal = lease.signal;
+      signals.push(lease.signal);
       return pending;
     });
     const logout = owner.signOut();
     expect(owner.snapshot().canUseAccount).toBe(false);
-    expect(signal?.aborted).toBe(true);
+    expect(signals[0]?.aborted).toBe(true);
     settle('stale result from account A');
     await expect(operation).rejects.toBeInstanceOf(SessionNotAvailable);
     expect(await logout).toBe(true);
