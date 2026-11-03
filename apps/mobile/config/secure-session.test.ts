@@ -61,11 +61,11 @@ describe('CPI-018 native protected refresh-token contract', () => {
     1,
     null,
   ])('rejects an unsafe refresh token before native write: %j', async (value) => {
-      const { vault, calls } = fakeVault();
-      const store = createProtectedRefreshTokenStore(() => true, vault);
-      expect(() => validateRefreshToken(value)).toThrow('Invalid refresh credential');
-      await expect(store.write(value as string)).rejects.toThrow('Invalid refresh credential');
-      expect(calls).toEqual([]);
+    const { vault, calls } = fakeVault();
+    const store = createProtectedRefreshTokenStore(() => true, vault);
+    expect(() => validateRefreshToken(value)).toThrow('Invalid refresh credential');
+    await expect(store.write(value as string)).rejects.toThrow('Invalid refresh credential');
+    expect(calls).toEqual([]);
   });
 
   it('refuses malformed credentials returned by an untrusted or corrupted vault', async () => {
@@ -83,23 +83,20 @@ describe('CPI-018 native protected refresh-token contract', () => {
     await expect(store.read()).rejects.toThrow('Invalid refresh credential');
   });
 
-  it(
-    'propagates storage failures without guessing a session or downgrading to plaintext',
-    async () => {
-      const store = createProtectedRefreshTokenStore(() => true, {
-        readRefreshToken() {
-          return Promise.reject(new Error('key invalidated'));
-        },
-        writeRefreshToken() {
-          return Promise.reject(new Error('store failed'));
-        },
-        clearRefreshToken() {
-          return Promise.reject(new Error('clear failed'));
-        },
-      });
-      await expect(store.read()).rejects.toThrow('key invalidated');
-      await expect(store.write(TOKEN)).rejects.toThrow('store failed');
-      await expect(store.clear()).rejects.toThrow('clear failed');
-    },
-  );
+  it('propagates storage failures without guessing a session or downgrading to plaintext', async () => {
+    const store = createProtectedRefreshTokenStore(() => true, {
+      readRefreshToken() {
+        return Promise.reject(new Error('key invalidated'));
+      },
+      writeRefreshToken() {
+        return Promise.reject(new Error('store failed'));
+      },
+      clearRefreshToken() {
+        return Promise.reject(new Error('clear failed'));
+      },
+    });
+    await expect(store.read()).rejects.toThrow('key invalidated');
+    await expect(store.write(TOKEN)).rejects.toThrow('store failed');
+    await expect(store.clear()).rejects.toThrow('clear failed');
+  });
 });
