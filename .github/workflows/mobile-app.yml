@@ -47,13 +47,6 @@ jobs:
         run: node --test .github/scripts/android-sdk-system-image.test.mjs
       - name: Install the clean workspace
         run: npm ci --ignore-scripts
-      - name: Temporary CPI-018 Phase 3 canonical formatting diagnostic
-        run: |
-          for path in apps/mobile/src/account/session-owner.ts apps/mobile/src/account/session-gateway.ts apps/mobile/config/session-owner.test.ts apps/mobile/config/session-gateway.test.ts; do
-            echo "CPI018_FORMAT_BEGIN:$path"
-            npx prettier "$path"
-            echo "CPI018_FORMAT_END:$path"
-          done
       - name: Record installed dependencies
         run: |
           mkdir -p apps/mobile/artifacts

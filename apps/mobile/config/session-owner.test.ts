@@ -51,11 +51,13 @@ function fakeVault(initial: string | null = null): ProtectedRefreshTokenStore & 
   };
 }
 
-function fakeTransport(options: {
-  exchange?: (ticket: string) => Promise<unknown>;
-  refresh?: (token: string) => Promise<unknown>;
-  revoke?: (token: string) => Promise<unknown>;
-} = {}) {
+function fakeTransport(
+  options: {
+    exchange?: (ticket: string) => Promise<unknown>;
+    refresh?: (token: string) => Promise<unknown>;
+    revoke?: (token: string) => Promise<unknown>;
+  } = {},
+) {
   const calls: string[] = [];
   const transport: SessionTransport = {
     exchange(ticket) {
@@ -251,7 +253,9 @@ describe('CPI-018 authenticated session ownership without a live account', () =>
     let fails = true;
     const { transport } = fakeTransport({
       revoke: () =>
-        fails ? Promise.reject(new Error('server unavailable')) : Promise.resolve({ status: 'revoked' }),
+        fails
+          ? Promise.reject(new Error('server unavailable'))
+          : Promise.resolve({ status: 'revoked' }),
     });
     const owner = new AccountSessionOwner(vault, transport, () => NOW);
     expect(await owner.exchangeVerifiedTicket(TICKET)).toBe(true);

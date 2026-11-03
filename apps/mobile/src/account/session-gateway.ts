@@ -33,7 +33,10 @@ export function createSessionTransport(
   }
   const path = base.pathname.replace(/\/$/, '');
 
-  async function post(endpoint: 'exchange' | 'refresh' | 'revoke', payload: object): Promise<unknown> {
+  async function post(
+    endpoint: 'exchange' | 'refresh' | 'revoke',
+    payload: object,
+  ): Promise<unknown> {
     let response: Response;
     try {
       response = await fetcher(base.origin + path + '/session/' + endpoint, {

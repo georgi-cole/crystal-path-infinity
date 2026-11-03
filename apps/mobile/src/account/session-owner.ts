@@ -202,10 +202,7 @@ export class AccountSessionOwner {
 
   /** Explicit restoration, never part of the offline practice bootstrap. */
   async restore(): Promise<boolean> {
-    if (
-      !this.vault.supported ||
-      (this.phase !== 'guest' && this.phase !== 'recovery_required')
-    ) {
+    if (!this.vault.supported || (this.phase !== 'guest' && this.phase !== 'recovery_required')) {
       return false;
     }
     const generation = this.invalidate('restoring');

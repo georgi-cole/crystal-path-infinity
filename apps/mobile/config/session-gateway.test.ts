@@ -58,9 +58,7 @@ describe('CPI-018 trusted session transport', () => {
       expect(call.init.referrerPolicy).toBe('no-referrer');
       expect(call.init.cache).toBe('no-store');
     }
-    expect(calls[0]?.init.body).toBe(
-      JSON.stringify({ schemaVersion: 1, verifiedTicket: TICKET }),
-    );
+    expect(calls[0]?.init.body).toBe(JSON.stringify({ schemaVersion: 1, verifiedTicket: TICKET }));
     expect(calls[1]?.init.body).toBe(JSON.stringify({ schemaVersion: 1, refreshToken: SECRET }));
     expect(calls[2]?.init.body).toBe(JSON.stringify({ schemaVersion: 1, refreshToken: SECRET }));
   });
@@ -81,7 +79,9 @@ describe('CPI-018 trusted session transport', () => {
       expect((error as Error).message).not.toContain(SECRET);
       expect((error as Error).message).not.toContain('x@example.net');
     }
-    const offline = createSessionTransport(BASE, () => Promise.reject(new Error('TOKEN=' + SECRET)));
+    const offline = createSessionTransport(BASE, () =>
+      Promise.reject(new Error('TOKEN=' + SECRET)),
+    );
     await expect(offline?.revoke(SECRET)).rejects.toThrow('Account session service unavailable');
   });
 });
