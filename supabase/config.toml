@@ -1,0 +1,15 @@
+# Crystal Path: Infinity — local Supabase CLI configuration.
+# This project_id is a LOCAL workspace name, NOT a hosted project reference.
+# Keep all dev/staging/production Supabase project refs and credentials out
+# of this file. It coexists with the existing CPI-017 migrations.
+project_id = "crystal-path-infinity"
+
+[api]
+# Only expose intended application-facing schemas in local Supabase.
+# cpi_private and auth must NEVER be exposed in the Data API.
+schemas = ["public", "storage"]
+extra_search_path = ["public", "extensions"]
+
+# Do not guess the hosted project's PostgreSQL version here. Once the
+# development project is verified, match [db].major_version to its actual
+# SHOW server_version; result before starting a local stack.
