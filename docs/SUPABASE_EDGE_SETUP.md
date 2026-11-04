@@ -1,6 +1,6 @@
 # Supabase Edge integration — development, closed services
 
-The `cpi-api` function is a deployable **locked host**, not an enabled account issuer.
+The `cpi-api` function is a deployed **locked host**, not an enabled account issuer.
 Its entry returns `service_unavailable` for all known account/game/ad operations.
 It does not initialize the database driver, fetch Auth, read incoming email bodies,
 issue tokens, approve privacy, start ranked play or initialize ads. Successful SMTP
@@ -32,11 +32,16 @@ guest practice with no live account base URL or ad provider.
 
 ## Current hosted state and prerequisites
 
-Development project: `jbyguybxhezjhdbenevh`, renamed DEV, Ireland. Only CPI-017 is
-known deployed; later merged migrations are **not** assumed applied. This PR does not
-change hosted SQL or deployment history. Before enabling any approved service,
-review/apply subsequent migrations with a separately reviewed incremental deployment
-and rerun real guest/A/B checks. Do not rerun the old CPI-017 empty-database deployment.
+Development project: `jbyguybxhezjhdbenevh`, renamed DEV, Ireland. On 4 November 2026,
+the owner authorized applying the eight remaining migrations from merged main
+`85940256ba52d7462d6be09ebccf8f187a1070e1`. DEV now records all nine versions through
+`20261104000700`; the foundation was not rerun. All 29 private tables have forced
+RLS, browser roles have no private table/RPC access, and ranked/ad starts remain off.
+The two existing Auth users were preserved. See the
+[deployment and verification record](operations/SUPABASE_DEV_2026-11-04.md).
+Before enabling approved services, complete the remaining issuer/policy acceptance
+and hosted application/device tests. Do not rerun the old CPI-017 empty-database
+deployment or its single-migration preview to perform another upgrade.
 
 Public/anonymous signups remain disabled. Local `config.toml` now matches that policy,
 requires email confirmation and uses 6-digit/600-second OTPs. This file does **not**
@@ -47,10 +52,12 @@ three public DNS records were independently checked. SMTP was saved in Supabase 
 the owner received both invitation and code emails. The SMTP key remains solely in
 the provider/Supabase secret UI; no credential belongs in this repository or logs.
 
-## Deployment handoff (not executed by this PR)
+## Locked function deployment and future redeployment
 
-After this PR is reviewed, merged and its exact `main` CI passes, deploy only the
-locked entry using an appropriately scoped **development** deployment credential:
+The locked entry from merged PR #79 was deployed to DEV on 4 November 2026 after
+its exact main CI passed. The dashboard received a pinned Deno bundle of the
+reviewed entry, verified against the editor contents before deployment. JWT
+verification remains enabled. For a future reviewed redeployment, the CLI command is:
 
 ```sh
 supabase functions deploy cpi-api --project-ref jbyguybxhezjhdbenevh
