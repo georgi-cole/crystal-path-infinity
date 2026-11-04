@@ -23,12 +23,14 @@ import {
 } from '../config/environments.ts';
 import { patchAndroidLifecycle } from '../config/native-lifecycle-patch.ts';
 import { BRAND_BACKGROUND, syncNativeBrandAssets } from './brand-assets.mjs';
+import { assertUnsignedRelease, resolveUnsignedRelease } from '../config/release-build.ts';
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repositoryRoot = resolve(appRoot, '../..');
 const appRequire = createRequire(join(appRoot, 'package.json'));
 const capacitorVersion = '8.5.3';
-const buildNumber = 1;
+let buildNumber = 1;
+let release = null;
 const background = BRAND_BACKGROUND;
 const nativePackages = [
   '@capacitor/cli',
@@ -214,6 +216,12 @@ function configureAndroid(info) {
     `versionName "${info.version}"`,
     'Android versionName',
   );
+  gradle = replaceOnce(
+    gradle,
+    'versionCode 1',
+    `versionCode ${buildNumber}`,
+    'Android versionCode',
+  );
   assert.ok(gradle.includes(`versionCode ${buildNumber}`), 'Unexpected Android versionCode');
   write('android/app/build.gradle', gradle);
   // Android 12+ splash is an icon on a fixed background, not fullscreen art.
@@ -332,6 +340,7 @@ function configureIOS(info) {
   project = project
     .replaceAll('TARGETED_DEVICE_FAMILY = "1,2";', 'TARGETED_DEVICE_FAMILY = "1";')
     .replaceAll('MARKETING_VERSION = 1.0;', `MARKETING_VERSION = ${info.version};`)
+    .replaceAll('CURRENT_PROJECT_VERSION = 1;', `CURRENT_PROJECT_VERSION = ${buildNumber};`)
     .replaceAll(
       'CODE_SIGN_STYLE = Automatic;',
       'CODE_SIGN_STYLE = Manual;\n\t\t\t\tCODE_SIGNING_ALLOWED = NO;',
@@ -396,6 +405,16 @@ function verifyNative(platform, info) {
       ? 'android/app/src/main/assets/public/build-info.json'
       : 'ios/App/App/public/build-info.json';
   assertBuiltEnvironment(json(copiedBuildInfo), info.environment, info.version);
+  const copiedRelease =
+    platform === 'android'
+      ? 'android/app/src/main/assets/public/release-info.json'
+      : 'ios/App/App/public/release-info.json';
+  if (release) assertUnsignedRelease(json(copiedRelease), release);
+  else
+    assert.ok(
+      !existsSync(join(appRoot, copiedRelease)),
+      'Unexpected release metadata in an ordinary build',
+    );
   if (platform === 'android') {
     const manifest = read('android/app/src/main/AndroidManifest.xml');
     const permissions = [
@@ -493,6 +512,7 @@ function verifyNative(platform, info) {
     );
     assert.equal(project.match(/TARGETED_DEVICE_FAMILY = "1";/g)?.length, 2);
     assert.equal(project.split(`MARKETING_VERSION = ${info.version};`).length, 3);
+    assert.equal(project.split(`CURRENT_PROJECT_VERSION = ${buildNumber};`).length, 3);
     assert.equal(project.match(/CODE_SIGNING_ALLOWED = NO;/g)?.length, 2);
     assert.ok(!project.includes('CODE_SIGN_STYLE = Automatic;'));
     const swift = read('ios/App/CapApp-SPM/Package.swift');
@@ -564,9 +584,17 @@ function verifyNative(platform, info) {
 try {
   const { platform, environment, check } = options();
   const manifest = verifyPackages();
-  const info = getBuildInfo(environment, manifest.version);
+  release = resolveUnsignedRelease(environment, manifest.version, process.env);
+  buildNumber = release?.buildNumber ?? 1;
+  const info = release?.app ?? getBuildInfo(environment, manifest.version);
   // This guard must run before rm/add/sync or any generated project mutation.
-  assertBuiltEnvironment(json('dist/build-info.json'), environment, manifest.version);
+  assertBuiltEnvironment(json('dist/build-info.json'), environment, info.version);
+  if (release) assertUnsignedRelease(json('dist/release-info.json'), release);
+  else
+    assert.ok(
+      !existsSync(join(appRoot, 'dist/release-info.json')),
+      'Unexpected release metadata; rebuild ordinary assets',
+    );
   assert.ok(
     existsSync(join(appRoot, 'dist/index.html')),
     'Build the matching web environment first',

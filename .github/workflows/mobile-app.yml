@@ -59,6 +59,10 @@ jobs:
         run: npm run format:check 2>&1 | tee apps/mobile/artifacts/format.log
       - name: Application tests
         run: npm test 2>&1 | tee apps/mobile/artifacts/tests.log
+      - name: Test unsigned packaging safeguards and artifact verification
+        run: |
+          node --experimental-strip-types --test .github/scripts/unsigned-beta.test.mjs
+          python3 .github/scripts/test_unsigned_artifacts.py
       - name: Build all three web environments
         run: |
           for environment in development staging production; do

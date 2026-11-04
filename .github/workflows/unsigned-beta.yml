@@ -1,0 +1,150 @@
+name: Unsigned beta preparation
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Standalone candidate identity; live services remain disabled
+        required: true
+        type: choice
+        options: [staging, production]
+        default: staging
+      version:
+        description: Numeric marketing version (major.minor.patch)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  checks: read
+
+concurrency:
+  group: cpi-unsigned-beta-preparation
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CPI_APP_ENV: ${{ inputs.environment }}
+  CPI_RELEASE_VERSION: ${{ inputs.version }}
+  CPI_RELEASE_BUILD_NUMBER: ${{ github.run_number }}
+  CPI_RELEASE_SOURCE_SHA: ${{ github.sha }}
+  CPI_RELEASE_RUN_ID: ${{ github.run_id }}
+  CPI_RELEASE_RUN_ATTEMPT: ${{ github.run_attempt }}
+
+jobs:
+  preflight:
+    if: github.ref == 'refs/heads/main' && github.repository == 'georgi-cole/crystal-path-infinity'
+    name: Validate unsigned source candidate
+    runs-on: ubuntu-24.04
+    environment: cpi-beta-preparation
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.23.4'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Validate manual main-only source and untouched build counter
+        run: node --experimental-strip-types .github/scripts/unsigned-beta.mjs prepare
+      - name: Require successful latest checks on this exact commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs" > apps/mobile/artifacts/release-source-checks.json
+          node --experimental-strip-types .github/scripts/unsigned-beta.mjs checks
+      - name: Install locked workspace and run preparation safety tests
+        run: |
+          npm ci --ignore-scripts
+          node --experimental-strip-types --test .github/scripts/unsigned-beta.test.mjs
+          python3 .github/scripts/test_unsigned_artifacts.py
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: unsigned-source-${{ inputs.environment }}-${{ github.run_number }}
+          path: apps/mobile/artifacts/unsigned-beta/
+          if-no-files-found: error
+          retention-days: 7
+
+  android:
+    name: Unsigned Android device artifacts
+    needs: preflight
+    runs-on: ubuntu-24.04
+    environment: cpi-beta-preparation
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.23.4'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Build the selected offline candidate and generate Android
+        run: |
+          npm ci --ignore-scripts
+          node --experimental-strip-types .github/scripts/unsigned-beta.mjs prepare
+          npm run "build:$CPI_APP_ENV"
+          npm run native:generate -- --platform android --environment "$CPI_APP_ENV"
+          npm run native:generate -- --platform android --environment "$CPI_APP_ENV" --check
+      - name: Compile unsigned release outputs and inspect the actual binaries
+        run: |
+          bash apps/mobile/android/gradlew -p apps/mobile/android --no-daemon --stacktrace :app:bundleRelease :app:assembleRelease
+          python3 .github/scripts/verify-unsigned-artifacts.py android
+          node --experimental-strip-types .github/scripts/unsigned-beta.mjs record android
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: unsigned-android-${{ inputs.environment }}-${{ github.run_number }}
+          path: apps/mobile/artifacts/unsigned-beta/
+          if-no-files-found: error
+          retention-days: 7
+
+  ios:
+    name: Unsigned iOS device archive and symbols
+    needs: preflight
+    runs-on: macos-26
+    environment: cpi-beta-preparation
+    timeout-minutes: 40
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.23.4'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Build the selected offline candidate and generate iOS
+        run: |
+          npm ci --ignore-scripts
+          node --experimental-strip-types .github/scripts/unsigned-beta.mjs prepare
+          npm run "build:$CPI_APP_ENV"
+          npm run native:generate -- --platform ios --environment "$CPI_APP_ENV"
+          npm run native:generate -- --platform ios --environment "$CPI_APP_ENV" --check
+      - name: Resolve pinned dependencies and compile an unsigned device archive
+        run: |
+          xcodebuild -resolvePackageDependencies -project apps/mobile/ios/App/App.xcodeproj -scheme App -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile
+          xcodebuild archive -project apps/mobile/ios/App/App.xcodeproj -scheme App -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -archivePath apps/mobile/build/unsigned-beta/App.xcarchive -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY= DEBUG_INFORMATION_FORMAT=dwarf-with-dsym
+          python3 .github/scripts/verify-unsigned-artifacts.py ios
+          tar -czf apps/mobile/artifacts/unsigned-ios-device-archive.tar.gz -C apps/mobile/build/unsigned-beta App.xcarchive
+          node --experimental-strip-types .github/scripts/unsigned-beta.mjs record ios
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: unsigned-ios-${{ inputs.environment }}-${{ github.run_number }}
+          path: apps/mobile/artifacts/unsigned-beta/
+          if-no-files-found: error
+          retention-days: 7
+
+# Preparation only: artifacts are unsigned and do not demonstrate installation,
+# distribution-channel acceptance, privacy approval or public release readiness.
