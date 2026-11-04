@@ -6,6 +6,7 @@ import type { RewardFlow } from '../rewards/reward-flow';
 import { SavedPendingView } from './saved-pending-view';
 import type { SavedPendingClient } from './saved-pending-client';
 import './ranked-scene.css';
+import { operationMessageKeys } from '../operations/operation-failure';
 
 const EMPTY: RankedClientState = {
   phase: 'unavailable',
@@ -183,27 +184,29 @@ export function RankedScene({
     else if (type !== 'choose') void client.command({ type, row, life });
   };
   const status =
-    state.phase === 'unavailable'
-      ? 'ranked.unavailable'
-      : !online || state.phase === 'offline'
-        ? 'ranked.offline'
-        : busy
-          ? 'ranked.pending'
-          : state.phase === 'lease_lost'
-            ? 'ranked.leaseLost'
-            : interrupted || state.phase === 'recovery'
-              ? 'ranked.recovery'
-              : state.phase === 'retry' || state.phase === 'error'
-                ? 'ranked.error'
-                : run?.status === 'finished'
-                  ? 'ranked.finished'
-                  : run?.rewardPending
-                    ? 'ranked.pendingReward'
-                    : run?.status === 'dead'
-                      ? 'ranked.dead'
-                      : run?.paused
-                        ? 'ranked.paused'
-                        : 'ranked.rules';
+    state.problem && online
+      ? operationMessageKeys[state.problem]
+      : state.phase === 'unavailable'
+        ? 'ranked.unavailable'
+        : !online || state.phase === 'offline'
+          ? 'ranked.offline'
+          : busy
+            ? 'ranked.pending'
+            : state.phase === 'lease_lost'
+              ? 'ranked.leaseLost'
+              : interrupted || state.phase === 'recovery'
+                ? 'ranked.recovery'
+                : state.phase === 'retry' || state.phase === 'error'
+                  ? 'ranked.error'
+                  : run?.status === 'finished'
+                    ? 'ranked.finished'
+                    : run?.rewardPending
+                      ? 'ranked.pendingReward'
+                      : run?.status === 'dead'
+                        ? 'ranked.dead'
+                        : run?.paused
+                          ? 'ranked.paused'
+                          : 'ranked.rules';
 
   return (
     <section className="cpi-ranked-scene" aria-labelledby="cpi-ranked-title" aria-busy={busy}>
@@ -226,7 +229,12 @@ export function RankedScene({
         <SavedPendingView
           client={savedPendingClient}
           online={online}
-          canRecover={(!run || run.status === 'finished') && !rewardState?.fullscreen && !busy}
+          canRecover={
+            (!run || run.status === 'finished') &&
+            !rewardState?.fullscreen &&
+            !busy &&
+            !state.problem
+          }
           onRecover={recoverSaved}
         />
       )}
@@ -251,12 +259,13 @@ export function RankedScene({
             void client?.retry();
           }}
         >
-          {t('ranked.retry')}
+          {t(state.phase === 'blocked' ? 'operations.recheck' : 'ranked.retry')}
         </button>
       )}
       {client &&
         online &&
         !busy &&
+        state.phase !== 'blocked' &&
         state.phase !== 'unavailable' &&
         (interrupted ||
           state.phase === 'recovery' ||

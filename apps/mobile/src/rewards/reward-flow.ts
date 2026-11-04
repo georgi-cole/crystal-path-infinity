@@ -1,4 +1,6 @@
-import { RewardUnavailable } from './reward-client.ts';
+import { RewardOperationUnavailable, RewardUnavailable } from './reward-client.ts';
+import { canRecheckOperation } from '../operations/operation-failure.ts';
+import type { OperationFailure } from '../operations/operation-failure';
 import type {
   RewardClient,
   RewardInventory,
@@ -99,7 +101,8 @@ export interface RewardFlowState {
   readonly canApply: boolean;
   readonly canRetry: boolean;
   readonly canEnd: boolean;
-  readonly problem: 'unavailable' | 'privacy_unavailable' | 'no_fill' | 'offline' | null;
+  readonly problem:
+    'unavailable' | 'privacy_unavailable' | 'no_fill' | 'offline' | OperationFailure | null;
 }
 export interface RewardFlowOptions {
   readonly runId: string;
@@ -224,6 +227,7 @@ export class RewardFlow {
         phase === 'offer' &&
         !!value?.offer &&
         this.adapter.available &&
+        !this.operationBlocked() &&
         !this.busy &&
         !this.statusFlight &&
         !this.arbiter.owner,
@@ -231,6 +235,7 @@ export class RewardFlow {
         valid &&
         this.online &&
         phase === 'granted' &&
+        !this.operationBlocked() &&
         !this.fullscreen &&
         !this.arbiter.owner &&
         !this.busy &&
@@ -240,6 +245,7 @@ export class RewardFlow {
         this.online &&
         !this.busy &&
         !this.statusFlight &&
+        canRecheckOperation(this.operationProblem()) &&
         (phase === 'earned_pending' || phase === 'unavailable' || this.problem !== null),
       canEnd:
         valid &&
@@ -264,6 +270,21 @@ export class RewardFlow {
         /* Observers cannot grant or resume a run. */
       }
     }
+  }
+  private operationProblem(): OperationFailure | null {
+    const problem = this.problem;
+    return problem &&
+      !['unavailable', 'privacy_unavailable', 'no_fill', 'offline'].includes(problem)
+      ? (problem as OperationFailure)
+      : null;
+  }
+  private operationBlocked(): boolean {
+    const problem = this.operationProblem();
+    return problem !== null && problem !== 'service_unavailable';
+  }
+  private failed(error: unknown): void {
+    this.problem = error instanceof RewardOperationUnavailable ? error.problem : 'unavailable';
+    if (this.operationBlocked()) this.cancelPoll();
   }
   private acquire(): boolean {
     if (this.arbiter.owner) return false;
@@ -297,6 +318,7 @@ export class RewardFlow {
       this.disposed ||
       !this.online ||
       this.view?.status !== 'pending' ||
+      this.operationBlocked() ||
       this.now() >= this.deadline
     ) {
       this.emit();
@@ -356,8 +378,8 @@ export class RewardFlow {
           this.phase = synchronized ? 'playing' : 'reviving';
           if (!synchronized) this.problem = 'unavailable';
         }
-      } catch {
-        if (this.current(epoch)) this.problem = 'unavailable';
+      } catch (error) {
+        if (this.current(epoch)) this.failed(error);
       }
     })();
     this.statusFlight = work;
@@ -435,9 +457,9 @@ export class RewardFlow {
         throw new RewardUnavailable();
       this.createKey = (this.options.newId ?? (() => crypto.randomUUID()))();
       await this.createAndShow(promise, controller, epoch);
-    } catch {
+    } catch (error) {
       if (this.current(epoch)) {
-        this.problem = 'unavailable';
+        this.failed(error);
         this.phase =
           this.view?.status === 'granted'
             ? 'granted'
@@ -524,7 +546,14 @@ export class RewardFlow {
   }
   async retry(): Promise<void> {
     this.syncAccount();
-    if (this.busy || !this.online || !this.scope || this.disposed) return;
+    if (
+      this.busy ||
+      !this.online ||
+      !this.scope ||
+      this.disposed ||
+      !canRecheckOperation(this.operationProblem())
+    )
+      return;
     if (this.createKey && this.ad && this.permit && this.view) {
       const promise = this.view.offer ?? this.view.intent;
       if (promise && permitMatchesAdapter(this.permit, this.adapter, this.now())) {
@@ -535,8 +564,8 @@ export class RewardFlow {
         this.emit();
         try {
           await this.createAndShow(promise, controller, epoch);
-        } catch {
-          if (this.current(epoch)) this.problem = 'unavailable';
+        } catch (error) {
+          if (this.current(epoch)) this.failed(error);
         } finally {
           if (this.current(epoch)) {
             this.busy = false;
@@ -566,10 +595,10 @@ export class RewardFlow {
       if (!this.current(epoch)) return;
       if (applied === false) throw new RewardUnavailable();
       await this.recover();
-    } catch {
+    } catch (error) {
       if (this.current(epoch)) {
         this.phase = 'granted';
-        this.problem = 'unavailable';
+        this.failed(error);
       }
     } finally {
       if (this.current(epoch)) {

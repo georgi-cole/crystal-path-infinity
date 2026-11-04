@@ -1,11 +1,14 @@
 import { RankedError } from './ranked.ts';
 import type { RankedAuthority } from './ranked.ts';
 import { createMountedPath } from './server-route.ts';
+import { OperationsPolicyError, operationsHttpStatus } from './operations-policy.ts';
 
 export interface VerifiedRankedAccount {
   readonly subject: string;
   /** Session/channel binding established by the trusted verifier, never the body. */
   readonly deviceId: string;
+  /** Server-bound verified client build, never copied from a JSON body/header. */
+  readonly clientBuild: number;
   /** Fresh server policy/privacy/account authorization, including revocation checks. */
   readonly rankedAllowed: boolean;
 }
@@ -143,7 +146,11 @@ export function createRankedHandler(options: RankedApiOptions) {
       )
         return response({ code: 'invalid_request' }, 400, allowedOrigin);
       const body = await readBody(request);
-      const actor = { subject: account.subject, deviceId: account.deviceId };
+      const actor = {
+        subject: account.subject,
+        deviceId: account.deviceId,
+        clientBuild: account.clientBuild,
+      };
       const result =
         route === 'start'
           ? await options.authority.start(actor, body)
@@ -154,6 +161,8 @@ export function createRankedHandler(options: RankedApiOptions) {
               : await options.authority.active(actor, body);
       return response(result, 200, allowedOrigin);
     } catch (error) {
+      if (error instanceof OperationsPolicyError)
+        return response({ code: error.code }, operationsHttpStatus(error), allowedOrigin);
       const code =
         error instanceof RankedError && PUBLIC_ERRORS.has(error.code)
           ? error.code

@@ -12,7 +12,7 @@ const LEASE = '30300000-0000-4000-8000-000000000031';
 const NEXT = '30300000-0000-4000-8000-000000000032';
 const KEY = '30400000-0000-4000-8000-000000000031';
 const NOW = 1_800_000_000_000;
-const actor = { subject: A, deviceId: 'device-a' };
+const actor = { subject: A, deviceId: 'device-a', clientBuild: 1 };
 function stored(): StoredRankedRun & { leaseActive?: boolean } {
   const initial = createRun(
     {

@@ -4,6 +4,8 @@ import { pathToFileURL } from 'node:url';
 import { createProfileHandler } from '../../packages/server-core/src/profile-api.ts';
 import { PostgresRankedRepository } from '../../packages/server-core/src/postgres-ranked.ts';
 import { RankedAuthority, RankedError } from '../../packages/server-core/src/ranked.ts';
+import { enableFixtureOperations } from './operations-fixture.mjs';
+import { createMvpServer } from '../../packages/server-core/src/server-app.ts';
 
 /** Exact production SQL adapter and handlers, against a disposable real SQL engine. */
 export async function runServerIntegration(adminPool, runtimePool, verifyPublished = null) {
@@ -12,19 +14,22 @@ export async function runServerIntegration(adminPool, runtimePool, verifyPublish
   const b = '00000000-0000-4000-8000-000000000452';
   const token = 'server-integration-token';
   let now = Date.now();
-  const actor = { subject: a, deviceId: 'trusted-device-a' };
+  const actor = { subject: a, deviceId: 'trusted-device-a', clientBuild: 1 };
+  let restorePolicy = () => Promise.resolve();
   const authority = new RankedAuthority({
     repository: new PostgresRankedRepository(runtimePool),
     now: () => now,
   });
-  const profile = createProfileHandler({
+  const profileHandler = createProfileHandler({
     database: runtimePool,
     authenticate: (bearer) =>
       Promise.resolve(bearer === token ? { subject: a, profileAllowed: true } : null),
     allowOrigin: (origin) => origin === 'capacitor://localhost',
     rateLimit: () => Promise.resolve(true),
   });
+  const profile = createMvpServer({ basePath: '/cpi', handlers: { profile: profileHandler } });
   try {
+    restorePolicy = await enableFixtureOperations(admin);
     await admin.query('insert into auth.users(id,email) values ($1::uuid,$2),($3::uuid,$4)', [
       a,
       'integration-a@example.invalid',
@@ -114,11 +119,11 @@ export async function runServerIntegration(adminPool, runtimePool, verifyPublish
     });
     assert.equal(cleared.snapshot.lastClearedRow, '1');
     await assert.rejects(
-      authority.execute({ subject: b, deviceId: actor.deviceId }, command),
+      authority.execute({ subject: b, deviceId: actor.deviceId, clientBuild: 1 }, command),
       (error) => error instanceof RankedError && error.code === 'run-not-found',
     );
     const takeover = await authority.recover(
-      { subject: a, deviceId: 'trusted-device-b' },
+      { subject: a, deviceId: 'trusted-device-b', clientBuild: 1 },
       { runId: start.snapshot.runId, idempotencyKey: randomUUID(), takeover: true },
     );
     await assert.rejects(
@@ -131,7 +136,7 @@ export async function runServerIntegration(adminPool, runtimePool, verifyPublish
     );
     assert.equal(takeover.snapshot.hints, 1);
     const final = await authority.execute(
-      { subject: a, deviceId: 'trusted-device-b' },
+      { subject: a, deviceId: 'trusted-device-b', clientBuild: 1 },
       {
         runId: start.snapshot.runId,
         sequence: takeover.snapshot.nextSequence,
@@ -160,6 +165,7 @@ export async function runServerIntegration(adminPool, runtimePool, verifyPublish
     );
   } finally {
     await admin.query('delete from auth.users where id in ($1::uuid,$2::uuid)', [a, b]);
+    await restorePolicy();
     admin.release();
   }
 }

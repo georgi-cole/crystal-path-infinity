@@ -1,4 +1,6 @@
 import type { AccountSessionOwner } from '../account/session-owner';
+import { parseOperationFailure } from '../operations/operation-failure.ts';
+import type { OperationFailure } from '../operations/operation-failure';
 
 export interface RewardPromise {
   readonly ordinal: number;
@@ -62,6 +64,14 @@ export class RewardUnavailable extends Error {
   constructor() {
     super('Rewarded continuation is unavailable');
     this.name = 'RewardUnavailable';
+  }
+}
+export class RewardOperationUnavailable extends RewardUnavailable {
+  readonly problem: OperationFailure;
+  constructor(problem: OperationFailure) {
+    super();
+    this.problem = problem;
+    this.name = 'RewardOperationUnavailable';
   }
 }
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -361,13 +371,18 @@ export function createRewardClient(options: {
           referrerPolicy: 'no-referrer',
           cache: 'no-store',
         });
-        if (!response.ok) throw new RewardUnavailable();
         const raw = await body(response);
         if (signal.aborted || lease.signal.aborted || scope !== options.session.accountScope())
           throw new RewardUnavailable();
+        if (!response.ok) {
+          const problem = parseOperationFailure(raw, response.status);
+          if (problem) throw new RewardOperationUnavailable(problem);
+          throw new RewardUnavailable();
+        }
         return raw;
       });
-    } catch {
+    } catch (error) {
+      if (error instanceof RewardOperationUnavailable) throw error;
       throw new RewardUnavailable();
     }
   };
@@ -396,7 +411,8 @@ export function createRewardClient(options: {
         const result = await options.applyGrant(runId, grantId);
         if (scope !== options.session.accountScope()) throw new RewardUnavailable();
         return result;
-      } catch {
+      } catch (error) {
+        if (error instanceof RewardOperationUnavailable) throw error;
         throw new RewardUnavailable();
       }
     },

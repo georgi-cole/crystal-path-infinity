@@ -6,6 +6,11 @@ import { rankedSnapshot, RANKED_RNG } from './ranked.ts';
 import type { RankedActor, RankedReply, StoredRankedRun } from './ranked.ts';
 import { createGoogleRewardKeys, RewardError, verifyGoogleReward } from './reward-ssv.ts';
 import type { GoogleRewardKeys } from './reward-ssv.ts';
+import {
+  createOperationStartGate,
+  createOperationRecoveryGate,
+  OperationsPolicyError,
+} from './operations-policy.ts';
 
 export interface RewardActor extends RankedActor {
   readonly clientBuild: number;
@@ -57,10 +62,14 @@ export interface RewardServiceOptions {
   readonly keys?: GoogleRewardKeys;
   readonly now?: () => number;
   readonly newId?: () => string;
-  /** Trusted operations gate; newest deployment schema requires its transaction context. */
+  /** Trusted injectable gate. Omission uses the required database policy gate. */
   readonly assertOperationStart?: (
     connection: SqlConnection,
     input: { operation: 'ad'; clientBuild: number; rulesetVersion: string },
+  ) => Promise<void>;
+  readonly assertOperationRecovery?: (
+    connection: SqlConnection,
+    input: { clientBuild: number; rulesetVersion: string },
   ) => Promise<void>;
 }
 interface PermitRow extends Record<string, unknown> {
@@ -126,11 +135,17 @@ export class RewardService {
   private readonly now: () => number;
   private readonly newId: () => string;
   private readonly keys: GoogleRewardKeys;
+  private readonly assertOperationStart: NonNullable<RewardServiceOptions['assertOperationStart']>;
+  private readonly assertOperationRecovery: NonNullable<
+    RewardServiceOptions['assertOperationRecovery']
+  >;
   constructor(options: RewardServiceOptions) {
     this.options = options;
     this.now = options.now ?? Date.now;
     this.newId = options.newId ?? randomUUID;
     this.keys = options.keys ?? createGoogleRewardKeys();
+    this.assertOperationStart = options.assertOperationStart ?? createOperationStartGate();
+    this.assertOperationRecovery = options.assertOperationRecovery ?? createOperationRecoveryGate();
   }
   private clock(): number {
     const now = this.now();
@@ -140,14 +155,14 @@ export class RewardService {
   }
   private actor(actor: RewardActor) {
     uuid(actor.subject);
+    if (typeof actor.deviceId !== 'string' || !/^[A-Za-z0-9:_-]{1,120}$/.test(actor.deviceId))
+      fail('invalid-reward-authentication');
     if (
-      typeof actor.deviceId !== 'string' ||
-      !/^[A-Za-z0-9:_-]{1,120}$/.test(actor.deviceId) ||
       !Number.isSafeInteger(actor.clientBuild) ||
       actor.clientBuild < 1 ||
       actor.clientBuild > 2_147_483_647
     )
-      fail('invalid-reward-authentication');
+      throw new OperationsPolicyError('operation_context_required');
   }
   private async transaction<T>(
     subject: string,
@@ -155,6 +170,7 @@ export class RewardService {
   ): Promise<T> {
     const connection = await this.options.database.connect();
     let began = false;
+    let committing = false;
     let broken: Error | undefined;
     try {
       await connection.query('begin');
@@ -165,10 +181,12 @@ export class RewardService {
       );
       if (owner.rows.length !== 1) fail('reward-account-unavailable');
       const result = await operation(connection, new PostgresTransaction(connection, subject));
+      committing = true;
       await connection.query('commit');
       began = false;
       return result;
     } catch (error) {
+      if (!began || committing) broken = new Error('reward-transaction-outcome-uncertain');
       if (began) {
         try {
           await connection.query('rollback');
@@ -251,13 +269,22 @@ export class RewardService {
     const runId = uuid(body.runId);
     return this.transaction(actor.subject, async (connection, ranked) => {
       const run = await this.run(ranked, runId, actor.subject);
-      if (run.state.status !== 'dead') return { schemaVersion: 1, status: 'unavailable' };
-      if (this.options.assertOperationStart)
-        await this.options.assertOperationStart(connection, {
-          operation: 'ad',
-          clientBuild: actor.clientBuild,
-          rulesetVersion: run.state.rulesetVersion,
-        });
+      const state = run.state;
+      if (
+        run.leaseActive === false ||
+        run.deviceId !== actor.deviceId ||
+        state.status !== 'dead' ||
+        !state.death ||
+        state.pendingReward !== null ||
+        state.revivesGranted !== state.revivesApplied ||
+        state.revivesApplied >= 10
+      )
+        return { schemaVersion: 1, status: 'unavailable' };
+      await this.assertOperationStart(connection, {
+        operation: 'ad',
+        clientBuild: actor.clientBuild,
+        rulesetVersion: run.state.rulesetVersion,
+      });
       const permit = await this.permit(connection, actor.subject, this.clock());
       return permit
         ? { schemaVersion: 1, status: 'allowed', permit: this.publicPermit(permit) }
@@ -397,15 +424,15 @@ export class RewardService {
       }
       if (state.pendingReward || state.revivesGranted !== state.revivesApplied)
         fail('reward-already-pending');
+      if (run.leaseActive === false || run.deviceId !== actor.deviceId) fail('reward-lease-lost');
       const permit = await this.permit(connection, actor.subject, now);
       if (!permit) fail('reward-privacy-unavailable');
       this.publicPermit(permit);
-      if (this.options.assertOperationStart)
-        await this.options.assertOperationStart(connection, {
-          operation: 'ad',
-          clientBuild: actor.clientBuild,
-          rulesetVersion: state.rulesetVersion,
-        });
+      await this.assertOperationStart(connection, {
+        operation: 'ad',
+        clientBuild: actor.clientBuild,
+        rulesetVersion: state.rulesetVersion,
+      });
       const intentId = uuid(this.newId());
       const nonce = uuid(this.newId());
       const ordinal = state.revivesApplied + 1;
@@ -579,6 +606,10 @@ export class RewardService {
       const repeated = await this.receipt(connection, actor, key, request);
       if (repeated) return repeated as RankedReply;
       let run = await this.run(ranked, runId, actor.subject);
+      await this.assertOperationRecovery(connection, {
+        clientBuild: actor.clientBuild,
+        rulesetVersion: run.state.rulesetVersion,
+      });
       const now = this.clock();
       if (run.leaseActive === false) fail('reward-lease-lost');
       if (run.deviceId !== actor.deviceId || run.leaseToken !== leaseToken)

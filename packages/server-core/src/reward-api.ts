@@ -1,6 +1,7 @@
 import { createMountedPath } from './server-route.ts';
 import { RewardError } from './reward-ssv.ts';
 import type { RewardActor, RewardService } from './reward-service.ts';
+import { OperationsPolicyError, operationsHttpStatus } from './operations-policy.ts';
 
 export interface RewardApiOptions {
   readonly basePath?: string;
@@ -143,6 +144,8 @@ export function createRewardHandler(options: RewardApiOptions) {
               : await options.service.apply(actor, input);
       return reply(result, 200, allowedOrigin);
     } catch (error) {
+      if (error instanceof OperationsPolicyError)
+        return reply({ code: error.code }, operationsHttpStatus(error), allowedOrigin);
       const code =
         error instanceof RewardError && PUBLIC_ERRORS.has(error.code)
           ? error.code

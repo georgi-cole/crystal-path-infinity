@@ -7,12 +7,14 @@ import { accountControlMessages } from '../account/account-controls-messages';
 import { nameReportMessages } from '../leaderboard/name-report-messages';
 import { rewardMessages } from '../rewards/reward.messages';
 import { savedPendingMessages } from '../ranked/saved-pending-messages';
+import { operationMessages } from '../operations/operations.messages';
 
 export const en = {
   ...accountControlMessages,
   ...nameReportMessages,
   ...rewardMessages,
   ...savedPendingMessages,
+  ...operationMessages,
   'general.accountConnected': 'Account connected',
   'general.rankedReady': 'Verified play available',
   'settings.accountAvailable':

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { pathToFileURL } from 'node:url';
 import { runServerIntegration } from './server-integration.mjs';
 import { createLeaderboardHandler } from '../../packages/server-core/src/leaderboard-api.ts';
+import { createMvpServer } from '../../packages/server-core/src/server-app.ts';
 
 export async function runLeaderboardIntegration(admin, runtime) {
   await runServerIntegration(admin, runtime, async ({ runId, subject, runtimePool }) => {
@@ -33,7 +34,7 @@ export async function runLeaderboardIntegration(admin, runtime) {
       connection.release();
     }
     const token = 'verified-leaderboard-test-token';
-    const handler = createLeaderboardHandler({
+    const leaderboardHandler = createLeaderboardHandler({
       database: runtimePool,
       allowedRulesets: ['infinity-v1'],
       allowedMappingVersions: ['cpi-regions-2026-11-v1'],
@@ -43,6 +44,7 @@ export async function runLeaderboardIntegration(admin, runtime) {
       authenticate: (bearer) =>
         Promise.resolve(bearer === token ? { subject, leaderboardAllowed: true } : null),
     });
+    const handler = createMvpServer({ handlers: { leaderboard: leaderboardHandler } });
     for (const scope of ['world', 'continent', 'country']) {
       const query = {
         schemaVersion: 1,

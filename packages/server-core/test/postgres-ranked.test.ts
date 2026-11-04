@@ -57,7 +57,7 @@ function fixture() {
     now: () => 1_000_000,
     newSecret: () => 'a'.repeat(64),
   });
-  const actor = { subject, deviceId: 'authenticated-device-1' };
+  const actor = { subject, deviceId: 'authenticated-device-1', clientBuild: 1 };
   const start = () =>
     authority.start(actor, { idempotencyKey: '00000000-0000-4000-8000-000000000123' });
   return { connection, repository, authority, actor, start };
@@ -78,6 +78,12 @@ describe('PostgreSQL ranked transaction adapter', () => {
     expect(
       calls.findIndex((call) => call.text.includes('snapshot_profile_region')),
     ).toBeGreaterThan(2);
+    const authorize = calls.findIndex((call) => call.text.includes('authorize_operation_start'));
+    expect(authorize).toBeGreaterThan(2);
+    expect(authorize).toBeLessThan(
+      calls.findIndex((call) => call.text.includes('snapshot_profile_region')),
+    );
+    expect(calls[authorize].values).toEqual(['ranked', 1, 'infinity-v1']);
     const insert = calls.find((call) => call.text.includes('insert into cpi_private.ranked_runs'))!;
     const receipt = calls.find((call) =>
       call.text.includes('insert into cpi_private.ranked_receipts'),

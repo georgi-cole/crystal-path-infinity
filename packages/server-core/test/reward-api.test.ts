@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createRewardHandler } from '../src/reward-api.ts';
 import { RewardService } from '../src/reward-service.ts';
 import type { RewardApiOptions } from '../src/reward-api.ts';
+import { OperationsPolicyError } from '../src/operations-policy.ts';
 
 const actor = {
   subject: '00000000-0000-4000-8000-000000000681',
@@ -61,6 +62,40 @@ function fixture(policy = true) {
   };
 }
 describe('trusted reward HTTP boundary', () => {
+  it('returns only fixed policy refusals with actionable status codes', async () => {
+    for (const [code, status] of [
+      ['maintenance', 503],
+      ['client_update_required', 426],
+      ['ruleset_unavailable', 409],
+      ['recovery_unavailable', 409],
+      ['operation_context_required', 503],
+    ] as const) {
+      const f = createRewardHandler({
+        service: {
+          eligibility: () => Promise.reject(new OperationsPolicyError(code)),
+          intent: () => Promise.reject(new Error()),
+          status: () => Promise.reject(new Error()),
+          apply: () => Promise.reject(new Error()),
+          receiveGoogleSsv: () => Promise.reject(new Error()),
+        },
+        authenticate: () => Promise.resolve(actor),
+        allowOrigin: () => true,
+        rateLimit: () => Promise.resolve(true),
+      });
+      const response = await f(
+        new Request('https://api.example.invalid/rewards/eligibility', {
+          method: 'POST',
+          headers: {
+            authorization: 'Bearer synthetic-access-token',
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({ runId }),
+        }),
+      );
+      expect(response.status).toBe(status);
+      expect(await response.json()).toEqual({ code });
+    }
+  });
   it('does not treat truthy verifier values as an ad policy authorization', async () => {
     const state = fixture('yes' as never);
     expect((await state.handler(state.request('eligibility'))).status).toBe(401);

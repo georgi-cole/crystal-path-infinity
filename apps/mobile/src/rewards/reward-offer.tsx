@@ -2,6 +2,7 @@ import { useCallback, useEffect, useSyncExternalStore } from 'react';
 import { useLanguage } from '../language-context';
 import type { RewardFlow, RewardFlowState } from './reward-flow';
 import './reward-offer.css';
+import { operationMessageKeys } from '../operations/operation-failure';
 const EMPTY: RewardFlowState = Object.freeze({
   phase: 'unavailable',
   promise: null,
@@ -65,7 +66,9 @@ export function RewardOffer({
         : state.problem === 'privacy_unavailable'
           ? 'rewards.privacyUnavailable'
           : state.problem
-            ? 'rewards.error'
+            ? state.problem === 'unavailable'
+              ? 'rewards.error'
+              : operationMessageKeys[state.problem]
             : null;
   return (
     <section className="cpi-reward-offer" aria-label={t('rewards.title')}>

@@ -1,7 +1,7 @@
 import { RewardFlow } from './reward-flow.ts';
 import type { NativeRewardedAdapter } from './reward-flow.ts';
 import type { RewardClient } from './reward-client.ts';
-import { RewardUnavailable } from './reward-client.ts';
+import { RewardOperationUnavailable, RewardUnavailable } from './reward-client.ts';
 import type { RankedClient } from '../ranked/ranked-client';
 
 /** Explicit source-only binding. No URL, account, privacy approval or SDK is selected here. */
@@ -42,6 +42,8 @@ export function createRankedRewardFlowFactory(options: {
       applyGrant: async (id, grant) => {
         if (id !== runId || !current()) return false;
         const applied = await ranked.applyVerifiedGrant(grant, runId);
+        const problem = ranked.snapshot().problem;
+        if (current() && !applied && problem) throw new RewardOperationUnavailable(problem);
         return current() && applied;
       },
     };
@@ -61,11 +63,13 @@ export function createRankedRewardFlowFactory(options: {
           state = ranked.snapshot();
         }
         if (state.phase === 'ready' && state.run?.status === 'playing') return true;
+        if (state.problem) throw new RewardOperationUnavailable(state.problem);
         // An unresolved request must retain its original receipt key/body.
         if (state.phase === 'pending' || state.canRetry) return false;
         await ranked.recover(runId, false);
         if (!current()) return false;
         state = ranked.snapshot();
+        if (state.problem) throw new RewardOperationUnavailable(state.problem);
         return state.phase === 'ready' && state.run?.status === 'playing';
       },
     });

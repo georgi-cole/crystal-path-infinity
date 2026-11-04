@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
+import { createMvpServer } from '../../packages/server-core/src/server-app.ts';
 import {
   createAccountLifecycleHandler,
   processAccountDeletion,
@@ -32,7 +33,9 @@ export async function runAccountLifecycleIntegration(adminPool, runtimePool) {
         revoke ? { status: 'revoked', subject: owner, operationId } : { status: 'unconfirmed' },
       ),
   };
-  const handler = createAccountLifecycleHandler(options);
+  const handler = createMvpServer({
+    handlers: { account: createAccountLifecycleHandler(options) },
+  });
   const request = (endpoint, body) =>
     new Request('https://example.invalid/account/' + endpoint, {
       method: 'POST',

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createRankedHandler } from '../src/ranked-api.ts';
 import { RankedAuthority } from '../src/ranked.ts';
 import type { RankedReceipt, RankedRepository, StoredRankedRun } from '../src/ranked.ts';
+import { OperationsPolicyError } from '../src/operations-policy.ts';
 
 const subject = '00000000-0000-4000-8000-000000000021';
 const token = 'test-access-token-never-log';
@@ -20,6 +21,8 @@ function fixture() {
     transaction: (_subject, operation) => {
       transactionCalls += 1;
       return operation({
+        authorizeStart: () => Promise.resolve(),
+        authorizeRecovery: () => Promise.resolve(),
         getActiveRun: () => Promise.resolve(record),
         getRun: (runId) => Promise.resolve(record?.state.runId === runId ? record : null),
         getReceipt: (key) => Promise.resolve(receipts.get(key) ?? null),
@@ -54,7 +57,12 @@ function fixture() {
         ? Promise.reject(new Error(`secret-database-url:${token}`))
         : Promise.resolve(
             candidate === token
-              ? { subject, deviceId: 'trusted-session-device', rankedAllowed: allowed }
+              ? {
+                  subject,
+                  deviceId: 'trusted-session-device',
+                  rankedAllowed: allowed,
+                  clientBuild: 1,
+                }
               : null,
           ),
     allowOrigin: (candidate) => candidate === origin,
@@ -90,6 +98,41 @@ function fixture() {
 }
 
 describe('trusted ranked HTTP routes', () => {
+  it('maps fixed operational refusals without leaking database policy exceptions', async () => {
+    for (const [code, status] of [
+      ['maintenance', 503],
+      ['client_update_required', 426],
+      ['ruleset_unavailable', 409],
+      ['recovery_unavailable', 409],
+      ['operation_context_required', 503],
+    ] as const) {
+      const deny = () => Promise.reject(new OperationsPolicyError(code));
+      const handler = createRankedHandler({
+        authority: { start: deny, execute: deny, recover: deny, active: deny },
+        authenticate: () =>
+          Promise.resolve({
+            subject,
+            deviceId: 'trusted-device',
+            clientBuild: 1,
+            rankedAllowed: true,
+          }),
+        allowOrigin: () => true,
+        rateLimit: () => Promise.resolve(true),
+      });
+      const response = await handler(
+        new Request('https://api.example.invalid/ranked/start', {
+          method: 'POST',
+          headers: {
+            authorization: 'Bearer synthetic-access-token',
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({ idempotencyKey: '00000000-0000-4000-8000-000000000777' }),
+        }),
+      );
+      expect(response.status).toBe(status);
+      expect(await response.json()).toEqual({ code });
+    }
+  });
   it('offers an authenticated minimal active lookup for recovery after app restart', async () => {
     const fixture = fixtureFactory();
     const empty = await fixture.handler(fixture.request('active', {}));
