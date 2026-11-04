@@ -39,7 +39,11 @@ export default defineConfig(
     languageOptions: { globals: globals.node },
   },
   {
-    files: ['apps/mobile/**/*.{ts,tsx}', 'packages/game-core/**/*.ts'],
+    files: [
+      'apps/mobile/**/*.{ts,tsx}',
+      'packages/game-core/**/*.ts',
+      'packages/server-core/**/*.ts',
+    ],
     extends: [js.configs.recommended, tseslint.configs.recommendedTypeChecked],
     languageOptions: {
       parserOptions: { projectService: true, tsconfigRootDir: root },

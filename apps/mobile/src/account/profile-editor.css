@@ -1,0 +1,37 @@
+.cpi-profile-editor {
+  margin-block: 1.5rem;
+}
+.cpi-profile-editor fieldset {
+  border: 0;
+  padding: 0;
+  min-inline-size: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+.cpi-profile-editor label {
+  font-weight: 700;
+}
+.cpi-profile-editor input,
+.cpi-profile-editor select {
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-block-size: 48px;
+  padding: 0.75rem;
+  color: #f3f5ff;
+  background: #171c32;
+  border: 1px solid #7a89b2;
+  border-radius: 0.75rem;
+  font: inherit;
+}
+.cpi-profile-editor button {
+  min-block-size: 48px;
+  padding: 0.75rem;
+  font: inherit;
+}
+.cpi-profile-editor p {
+  overflow-wrap: anywhere;
+}
+.cpi-profile-editor :focus-visible {
+  outline: 3px solid #a9eaff;
+  outline-offset: 3px;
+}

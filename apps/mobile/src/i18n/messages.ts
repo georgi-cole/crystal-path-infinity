@@ -4,6 +4,42 @@
  * native plugins, profile data and leaderboard authority.
  */
 export const en = {
+  'profile.title': 'Player profile',
+  'profile.pseudonym': 'Choose a nickname. Avoid your real name, email or other personal details.',
+  'profile.signInFirst':
+    'Profile editing becomes available after account setup is verified. Age analytics is optional. You can practice without a profile.',
+  'profile.offline': 'Connect to edit your account profile. Practice is available offline.',
+  'profile.loading': 'Loading your profile…',
+  'profile.username': 'Nickname',
+  'profile.nameHelp': '3–24 letters a–z, numbers or underscores. Names are saved in lowercase.',
+  'profile.nameInvalid': 'Use 3–24 letters a–z, numbers or underscores.',
+  'profile.nameReserved': 'This name is reserved. Choose another nickname.',
+  'profile.nameTaken': 'This nickname is already in use. Choose another.',
+  'profile.country': 'Declared country or territory',
+  'profile.worldOnly': 'No country · World ranking only',
+  'profile.countryHelp':
+    'This is your choice, not verified location or citizenship. Existing runs keep their original region. After your first ranked start, country changes have a 30-day cooldown.',
+  'profile.nextCountryChange': 'Next country change: {date} (UTC).',
+  'profile.countryInvalid': 'Choose a supported country or World only.',
+  'profile.countryCooldown':
+    'Your country cannot change yet. Reload to see the next available date.',
+  'profile.optionalAnalytics': 'Optional age analytics',
+  'profile.agePurpose':
+    'You may answer for private age-group analytics. Only a group and the response date are retained. Your exact age is discarded. This answer does not control access to practice, ads or account eligibility.',
+  'profile.ageChoice': 'Your choice',
+  'profile.skip': 'Skip · keep my current choice',
+  'profile.answer': 'Provide or correct my age group',
+  'profile.withdraw': 'Withdraw · remove my age-group answer',
+  'profile.age': 'Age in completed years (optional)',
+  'profile.ageInvalid': 'Enter a whole age from 0 to 120, or choose Skip.',
+  'profile.analyticsUnavailable':
+    'Optional age analytics is unavailable under your current privacy permissions. You can skip or remove a previous answer.',
+  'profile.bandSaved': 'A private age-group answer is stored. You can correct or remove it.',
+  'profile.save': 'Save profile',
+  'profile.saving': 'Saving…',
+  'profile.saved': 'Profile saved.',
+  'profile.retry': 'Your profile could not be loaded or saved. Retry when connected.',
+  'profile.reload': 'Reload profile',
   'brand.name': 'Crystal Path: Infinity',
   'general.back': 'Back',
   'general.guest': 'Guest',
