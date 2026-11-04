@@ -29,6 +29,9 @@ export interface LeaderboardSnapshot extends LeaderboardQuery {
 }
 export interface LeaderboardClient {
   read(query: LeaderboardQuery, signal: AbortSignal): Promise<LeaderboardSnapshot>;
+  /** A missing scope denotes a public-only client; it never labels an own result. */
+  accountScope?(): object | null;
+  subscribeAccountScope?(observer: () => void): () => void;
 }
 export class LeaderboardUnavailable extends Error {
   constructor() {
@@ -197,7 +200,10 @@ export function parseLeaderboard(
 /** Explicit approved HTTPS origin only. Account identity comes from the bearer, never a body ID. */
 export function createLeaderboardClient(
   baseUrl: string | undefined,
-  session: Pick<AccountSessionOwner, 'withAccountRequest'> | null = null,
+  session: Pick<
+    AccountSessionOwner,
+    'withAccountRequest' | 'accountScope' | 'subscribeAccountScope'
+  > | null = null,
   fetcher: typeof fetch = fetch,
 ): LeaderboardClient | null {
   if (!baseUrl) return null;
@@ -219,6 +225,9 @@ export function createLeaderboardClient(
     return null;
   const url = base.origin + base.pathname.replace(/\/$/, '') + '/leaderboard/read';
   return {
+    accountScope: () => session?.accountScope() ?? null,
+    subscribeAccountScope: (observer) =>
+      session?.subscribeAccountScope(observer) ?? (() => undefined),
     async read(query, signal) {
       try {
         if (!validLeaderboardQuery(query) || signal.aborted) throw new LeaderboardUnavailable();
@@ -264,6 +273,17 @@ export function createLeaderboardClient(
       }
     },
   };
+}
+
+/** Public rows may stay visible; an old identity association may never survive a scope change. */
+export function leaderboardForAccount(
+  snapshot: LeaderboardSnapshot,
+  loadedScope: object | null,
+  currentScope: object | null,
+): LeaderboardSnapshot {
+  return currentScope !== null && loadedScope === currentScope
+    ? snapshot
+    : { ...snapshot, own: null, neighbors: [] };
 }
 
 /** Bounded per-client public snapshots only; own/neighbor associations are never cached. */

@@ -5,6 +5,11 @@ import { ProfileEditor } from './account/profile-editor';
 import type { ProfileClient } from './account/profile-client';
 import { LeaderboardView } from './leaderboard/leaderboard-view';
 import type { LeaderboardClient } from './leaderboard/leaderboard-client';
+import { RankedScene } from './ranked/ranked-scene';
+import type { RankedClient } from './ranked/ranked-client';
+import { AccountControls } from './account/account-controls';
+import type { AccountControlsClient } from './account/account-controls-model';
+import type { NameReportClient } from './leaderboard/name-report-client';
 import { LanguageSettings, PrivacyAccountSupport } from './locale-settings';
 import { useLanguage } from './language-context';
 import { BridgeTutorial } from './bridge-tutorial';
@@ -228,16 +233,25 @@ export interface MainMenuProps {
   leaderboardClient?: LeaderboardClient | null;
   leaderboardCountries?: readonly { countryCode: string; continentCode: string }[];
   pendingPersonalResult?: boolean;
+  rankedClient?: RankedClient | null;
+  accountControlsClient?: AccountControlsClient | null;
+  accountScope?: object | null;
+  accountConnected?: boolean;
+  nameReportClient?: NameReportClient | null;
 }
 
 function MenuHeader({
   view,
   online,
   onBack,
+  accountConnected = false,
+  rankedAvailable = false,
 }: {
   view: MenuView;
   online: boolean;
   onBack: () => void;
+  accountConnected?: boolean;
+  rankedAvailable?: boolean;
 }) {
   const { t } = useLanguage();
   return (
@@ -258,9 +272,13 @@ function MenuHeader({
         </span>
       )}
       <div className="cpi-menu-status" aria-label={t('menu.status')}>
-        <StatusPill>{t('general.guest')}</StatusPill>
+        <StatusPill>
+          {t(accountConnected ? 'general.accountConnected' : 'general.guest')}
+        </StatusPill>
         <StatusPill tone={online ? 'neutral' : 'offline'}>
-          {online ? t('general.rankedUnavailable') : t('general.offline')}
+          {online
+            ? t(rankedAvailable ? 'general.rankedReady' : 'general.rankedUnavailable')
+            : t('general.offline')}
         </StatusPill>
       </div>
     </header>
@@ -435,6 +453,11 @@ export function MainMenu({
   leaderboardClient = null,
   leaderboardCountries = [],
   pendingPersonalResult = false,
+  rankedClient = null,
+  accountControlsClient = null,
+  accountScope = null,
+  accountConnected = false,
+  nameReportClient = null,
 }: MainMenuProps) {
   const service = rankedServiceState(online);
   const { t, number } = useLanguage();
@@ -445,7 +468,13 @@ export function MainMenu({
     >
       <div className="cpi-menu-orbit" aria-hidden="true" />
       <div className="cpi-menu-inner">
-        <MenuHeader view={view} online={online} onBack={onBack} />
+        <MenuHeader
+          view={view}
+          online={online}
+          onBack={onBack}
+          accountConnected={accountConnected}
+          rankedAvailable={rankedClient !== null}
+        />
         {view === 'home' ? (
           <>
             <HubUtilityControls
@@ -501,20 +530,26 @@ export function MainMenu({
           />
         ) : view === 'play' ? (
           <MenuPanel title={t('general.play')} eyebrow={t('menu.playEyebrow')}>
-            <p>{t('menu.playUnavailable')}</p>
-            <div className="cpi-menu-notice" role="status">
-              <strong>
-                {service === 'offline' ? t('menu.youOffline') : t('menu.servicesMissing')}
-              </strong>
-              <span>{t('menu.noRankedHere')}</span>
-            </div>
-            <MenuAction
-              label={t('menu.practiceInstead')}
-              description={t('menu.practiceNow')}
-              icon="practice"
-              variant="primary"
-              onClick={() => onOpen('practice')}
-            />
+            {rankedClient ? (
+              <RankedScene client={rankedClient} online={online} onLeave={() => onOpen('home')} />
+            ) : (
+              <>
+                <p>{t('menu.playUnavailable')}</p>
+                <div className="cpi-menu-notice" role="status">
+                  <strong>
+                    {service === 'offline' ? t('menu.youOffline') : t('menu.servicesMissing')}
+                  </strong>
+                  <span>{t('menu.noRankedHere')}</span>
+                </div>
+                <MenuAction
+                  label={t('menu.practiceInstead')}
+                  description={t('menu.practiceNow')}
+                  icon="practice"
+                  variant="primary"
+                  onClick={() => onOpen('practice')}
+                />
+              </>
+            )}
           </MenuPanel>
         ) : view === 'rankings' ? (
           <MenuPanel title={t('general.rankings')} eyebrow={t('menu.rankingsScope')}>
@@ -524,6 +559,7 @@ export function MainMenu({
                 online={online}
                 countries={leaderboardCountries}
                 pendingPersonalResult={pendingPersonalResult}
+                reportClient={nameReportClient}
               />
             )}
             {!leaderboardClient && (
@@ -557,11 +593,15 @@ export function MainMenu({
           </MenuPanel>
         ) : view === 'profile' ? (
           <MenuPanel title={t('general.profile')} eyebrow={t('menu.profileEyebrow')}>
-            <div className="cpi-menu-notice" role="status">
-              <strong>{t('menu.asGuest')}</strong>
-              <span>{t('menu.noAccount')}</span>
-            </div>
-            <AccountEntry online={online} />
+            {!accountConnected && (
+              <>
+                <div className="cpi-menu-notice" role="status">
+                  <strong>{t('menu.asGuest')}</strong>
+                  <span>{t('menu.noAccount')}</span>
+                </div>
+                <AccountEntry online={online} />
+              </>
+            )}
             <ProfileEditor client={profileClient} online={online} />
             <MenuAction
               label={t('menu.practiceUnsigned')}
@@ -586,7 +626,10 @@ export function MainMenu({
               onClick={() => onOpen('tutorial')}
             />
             <LanguageSettings />
-            <PrivacyAccountSupport />
+            <PrivacyAccountSupport
+              accountAvailable={accountConnected && accountControlsClient !== null}
+            />
+            <AccountControls client={accountControlsClient} accountScope={accountScope} />
           </MenuPanel>
         )}
         {warning && (

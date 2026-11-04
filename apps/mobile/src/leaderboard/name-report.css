@@ -1,0 +1,50 @@
+.cpi-name-report-open {
+  display: block;
+  margin-block-start: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.cpi-name-report-dialog {
+  width: min(28rem, calc(100% - 2rem));
+  max-height: calc(100dvh - 3rem);
+  overflow: auto;
+  box-sizing: border-box;
+  border: 1px solid #81c9e5;
+  border-radius: 1.25rem;
+  padding: 1.5rem;
+  color: #edfaff;
+  background: #12233b;
+  box-shadow: 0 1.5rem 6rem #000b;
+  overflow-wrap: anywhere;
+}
+
+.cpi-name-report-dialog::backdrop {
+  background: #030918dd;
+}
+
+.cpi-name-report-dialog form {
+  display: grid;
+  gap: 0.75rem;
+  margin-block: 1rem;
+}
+
+.cpi-name-report-dialog button,
+.cpi-name-report-dialog select {
+  min-height: 2.75rem;
+  max-width: 100%;
+  border: 1px solid #8ba8c6;
+  border-radius: 0.5rem;
+  padding: 0.7rem;
+  background: #1b3652;
+  color: #f3faff;
+  font: inherit;
+}
+
+.cpi-name-report-dialog :focus-visible {
+  outline: 3px solid #b1f5ff;
+  outline-offset: 3px;
+}
+
+.cpi-name-report-dialog button:disabled {
+  opacity: 0.65;
+}

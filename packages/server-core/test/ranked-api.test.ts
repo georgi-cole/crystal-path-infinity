@@ -90,6 +90,21 @@ function fixture() {
 }
 
 describe('trusted ranked HTTP routes', () => {
+  it('offers an authenticated minimal active lookup for recovery after app restart', async () => {
+    const fixture = fixtureFactory();
+    const empty = await fixture.handler(fixture.request('active', {}));
+    expect(await empty.json()).toEqual({ status: 'none' });
+    const started = await fixture.handler(
+      fixture.request('start', { idempotencyKey: fixture.newId() }),
+    );
+    const value = (await started.json()) as { snapshot: { runId: string } };
+    const active = await fixture.handler(fixture.request('active', {}));
+    expect(await active.json()).toEqual({ status: 'active', runId: value.snapshot.runId });
+    const forged = await fixture.handler(fixture.request('active', { subject: 'another-account' }));
+    expect(forged.status).toBe(400);
+    fixture.denyPolicy();
+    expect((await fixture.handler(fixture.request('active', {}))).status).toBe(401);
+  });
   it('uses verified actor/device, returns an issued lease, rejects forged scores and requires that lease for actions', async () => {
     const fixture = fixtureFactory();
     const started = await fixture.handler(

@@ -7,6 +7,7 @@ import {
   LeaderboardUnavailable,
   leaderboardKey,
   parseLeaderboard,
+  leaderboardForAccount,
 } from '../src/leaderboard/leaderboard-client';
 import type {
   LeaderboardEntry,
@@ -15,6 +16,8 @@ import type {
 } from '../src/leaderboard/leaderboard-client';
 import { LeaderboardTable, LeaderboardView } from '../src/leaderboard/leaderboard-view';
 import type { AccountRequestLease } from '../src/account/session-owner';
+import { AccountSessionOwner } from '../src/account/session-owner';
+import { createLeaderboardHandler } from '../../../packages/server-core/src/leaderboard-api';
 
 const WORLD: LeaderboardQuery = {
   rulesetVersion: 'infinity-v1',
@@ -141,6 +144,103 @@ describe('CPI-024 lossless public leaderboard projection', () => {
 });
 
 describe('CPI-024 explicit trusted transport and bounded memory snapshots', () => {
+  it('roundtrips the actual mounted HTTP handler and fences ready own rows across A/logout/B with one client', async () => {
+    const a = '11111111-1111-4111-8111-111111111111';
+    const b = '22222222-2222-4222-8222-222222222222';
+    let subject = a;
+    let credential: string | null = null;
+    const now = Date.now();
+    const account = new AccountSessionOwner(
+      {
+        supported: true,
+        read: () => Promise.resolve(credential),
+        write: (value) => {
+          credential = value;
+          return Promise.resolve();
+        },
+        clear: () => {
+          credential = null;
+          return Promise.resolve();
+        },
+      },
+      {
+        exchange: () =>
+          Promise.resolve({
+            status: 'active',
+            subject,
+            accessToken: 'access-memory-' + subject,
+            refreshToken: 'refresh-private-' + subject,
+            expiresAt: now + 3_600_000,
+          }),
+        refresh: () => Promise.reject(new Error('Unexpected refresh')),
+        revoke: () => Promise.resolve({ status: 'revoked' }),
+      },
+      () => now,
+    );
+    expect(await account.exchangeVerifiedTicket('verified-opaque-ticket-0123456789')).toBe(true);
+    const handler = createLeaderboardHandler({
+      basePath: '/cpi',
+      allowedRulesets: ['infinity-v1'],
+      allowedMappingVersions: ['cpi-regions-2026-11-v1'],
+      database: {
+        connect: () =>
+          Promise.resolve({
+            query: (_sql: string, values?: readonly unknown[]) => {
+              const data = board();
+              if (values?.[4] === b) {
+                data.own = player(102);
+                data.neighbors = [100, 101, 102, 103, 104].map(player);
+              }
+              return Promise.resolve({ rows: [{ board: data }] });
+            },
+            release: () => undefined,
+          }),
+      },
+      authenticate: (token) =>
+        Promise.resolve(
+          token === 'access-memory-' + subject ? { subject, leaderboardAllowed: true } : null,
+        ),
+      allowOrigin: (origin) => origin === 'capacitor://localhost',
+      allowPublicRead: () => true,
+      rateLimit: () => Promise.resolve(true),
+    });
+    const client = createLeaderboardClient(
+      'https://api.example.invalid/cpi',
+      account,
+      (url, init) => {
+        const headers = new Headers(init?.headers);
+        headers.set('origin', 'capacitor://localhost');
+        return handler(new Request(url, { ...init, headers }));
+      },
+    )!;
+    const scopeA = client.accountScope!();
+    const ownA = await client.read(WORLD, signal());
+    expect(ownA.own?.rank).toBe('101');
+    const observed: (object | null)[] = [];
+    const unsubscribe = client.subscribeAccountScope!(() => observed.push(client.accountScope!()));
+    const signingOut = account.signOut();
+    const signedOut = leaderboardForAccount(ownA, scopeA, client.accountScope!());
+    expect(signedOut.own).toBeNull();
+    expect(signedOut.neighbors).toEqual([]);
+    expect(
+      renderToStaticMarkup(
+        createElement(LeaderboardTable, {
+          entries: signedOut.own ? [signedOut.own] : [],
+          caption: 'Your position',
+        }),
+      ),
+    ).not.toContain('player_101');
+    expect(await signingOut).toBe(true);
+    subject = b;
+    expect(await account.exchangeVerifiedTicket('verified-second-ticket-0123456789')).toBe(true);
+    expect(client.accountScope!()).not.toBe(scopeA);
+    expect(leaderboardForAccount(ownA, scopeA, client.accountScope!()).own).toBeNull();
+    const ownB = await client.read(WORLD, signal());
+    expect(ownB.own?.rank).toBe('102');
+    expect(observed).toContain(null);
+    unsubscribe();
+    await account.signOut();
+  });
   it('does not create a default, insecure or public Supabase endpoint', () => {
     const fetcher = vi.fn<typeof fetch>();
     for (const base of [
@@ -162,6 +262,8 @@ describe('CPI-024 explicit trusted transport and bounded memory snapshots', () =
   it('uses one fixed POST route and the approved account request fence', async () => {
     const controller = new AbortController();
     const session = {
+      accountScope: () => session,
+      subscribeAccountScope: () => () => undefined,
       withAccountRequest: <T>(operation: (lease: AccountRequestLease) => Promise<T>) =>
         operation({ accessToken: 'ACCESS-SECRET', signal: controller.signal }),
     };
@@ -201,6 +303,8 @@ describe('CPI-024 explicit trusted transport and bounded memory snapshots', () =
     await expect(client!.read(WORLD, signal())).rejects.toEqual(new LeaderboardUnavailable());
     const controller = new AbortController();
     const session = {
+      accountScope: () => session,
+      subscribeAccountScope: () => () => undefined,
       withAccountRequest: <T>(operation: (lease: AccountRequestLease) => Promise<T>) =>
         operation({ accessToken: 'ACCESS-SECRET', signal: controller.signal }),
     };

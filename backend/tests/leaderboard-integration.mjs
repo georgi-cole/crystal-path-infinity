@@ -7,6 +7,15 @@ export async function runLeaderboardIntegration(admin, runtime) {
   await runServerIntegration(admin, runtime, async ({ runId, subject, runtimePool }) => {
     const connection = await runtimePool.connect();
     try {
+      const existing = await connection.query(
+        'select count(*)::text as count from cpi_private.verified_results where run_id=$1::uuid and published_at is not null',
+        [runId],
+      );
+      assert.equal(
+        existing.rows[0].count,
+        '1',
+        'End command publishes atomically before any separate publisher call',
+      );
       const result = await connection.query(
         'select cpi_private.publish_ranked_result($1::uuid) as result',
         [runId],

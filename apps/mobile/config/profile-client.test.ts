@@ -5,6 +5,7 @@ import {
   ageBandFromInput,
   createProfileClient,
   parseOwnerProfile,
+  profileForAccount,
 } from '../src/account/profile-client';
 import { ProfileEditor } from '../src/account/profile-editor';
 import type { AccountRequestLease } from '../src/account/session-owner';
@@ -33,6 +34,8 @@ const response = () => ({
   },
 });
 const session = {
+  accountScope: () => session,
+  subscribeAccountScope: () => () => undefined,
   withAccountRequest: <T>(operation: (lease: AccountRequestLease) => Promise<T>) =>
     operation({ accessToken: 'memory-only-token', signal: new AbortController().signal }),
 };
@@ -202,13 +205,23 @@ describe('profile privacy and transport', () => {
       })
       .mockResolvedValueOnce(new Response(JSON.stringify(profileB)));
     const clientA = createProfileClient('https://example.invalid/cpi', account, fetcher)!;
+    const scopeA = clientA.accountScope!();
+    const alreadyLoadedA = parseOwnerProfile(response())!;
+    expect(profileForAccount(alreadyLoadedA, scopeA, clientA.accountScope!())).toBe(alreadyLoadedA);
+    const observedScopes: (object | null)[] = [];
+    const unsubscribe = clientA.subscribeAccountScope!(() =>
+      observedScopes.push(clientA.accountScope!()),
+    );
     const pendingA = clientA.load(new AbortController().signal);
     await requested;
     const signingOut = account.signOut();
     expect(signalA?.aborted).toBe(true);
+    expect(profileForAccount(alreadyLoadedA, scopeA, clientA.accountScope!())).toBeNull();
     expect(await signingOut).toBe(true);
     expect(await account.exchangeVerifiedTicket('verified-second-ticket-0123456789')).toBe(true);
-    const clientB = createProfileClient('https://example.invalid/cpi', account, fetcher)!;
+    const clientB = clientA;
+    expect(clientB.accountScope!()).not.toBe(scopeA);
+    expect(profileForAccount(alreadyLoadedA, scopeA, clientB.accountScope!())).toBeNull();
     const resultB = await clientB.load(new AbortController().signal);
     expect(resultB.ok && resultB.value.profile?.username).toBe('prism_b');
     resolveA(new Response(JSON.stringify(response())));
@@ -217,6 +230,8 @@ describe('profile privacy and transport', () => {
     expect(fetcher.mock.calls[1][1]?.headers).toMatchObject({
       authorization: 'Bearer access-memory-22222222-2222-4222-8222-222222222222',
     });
+    expect(observedScopes).toContain(null);
+    unsubscribe();
     await account.signOut();
   });
   it('keeps guest profile view free of collection fields and preserves practice', () => {

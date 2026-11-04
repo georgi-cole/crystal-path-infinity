@@ -45,6 +45,17 @@ export type ProfileResult =
 export interface ProfileClient {
   load(signal: AbortSignal): Promise<ProfileResult>;
   save(input: ProfileEdit, signal: AbortSignal): Promise<ProfileResult>;
+  accountScope?(): object | null;
+  subscribeAccountScope?(observer: () => void): () => void;
+}
+
+/** Never render a private owner response under a different or signed-out identity. */
+export function profileForAccount(
+  value: OwnerProfile | null,
+  loadedScope: object | null,
+  currentScope: object | null,
+): OwnerProfile | null {
+  return currentScope !== null && loadedScope === currentScope ? value : null;
 }
 
 /** Exact age exists only in a transient input. Neither requests nor storage retain it. */
@@ -148,7 +159,10 @@ const problems: Readonly<Record<string, ProfileProblem>> = {
 /** Only an explicitly supplied, approved session can make account requests. No auto-start. */
 export function createProfileClient(
   baseUrl: string | undefined,
-  session: Pick<AccountSessionOwner, 'withAccountRequest'>,
+  session: Pick<
+    AccountSessionOwner,
+    'withAccountRequest' | 'accountScope' | 'subscribeAccountScope'
+  >,
   fetcher: typeof fetch = fetch,
 ): ProfileClient | null {
   if (!baseUrl) return null;
@@ -209,6 +223,8 @@ export function createProfileClient(
     }
   }
   return {
+    accountScope: () => session.accountScope(),
+    subscribeAccountScope: (observer) => session.subscribeAccountScope(observer),
     load: (signal) => request('read', {}, signal),
     save: (input, signal) =>
       request(

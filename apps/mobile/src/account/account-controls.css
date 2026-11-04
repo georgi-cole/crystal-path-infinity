@@ -1,0 +1,49 @@
+.cpi-account-controls {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  color: var(--cpi-text-primary, #eef8ff);
+  border: 1px solid rgb(113 203 255 / 22%);
+  border-radius: 1rem;
+  background: rgb(7 15 33 / 80%);
+}
+.cpi-account-controls h2,
+.cpi-account-controls p {
+  margin: 0;
+}
+.cpi-account-controls-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.cpi-account-controls button {
+  min-block-size: 44px;
+  padding: 0.65rem 1rem;
+  border: 1px solid rgb(113 203 255 / 40%);
+  border-radius: 0.6rem;
+  color: inherit;
+  font: inherit;
+  background: #142443;
+}
+.cpi-account-controls button:disabled {
+  opacity: 0.5;
+}
+.cpi-account-controls button:focus-visible,
+.cpi-account-controls textarea:focus-visible {
+  outline: 2px solid #91e8ff;
+  outline-offset: 3px;
+}
+.cpi-account-controls textarea {
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-block-size: 13rem;
+  max-block-size: 24rem;
+  padding: 0.75rem;
+  border: 1px solid rgb(113 203 255 / 40%);
+  border-radius: 0.6rem;
+  color: inherit;
+  font-size: 1rem;
+  background: #070f21;
+  resize: vertical;
+  direction: ltr;
+}

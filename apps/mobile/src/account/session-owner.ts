@@ -96,6 +96,8 @@ export class AccountSessionOwner {
   private renewal: Promise<boolean> | null = null;
   private signingOut: Promise<boolean> | null = null;
   private failedRevocation: string | null = null;
+  private accountEpoch: object = Object.freeze({});
+  private readonly accountObservers = new Set<() => void>();
 
   constructor(
     private readonly vault: ProtectedRefreshTokenStore,
@@ -114,12 +116,38 @@ export class AccountSessionOwner {
     };
   }
 
+  /** Opaque local identity generation; never a subject, token or request field. */
+  accountScope(): object | null {
+    return (this.phase === 'active' || this.phase === 'refreshing') &&
+      this.current &&
+      this.current.expiresAt > this.now() + 5_000
+      ? this.accountEpoch
+      : null;
+  }
+
+  subscribeAccountScope(observer: () => void): () => void {
+    this.accountObservers.add(observer);
+    return () => this.accountObservers.delete(observer);
+  }
+
+  private notifyAccountScope(): void {
+    for (const observer of this.accountObservers) {
+      try {
+        observer();
+      } catch {
+        /* A view observer cannot block session invalidation. */
+      }
+    }
+  }
+
   private invalidate(phase: SessionPhase): number {
     this.revision++;
     this.phase = phase;
     this.current = null;
+    this.accountEpoch = Object.freeze({});
     for (const controller of this.inFlight) controller.abort();
     this.inFlight.clear();
+    this.notifyAccountScope();
     return this.revision;
   }
 
@@ -183,6 +211,7 @@ export class AccountSessionOwner {
     }
     this.current = parsed;
     this.phase = 'active';
+    this.notifyAccountScope();
     return true;
   }
 
@@ -232,6 +261,7 @@ export class AccountSessionOwner {
     const existing = this.current;
     const generation = this.revision;
     this.phase = 'refreshing';
+    this.notifyAccountScope();
     const work = (async () => {
       try {
         return await this.accept(

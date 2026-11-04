@@ -92,6 +92,34 @@ function request(
 }
 
 describe('CPI-023/024 trusted leaderboard HTTP boundary', () => {
+  it('accepts only its explicitly configured mount and rejects ambiguous service prefixes', async () => {
+    const f = fixture({ basePath: '/cpi' });
+    expect(
+      (await f.handler(request(world, true, 'https://api.example.invalid/cpi/leaderboard/read')))
+        .status,
+    ).toBe(200);
+    expect(
+      (await f.handler(request(world, true, 'https://api.example.invalid/leaderboard/read')))
+        .status,
+    ).toBe(404);
+    expect(
+      (
+        await f.handler(
+          request(world, true, 'https://api.example.invalid/cpi-evil/leaderboard/read'),
+        )
+      ).status,
+    ).toBe(404);
+    for (const basePath of [
+      '/',
+      '/cpi/',
+      'cpi',
+      '/cpi//v1',
+      '/cpi/../v1',
+      '/cpi%2Fv1',
+      '/cpi?secret=x',
+    ])
+      expect(() => fixture({ basePath })).toThrow('Invalid server base path');
+  });
   it('binds the optional own account to verified authentication and one stable parameterized SQL statement', async () => {
     const f = fixture();
     const response = await f.handler(request());

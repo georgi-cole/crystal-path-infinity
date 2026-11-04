@@ -3,7 +3,52 @@
  * The locale catalog is independent of the game-core reducer, checkpoints,
  * native plugins, profile data and leaderboard authority.
  */
+import { accountControlMessages } from '../account/account-controls-messages';
+import { nameReportMessages } from '../leaderboard/name-report-messages';
+
 export const en = {
+  ...accountControlMessages,
+  ...nameReportMessages,
+  'general.accountConnected': 'Account connected',
+  'general.rankedReady': 'Verified play available',
+  'settings.accountAvailable':
+    'Export or delete your account below. Identity verification is required.',
+  'ranked.title': 'Verified run',
+  'ranked.unavailable': 'Verified play is unavailable. Guest practice remains available.',
+  'ranked.start': 'Start verified run',
+  'ranked.resume': 'Resume',
+  'ranked.pause': 'Pause',
+  'ranked.recover': 'Recover saved run',
+  'ranked.takeover': 'Take over on this device',
+  'ranked.retry': 'Retry the same request',
+  'ranked.pending': 'Waiting for the server. Your confirmed progress has not changed.',
+  'ranked.offline': 'Offline. New ranked actions are paused; the run remains recoverable.',
+  'ranked.recovery': 'Recover the server checkpoint before continuing.',
+  'ranked.leaseLost': 'This run is controlled by another device. Take over explicitly to continue.',
+  'ranked.row': 'Current row {row}',
+  'ranked.confirmed': 'Confirmed rows: {row}',
+  'ranked.sp': 'Stability Points: {sp}',
+  'ranked.hints': 'Hints: {count}',
+  'ranked.hint': 'Reveal current safe pane',
+  'ranked.mystery': 'Open current mystery',
+  'ranked.left': 'Step left',
+  'ranked.right': 'Step right',
+  'ranked.end': 'End run',
+  'ranked.confirmEnd': 'Confirm end run',
+  'ranked.cancel': 'Keep run',
+  'ranked.dead': 'This life ended. Verified advertising is unavailable; you can end this run.',
+  'ranked.finished': 'Run ended. Only server-validated publication can give it a ranking.',
+  'ranked.pendingReward': 'Reward verification is pending. Keep this run recoverable.',
+  'ranked.leave': 'Save and leave',
+  'ranked.runId': 'Saved run ID',
+  'ranked.runIdHelp': 'Use the run ID from this device or your trusted account recovery list.',
+  'ranked.rejected': 'The server rejected this action. Confirmed state is shown.',
+  'ranked.effects': 'Active server-confirmed effects',
+  'ranked.error':
+    'Verified play could not connect. Retry or recover without losing confirmed progress.',
+  'ranked.reveal': 'Current hint: {side}',
+  'ranked.paused': 'Server clock paused',
+  'ranked.rules': 'Official progress changes only after server confirmation.',
   'leaderboard.unavailable':
     'Verified rankings are not available yet. Practice is always available.',
   'leaderboard.world': 'World',

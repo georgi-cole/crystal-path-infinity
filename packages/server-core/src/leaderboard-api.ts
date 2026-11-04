@@ -1,4 +1,5 @@
 import type { SqlConnection, SqlPool } from './database.ts';
+import { createMountedPath } from './server-route.ts';
 
 export interface LeaderboardReadQuery {
   readonly rulesetVersion: string;
@@ -12,6 +13,8 @@ export interface VerifiedLeaderboardAccount {
   readonly leaderboardAllowed: boolean;
 }
 export interface LeaderboardApiOptions {
+  /** Explicit fixed service mount, e.g. '/cpi'; default is the root namespace. */
+  readonly basePath?: string;
   readonly database: SqlPool;
   readonly allowedRulesets: readonly string[];
   readonly allowedMappingVersions: readonly string[];
@@ -252,6 +255,7 @@ function reply(value: unknown, status: number, origin: string | null): Response 
 
 /** Framework-independent private SQL adapter. No server or public policy starts automatically. */
 export function createLeaderboardHandler(options: LeaderboardApiOptions) {
+  const mountedPath = createMountedPath(options.basePath);
   return async (request: Request): Promise<Response> => {
     let origin: string | null = null;
     let connection: SqlConnection | null = null;
@@ -263,7 +267,8 @@ export function createLeaderboardHandler(options: LeaderboardApiOptions) {
       const url = new URL(request.url);
       if (url.protocol !== 'https:' || url.search || url.hash)
         return reply({ code: 'invalid_request' }, 400, origin);
-      if (url.pathname !== '/leaderboard/read') return reply({ code: 'not_found' }, 404, origin);
+      if (mountedPath(url.pathname) !== '/leaderboard/read')
+        return reply({ code: 'not_found' }, 404, origin);
       if (request.method === 'OPTIONS') {
         const headers = (request.headers.get('access-control-request-headers') ?? '')
           .split(',')
@@ -285,7 +290,7 @@ export function createLeaderboardHandler(options: LeaderboardApiOptions) {
         if (!/^Bearer [\x21-\x7e]{16,8192}$/.test(authorization) || !options.authenticate)
           return reply({ code: 'account_required' }, 401, origin);
         const account = await options.authenticate(authorization.slice(7));
-        if (!account?.leaderboardAllowed || !UUID.test(account.subject))
+        if (account?.leaderboardAllowed !== true || !UUID.test(account.subject))
           return reply({ code: 'account_required' }, 401, origin);
         subject = account.subject;
         if (!(await options.rateLimit(request, subject)))
