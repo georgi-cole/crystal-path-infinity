@@ -520,7 +520,12 @@ describe('iOS cold-start launch-service preflight', () => {
       'for (attempt = 1; attempt <= iosColdStarts; attempt += 1)',
     );
     const actualLaunch = iosHarness.indexOf("'--console-pty'");
+    const provisioning = iosHarness.indexOf('await prepareIosSimulator(');
+    const install = iosHarness.indexOf("'install',");
 
+    expect(provisioning).toBeGreaterThan(0);
+    expect(install).toBeGreaterThan(systemTerminate);
+    expect(firstGameAttempt).toBeGreaterThan(install);
     expect(systemProbe).toBeGreaterThan(0);
     expect(systemTerminate).toBeGreaterThan(systemProbe);
     expect(firstGameAttempt).toBeGreaterThan(systemTerminate);
