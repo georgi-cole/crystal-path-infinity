@@ -8,6 +8,10 @@
 
 ## Стартиране на приложението
 
+**Browser guest preview:** [Open the game](https://georgi-cole.github.io/crystal-path-infinity/).
+Practice and navigation can be tested without an account. Live signups, ranked
+services and ads stay disabled. [Deployment and verification](docs/operations/GITHUB_PAGES_GUEST_PREVIEW.md).
+
 CPI-005 добавя [чистото игрово ядро](packages/game-core/README.md) като отделен TypeScript workspace: безкраен маршрут с ограничен буфер, сериализируеми преходи и приетите SP/mystery/revive правила. То още не е свързано с играемия мобилен интерфейс. [Решенията за timing, RNG и точни индекси](docs/decisions/CPI-005-game-core.md) разграничават запазените правила от standalone промените; root `typecheck`, `lint` и `test` включват и ядрото.
 
 [CPI-006](docs/decisions/CPI-006-death-progress.md) добавя `createRunSession`: входовете се обвързват с показания ред/живот и се изпълняват върху актуалния state. Повторен или остарял callback не добавя действие; cleanup запазва checkpoint без неявен край.
