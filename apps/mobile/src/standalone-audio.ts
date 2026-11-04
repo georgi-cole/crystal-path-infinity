@@ -2,12 +2,12 @@ import type { RunEvent, RunState } from '@crystal-path-infinity/game-core';
 import type { PracticeSettings } from './practice-save';
 
 export const CRYSTAL_AUDIO = Object.freeze({
-  safe: '/assets/sounds/minigames/minigame_gb_safe_step.mp3',
-  death: '/assets/sounds/minigames/minigame_gb_death.mp3',
-  record: '/assets/sounds/minigames/minigame_gb_winner.mp3',
-  newTurn: '/assets/sounds/minigames/minigame_gb_new_turn.mp3',
+  safe: import.meta.env.BASE_URL + 'assets/sounds/minigames/minigame_gb_safe_step.mp3',
+  death: import.meta.env.BASE_URL + 'assets/sounds/minigames/minigame_gb_death.mp3',
+  record: import.meta.env.BASE_URL + 'assets/sounds/minigames/minigame_gb_winner.mp3',
+  newTurn: import.meta.env.BASE_URL + 'assets/sounds/minigames/minigame_gb_new_turn.mp3',
   // Original offline interim music, NOT the Big Eye glass_bridge.mp3.
-  music: '/assets/music/crystal-ambient-interim.wav',
+  music: import.meta.env.BASE_URL + 'assets/music/crystal-ambient-interim.wav',
 });
 
 export type HapticKind = 'step' | 'damage' | 'end';
