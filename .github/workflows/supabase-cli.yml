@@ -76,6 +76,16 @@ jobs:
           assert 'cpi_private' not in api['extra_search_path']
           assert 'auth' not in api['extra_search_path']
           assert 'remotes' not in config, 'Hosted projects must be linked explicitly, never hardcoded'
+          assert config['auth']['enable_signup'] is False
+          assert config['auth']['enable_anonymous_sign_ins'] is False
+          assert config['auth']['email']['enable_signup'] is False
+          assert config['auth']['email']['enable_confirmations'] is True
+          assert config['auth']['email']['otp_length'] == 6
+          assert config['auth']['email']['otp_expiry'] == 600
+          edge = config['functions']['cpi-api']
+          assert edge['verify_jwt'] is True, 'Locked function must retain the platform JWT gate'
+          assert Path(edge['entrypoint'].replace('./', 'supabase/', 1)).is_file()
+          assert Path(edge['import_map'].replace('./', 'supabase/', 1)).is_file()
           migration = root / 'migrations' / '20261103000100_cpi017_foundation.sql'
           assert migration.is_file() and migration.stat().st_size > 1000
           assert 'create schema if not exists cpi_private;' in migration.read_text(encoding='utf-8')

@@ -18,6 +18,7 @@ import {
 import { dirname, join, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
+import { iosProvisioningBudgetsMs, prepareIosSimulator } from '../config/ios-provisioning.ts';
 import {
   androidAppAnrObserved,
   androidBroadcastsIdle,
@@ -862,7 +863,7 @@ async function android() {
 async function ios() {
   // Fresh iOS 26.5 migration exceeded 360s and native first launch took 89s in CI.
   // Bound that provisioning work separately from the unchanged app/lifecycle checks.
-  const provisioningBudgetsMs = { coldBoot: 900_000, firstNativeProcess: 180_000 };
+  const provisioningBudgetsMs = iosProvisioningBudgetsMs;
   const available = JSON.parse(text('xcrun', ['simctl', 'list', '--json', 'devices', 'available']));
   save('ios-simulators.json', JSON.stringify(available, null, 2));
   save('ios-runtimes.json', text('xcrun', ['simctl', 'list', '--json', 'runtimes']));
@@ -887,6 +888,11 @@ async function ios() {
   let child;
   let boundary;
   let observationComplete = false;
+  const hostPressure = detachedLog(
+    'top',
+    ['-l', '0', '-s', '15', '-o', 'cpu', '-n', '20'],
+    'ios-host-pressure.log',
+  );
   save('ios-simctl-launch-help.txt', text('xcrun', ['simctl', 'help', 'launch']));
   save(
     'ios-smoke-device.json',
@@ -906,12 +912,41 @@ async function ios() {
     console.log(
       `Booting fresh ${device.name} / iOS 26.5 simulator (budget ${provisioningBudgetsMs.coldBoot / 1000}s); progress is recorded in ios-boot.log`,
     );
-    await runLogged(
-      'xcrun',
-      ['simctl', 'bootstatus', udid, '-b'],
-      'ios-boot.log',
-      provisioningBudgetsMs.coldBoot,
-    );
+    await prepareIosSimulator(async (step, timeout) => {
+      console.log(`iOS provisioning: ${step} (budget ${timeout / 1000}s)`);
+      // Every operation names only the fresh device owned by this invocation.
+      if (step === 'cold-boot' || step === 'warm-boot') {
+        await runLogged(
+          'xcrun',
+          ['simctl', 'bootstatus', udid, '-b'],
+          step === 'cold-boot' ? 'ios-boot.log' : 'ios-warm-boot.log',
+          timeout,
+        );
+        return '';
+      }
+      if (step === 'shutdown') {
+        save(
+          'ios-post-migration-processes.txt',
+          text('ps', ['-A', '-o', 'pid,ppid,%cpu,%mem,comm']),
+        );
+        save('ios-post-migration-memory.txt', text('vm_stat', []));
+        return text('xcrun', ['simctl', 'shutdown', udid], { timeout });
+      }
+      if (step === 'system-launch') {
+        const output = text('xcrun', ['simctl', 'launch', udid, 'com.apple.Preferences'], {
+          timeout,
+        });
+        save('ios-launchservice-control.txt', output + '\n');
+        recordLifecycleAction('ios-system-app-launch-confirmed');
+        return output;
+      }
+      const output = text('xcrun', ['simctl', 'terminate', udid, 'com.apple.Preferences'], {
+        timeout,
+      });
+      recordLifecycleAction('ios-system-app-terminated');
+      return output;
+    });
+    // Install only after post-migration services pass the control round trip.
     text(
       'xcrun',
       [
@@ -920,32 +955,8 @@ async function ios() {
         udid,
         join(appRoot, 'build/ios/Build/Products/Debug-iphonesimulator/App.app'),
       ],
-      { timeout: 120_000 },
+      { timeout: provisioningBudgetsMs.install },
     );
-    // A fresh simulator can report bootstatus=Finished while SpringBoard /
-    // FrontBoard is still unable to start the first app. In the failed CPI-017
-    // run, bootstatus spent 5 min migrating system data, install succeeded,
-    // and the CPI process produced zero native logs for the full 180s gate.
-    // Verify the *OS launch service* using Settings before attempting CPI.
-    // This is not a retry of the game or a substitute for its native proof.
-    console.log('Checking iOS system-app launch readiness before the first CPI cold start.');
-    const controlLaunch = text('xcrun', ['simctl', 'launch', udid, 'com.apple.Preferences'], {
-      timeout: 120_000,
-    });
-    save('ios-launchservice-control.txt', controlLaunch + '\n');
-    assert.match(
-      controlLaunch,
-      /com\.apple\.Preferences:\s*[1-9]\d*/,
-      'iOS launch service did not return a Settings process identifier',
-    );
-    recordLifecycleAction('ios-system-app-launch-confirmed');
-    // Terminating the probe returns the simulator to its normal Home screen,
-    // so the next launch is still CPI's genuine first native process.
-    await delay(2000);
-    text('xcrun', ['simctl', 'terminate', udid, 'com.apple.Preferences'], {
-      timeout: 30_000,
-    });
-    recordLifecycleAction('ios-system-app-terminated');
     for (attempt = 1; attempt <= iosColdStarts; attempt += 1) {
       boundary = undefined;
       observationComplete = false;
@@ -1056,6 +1067,7 @@ async function ios() {
     );
     throw error;
   } finally {
+    await stopLog(hostPressure);
     run('xcrun', ['simctl', 'terminate', udid, buildInfo.appId], {
       timeout: 10_000,
       allowFailure: true,

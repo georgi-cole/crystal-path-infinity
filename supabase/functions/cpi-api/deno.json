@@ -1,0 +1,12 @@
+{
+  "nodeModulesDir": "none",
+  "compilerOptions": { "strict": true },
+  "imports": {
+    "@crystal-path-infinity/game-core": "../../../packages/game-core/src/index.ts",
+    "pg": "npm:pg@8.23.1"
+  },
+  "tasks": {
+    "check": "deno check --frozen index.ts postgres.ts smoke.test.ts",
+    "test": "deno test --frozen --deny-env --deny-net --deny-read --deny-write smoke.test.ts"
+  }
+}

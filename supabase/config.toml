@@ -10,6 +10,23 @@ project_id = "crystal-path-infinity"
 schemas = ["public", "storage"]
 extra_search_path = ["public", "extensions"]
 
+[auth]
+# Local development also keeps public/anonymous registration closed.
+enable_signup = false
+enable_anonymous_sign_ins = false
+
+[auth.email]
+enable_signup = false
+enable_confirmations = true
+otp_length = 6
+otp_expiry = 600
+
+[functions.cpi-api]
+# Preserve the platform JWT gate; unauthenticated OTP/SSV routes are not deployed.
+verify_jwt = true
+entrypoint = "./functions/cpi-api/index.ts"
+import_map = "./functions/cpi-api/deno.json"
+
 # Do not guess the hosted project's PostgreSQL version here. Once the
 # development project is verified, match [db].major_version to its actual
 # SHOW server_version; result before starting a local stack.

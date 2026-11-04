@@ -59,6 +59,10 @@ jobs:
         run: npm run format:check 2>&1 | tee apps/mobile/artifacts/format.log
       - name: Application tests
         run: npm test 2>&1 | tee apps/mobile/artifacts/tests.log
+      - name: Check and execute the Supabase Edge adapter in pinned Deno
+        run: |
+          npm exec --yes --package=deno@2.9.6 -- deno task --config supabase/functions/cpi-api/deno.json check
+          npm exec --yes --package=deno@2.9.6 -- deno task --config supabase/functions/cpi-api/deno.json test
       - name: Test unsigned packaging safeguards and artifact verification
         run: |
           node --experimental-strip-types --test .github/scripts/unsigned-beta.test.mjs
@@ -440,6 +444,7 @@ jobs:
           node --experimental-strip-types backend/tests/ranked-client-integration.mjs
           node --experimental-strip-types backend/tests/reward-integration.mjs
           node --experimental-strip-types backend/tests/operations-integration.mjs
+          node --experimental-strip-types backend/tests/edge-integration.mjs
       - name: Validate independent backend environments and public-variable guard
         run: node --test backend/tests/environments.test.mjs
 

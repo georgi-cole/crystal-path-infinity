@@ -103,3 +103,27 @@ Five mocked-SDK integration cases check success without retries, recovery from t
 The optional `uiautomator dump` was replaced with `adb shell dumpsys window windows` for a **passive** window-state artifact (`android-window.txt`). This eliminates the additional accessibility-instrumentation process without weakening any required native acceptance: the full profile still requires **three distinct cold starts**, verified in-app React/Capacitor readiness, Android Home/lock interruptions, native pause/resume and bridge clock evidence, screenshot captures, target-app ANR detection, and zero unexplained runtime errors. No application crash is reclassified or suppressed. If a runtime exception appears in a future run, the job still fails and retains the logs for review.
 
 The new regression test checks absence of the UIAutomator sidecar and presence of passive window diagnostics and the original strict lifecycle assertions. This is a source-level prevention measure; success must be confirmed by a subsequent full Android emulator job and the unchanged aggregate check.
+
+## iOS post-migration provisioning (4 November 2026)
+
+[PR #79's initial run](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41830327114)
+failed twice before any CPI process started. On attempt 1, Apple Settings launch
+timed out; on attempt 2, installation timed out after a six-minute first boot.
+The second failure screenshot nevertheless showed the installed CPI icon on the
+Home screen, demonstrating that a command timeout does not mean installation
+never started. Neither failure supplied application lifecycle evidence.
+
+The harness now completes migration on its fresh device, shuts down that same
+device once, and performs a separate bounded warm boot. It requires Settings to
+launch with a real process identifier and terminate successfully **before**
+installing CPI. This keeps first-boot service congestion outside the application
+test. Settings gets a 180-second launch and 60-second termination budget; cold
+boot remains bounded at 900 seconds and warm boot at 180 seconds. Both boot logs
+and the command transcript are retained. Any failed step immediately fails the
+check; there is no retry loop, replacement simulator, or retry of a game launch.
+
+The full profile still executes both distinct CPI cold starts and every existing
+prebridge, background/resume, bridge round-trip, screenshot and runtime-error
+assertion. Unit tests exercise each provisioning failure boundary and malformed
+Settings responses. Required native CI must pass on the updated PR head; this
+provisioning change does not claim a measured long-term reliability rate.
