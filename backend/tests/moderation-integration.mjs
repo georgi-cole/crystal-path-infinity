@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { runServerIntegration } from './server-integration.mjs';
 import { createModerationHandler } from '../../packages/server-core/src/moderation-api.ts';
 import { createAccountLifecycleHandler } from '../../packages/server-core/src/account-lifecycle.ts';
+import { createMvpServer } from '../../packages/server-core/src/server-app.ts';
 
 export async function runModerationIntegration(adminPool, runtimePool) {
   await runServerIntegration(adminPool, runtimePool, async ({ runId, subject }) => {
@@ -11,7 +12,7 @@ export async function runModerationIntegration(adminPool, runtimePool) {
     const reporter = '00000000-0000-4000-8000-000000000481';
     const reporterToken = 'trusted-reporter-test-token';
     const staffToken = 'trusted-staff-test-token';
-    const handler = createModerationHandler({
+    const moderationHandler = createModerationHandler({
       database: runtimePool,
       allowOrigin: (origin) => origin === 'capacitor://localhost',
       rateLimit: () => Promise.resolve(true),
@@ -26,6 +27,7 @@ export async function runModerationIntegration(adminPool, runtimePool) {
             : null,
         ),
     });
+    const handler = createMvpServer({ handlers: { moderation: moderationHandler } });
     const request = (route, token, body) =>
       new Request('https://example.invalid/moderation/' + route, {
         method: 'POST',
@@ -108,7 +110,7 @@ export async function runModerationIntegration(adminPool, runtimePool) {
           assert.equal(read.rows[0].board.count, count);
         }
       }
-      const lifecycle = createAccountLifecycleHandler({
+      const accountHandler = createAccountLifecycleHandler({
         database: runtimePool,
         authenticate: () => Promise.resolve({ subject: reporter }),
         allowOrigin: () => true,
@@ -125,6 +127,7 @@ export async function runModerationIntegration(adminPool, runtimePool) {
         },
         revokeAllSessions: () => Promise.resolve(null),
       });
+      const lifecycle = createMvpServer({ handlers: { account: accountHandler } });
       const exported = await lifecycle(
         new Request('https://example.invalid/account/export', {
           method: 'POST',

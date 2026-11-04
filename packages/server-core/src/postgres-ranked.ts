@@ -1,5 +1,6 @@
 import type { SqlConnection, SqlPool } from './database.ts';
 import { RankedError } from './ranked.ts';
+import { createOperationStartGate, createOperationRecoveryGate } from './operations-policy.ts';
 import type {
   RankedAudit,
   RankedReceipt,
@@ -44,6 +45,14 @@ export class PostgresTransaction implements RankedTransaction {
   constructor(connection: SqlConnection, subject: string) {
     this.connection = connection;
     this.subject = subject;
+  }
+
+  authorizeStart(input: { clientBuild: number; rulesetVersion: string }): Promise<void> {
+    return createOperationStartGate()(this.connection, { operation: 'ranked', ...input });
+  }
+
+  authorizeRecovery(input: { clientBuild: number; rulesetVersion: string }): Promise<void> {
+    return createOperationRecoveryGate()(this.connection, input);
   }
 
   async getActiveRun(): Promise<StoredRankedRun | null> {

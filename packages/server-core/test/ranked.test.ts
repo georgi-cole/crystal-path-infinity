@@ -12,6 +12,7 @@ import type {
   RankedTransaction,
   StoredRankedRun,
 } from '../src/ranked.ts';
+import { OperationsPolicyError } from '../src/operations-policy.ts';
 
 interface Account {
   runs: Map<string, StoredRankedRun>;
@@ -25,6 +26,9 @@ class Repository implements RankedRepository {
   readonly accounts = new Map<string, Account>();
   private readonly queues = new Map<string, Promise<void>>();
   failReceipt = false;
+  startProblem: OperationsPolicyError | null = null;
+  recoveryProblem: OperationsPolicyError | null = null;
+  readonly operationCalls: string[] = [];
 
   account(subject = 'account-A'): Account {
     let account = this.accounts.get(subject);
@@ -51,6 +55,14 @@ class Repository implements RankedRepository {
     await previous;
     const draft = structuredClone(this.account(subject));
     const transaction: RankedTransaction = {
+      authorizeStart: () => {
+        this.operationCalls.push('start');
+        return this.startProblem ? Promise.reject(this.startProblem) : Promise.resolve();
+      },
+      authorizeRecovery: () => {
+        this.operationCalls.push('recovery');
+        return this.recoveryProblem ? Promise.reject(this.recoveryProblem) : Promise.resolve();
+      },
       getActiveRun: () =>
         Promise.resolve(
           [...draft.runs.values()].find(
@@ -91,9 +103,9 @@ class Repository implements RankedRepository {
   }
 }
 
-const A: RankedActor = { subject: 'account-A', deviceId: 'device-A' };
-const B: RankedActor = { subject: 'account-A', deviceId: 'device-B' };
-const OTHER: RankedActor = { subject: 'account-B', deviceId: 'device-A' };
+const A: RankedActor = { subject: 'account-A', deviceId: 'device-A', clientBuild: 1 };
+const B: RankedActor = { subject: 'account-A', deviceId: 'device-B', clientBuild: 1 };
+const OTHER: RankedActor = { subject: 'account-B', deviceId: 'device-A', clientBuild: 1 };
 
 function setup(options: { heartbeatWindowMs?: number } = {}) {
   const repository = new Repository();
@@ -136,6 +148,47 @@ function setup(options: { heartbeatWindowMs?: number } = {}) {
 }
 
 describe('ranked authority trust boundary', () => {
+  it('gates new starts and recovery before writes, but retrieves committed receipts after a policy change', async () => {
+    const f = setup();
+    const input = { idempotencyKey: f.newId() };
+    f.repository.startProblem = new OperationsPolicyError('maintenance');
+    await expect(f.authority.start(A, input)).rejects.toMatchObject({ code: 'maintenance' });
+    expect(f.repository.account().runs.size).toBe(0);
+    expect(f.repository.account().regionLocks).toBe(0);
+    f.repository.startProblem = null;
+    const started = await f.authority.start(A, input);
+    f.repository.startProblem = new OperationsPolicyError('client_update_required');
+    expect(await f.authority.start(A, input)).toEqual(started);
+    const request = f.request(started, { type: 'resume' });
+    f.repository.recoveryProblem = new OperationsPolicyError('recovery_unavailable');
+    const original = structuredClone(f.record(started));
+    await expect(f.authority.execute(A, request)).rejects.toMatchObject({
+      code: 'recovery_unavailable',
+    });
+    expect(f.record(started)).toEqual(original);
+    await expect(
+      f.authority.recover(A, {
+        runId: started.snapshot.runId,
+        idempotencyKey: f.newId(),
+        takeover: false,
+      }),
+    ).rejects.toMatchObject({ code: 'recovery_unavailable' });
+    f.repository.recoveryProblem = null;
+    const executed = await f.authority.execute(A, request);
+    f.repository.recoveryProblem = new OperationsPolicyError('client_update_required');
+    expect(await f.authority.execute(A, request)).toEqual(executed);
+    expect(f.record(executed).nextSequence).toBe('2');
+  });
+  it('fails closed on an absent or untrusted client build before any new transaction', async () => {
+    const f = setup();
+    for (const clientBuild of [undefined, 0, -1, 1.5, 2_147_483_648]) {
+      await expect(
+        f.authority.start({ ...A, clientBuild } as RankedActor, { idempotencyKey: f.newId() }),
+      ).rejects.toMatchObject({ code: 'operation_context_required' });
+    }
+    expect(f.repository.operationCalls).toEqual([]);
+    expect(f.repository.accounts.size).toBe(0);
+  });
   it('keeps saved pending attempts inactive until explicit recovery with no other attached run', async () => {
     const fixture = setup();
     const old = await fixture.start();

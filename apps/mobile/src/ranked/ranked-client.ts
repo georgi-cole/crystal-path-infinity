@@ -1,4 +1,6 @@
 import type { AccountSessionOwner } from '../account/session-owner';
+import { canRecheckOperation, parseOperationFailure } from '../operations/operation-failure.ts';
+import type { OperationFailure } from '../operations/operation-failure';
 
 export type RankedSide = 'left' | 'right';
 export type RankedCommand =
@@ -69,6 +71,7 @@ export type RankedClientPhase =
   | 'offline'
   | 'recovery'
   | 'lease_lost'
+  | 'blocked'
   | 'error'
   | 'finished';
 export interface RankedClientState {
@@ -77,6 +80,7 @@ export interface RankedClientState {
   readonly online: boolean;
   readonly canRetry: boolean;
   readonly rejected: boolean;
+  readonly problem?: OperationFailure | null;
 }
 export interface RankedClient {
   snapshot(): RankedClientState;
@@ -441,6 +445,7 @@ export function createRankedClient(options: RankedClientOptions): RankedClient |
   let online = options.online ?? true;
   let phase: RankedClientPhase = 'idle';
   let rejected = false;
+  let problem: OperationFailure | null = null;
   let disposed = false;
   const notify = () => {
     for (const observer of observers) {
@@ -460,6 +465,7 @@ export function createRankedClient(options: RankedClientOptions): RankedClient |
     pending = null;
     phase = 'idle';
     rejected = false;
+    problem = null;
     notify();
   };
   const syncAccount = () => {
@@ -492,8 +498,9 @@ export function createRankedClient(options: RankedClientOptions): RankedClient |
           disposed || !scope ? 'unavailable' : !online ? 'offline' : flight ? 'pending' : phase,
         run: scope && !disposed && latest ? structuredClone(latest.snapshot) : null,
         online,
-        canRetry: !!scope && !!pending && !flight && online,
+        canRetry: !!scope && !!pending && !flight && online && canRecheckOperation(problem),
         rejected,
+        problem,
       };
     },
     subscribe(observer) {
@@ -509,7 +516,7 @@ export function createRankedClient(options: RankedClientOptions): RankedClient |
     },
     async lookupActive() {
       syncAccount();
-      if (flight || !online || !account) return null;
+      if (flight || pending || !online || !account) return null;
       discoveredRunId = null;
       pending = { route: 'active', body: '{}', runId: null };
       await send(pending);
@@ -560,7 +567,7 @@ export function createRankedClient(options: RankedClientOptions): RankedClient |
       await send(pending);
     },
     async retry() {
-      if (pending && !flight && online) await send(pending);
+      if (pending && !flight && online && canRecheckOperation(problem)) await send(pending);
     },
     async applyVerifiedGrant(grantId, expectedRunId) {
       const scope = syncAccount();
@@ -577,6 +584,7 @@ export function createRankedClient(options: RankedClientOptions): RankedClient |
       const runId = latest.snapshot.runId;
       if (pending?.route === 'reward_apply') {
         if (pending.runId !== runId || pending.grantId !== grantId) return false;
+        if (!canRecheckOperation(problem)) return false;
         await send(pending);
         return grantRestored(scope, runId);
       }
@@ -584,7 +592,8 @@ export function createRankedClient(options: RankedClientOptions): RankedClient |
       if (pending) {
         // Preserve an uncertain recovery request too. Never overwrite a possibly
         // committed action/application with a newly minted idempotency key.
-        if (pending.route !== 'recover' || pending.runId !== runId) return false;
+        if (pending.route !== 'recover' || pending.runId !== runId || !canRecheckOperation(problem))
+          return false;
         await send(pending);
         if (pending) return false;
         recovered = true;
@@ -640,12 +649,14 @@ export function createRankedClient(options: RankedClientOptions): RankedClient |
       const runId = latest.snapshot.runId;
       if (pending?.route === 'archive') {
         if (pending.runId !== runId) return false;
+        if (!canRecheckOperation(problem)) return false;
         await send(pending);
         return runArchived(scope);
       }
       let recovered = false;
       if (pending) {
-        if (pending.route !== 'recover' || pending.runId !== runId) return false;
+        if (pending.route !== 'recover' || pending.runId !== runId || !canRecheckOperation(problem))
+          return false;
         await send(pending);
         if (pending) return false;
         recovered = true;
@@ -683,6 +694,7 @@ export function createRankedClient(options: RankedClientOptions): RankedClient |
       syncAccount();
       if (
         flight ||
+        pending ||
         !online ||
         !account ||
         !UUID.test(runId) ||
@@ -726,6 +738,7 @@ export function createRankedClient(options: RankedClientOptions): RankedClient |
     flight = controller;
     phase = 'pending';
     rejected = false;
+    problem = null;
     notify();
     try {
       const result = await options.session.withAccountRequest(async (lease) => {
@@ -753,7 +766,12 @@ export function createRankedClient(options: RankedClientOptions): RankedClient |
         const raw = await readPublicReply(response);
         if (!response.ok) {
           const code = object(raw, ['code']) && typeof raw.code === 'string' ? raw.code : '';
-          return { error: code, reply: null, active: undefined };
+          return {
+            error: code,
+            operation: parseOperationFailure(raw, response.status),
+            reply: null,
+            active: undefined,
+          };
         }
         if (request.route === 'archive') {
           if (
@@ -828,6 +846,13 @@ export function createRankedClient(options: RankedClientOptions): RankedClient |
         rejected = !incoming.accepted;
         phase = incoming.snapshot.status === 'finished' ? 'finished' : 'ready';
       } else {
+        if ('operation' in result && result.operation) {
+          // Even a definitive pre-mutation refusal keeps the exact queued body:
+          // a preceding response may have been lost and only its receipt can settle it.
+          problem = result.operation;
+          phase = result.operation === 'service_unavailable' ? 'retry' : 'blocked';
+          return;
+        }
         const code =
           result.error === 'reward-lease-lost'
             ? 'lease-lost'

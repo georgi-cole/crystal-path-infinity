@@ -1,4 +1,5 @@
 import { createHash, createHmac, randomBytes, randomUUID } from 'node:crypto';
+import { OperationsPolicyError } from './operations-policy.ts';
 import {
   addDecimal,
   assertRunState,
@@ -19,6 +20,8 @@ import type {
 export interface RankedActor {
   readonly subject: string;
   readonly deviceId: string;
+  /** Trusted authenticated build binding; never accepted from the command body. */
+  readonly clientBuild: number;
 }
 
 export interface RankedRegionSnapshot {
@@ -114,6 +117,8 @@ export interface RankedAudit {
 }
 
 export interface RankedTransaction {
+  authorizeStart(input: { clientBuild: number; rulesetVersion: string }): Promise<void>;
+  authorizeRecovery(input: { clientBuild: number; rulesetVersion: string }): Promise<void>;
   getActiveRun(): Promise<StoredRankedRun | null>;
   getRun(runId: string): Promise<StoredRankedRun | null>;
   getReceipt(key: string): Promise<RankedReceipt | null>;
@@ -208,6 +213,12 @@ function actorIdentity(actor: RankedActor): void {
       fail('invalid-authentication');
     }
   }
+  if (
+    !Number.isInteger(actor.clientBuild) ||
+    actor.clientBuild < 1 ||
+    actor.clientBuild > 2_147_483_647
+  )
+    throw new OperationsPolicyError('operation_context_required');
 }
 
 function parseCommand(value: unknown): RankedCommand {
@@ -424,6 +435,10 @@ export class RankedAuthority {
       const repeated = await this.repeated(transaction, key, request);
       if (repeated) return repeated;
       if (await transaction.getActiveRun()) fail('active-run-exists');
+      await transaction.authorizeStart({
+        clientBuild: actor.clientBuild,
+        rulesetVersion: this.rulesetVersion,
+      });
       const now = this.observation();
       const region = structuredClone(await transaction.getRegionSnapshot());
       const state = createRun(
@@ -477,6 +492,10 @@ export class RankedAuthority {
       const repeated = await this.repeated(transaction, key, request);
       if (repeated) return repeated;
       let record = this.owned(await transaction.getRun(runId), actor);
+      await transaction.authorizeRecovery({
+        clientBuild: actor.clientBuild,
+        rulesetVersion: record.state.rulesetVersion,
+      });
       const now = this.observation();
       if (record.leaseActive === false) fail('run-archived');
       if (record.deviceId !== actor.deviceId || record.leaseToken !== leaseToken)
@@ -546,6 +565,10 @@ export class RankedAuthority {
       const repeated = await this.repeated(transaction, key, request);
       if (repeated) return repeated;
       let record = this.owned(await transaction.getRun(runId), actor);
+      await transaction.authorizeRecovery({
+        clientBuild: actor.clientBuild,
+        rulesetVersion: record.state.rulesetVersion,
+      });
       const now = this.observation();
       if (record.state.status === 'finished') {
         return this.remember(transaction, key, request, reply(record), now);

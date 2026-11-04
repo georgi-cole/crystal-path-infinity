@@ -5,6 +5,8 @@ import { createRankedClient } from '../../apps/mobile/src/ranked/ranked-client.t
 import { createRankedHandler } from '../../packages/server-core/src/ranked-api.ts';
 import { PostgresRankedRepository } from '../../packages/server-core/src/postgres-ranked.ts';
 import { RankedAuthority } from '../../packages/server-core/src/ranked.ts';
+import { enableFixtureOperations } from './operations-fixture.mjs';
+import { createMvpServer } from '../../packages/server-core/src/server-app.ts';
 
 /** Actual mobile transport/parsing -> authenticated handler -> private SQL adapter. */
 export async function runRankedClientIntegration(adminPool, runtimePool) {
@@ -54,20 +56,26 @@ export async function runRankedClientIntegration(adminPool, runtimePool) {
     repository: new PostgresRankedRepository(runtimePool),
     now: () => now,
   });
-  const handler = createRankedHandler({
+  const rankedHandler = createRankedHandler({
     basePath: '/cpi',
     authority,
     authenticate: (token) =>
       Promise.resolve(
         token === tokenA
-          ? { subject: a, deviceId: 'trusted-mobile-device-A', rankedAllowed: true }
+          ? { subject: a, deviceId: 'trusted-mobile-device-A', clientBuild: 1, rankedAllowed: true }
           : token === tokenB
-            ? { subject: b, deviceId: 'trusted-mobile-device-B', rankedAllowed: true }
+            ? {
+                subject: b,
+                deviceId: 'trusted-mobile-device-B',
+                clientBuild: 1,
+                rankedAllowed: true,
+              }
             : null,
       ),
     allowOrigin: (origin) => origin === 'capacitor://localhost',
     rateLimit: () => Promise.resolve(true),
   });
+  const handler = createMvpServer({ basePath: '/cpi', handlers: { ranked: rankedHandler } });
   const bodies = [];
   let dropAfterCommit = false;
   const bridge = async (input, init) => {
@@ -117,7 +125,9 @@ export async function runRankedClientIntegration(adminPool, runtimePool) {
     return client;
   };
   let client = makeClient();
+  let restorePolicy = () => Promise.resolve();
   try {
+    restorePolicy = await enableFixtureOperations(admin);
     await admin.query('insert into auth.users(id,email) values ($1::uuid,$2),($3::uuid,$4)', [
       a,
       'mobile-ranked-a@example.invalid',
@@ -233,7 +243,7 @@ export async function runRankedClientIntegration(adminPool, runtimePool) {
     assert.equal(published.rows[0].last_cleared_row, '1');
     assert.ok(published.rows[0].published_at);
     const otherDevice = await authority.start(
-      { subject: a, deviceId: 'trusted-mobile-other-device' },
+      { subject: a, deviceId: 'trusted-mobile-other-device', clientBuild: 1 },
       { idempotencyKey: randomUUID() },
     );
     await client.start();
@@ -275,6 +285,7 @@ export async function runRankedClientIntegration(adminPool, runtimePool) {
   } finally {
     client.dispose();
     await admin.query('delete from auth.users where id in ($1::uuid,$2::uuid)', [a, b]);
+    await restorePolicy();
     admin.release();
   }
 }

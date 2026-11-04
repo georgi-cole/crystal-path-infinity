@@ -8,6 +8,7 @@ import {
 import type { RandomSource, RunCommand } from '@crystal-path-infinity/game-core';
 import { RewardFlow, UNAVAILABLE_REWARDED_ADAPTER } from '../src/rewards/reward-flow';
 import type { LoadedRewardedAd, NativeRewardedAdapter } from '../src/rewards/reward-flow';
+import { RewardOperationUnavailable } from '../src/rewards/reward-client';
 import type {
   RewardClient,
   RewardInventory,
@@ -273,6 +274,98 @@ function fixture() {
 }
 
 describe('CPI-029/030 authoritative continuation orchestration', () => {
+  it('stops pending polling on a fixed policy refusal without erasing the issued intent', async () => {
+    const f = fixture();
+    const flow = f.makeFlow();
+    await flow.recover();
+    await flow.watch();
+    f.events().onClosed();
+    await flush();
+    expect(f.timers.size).toBe(1);
+    vi.mocked(f.client.status).mockRejectedValueOnce(
+      new RewardOperationUnavailable('operation_context_required'),
+    );
+    await f.tick(1000);
+    expect(flow.snapshot()).toMatchObject({
+      phase: 'earned_pending',
+      problem: 'operation_context_required',
+      waiting: false,
+      canRetry: false,
+      inputBlocked: true,
+    });
+    expect(f.timers.size).toBe(0);
+    expect(f.core().pendingReward).not.toBeNull();
+    expect(f.core().revivesGranted).toBe(0);
+    flow.dispose();
+  });
+  it('blocks SDK work on operational refusal and permits only an explicit useful recheck', async () => {
+    const f = fixture();
+    const flow = f.makeFlow();
+    await flow.recover();
+    vi.mocked(f.client.eligibility).mockRejectedValueOnce(
+      new RewardOperationUnavailable('maintenance'),
+    );
+    await flow.watch();
+    expect(flow.snapshot()).toMatchObject({
+      problem: 'maintenance',
+      phase: 'offer',
+      canWatch: false,
+      canRetry: true,
+    });
+    expect(f.adapter.initialize).not.toHaveBeenCalled();
+    expect(f.core().revivesGranted).toBe(0);
+    await flow.watch();
+    expect(f.client.eligibility).toHaveBeenCalledOnce();
+    await flow.retry();
+    expect(flow.snapshot()).toMatchObject({ problem: null, canWatch: true });
+    vi.mocked(f.client.eligibility).mockRejectedValueOnce(
+      new RewardOperationUnavailable('client_update_required'),
+    );
+    await flow.watch();
+    expect(flow.snapshot()).toMatchObject({
+      problem: 'client_update_required',
+      canRetry: false,
+      canWatch: false,
+    });
+    const calls = f.calls.length;
+    await flow.retry();
+    expect(f.calls).toHaveLength(calls);
+    expect(f.adapter.initialize).not.toHaveBeenCalled();
+    flow.dispose();
+  });
+  it('keeps a verified grant when recovery requires an update and never consumes a second ad', async () => {
+    const f = fixture();
+    const flow = f.makeFlow();
+    await flow.recover();
+    await flow.watch();
+    f.verify();
+    f.events().onClosed();
+    await flush();
+    vi.mocked(f.client.applyGrant).mockRejectedValueOnce(
+      new RewardOperationUnavailable('client_update_required'),
+    );
+    await flow.apply();
+    expect(flow.snapshot()).toMatchObject({
+      phase: 'granted',
+      problem: 'client_update_required',
+      revivesGranted: 1,
+      revivesApplied: 0,
+      canApply: false,
+      canRetry: false,
+      inputBlocked: true,
+    });
+    expect(f.core().revivesApplied).toBe(0);
+    expect(f.core().reviveReceipts[0].status).toBe('granted');
+    await flow.watch();
+    expect(f.ad.show).toHaveBeenCalledOnce();
+    flow.dispose();
+    const updated = f.makeFlow();
+    await updated.recover();
+    await updated.apply();
+    expect(f.core().revivesApplied).toBe(1);
+    expect(f.ad.show).toHaveBeenCalledOnce();
+    updated.dispose();
+  });
   it('serializes a shared fullscreen provider and refreshes a stale second offer before any second SDK load', async () => {
     const f = fixture();
     const first = f.makeFlow();

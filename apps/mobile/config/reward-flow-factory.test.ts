@@ -146,6 +146,39 @@ function fixture() {
   };
 }
 describe('CPI-029 explicit ranked/reward flow binding', () => {
+  it('preserves fixed operation failures from the ranked lease/apply queue and keeps the owed grant', async () => {
+    const f = fixture();
+    f.apply.mockImplementationOnce(() => {
+      f.setState({ phase: 'blocked', problem: 'client_update_required', canRetry: false });
+      return Promise.resolve(false);
+    });
+    const flow = f.factory(RUN)!;
+    await flow.recover();
+    await flow.apply();
+    expect(flow.snapshot()).toMatchObject({
+      phase: 'granted',
+      problem: 'client_update_required',
+      canRetry: false,
+      revivesGranted: 1,
+      revivesApplied: 0,
+      inputBlocked: true,
+    });
+    expect(f.recover).not.toHaveBeenCalled();
+    flow.dispose();
+    const recovery = fixture();
+    recovery.remotePlaying();
+    recovery.recover.mockImplementationOnce(() => {
+      recovery.setState({ phase: 'blocked', problem: 'recovery_unavailable', canRetry: true });
+      return Promise.resolve();
+    });
+    const restored = recovery.factory(RUN)!;
+    await restored.recover();
+    expect(restored.snapshot()).toMatchObject({
+      problem: 'recovery_unavailable',
+      inputBlocked: true,
+    });
+    restored.dispose();
+  });
   it('uses the ranked private queue with an obligatory expected run ID instead of a supplied arbitrary apply callback', async () => {
     const f = fixture();
     const flow = f.factory(RUN)!;

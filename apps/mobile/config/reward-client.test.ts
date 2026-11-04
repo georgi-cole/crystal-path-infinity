@@ -4,6 +4,7 @@ import {
   parseRewardPermit,
   parseRewardView,
   RewardUnavailable,
+  RewardOperationUnavailable,
 } from '../src/rewards/reward-client';
 import type { RewardClient, RewardPermit, RewardView } from '../src/rewards/reward-client';
 import type { AccountRequestLease } from '../src/account/session-owner';
@@ -65,6 +66,41 @@ function session() {
   };
 }
 describe('CPI-026/029 strict rewarded wire and private transport', () => {
+  it.each([
+    ['maintenance', 503],
+    ['client_update_required', 426],
+    ['ruleset_unavailable', 409],
+    ['recovery_unavailable', 409],
+    ['operation_context_required', 503],
+    ['service_unavailable', 503],
+  ] as const)('preserves only the fixed %s category for the reward owner', async (code, status) => {
+    const client = createRewardClient({
+      baseUrl: 'https://server.invalid',
+      session: session(),
+      applyGrant: () => Promise.resolve(false),
+      fetcher: () => Promise.resolve(new Response(JSON.stringify({ code }), { status })),
+    })!;
+    await expect(client.intent(runId, intentId, new AbortController().signal)).rejects.toEqual(
+      new RewardOperationUnavailable(code),
+    );
+  });
+  it('does not expose private error details or accept a forged policy status', async () => {
+    for (const [wire, status] of [
+      [{ code: 'client_update_required', email: 'REWARD-ACCESS-SECRET' }, 426],
+      [{ code: 'client_update_required' }, 500],
+      [{ code: 'REWARD-ACCESS-SECRET' }, 503],
+    ] as const) {
+      const client = createRewardClient({
+        baseUrl: 'https://server.invalid',
+        session: session(),
+        applyGrant: () => Promise.resolve(false),
+        fetcher: () => Promise.resolve(new Response(JSON.stringify(wire), { status })),
+      })!;
+      await expect(client.status(runId, new AbortController().signal)).rejects.toEqual(
+        new RewardUnavailable(),
+      );
+    }
+  });
   it('validates exact fixed promises and preserves the tenth granted continuation before it is applied', () => {
     expect(parseRewardView(offer(), runId)).toEqual(offer());
     const tenth = {

@@ -12,3 +12,5 @@ export * from './reward-api.ts';
 export * from './reward-export.ts';
 export * from './pending-runs.ts';
 export * from './pending-runs-api.ts';
+export * from './operations.ts';
+export * from './server-app.ts';

@@ -134,6 +134,86 @@ function body(input: RequestInit): Record<string, unknown> {
   return JSON.parse(serializedBody(input)) as Record<string, unknown>;
 }
 
+describe('CPI-032/037 fixed operational refusals', () => {
+  it.each([
+    ['maintenance', 503, true],
+    ['client_update_required', 426, false],
+    ['ruleset_unavailable', 409, true],
+    ['recovery_unavailable', 409, true],
+    ['operation_context_required', 503, false],
+  ] as const)(
+    'fences %s and only offers a useful explicit recheck',
+    async (code, status, canRetry) => {
+      const f = await fixture(() => Promise.resolve(response({ code }, status)));
+      await f.client.start();
+      expect(f.client.snapshot()).toMatchObject({
+        phase: 'blocked',
+        problem: code,
+        run: null,
+        canRetry,
+      });
+      const original = serializedBody(f.calls[0].init);
+      await f.client.recover(RUN);
+      await f.client.lookupActive();
+      await f.client.start();
+      expect(f.calls).toHaveLength(1);
+      await f.client.retry();
+      expect(f.calls).toHaveLength(canRetry ? 2 : 1);
+      if (canRetry) expect(serializedBody(f.calls[1].init)).toBe(original);
+      f.client.dispose();
+    },
+  );
+  it('keeps an uncertain action byte-for-byte through maintenance until its original receipt returns', async () => {
+    let attempt = 0;
+    const f = await fixture(() => {
+      attempt++;
+      if (attempt === 1) return Promise.resolve(response(reply()));
+      if (attempt === 2) return Promise.reject(new Error('Response lost after commit'));
+      if (attempt === 3) return Promise.resolve(response({ code: 'maintenance' }, 503));
+      return Promise.resolve(response(reply('2', '0', '1', false)));
+    });
+    await f.client.start();
+    await f.client.command({ type: 'resume' });
+    await f.client.retry();
+    expect(f.client.snapshot()).toMatchObject({
+      phase: 'blocked',
+      problem: 'maintenance',
+      run: { nextSequence: '1', paused: true },
+    });
+    await f.client.command({ type: 'end' });
+    await f.client.recover(RUN, true);
+    expect(f.calls).toHaveLength(3);
+    await f.client.retry();
+    expect(f.calls.slice(1).map(({ init }) => serializedBody(init))).toEqual(
+      Array.from({ length: 3 }, () => serializedBody(f.calls[1].init)),
+    );
+    expect(f.client.snapshot()).toMatchObject({
+      phase: 'ready',
+      problem: null,
+      run: { nextSequence: '2', paused: false },
+    });
+    f.client.dispose();
+  });
+  it('treats service failure as ambiguous and rejects extra private fields or mismatched status in fixed errors', async () => {
+    for (const [wire, status, expected] of [
+      [{ code: 'service_unavailable' }, 503, 'service_unavailable'],
+      [{ code: 'maintenance', email: 'PRIVATE-SECRET' }, 503, null],
+      [{ code: 'client_update_required' }, 500, null],
+      [{ code: 'PRIVATE-SECRET' }, 503, null],
+    ] as const) {
+      const f = await fixture(() => Promise.resolve(response(wire, status)));
+      await f.client.start();
+      expect(f.client.snapshot()).toMatchObject({
+        phase: 'retry',
+        problem: expected,
+        canRetry: true,
+      });
+      expect(JSON.stringify(f.client.snapshot())).not.toContain('PRIVATE-SECRET');
+      f.client.dispose();
+    }
+  });
+});
+
 describe('CPI-029 verified grant queue and device lease recovery', () => {
   const grantId = '29000000-0000-4000-8000-000000000099';
   const refreshedLease = '00000000-0000-4000-8000-000000000023';
@@ -318,6 +398,8 @@ describe('strict ranked public wire projection', () => {
     const repository: RankedRepository = {
       transaction: (_subject, operation) =>
         operation({
+          authorizeStart: () => Promise.resolve(),
+          authorizeRecovery: () => Promise.resolve(),
           getActiveRun: () =>
             Promise.resolve(record && record.state.status !== 'finished' ? record : null),
           getRun: () => Promise.resolve(record),
@@ -345,7 +427,7 @@ describe('strict ranked public wire projection', () => {
       newId,
       newSecret: () => 'a'.repeat(64),
     });
-    const actor = { subject: USER_A, deviceId: 'trusted-test-device' };
+    const actor = { subject: USER_A, deviceId: 'trusted-test-device', clientBuild: 1 };
     let latest = await authority.start(actor, { idempotencyKey: newId() });
     expect(parseRankedReply(latest)).not.toBeNull();
     const command = async (value: Parameters<RankedAuthority['execute']>[1]) => {
@@ -762,5 +844,32 @@ describe('ranked scene confirmed-state presentation', () => {
     expect(markup).toContain('Reward verification is pending');
     expect(markup).not.toContain('>End run<');
     expect(markup).not.toContain('Watch ad');
+  });
+  it('shows actionable fixed copy for update, maintenance and retained recovery without enabling play', () => {
+    for (const [problem, phrase, canRetry] of [
+      ['maintenance', 'paused for maintenance', true],
+      ['client_update_required', 'Update the app', false],
+      ['operation_context_required', 'Ranked services are unavailable', false],
+      ['recovery_unavailable', 'verified continuations are kept', true],
+    ] as const) {
+      const markup = renderToStaticMarkup(
+        createElement(RankedScene, {
+          client: client({
+            phase: 'blocked',
+            problem,
+            run: parseRankedReply(reply())!.snapshot,
+            online: true,
+            canRetry,
+            rejected: false,
+          }),
+          online: true,
+          onLeave: () => {},
+        }),
+      );
+      expect(markup).toContain(phrase);
+      expect(markup.includes('Check again')).toBe(canRetry);
+      expect(markup).not.toContain('>Resume<');
+      expect(markup).not.toContain(LEASE);
+    }
   });
 });

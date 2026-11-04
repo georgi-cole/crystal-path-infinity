@@ -8,6 +8,8 @@ import { RewardService } from '../../packages/server-core/src/reward-service.ts'
 import { createRewardHandler } from '../../packages/server-core/src/reward-api.ts';
 import { createAccountLifecycleHandler } from '../../packages/server-core/src/account-lifecycle.ts';
 import { PendingRunsService } from '../../packages/server-core/src/pending-runs.ts';
+import { enableFixtureOperations } from './operations-fixture.mjs';
+import { createMvpServer } from '../../packages/server-core/src/server-app.ts';
 
 /** Local keys sign synthetic Google-shaped fixtures. This is NOT live AdMob evidence. */
 export async function runRewardIntegration(adminPool, runtimePool) {
@@ -23,24 +25,16 @@ export async function runRewardIntegration(adminPool, runtimePool) {
     repository: new PostgresRankedRepository(runtimePool),
     now: () => now,
   });
-  let operations = false;
   const service = new RewardService({
     database: runtimePool,
     environment: 'development',
     platform: 'android',
     now: () => now,
     keys: { get: () => Promise.resolve(keys.publicKey) },
-    assertOperationStart: async (connection, input) => {
-      if (operations)
-        await connection.query(
-          'select cpi_private.authorize_operation_start($1::text,$2::integer,$3::text)',
-          ['ad', input.clientBuild, input.rulesetVersion],
-        );
-    },
   });
   const pendingRuns = new PendingRunsService({ database: runtimePool, now: () => now });
   let otherActive = null;
-  const api = createRewardHandler({
+  const rewardHandler = createRewardHandler({
     basePath: '/cpi',
     service,
     authenticate: (token) =>
@@ -50,6 +44,7 @@ export async function runRewardIntegration(adminPool, runtimePool) {
     allowOrigin: (origin) => origin === 'capacitor://localhost',
     rateLimit: () => Promise.resolve(true),
   });
+  const api = createMvpServer({ basePath: '/cpi', handlers: { rewards: rewardHandler } });
   async function post(route, body, expected = 200) {
     const result = await api(
       new Request('https://reward.example.invalid/cpi/rewards/' + route, {
@@ -90,7 +85,7 @@ export async function runRewardIntegration(adminPool, runtimePool) {
     assert.equal(result.status, expected, 'Unexpected synthetic callback status');
     return result.json();
   }
-  let policy;
+  let restorePolicy = () => Promise.resolve();
   let latest;
   async function command(value) {
     now += 200;
@@ -121,6 +116,7 @@ export async function runRewardIntegration(adminPool, runtimePool) {
     }
   }
   try {
+    restorePolicy = await enableFixtureOperations(admin);
     await admin.query('insert into auth.users(id,email) values($1::uuid,$2),($3::uuid,$4)', [
       subject,
       'reward-integration@example.invalid',
@@ -139,18 +135,6 @@ export async function runRewardIntegration(adminPool, runtimePool) {
       );
     } finally {
       runtime.release();
-    }
-    const ops = await admin.query(
-      "select to_regprocedure('cpi_private.authorize_operation_start(text,integer,text)') as function",
-    );
-    operations = ops.rows[0].function !== null;
-    if (operations) {
-      const current = await admin.query('select cpi_private.get_operations_policy() as policy');
-      policy = current.rows[0].policy;
-      await admin.query(
-        "select cpi_private.set_operations_policy($1::bigint,true,true,1,1,'infinity-v1',ARRAY['infinity-v1'],'none','CI:reward')",
-        [policy.revision],
-      );
     }
     latest = await authority.start(actor, { idempotencyKey: randomUUID() });
     await die();
@@ -355,7 +339,7 @@ export async function runRewardIntegration(adminPool, runtimePool) {
     );
     assert.deepEqual(counts.rows[0], { transactions: '10', applied: '10', published: '1' });
     const wall = Date.now();
-    const lifecycle = createAccountLifecycleHandler({
+    const accountHandler = createAccountLifecycleHandler({
       database: runtimePool,
       authenticate: () => Promise.resolve({ subject }),
       verifyReauthentication: () =>
@@ -371,6 +355,7 @@ export async function runRewardIntegration(adminPool, runtimePool) {
       rateLimit: () => Promise.resolve(true),
       now: () => wall,
     });
+    const lifecycle = createMvpServer({ handlers: { account: accountHandler } });
     const exported = await lifecycle(
       new Request('https://reward.example.invalid/account/export', {
         method: 'POST',
@@ -399,23 +384,7 @@ export async function runRewardIntegration(adminPool, runtimePool) {
     await admin.query('delete from cpi_private.reward_sdk_configurations where id=$1::uuid', [
       configuration,
     ]);
-    if (policy) {
-      const current = await admin.query('select cpi_private.get_operations_policy() as policy');
-      await admin.query(
-        'select cpi_private.set_operations_policy($1::bigint,$2::boolean,$3::boolean,$4::integer,$5::integer,$6::text,$7::text[],$8::text,$9::text)',
-        [
-          current.rows[0].policy.revision,
-          policy.rankedStartsEnabled,
-          policy.adStartsEnabled,
-          policy.minimumClientBuild,
-          policy.minimumRecoveryBuild,
-          policy.startRuleset,
-          policy.recoveryRulesets,
-          policy.maintenanceCode,
-          'CI:reward-restore',
-        ],
-      );
-    }
+    await restorePolicy();
     admin.release();
   }
 }

@@ -99,7 +99,12 @@ describe('CPI-030 saved pending attempt discovery', () => {
       basePath: '/cpi',
       service: { saved, archive: () => Promise.reject(new Error()) },
       authenticate: () =>
-        Promise.resolve({ subject: A, deviceId: 'trusted-device', rankedAllowed: true }),
+        Promise.resolve({
+          subject: A,
+          deviceId: 'trusted-device',
+          rankedAllowed: true,
+          clientBuild: 1,
+        }),
       allowOrigin: () => true,
       rateLimit: () => Promise.resolve(true),
     });
