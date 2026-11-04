@@ -402,6 +402,12 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261104000100_cpi019_profiles_regions.sql
           psql -X -v ON_ERROR_STOP=1 -f backend/tests/profile-regions.sql
           bash backend/tests/profile-regions-concurrency.sh
+      - name: Test durable ranked authority and authenticated server adapters
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261104000200_cpi021_ranked_authority.sql
+          psql -X -v ON_ERROR_STOP=1 -f backend/tests/ranked-storage.sql
+          npm ci --ignore-scripts
+          node --experimental-strip-types backend/tests/server-integration.mjs
       - name: Validate independent backend environments and public-variable guard
         run: node --test backend/tests/environments.test.mjs
 
