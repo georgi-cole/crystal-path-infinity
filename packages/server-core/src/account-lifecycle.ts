@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { SqlConnection, SqlPool } from './database.ts';
+import { ownAdAuthorizationExport, ownRewardExport } from './reward-export.ts';
 
 export interface ReauthenticationEvidence {
   readonly subject: string;
@@ -323,16 +324,34 @@ export function createAccountLifecycleHandler(options: AccountLifecycleOptions) 
         run: null,
         result: null,
         report: null,
+        reward: null,
+        adAuthorization: null,
       };
       if (
         !object(cursor) ||
-        (Object.keys(cursor).length !== 4 && Object.keys(cursor).length !== 5) ||
+        Object.keys(cursor).length < 4 ||
+        Object.keys(cursor).length > 7 ||
         Object.keys(cursor).some(
-          (key) => !['consent', 'parental', 'run', 'result', 'report'].includes(key),
+          (key) =>
+            ![
+              'consent',
+              'parental',
+              'run',
+              'result',
+              'report',
+              'reward',
+              'adAuthorization',
+            ].includes(key),
         ) ||
         (cursor.report !== undefined &&
           cursor.report !== null &&
           (typeof cursor.report !== 'string' || !uuid.test(cursor.report))) ||
+        !['reward', 'adAuthorization'].every(
+          (key) =>
+            cursor[key] === undefined ||
+            cursor[key] === null ||
+            (typeof cursor[key] === 'string' && uuid.test(cursor[key])),
+        ) ||
         !['consent', 'parental', 'run', 'result'].every(
           (key) =>
             cursor[key] === null || (typeof cursor[key] === 'string' && uuid.test(cursor[key])),
@@ -388,10 +407,29 @@ export function createAccountLifecycleHandler(options: AccountLifecycleOptions) 
             [actor.subject, cursor.report ?? null],
           );
           const reports = reportExport(ownReports.rows[0]?.report_export);
+          const rewardRows = await connection.query(
+            'select cpi_private.export_own_rewards($1::uuid,$2::uuid) as reward_export',
+            [actor.subject, cursor.reward ?? null],
+          );
+          const rewards = ownRewardExport(rewardRows.rows[0]?.reward_export);
+          const authorizationRows = await connection.query(
+            'select cpi_private.export_own_ad_authorizations($1::uuid,$2::uuid) as ad_authorization_export',
+            [actor.subject, cursor.adAuthorization ?? null],
+          );
+          const authorizations = ownAdAuthorizationExport(
+            authorizationRows.rows[0]?.ad_authorization_export,
+          );
           return {
             ...data,
             reports: reports.reports,
-            next: { ...data.next, report: reports.next },
+            rewards: rewards.rewards,
+            adAuthorizations: authorizations.adAuthorizations,
+            next: {
+              ...data.next,
+              report: reports.next,
+              reward: rewards.next,
+              adAuthorization: authorizations.next,
+            },
           };
         }
         const result = await connection.query(

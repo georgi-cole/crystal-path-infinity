@@ -36,7 +36,8 @@ function timestamp(value: number | null): string | null {
   return value === null ? null : new Date(value).toISOString();
 }
 
-class PostgresTransaction implements RankedTransaction {
+/** Server-only checkpoint helper for callers holding the same account transaction lock. */
+export class PostgresTransaction implements RankedTransaction {
   private readonly connection: SqlConnection;
   private readonly subject: string;
 
