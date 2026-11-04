@@ -888,6 +888,11 @@ async function ios() {
   let child;
   let boundary;
   let observationComplete = false;
+  const hostPressure = detachedLog(
+    'top',
+    ['-l', '0', '-s', '15', '-o', 'cpu', '-n', '20'],
+    'ios-host-pressure.log',
+  );
   save('ios-simctl-launch-help.txt', text('xcrun', ['simctl', 'help', 'launch']));
   save(
     'ios-smoke-device.json',
@@ -920,6 +925,11 @@ async function ios() {
         return '';
       }
       if (step === 'shutdown') {
+        save(
+          'ios-post-migration-processes.txt',
+          text('ps', ['-A', '-o', 'pid,ppid,%cpu,%mem,comm']),
+        );
+        save('ios-post-migration-memory.txt', text('vm_stat', []));
         return text('xcrun', ['simctl', 'shutdown', udid], { timeout });
       }
       if (step === 'system-launch') {
@@ -1057,6 +1067,7 @@ async function ios() {
     );
     throw error;
   } finally {
+    await stopLog(hostPressure);
     run('xcrun', ['simctl', 'terminate', udid, buildInfo.appId], {
       timeout: 10_000,
       allowFailure: true,
