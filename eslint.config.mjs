@@ -29,6 +29,11 @@ export default defineConfig(
   ]),
   { linterOptions: { reportUnusedDisableDirectives: 'error' } },
   {
+    files: ['supabase/functions/**/*.ts'],
+    extends: [js.configs.recommended, tseslint.configs.recommended],
+    languageOptions: { globals: { ...globals.browser, Deno: 'readonly' } },
+  },
+  {
     files: [
       'eslint.config.mjs',
       'prettier.config.mjs',
