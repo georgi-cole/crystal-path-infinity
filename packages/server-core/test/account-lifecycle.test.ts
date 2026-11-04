@@ -87,6 +87,10 @@ function fixture() {
           },
         ],
       };
+    else if (sql.includes('export_own_rewards'))
+      return { rows: [{ reward_export: { rewards: [], next: null } }] };
+    else if (sql.includes('export_own_ad_authorizations'))
+      return { rows: [{ ad_authorization_export: { adAuthorizations: [], next: null } }] };
     return { rows: [] };
   });
   const release = vi.fn<SqlConnection['release']>();
@@ -151,6 +155,8 @@ describe('CPI-031 trusted account lifecycle', () => {
       run: null,
       result: null,
       report: '31900000-0000-4000-8000-000000000001',
+      reward: '31900000-0000-4000-8000-000000000002',
+      adAuthorization: '31900000-0000-4000-8000-000000000003',
     };
     const response = await f.handler(request('export', { cursor }));
     expect(response.status).toBe(200);
@@ -158,7 +164,9 @@ describe('CPI-031 trusted account lifecycle', () => {
       schemaVersion: 1,
       profile: { username: 'prism_a' },
       reports: [{ reason: 'spam', pending: true }],
-      next: { report: null },
+      rewards: [],
+      adAuthorizations: [],
+      next: { report: null, reward: null, adAuthorization: null },
     });
     expect(f.verifyReauthentication).toHaveBeenCalledWith({
       subject: A,
@@ -187,6 +195,14 @@ describe('CPI-031 trusted account lifecycle', () => {
     expect(f.query).toHaveBeenCalledWith(expect.stringContaining('export_own_name_reports'), [
       A,
       cursor.report,
+    ]);
+    expect(f.query).toHaveBeenCalledWith(expect.stringContaining('export_own_rewards'), [
+      A,
+      cursor.reward,
+    ]);
+    expect(f.query).toHaveBeenCalledWith(expect.stringContaining('export_own_ad_authorizations'), [
+      A,
+      cursor.adAuthorization,
     ]);
     expect(response.headers.get('cache-control')).toBe('no-store');
   });

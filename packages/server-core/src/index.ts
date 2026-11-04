@@ -6,3 +6,7 @@ export * from './ranked-api.ts';
 export * from './leaderboard-api.ts';
 export * from './account-lifecycle.ts';
 export * from './moderation-api.ts';
+export * from './reward-ssv.ts';
+export * from './reward-service.ts';
+export * from './reward-api.ts';
+export * from './reward-export.ts';
