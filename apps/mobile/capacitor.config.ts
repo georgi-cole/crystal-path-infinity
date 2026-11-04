@@ -2,6 +2,11 @@ import type { CapacitorConfig } from '@capacitor/cli';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { assertBuiltEnvironment, getBuildInfo, requireEnvironment } from './config/environments';
+import {
+  assertUnsignedPublicVariables,
+  assertUnsignedRelease,
+  resolveUnsignedRelease,
+} from './config/release-build';
 
 const CPI_BRAND_BACKGROUND = '#060a18';
 
@@ -10,11 +15,23 @@ const environment = requireEnvironment(process.env.CPI_APP_ENV ?? 'development')
 const mobilePackage = JSON.parse(readFileSync(join(__dirname, 'package.json'), 'utf8')) as {
   version: string;
 };
-const build = getBuildInfo(environment, mobilePackage.version);
+const release = resolveUnsignedRelease(environment, mobilePackage.version, process.env);
+const build = release?.app ?? getBuildInfo(environment, mobilePackage.version);
 const metadataPath = join(__dirname, 'dist', 'build-info.json');
 const copiesAssets = process.argv
   .slice(2)
   .some((argument) => ['add', 'copy', 'sync', 'build', 'run'].includes(argument));
+
+const releaseMetadataPath = join(__dirname, 'dist', 'release-info.json');
+if (release) {
+  assertUnsignedPublicVariables(process.env);
+  if (existsSync(releaseMetadataPath))
+    assertUnsignedRelease(JSON.parse(readFileSync(releaseMetadataPath, 'utf8')), release);
+  else if (copiesAssets)
+    throw new Error('Build the matching unsigned release metadata before copying native assets.');
+} else if (copiesAssets && existsSync(releaseMetadataPath)) {
+  throw new Error('Rebuild ordinary assets before copying an unsigned candidate into development.');
+}
 
 if (existsSync(metadataPath)) {
   assertBuiltEnvironment(
