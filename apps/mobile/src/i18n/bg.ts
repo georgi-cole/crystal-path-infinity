@@ -2,6 +2,12 @@ import type { MessageKey } from './messages';
 
 /** Bulgarian preview copy — reviewed by the product owner before public release. */
 export const bg = {
+  'game.stabilityShort': 'Стабилност',
+  'game.runDetails': 'Детайли за опита',
+  'game.stepLeft': 'Стъпка наляво',
+  'game.stepRight': 'Стъпка надясно',
+  'game.bridgeGuidance': 'Избери следващата си стъпка',
+
   'general.back': 'Назад',
   'general.guest': 'Гост',
   'general.offline': 'Офлайн',

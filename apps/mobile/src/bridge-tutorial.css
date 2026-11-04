@@ -241,3 +241,104 @@
     min-height: 4.3rem;
   }
 }
+
+/* The guided bridge uses the same glass, metal and typography as the live scene. */
+.cpi-tutorial {
+  width: min(100%, 42rem);
+  margin: 2.5rem auto;
+  padding: clamp(1.1rem, 4vw, 2rem);
+  border: 1px solid var(--cpi-line);
+  border-radius: 8px;
+  background: linear-gradient(140deg, #202024d9, #101013e6);
+  gap: 1.1rem;
+}
+.cpi-tutorial h1 {
+  font: 400 clamp(2.5rem, 5vw, 3.75rem)/1.1 var(--cpi-font-display);
+}
+.cpi-tutorial-instruction {
+  color: #bdb8c5;
+  line-height: 1.8;
+  font-size: 0.85rem;
+}
+.cpi-tutorial-proof {
+  color: #b8cabd;
+  font-size: 0.65rem;
+  font-weight: 400;
+}
+.cpi-tutorial-stats span {
+  background: none;
+  border: 0;
+  padding: 0.3rem 0;
+  font-size: 0.7rem;
+}
+.cpi-tutorial-stats {
+  justify-content: space-between;
+  border-bottom: 1px solid var(--cpi-line);
+  padding-bottom: 0.5rem;
+}
+.cpi-tutorial-bridge {
+  border: 0;
+  padding: 1rem 0;
+  border-radius: 0;
+  background: radial-gradient(ellipse at 50% 40%, #ad78a319, transparent 65%);
+}
+.cpi-tutorial-pane {
+  border: 1px solid #b1c6cc88;
+  border-radius: 2px;
+  background: linear-gradient(140deg, #d6b8df26, #23232966);
+  box-shadow:
+    inset 0 1px 0 #e9e8d24d,
+    0 6px 0 #27232b;
+  min-height: 7rem;
+}
+.cpi-tutorial-pane:disabled {
+  border-style: solid;
+}
+.cpi-tutorial-pane-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+.cpi-tutorial-pane-note {
+  font-size: 0.65rem;
+  font-weight: 400;
+  color: #c5d1d2;
+}
+.cpi-tutorial-pane.is-revealed {
+  border-color: #cae2c0;
+  background: linear-gradient(135deg, #96c6a444, #1a403599);
+  box-shadow:
+    inset 0 1px 0 #ecffe180,
+    0 6px 0 #2c4d3b;
+}
+.cpi-tutorial-mystery {
+  border-radius: 4px;
+  border-color: #d2bc8a99;
+  background: #ac8d4626;
+  color: #e8d2a6;
+  font-weight: 400;
+}
+.cpi-tutorial-actions button,
+.cpi-tutorial-skip {
+  border-radius: 4px;
+  background: #b6cbd00a;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+.cpi-tutorial-actions .cpi-tutorial-primary {
+  color: #1a0b18;
+  border-color: #e688c2;
+  background: linear-gradient(115deg, #f5a1ce, #a8558f);
+}
+.cpi-tutorial-facts {
+  background: #cf72b20a;
+  border-left: 1px solid #c671a566;
+  border-radius: 2px;
+}
+@media (max-width: 600px) {
+  .cpi-tutorial {
+    margin-block: 1.5rem;
+  }
+  .cpi-tutorial-stats {
+    gap: 0.5rem;
+  }
+}

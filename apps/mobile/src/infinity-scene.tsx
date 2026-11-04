@@ -1,3 +1,5 @@
+import { StageAtmosphere } from './stage-atmosphere';
+import { PrismBridge } from './prism-bridge';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   createPracticeCursor,
@@ -24,13 +26,12 @@ import { AudioSettingsControls } from './audio-settings-controls';
 import { createPracticeRuntime, schedulePracticeTick } from './practice-runtime';
 import type { PracticePauseLease, PracticeRuntime } from './practice-runtime';
 import { presentInfinityScene } from './infinity-presentation';
-import type { PresentedEffect, PresentedRow } from './infinity-presentation';
+import type { PresentedEffect } from './infinity-presentation';
 import type { MessageKey } from './i18n/messages';
 import './infinity-scene.css';
 import './infinity-hud-premium.css';
 import './run-outcome.css';
 
-const particles = Array.from({ length: 6 }, (_, index) => index);
 const EFFECT_MESSAGE: Record<PresentedEffect['kind'], MessageKey> = {
   shield_5s: 'game.effectShield',
   regen_5s: 'game.effectRegen',
@@ -76,21 +77,6 @@ export interface InfinitySceneViewProps {
   readonly onRetry: () => void;
   readonly settings: PracticeSettings;
   readonly onSettingsChange: (next: PracticeSettings) => void;
-}
-
-function tileClass(row: PresentedRow, side: TileSide, feedback: SceneFeedback | null): string {
-  const currentFeedback = feedback?.row === row.index && feedback.side === side;
-  const hint = row.phase === 'current' && row.hint === side;
-  const decision = row.chosen === side;
-  return [
-    'cps-tile',
-    `cps-tile-${side}`,
-    hint ? 'is-hinted' : '',
-    decision ? (row.wrong ? 'is-cracked' : 'is-cleared') : '',
-    currentFeedback ? (feedback.kind === 'wrong' ? 'is-wrong' : 'is-safe') : '',
-  ]
-    .filter(Boolean)
-    .join(' ');
 }
 
 /** No game-core mutations or timers. All callbacks are externally owned events. */
@@ -165,37 +151,47 @@ export function InfinitySceneView({
       data-testid="infinity-scene"
       aria-label={INFINITY_SCENE_SKIN.title}
     >
-      <div className="cps-infinity-void" aria-hidden="true">
-        <span className="cps-void-ring cps-void-ring-outer" />
-        <span className="cps-void-ring cps-void-ring-inner" />
-        <span className="cps-void-event-horizon" />
-      </div>
-      <div className="cps-tech-frame" aria-hidden="true">
-        <span />
-        <span />
-        <span />
-        <span />
-      </div>
-      <div className="cps-depth-fog" aria-hidden="true" />
-      <div className="cps-spotlight" aria-hidden="true" />
-      <div className="cps-edge-light-left" aria-hidden="true" />
-      <div className="cps-edge-light-right" aria-hidden="true" />
-      <div className="cps-particles" aria-hidden="true">
-        {particles.map((i) => (
-          <span key={i} className="cps-particle" />
-        ))}
-      </div>
-      <div className="cps-light-shafts" aria-hidden="true">
-        <span className="cps-light-shaft" />
-        <span className="cps-light-shaft" />
-        <span className="cps-light-shaft" />
-      </div>
+      <StageAtmosphere />
       <div className="cps-content" inert={overlayVisible}>
-        <div className="cpi-scene-toolbar">
-          <span className="cpi-practice-tag">
-            <span className="cpi-practice-indicator" aria-hidden="true" />
-            {t('game.local')}
-          </span>
+        <header className="cpi-hud-header">
+          <div className="cpi-hud-position">
+            <span className="cpi-hud-wordmark">Infinity</span>
+            <strong className="cps-row-display">
+              {t('general.row', { row: number(presented.currentRow) })}
+            </strong>
+            <span className="cpi-hud-cleared">
+              {t('game.cleared')} <b>{clearedRows}</b>
+            </span>
+          </div>
+          <div className="cpi-hud-stability">
+            <div className="cps-sp-display">
+              <span className="cps-sp-label">{t('game.stabilityShort')}</span>
+              <span className={`cps-sp-value ${spClass}`}>
+                {state.sp}
+                <small> / {MAX_SP}</small>
+              </span>
+            </div>
+            <div
+              className={`cps-sp-bar-main cpi-energy-meter ${state.sp <= 60 ? 'is-low' : ''}`}
+              role="meter"
+              aria-label={t('game.spAccessible')}
+              aria-valuemin={0}
+              aria-valuemax={MAX_SP}
+              aria-valuenow={state.sp}
+            >
+              <div className={`cps-sp-bar-fill ${spClass}`} style={{ width: `${spPct}%` }} />
+              <div className="cpi-energy-segments" aria-hidden="true">
+                {Array.from({ length: 14 }, (_, index) => (
+                  <span key={index} />
+                ))}
+              </div>
+              <span
+                className="cpi-energy-marker"
+                style={{ left: `${spPct}%` }}
+                aria-hidden="true"
+              />
+            </div>
+          </div>
           <div className="cpi-scene-toolbar-actions">
             <button
               type="button"
@@ -209,15 +205,6 @@ export function InfinitySceneView({
                 <path d="M12 8v8M8 12h8" />
               </svg>
               <span className="cps-hint-count">{state.hints}</span>
-            </button>
-            <button
-              type="button"
-              className="cpi-end-control cpi-hud-control"
-              onClick={onRequestEnd}
-              disabled={!ready || busy || !!error || !outcome.canEnd}
-              aria-label={t('general.endRun')}
-            >
-              {t('general.endRun')}
             </button>
             <button
               type="button"
@@ -236,55 +223,9 @@ export function InfinitySceneView({
                   </>
                 )}
               </svg>
-              <span>{paused ? t('general.resume') : t('game.pause')}</span>
             </button>
           </div>
-        </div>
-        <header className="cps-header cpi-hud-header">
-          <div className="cps-header-left">
-            <span className="cps-protocol-label">
-              <img
-                className="cpi-scene-brand-mark"
-                src={`${import.meta.env.BASE_URL}brand/prism-mark.svg`}
-                alt=""
-                aria-hidden="true"
-              />
-              {t('game.run')}
-            </span>
-            <span className="cps-player-name">{t('game.yourPath')}</span>
-            <span className="cps-row-display">
-              {t('general.row', { row: number(presented.currentRow) })}
-            </span>
-          </div>
-          <div className="cps-header-right">
-            <span className="cps-hints-display">
-              <span className="cpi-hud-small-label">{t('game.hints')}</span> {state.hints}
-            </span>
-            <div className="cps-sp-display">
-              <span className="cps-sp-label">{t('game.sp')}</span>
-              <span className={`cps-sp-value ${spClass}`}>
-                {state.sp}
-                <span className="cpi-hud-sp-unit"> SP</span>
-              </span>
-            </div>
-          </div>
         </header>
-        <div
-          className={`cps-sp-bar-main cpi-energy-meter ${state.sp <= 60 ? 'is-low' : ''}`}
-          role="meter"
-          aria-label={t('game.spAccessible')}
-          aria-valuemin={0}
-          aria-valuemax={MAX_SP}
-          aria-valuenow={state.sp}
-        >
-          <div className={`cps-sp-bar-fill ${spClass}`} style={{ width: `${spPct}%` }} />
-          <div className="cpi-energy-segments" aria-hidden="true">
-            {Array.from({ length: 14 }, (_, index) => (
-              <span key={index} />
-            ))}
-          </div>
-          <span className="cpi-energy-marker" style={{ left: `${spPct}%` }} aria-hidden="true" />
-        </div>
         {state.sp <= 140 && state.status === 'playing' && (
           <p
             className={'cpi-sp-danger-copy ' + (state.sp <= 60 ? 'is-critical' : 'is-low')}
@@ -293,20 +234,6 @@ export function InfinitySceneView({
             {t(state.sp <= 60 ? 'game.spCritical' : 'game.spLow', { sp: number(state.sp) })}
           </p>
         )}
-        <div className="cpi-run-metrics" aria-label={t('menu.progress')}>
-          <span>
-            {t('game.cleared')} <strong>{clearedRows}</strong>
-          </span>
-          <span>
-            {t('game.used')} <strong>{number(outcome.appliedContinues)} / 10</strong>
-          </span>
-          <span>
-            {t('game.granted')} <strong>{number(outcome.grantedContinues)} / 10</strong>
-          </span>
-          <span>
-            {t('game.quota')} <strong>{number(outcome.grantsRemaining)}</strong>
-          </span>
-        </div>
         {presented.effects.length > 0 && (
           <div className="cps-effects" aria-label={t('game.effects')}>
             {presented.effects.map((effect, i) => (
@@ -326,78 +253,29 @@ export function InfinitySceneView({
           </div>
         )}
         <section className="cps-board" aria-label={t('game.bridge')} dir="ltr">
-          <div className="cps-bridge-track">
-            {presented.rows.map((row) => (
-              <div
-                key={row.index}
-                className={`cps-row tone-${row.tone} ${row.phase === 'past' ? 'is-past' : row.phase === 'current' ? 'is-current' : `is-future-${row.tone}`}`}
-                data-row={row.label}
-              >
-                <button
-                  type="button"
-                  className={tileClass(row, 'left', feedback)}
-                  aria-label={t('game.leftTile', { row: number(row.label) })}
-                  onClick={() => onChoose('left')}
-                  disabled={!interactive || row.phase !== 'current'}
-                >
-                  {row.phase === 'past' && row.chosen === 'left' && (
-                    <span className="cpi-tile-feedback-text">
-                      {t(row.wrong ? 'game.wrongTile' : 'game.safeTile')}
-                    </span>
-                  )}
-                  {row.phase === 'current' && row.hint === 'left' && (
-                    <span className="cpi-tile-feedback-text">{t('game.hintedTile')}</span>
-                  )}
-                </button>
-                <div className="cps-center">
-                  {row.hasMystery && (
-                    <button
-                      type="button"
-                      className="cps-tile cps-tile-center"
-                      aria-label={t('game.mysteryTile', { row: number(row.label) })}
-                      onClick={onMystery}
-                      disabled={!interactive || !row.mysteryAvailable}
-                    >
-                      ?
-                    </button>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  className={tileClass(row, 'right', feedback)}
-                  aria-label={t('game.rightTile', { row: number(row.label) })}
-                  onClick={() => onChoose('right')}
-                  disabled={!interactive || row.phase !== 'current'}
-                >
-                  {row.phase === 'past' && row.chosen === 'right' && (
-                    <span className="cpi-tile-feedback-text">
-                      {t(row.wrong ? 'game.wrongTile' : 'game.safeTile')}
-                    </span>
-                  )}
-                  {row.phase === 'current' && row.hint === 'right' && (
-                    <span className="cpi-tile-feedback-text">{t('game.hintedTile')}</span>
-                  )}
-                </button>
-                <span className="cps-row-label" aria-hidden="true">
-                  {number(row.label)}
-                </span>
-              </div>
-            ))}
-            <div className="cps-bridge-reflection" aria-hidden="true">
-              {presented.rows.slice(0, 2).map((row) => (
-                <div className="cps-row" key={'reflection:' + row.index}>
-                  <div className="cps-tile" />
-                  <div className="cps-center" />
-                  <div className="cps-tile" />
-                </div>
-              ))}
-            </div>
+          <PrismBridge
+            rows={presented.rows}
+            feedback={feedback}
+            interactive={interactive}
+            onChoose={onChoose}
+            onMystery={onMystery}
+            reducedMotion={settings.reducedMotion}
+          />
+          <div className="cpi-bridge-guidance" aria-hidden="true">
+            <span />
+            {t('game.bridgeGuidance')}
+            <span />
           </div>
         </section>
         <p className="visually-hidden" role="status" aria-live="polite">
           {notice}
         </p>
-        <p className="cpi-scene-footer">{t('game.footer')}</p>
+        <p className="cpi-scene-footer">
+          <img src={import.meta.env.BASE_URL + 'brand/prism-mark.svg'} alt="" aria-hidden="true" />
+          {t('general.practice')}
+          <span>∞</span>
+          <span className="visually-hidden">{t('game.footer')}</span>
+        </p>
       </div>
       {overlayVisible && (
         <div className="cpi-overlay">
@@ -407,6 +285,9 @@ export function InfinitySceneView({
             aria-modal="true"
             aria-labelledby="cpi-run-outcome-title"
           >
+            <div className="cpi-dialog-emblem" aria-hidden="true">
+              {paused ? 'Ⅱ' : '↗'}
+            </div>
             {error ? (
               <>
                 <h2 id="cpi-run-outcome-title">{t('game.clockTitle')}</h2>
@@ -552,6 +433,23 @@ export function InfinitySceneView({
                 <h2 id="cpi-run-outcome-title">{t('game.paused')}</h2>
                 <p>{t('game.pausedExplanation')}</p>
                 <p>{t('game.pausedRows', { row: clearedRows })}</p>
+                <details className="cpi-run-ledger">
+                  <summary>{t('game.runDetails')}</summary>
+                  <div className="cpi-run-metrics" aria-label={t('menu.progress')}>
+                    <span>
+                      {t('game.cleared')} <strong>{clearedRows}</strong>
+                    </span>
+                    <span>
+                      {t('game.used')} <strong>{number(outcome.appliedContinues)} / 10</strong>
+                    </span>
+                    <span>
+                      {t('game.granted')} <strong>{number(outcome.grantedContinues)} / 10</strong>
+                    </span>
+                    <span>
+                      {t('game.quota')} <strong>{number(outcome.grantsRemaining)}</strong>
+                    </span>
+                  </div>
+                </details>
                 <AudioSettingsControls settings={settings} onChange={onSettingsChange} />
                 <div className="cpi-overlay-actions">
                   <button type="button" data-cpi-overlay-primary disabled={busy} onClick={onPause}>

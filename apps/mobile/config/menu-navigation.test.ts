@@ -59,7 +59,8 @@ describe('CPI-013 standalone menu and route model', () => {
     expect(html).toContain('data-testid="app-ready"');
     expect(html).toContain('Main menu');
     expect(html).toContain('Play');
-    expect(html).toContain('Ranked mode · Account needed');
+    expect(html).not.toContain('A journey beyond the ordinary');
+    expect(html).not.toContain('Trust your instinct.');
     expect(html).toContain('Practice');
     expect(html).toContain('Rankings');
     expect(html).toContain('Profile');
@@ -181,18 +182,17 @@ describe('CPI-013 standalone menu and route model', () => {
     expect(readPracticePersonalBest(storage)).toBe(null);
   });
 
-  it('renders the original Big Eye hub silhouettes and genuinely functioning corner utilities', () => {
+  it('renders the original LED stage and functioning corner utilities', () => {
     const html = render('home');
-    expect(html).toContain('intro-hub/buttons/primary_large_normal.svg');
-    expect(html).toContain('intro-hub/buttons/secondary_wide_normal.svg');
-    expect(html).toContain('intro-hub/buttons/secondary_medium_normal.svg');
-    expect(html).toContain('intro-hub/utilities/side_utility_shell_normal.svg');
+    expect(html).toContain('cpi-home-scenery');
+    expect(html).toContain('cpi-prism-bridge is-preview');
+    expect(html).not.toContain('primary_large_normal.svg');
     expect(html).toContain('aria-label="Disable music"');
     expect(html).toContain('aria-label="Disable sound effects"');
     expect(html).toContain('aria-label="Open settings"');
     const css = readFileSync(new URL('../src/intro-hub-premium.css', import.meta.url), 'utf8');
-    expect(css).toContain("url('./infinity-black-hole-bg.webp')");
-    expect(css).toContain('backdrop-filter');
+    expect(css).toContain('cpi-stage-atmosphere');
+    expect(css).toContain('pointer-events: none');
     expect(css).toContain('prefers-reduced-motion');
     expect(css).toContain('max-height: 690px');
   });

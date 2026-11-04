@@ -1,212 +1,120 @@
-/* CPI-015. Additive run-state treatment over the existing premium HUD. */
-.cpi-infinity-scene .cpi-scene-toolbar {
-  flex-wrap: wrap;
-}
-
-.cpi-infinity-scene .cpi-scene-toolbar-actions {
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.35rem;
-}
-
-.cpi-infinity-scene .cpi-end-control {
-  min-height: 2.85rem;
-  padding-inline: 0.72rem;
-  border-color: rgba(255, 183, 191, 0.42);
-  color: #ffe5e8;
-  white-space: nowrap;
-}
-
-.cpi-run-metrics {
+/* Dialogs share the navigation materials; the run state remains authoritative. */
+.cpi-dialog-emblem {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.35rem;
-  color: var(--cpi-muted);
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border: 1px solid #c184b44d;
+  border-radius: 8px;
+  color: #ee9dce;
+  background: #d764ae0a;
+  font: 400 1.7rem var(--cpi-font-display);
+  margin-bottom: 1.5rem;
 }
-
-.cpi-run-metrics > span {
-  min-width: 0;
-  padding: 0.4rem 0.48rem;
-  font-size: clamp(0.59rem, 1.65vw, 0.71rem);
-  line-height: 1.4;
-  text-align: center;
-  border: 1px solid rgba(141, 221, 240, 0.18);
-  border-radius: 0.55rem;
-  background: rgba(5, 18, 39, 0.75);
-  overflow-wrap: anywhere;
-}
-
-.cpi-run-metrics strong {
-  color: var(--cpi-text);
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-}
-
-.cpi-infinity-scene .cpi-overlay-card.cpi-run-outcome {
-  width: min(94vw, 29rem);
-  text-align: left;
-  padding: clamp(0.95rem, 3vw, 1.4rem);
-}
-
 .cpi-run-outcome h2 {
-  margin: 0 0 0.7rem;
-  color: var(--cpi-text);
-  font-family: var(--cpi-font-display);
-  line-height: 1.15;
+  font: 600 1.8rem/1.15 var(--cpi-font-display);
+  color: #f1e9f7;
+  margin: 0 0 1rem;
+  letter-spacing: -0.025em;
 }
-
 .cpi-run-outcome p {
-  margin: 0.65rem 0;
-  color: #d5e7f6;
-  line-height: 1.46;
-  font-size: 0.88rem;
-  overflow-wrap: anywhere;
+  color: #aebbc5;
+  font-size: 0.76rem;
+  line-height: 1.85;
+  margin: 0.7rem 0;
 }
-
 .cpi-run-outcome p[role='alert'] {
-  color: #ffc2c8;
+  color: #edb6a6;
 }
-
 .cpi-run-outcome .cpi-run-status-label {
+  color: #da91bf;
   font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.13em;
-  color: var(--cpi-ice);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
 }
-
 .cpi-result-score {
+  padding: 1.4rem 0;
+  border-top: 1px solid var(--cpi-line);
+  border-bottom: 1px solid var(--cpi-line);
   display: flex;
-  flex-direction: column;
-  gap: 0.18rem;
-  padding: 0.85rem 0.9rem;
-  border: 1px solid rgba(133, 213, 236, 0.35);
-  border-radius: 0.82rem;
-  background: linear-gradient(140deg, rgba(26, 82, 108, 0.5), rgba(21, 17, 60, 0.62));
-  color: var(--cpi-muted);
-  font-size: 0.78rem;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin: 1.25rem 0;
 }
-
-.cpi-result-score strong {
-  color: var(--cpi-text);
-  font-family: var(--cpi-font-display);
-  font-size: clamp(1.8rem, 8vw, 3rem);
-  line-height: 1.1;
-  font-weight: 750;
+.cpi-result-score > span {
+  font-size: 0.7rem;
+  color: #9faeb9;
+}
+.cpi-result-score > strong {
+  font: 400 4rem/1 var(--cpi-font-display);
+  color: #e6b3d7;
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
-
 .cpi-result-details {
-  margin: 0.65rem 0;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.45rem;
+  gap: 1rem;
+  margin: 1rem 0;
 }
-
 .cpi-result-details > div {
+  display: grid;
+  gap: 0.4rem;
   min-width: 0;
-  padding: 0.55rem;
-  border: 1px solid rgba(151, 204, 232, 0.18);
-  border-radius: 0.53rem;
-  background: rgba(9, 24, 43, 0.85);
 }
-
 .cpi-result-details dt {
-  margin-bottom: 0.2rem;
-  color: var(--cpi-muted);
-  font-size: 0.69rem;
+  font-size: 0.7rem;
+  color: #a0aeb9;
 }
-
 .cpi-result-details dd {
   margin: 0;
-  color: var(--cpi-text);
+  font-size: 0.85rem;
+  color: #d9e1df;
   font-variant-numeric: tabular-nums;
-  font-weight: 750;
-  overflow-wrap: anywhere;
 }
-
 .cpi-run-outcome .cpi-new-best {
-  color: var(--cpi-safe);
-  font-weight: 800;
+  color: #c2dfbb;
 }
-
 .cpi-revive-offer {
   display: grid;
-  gap: 0.65rem;
-  margin-block: 0.65rem;
-  padding: 0.9rem;
-  border: 1px solid rgba(202, 157, 247, 0.38);
-  border-radius: 0.75rem;
-  background: linear-gradient(125deg, rgba(61, 39, 95, 0.6), rgba(15, 31, 58, 0.9));
-  color: var(--cpi-muted);
-  line-height: 1.4;
-  font-size: 0.81rem;
+  gap: 0.6rem;
+  padding: 1rem;
+  margin: 1rem 0;
+  border: 1px solid #ba71a140;
+  border-radius: 4px;
+  background: #c3549d0b;
+  font-size: 0.7rem;
+  line-height: 1.8;
+  color: #aebac1;
 }
-
 .cpi-revive-offer > strong {
-  color: #f1dcff;
-  font-size: 0.94rem;
+  color: #e4b0d5;
+  font-size: 0.77rem;
+  font-weight: 500;
 }
-
-.cpi-infinity-scene .cpi-overlay .cpi-run-danger-action {
-  border-color: rgba(250, 114, 141, 0.6);
-  color: #ffe4e8;
-  background: rgba(105, 33, 54, 0.64);
+.cpi-overlay-actions .cpi-run-danger-action {
+  color: #efc0b3;
+  border-color: #bd796866;
+  background: #b6614914;
 }
-
-.cpi-run-outcome .cpi-overlay-actions {
-  justify-content: stretch;
-  gap: 0.5rem;
-  margin-top: 0.95rem;
-}
-
-.cpi-run-outcome .cpi-overlay-actions button {
-  flex: 1 1 8.5rem;
-  min-height: 2.85rem;
-  overflow-wrap: anywhere;
-  text-align: center;
-  cursor: pointer;
-}
-
-.cpi-run-outcome button:disabled {
-  opacity: 0.5;
+.cpi-overlay-actions button:disabled {
+  opacity: 0.45;
   cursor: default;
 }
-
-@media (max-width: 450px) {
-  .cpi-run-metrics {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .cpi-infinity-scene .cpi-scene-toolbar-actions {
-    gap: 0.25rem;
-  }
-
-  .cpi-infinity-scene .cpi-end-control {
-    font-size: 0.65rem;
-    padding-inline: 0.45rem;
-  }
-}
-
 @media (max-height: 650px) {
+  .cpi-dialog-emblem {
+    margin-bottom: 0.8rem;
+  }
   .cpi-run-outcome h2 {
-    font-size: 1.2rem;
+    font-size: 2.2rem;
   }
-
-  .cpi-result-details > div {
-    padding: 0.35rem;
-  }
-
-  .cpi-run-outcome .cpi-result-score {
-    padding: 0.55rem;
+  .cpi-result-score {
+    padding-block: 0.8rem;
   }
 }
-
 @media (prefers-reduced-motion: reduce) {
-  .cpi-run-outcome *,
-  .cpi-run-outcome *::before,
-  .cpi-run-outcome *::after {
+  .cpi-overlay-card {
     animation: none !important;
-    transition: none !important;
   }
 }

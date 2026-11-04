@@ -100,8 +100,8 @@ describe('CPI-008 standalone scene', () => {
     expect(html).toContain('cpi-hint-control');
     const css = readFileSync(new URL('../src/infinity-hud-premium.css', import.meta.url), 'utf8');
     expect(css).toContain('grid-template-columns: repeat(14');
-    expect(css).toContain('perspective: 1100px');
-    expect(css).toContain('min-height: clamp(23rem, 66dvh, 43rem)');
+    expect(html).toContain('cpi-prism-bridge');
+    expect(html).toContain('cpi-bridge-pane');
     expect(css).toContain('prefers-reduced-motion');
   });
 
@@ -114,13 +114,7 @@ describe('CPI-008 standalone scene', () => {
     expect(css).toContain('env(safe-area-inset-top');
     expect(css).toMatch(/max-height:\s*650px/);
     expect(css).toContain('prefers-reduced-motion');
-    expect(css).toContain("url('./infinity-black-hole-bg.webp')");
-    const railRules = css.match(
-      /\.cps-shell--premium \.cps-board::before,\s*\.cps-shell--premium \.cps-board::after\s*\{([^}]+)\}/,
-    );
-    expect(railRules?.[1]).toContain('bottom: 56%');
-    expect(railRules?.[1]).toContain('pointer-events: none');
-    expect(railRules?.[1]).toContain('mask-image: linear-gradient(to bottom');
-    expect(railRules?.[1]).toContain('-webkit-mask-image: linear-gradient(to bottom');
+    expect(markup()).toContain('aria-hidden="true"');
+    expect(css).toContain('pointer-events: none');
   });
 });

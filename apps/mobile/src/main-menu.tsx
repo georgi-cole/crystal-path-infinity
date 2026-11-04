@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react';
+import { StageAtmosphere } from './stage-atmosphere';
+import { PrismBridge } from './prism-bridge';
 import { AudioSettingsControls } from './audio-settings-controls';
 import { AccountEntry } from './account/account-entry';
 import { ProfileEditor } from './account/profile-editor';
@@ -74,7 +76,7 @@ function Glyph({ name }: { name: GlyphName }) {
   );
 }
 
-/** Original Big Eye IntroHub button silhouettes and icons; standalone navigation owns the click. */
+/** Shared semantic action with an original material and interaction treatment. */
 export function MenuAction({
   label,
   description,
@@ -88,46 +90,15 @@ export function MenuAction({
   variant?: 'primary' | 'secondary' | 'quiet';
   onClick: () => void;
 }) {
-  const buttonFace =
-    variant === 'primary'
-      ? 'primary_large_normal.svg'
-      : icon === 'practice'
-        ? 'secondary_wide_normal.svg'
-        : icon === 'settings'
-          ? 'secondary_small_normal.svg'
-          : 'secondary_medium_normal.svg';
-  const sourceIcon =
-    icon === 'play'
-      ? 'icons/play.svg'
-      : icon === 'practice'
-        ? 'icons/rules.svg'
-        : icon === 'ranking'
-          ? 'icons/leaderboard.svg'
-          : icon === 'profile'
-            ? 'icons/profile.svg'
-            : icon === 'settings'
-              ? 'utilities/settings_v2.svg'
-              : null;
   return (
     <button
       className={'cpi-menu-action cpi-menu-action--' + variant}
       type="button"
       onClick={onClick}
     >
-      <img
-        className="cpi-menu-action-art"
-        src={INTRO_HUB_BASE + 'buttons/' + buttonFace}
-        alt=""
-        aria-hidden="true"
-        draggable={false}
-      />
       {icon && (
         <span className="cpi-menu-action-icon">
-          {sourceIcon ? (
-            <img src={INTRO_HUB_BASE + sourceIcon} alt="" aria-hidden="true" />
-          ) : (
-            <Glyph name={icon} />
-          )}
+          <Glyph name={icon} />
         </span>
       )}
       <span className="cpi-menu-action-copy">
@@ -167,12 +138,6 @@ function HubUtilityControls({
             onClick={() => onSettingsChange({ ...settings, [key]: !settings[key] })}
           >
             <img
-              className="cpi-hub-chip-shell"
-              src={INTRO_HUB_BASE + 'utilities/side_utility_shell_normal.svg'}
-              alt=""
-              aria-hidden="true"
-            />
-            <img
               className="cpi-hub-chip-glyph"
               src={INTRO_HUB_BASE + 'utilities/' + icon}
               alt=""
@@ -187,12 +152,6 @@ function HubUtilityControls({
         aria-label={t('settings.open')}
         onClick={() => onOpen('settings')}
       >
-        <img
-          className="cpi-hub-chip-shell"
-          src={INTRO_HUB_BASE + 'utilities/side_utility_shell_normal.svg'}
-          alt=""
-          aria-hidden="true"
-        />
         <img
           className="cpi-hub-chip-glyph"
           src={INTRO_HUB_BASE + 'utilities/settings_v2.svg'}
@@ -272,6 +231,7 @@ function MenuHeader({
         </button>
       ) : (
         <span className="cpi-menu-series">
+          <img src={import.meta.env.BASE_URL + 'brand/prism-mark.svg'} alt="" aria-hidden="true" />
           Crystal Path <span aria-hidden="true">/</span> Infinity
         </span>
       )}
@@ -279,11 +239,13 @@ function MenuHeader({
         <StatusPill>
           {t(accountConnected ? 'general.accountConnected' : 'general.guest')}
         </StatusPill>
-        <StatusPill tone={online ? 'neutral' : 'offline'}>
-          {online
-            ? t(rankedAvailable ? 'general.rankedReady' : 'general.rankedUnavailable')
-            : t('general.offline')}
-        </StatusPill>
+        {(!online || rankedAvailable) && (
+          <StatusPill tone={online ? 'neutral' : 'offline'}>
+            {online
+              ? t(rankedAvailable ? 'general.rankedReady' : 'general.rankedUnavailable')
+              : t('general.offline')}
+          </StatusPill>
+        )}
       </div>
     </header>
   );
@@ -296,21 +258,20 @@ function MenuHome({
   onResume,
   onNew,
   tutorialProgress,
-}: Pick<MainMenuProps, 'saved' | 'best' | 'onOpen' | 'onResume' | 'onNew' | 'tutorialProgress'>) {
+  rankedClient,
+}: Pick<
+  MainMenuProps,
+  'saved' | 'best' | 'onOpen' | 'onResume' | 'onNew' | 'tutorialProgress' | 'rankedClient'
+>) {
   const canResume = canResumePractice(saved);
   const { t, number } = useLanguage();
   return (
-    <>
+    <div className="cpi-home-composition">
+      <div className="cpi-home-scenery" aria-hidden="true">
+        <PrismBridge preview />
+      </div>
       <section className="cpi-menu-hero" aria-labelledby="menu-title">
-        <div className="cpi-hub-emblem" aria-hidden="true">
-          <span className="cpi-hub-emblem-orbit" />
-          <img
-            className="cpi-menu-mark"
-            src={import.meta.env.BASE_URL + 'brand/prism-mark.svg'}
-            alt=""
-          />
-        </div>
-        <p className="cpi-menu-kicker">{t('menu.kicker')}</p>
+        <p className="cpi-menu-kicker">Crystal Path</p>
         <h1 id="menu-title" data-menu-heading tabIndex={-1}>
           Infinity
         </h1>
@@ -322,26 +283,23 @@ function MenuHome({
           <span className="cpi-menu-eyebrow">{t('menu.personalBest')}</span>
           <strong className="cpi-menu-score">{t('general.row', { row: number(best) })}</strong>
         </div>
-        <span className="cpi-menu-score-caption">{t('menu.notRanked')}</span>
+        <span className="visually-hidden">{t('menu.notRanked')}</span>
       </section>
 
       <nav className="cpi-menu-actions" aria-label={t('menu.main')}>
         <MenuAction
-          label={t('general.play')}
-          description={t('menu.playDescription')}
+          label={t(canResume && !rankedClient ? 'general.resume' : 'general.play')}
           icon="play"
           variant="primary"
-          onClick={() => onOpen('play')}
+          onClick={rankedClient ? () => onOpen('play') : canResume ? onResume : onNew}
         />
         <MenuAction
           label={t('general.practice')}
-          description={t('menu.practiceDescription')}
           icon="practice"
           onClick={() => onOpen('practice')}
         />
         <MenuAction
           label={tutorialProgress === 'completed' ? t('menu.replay') : t('menu.learn')}
-          description={t('menu.tutorialDescription')}
           icon="practice"
           variant="quiet"
           onClick={() => onOpen('tutorial')}
@@ -377,7 +335,7 @@ function MenuHome({
           />
         </div>
       </nav>
-    </>
+    </div>
   );
 }
 
@@ -469,10 +427,14 @@ export function MainMenu({
   const { t, number } = useLanguage();
   return (
     <main
-      className={'cpi-menu-shell' + (settings.reducedMotion ? ' cpi-reduced-motion' : '')}
+      className={
+        'cpi-menu-shell cpi-menu-view--' +
+        view +
+        (settings.reducedMotion ? ' cpi-reduced-motion' : '')
+      }
       data-testid="app-ready"
     >
-      <div className="cpi-menu-orbit" aria-hidden="true" />
+      <StageAtmosphere subdued={view !== 'home'} />
       <div className="cpi-menu-inner">
         <MenuHeader
           view={view}
@@ -495,6 +457,7 @@ export function MainMenu({
               onResume={onResume}
               onNew={onNew}
               tutorialProgress={tutorialProgress}
+              rankedClient={rankedClient}
             />
           </>
         ) : view === 'practice' ? (
@@ -651,7 +614,9 @@ export function MainMenu({
         )}
         <footer className="cpi-menu-footer">
           <span>Crystal Path: Infinity</span>
-          <span>{t('menu.footerOffline')}</span>
+          <span>
+            <span className="cpi-status-dot" aria-hidden="true" /> {t('menu.footerOffline')}
+          </span>
           {buildLabel && <span>{buildLabel}</span>}
         </footer>
       </div>

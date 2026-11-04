@@ -84,19 +84,19 @@ function markup(
 }
 
 describe('CPI-015 HUD and result state contract', () => {
-  it('shows separate confirmed grants, applied revives and remaining quota, not fake ad stock', () => {
+  it('keeps confirmed grants, applied revives and quota separate in pause details', () => {
     const live = presentRunOutcome(initial());
     expect(live.appliedContinues).toBe(0);
     expect(live.grantedContinues).toBe(0);
     expect(live.grantsRemaining).toBe(10);
     expect(live.offer).toBe(null);
     expect(live.canEnd).toBe(true);
-    const html = markup();
+    const html = markup(initial(), { paused: true });
     expect(html).toContain('Cleared');
     expect(html).toContain('Continues used');
     expect(html).toContain('Grants earned');
     expect(html).toContain('Grant quota left');
-    expect(html).toContain('aria-label="End run"');
+    expect(html).toContain('End run');
     expect(html).toContain('aria-label="Survival points"');
     expect(html).not.toContain('Run complete');
     expect(html).not.toContain('Victory');
@@ -292,10 +292,11 @@ describe('CPI-015 HUD and result state contract', () => {
     expect(scene).toContain("runtime.hold('recovery')");
     expect(scene).toContain('restartLock.current');
     const css = readFileSync(new URL('../src/run-outcome.css', import.meta.url), 'utf8');
-    expect(css).toContain('max-width: 450px');
+    expect(css).toContain('grid-template-columns: repeat(2, minmax(0, 1fr))');
     expect(css).toContain('max-height: 650px');
     expect(css).toContain('prefers-reduced-motion');
-    expect(css).toContain('min-height: 2.85rem');
+    const controls = readFileSync(new URL('../src/main-menu.css', import.meta.url), 'utf8');
+    expect(controls).toContain('min-height: 3rem');
   });
 
   it('renders active time without wall-clock background inflation', () => {
