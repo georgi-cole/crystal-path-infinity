@@ -1,0 +1,586 @@
+/* Every beat has an end; all movement yields to the shared motion preferences. */
+.cps-content {
+  height: 100dvh;
+  min-height: 20rem;
+}
+.cps-content .cps-board {
+  min-height: 0;
+}
+.cpi-scene-footer {
+  min-height: 1.8rem;
+  gap: 0.8rem;
+  color: #a39aaa;
+  font-size: 0.64rem;
+  letter-spacing: 0.08em;
+}
+.cpi-stage-instruments {
+  position: absolute;
+  z-index: 5;
+  top: 3%;
+  left: 1%;
+  width: 9rem;
+  pointer-events: none;
+}
+.cpi-death-clock {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  color: #b4aaba;
+}
+.cpi-death-clock > svg {
+  width: 1.4rem;
+  height: 1.8rem;
+  stroke: #a798b0;
+  stroke-width: 1;
+}
+.cpi-death-clock > div {
+  display: grid;
+  gap: 0.3rem;
+}
+.cpi-death-clock span {
+  font-size: 0.43rem;
+  letter-spacing: 0.18em;
+}
+.cpi-death-clock time {
+  font-size: 1.05rem;
+  line-height: 1;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.09em;
+  color: #d7cbdc;
+}
+.cpi-death-clock > i {
+  width: 3px;
+  height: 3px;
+  background: #d57da3;
+  border-radius: 50%;
+  box-shadow: 0 0 6px #e67bae66;
+  animation: cpi-clock-beat 2s ease-in-out infinite;
+}
+.cpi-stage-instruments .cps-effects {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.8rem;
+}
+.cpi-stage-instruments .cps-effect {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 0;
+  padding: 0;
+  background: none;
+  overflow: visible;
+  color: #9de5d1;
+  animation: cpi-effect-arrive 0.4s 1s both;
+}
+.cpi-stage-instruments .cps-effect.is-neg {
+  color: #f291b5;
+  background: none;
+  border: 0;
+}
+.cpi-effect-symbol {
+  position: relative;
+  width: 2.3rem;
+  height: 2.3rem;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 6px #81e3d442);
+}
+.cpi-effect-symbol > svg:first-child {
+  position: absolute;
+  inset: 0.4rem;
+  width: calc(100% - 0.8rem);
+  height: calc(100% - 0.8rem);
+}
+.cpi-effect-orbit {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1;
+  rotate: -90deg;
+  opacity: 0.7;
+}
+.cpi-effect-copy {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
+}
+.cps-effect-name {
+  font-size: 0.56rem;
+}
+.cpi-effect-copy .cps-effect-timer {
+  font-size: 0.52rem;
+  opacity: 0.65;
+}
+.cpi-infinity-scene .cpi-sp-danger-copy {
+  position: absolute;
+  z-index: 5;
+  top: 4%;
+  right: 1%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: auto;
+  max-width: 8rem;
+  margin: 0;
+  padding: 0.5rem 0.65rem 0.5rem 0.5rem;
+  border: 0;
+  border-inline-end: 2px solid #cd718a;
+  border-radius: 0;
+  background: linear-gradient(270deg, #ac294024, #0b080c00);
+  color: #f194a9;
+}
+.cpi-sp-danger-copy > svg {
+  width: 1.4rem;
+  height: 1.4rem;
+  stroke: currentColor;
+  stroke-width: 1.3;
+  filter: drop-shadow(0 0 5px #ff41664d);
+  flex-shrink: 0;
+}
+.cpi-sp-danger-copy > span {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.42rem;
+  letter-spacing: 0.1em;
+  line-height: 1.3;
+}
+.cpi-sp-danger-copy strong {
+  font-size: 1.15rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.05em;
+}
+.cpi-sp-danger-copy small {
+  font-size: 0.5rem;
+}
+.cpi-infinity-scene .cpi-sp-danger-copy.is-critical {
+  color: #ff7796;
+  border-color: #ff3f68;
+  background: linear-gradient(270deg, #cc244a30, transparent);
+}
+.cpi-glass-pane.is-shattered .cpi-pane-material {
+  opacity: 0;
+}
+.cpi-glass-pane.is-contact .cpi-pane-material {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: cpi-glass-contact 0.11s ease-out both;
+}
+.cpi-glass-shard {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: cpi-glass-fall 0.96s var(--shard-delay) cubic-bezier(0.5, 0.02, 0.9, 0.5) both;
+}
+.cpi-pane-fragments {
+  pointer-events: none;
+}
+.cpi-rail-lamp > g {
+  animation: cpi-led-breathe 3.7s var(--lamp-delay) ease-in-out infinite alternate;
+}
+.cpi-step-readout {
+  position: absolute;
+  top: 38%;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.25em;
+  color: #baf3db;
+  text-shadow: 0 0 20px #6effb43b;
+  pointer-events: none;
+  animation: cpi-beat-readout 0.2s ease-out both;
+}
+.cpi-step-readout.is-wrong {
+  color: #ff93b4;
+  text-shadow: 0 0 20px #ff457855;
+}
+.is-collapsing .cpi-structural-rail {
+  animation: cpi-rail-collapse 1.65s ease-in both;
+  transform-box: fill-box;
+  transform-origin: center top;
+}
+.is-collapsing .cpi-rail-lamp {
+  animation: cpi-lamp-fail 0.5s ease-in both;
+}
+.cpi-death-veil {
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 100px #e42f4926;
+  animation: cpi-death-iris 1.8s ease-in both;
+}
+.cpi-death-veil > span {
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  height: 1px;
+  top: 30%;
+  background: linear-gradient(90deg, transparent, #ff6b8b4d, transparent);
+  animation: cpi-signal-loss 1.4s ease-out both;
+}
+.cpi-death-veil > span:nth-child(2) {
+  top: 54%;
+  animation-delay: 0.15s;
+  opacity: 0.4;
+}
+.cpi-death-veil > span:nth-child(3) {
+  top: 75%;
+  animation-delay: 0.3s;
+  opacity: 0.2;
+}
+.is-emergency .cpi-stage-atmosphere::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #ff183326, transparent 25%, transparent 75%, #ff183326);
+  animation: cpi-emergency-light 1.9s ease-in-out infinite;
+}
+.is-emergency .cpi-rail-lamp circle {
+  fill: #ff3559;
+}
+.is-emergency .cpi-rail-lamp circle:last-child {
+  fill: #ffd0d9;
+}
+.is-emergency .cpi-pane-underglow {
+  fill: #ff244b;
+  opacity: 0.5;
+}
+.is-emergency .cpi-pane-tint {
+  fill: #ff244b;
+}
+.is-emergency .cpi-death-clock time,
+.is-emergency .cpi-death-clock svg {
+  color: #ff6c8d;
+  stroke: #ff6c8d;
+}
+.is-emergency .cpi-death-clock > i {
+  background: #ff345e;
+}
+.cpi-stage-fog {
+  animation: cpi-stage-fog 17s ease-in-out infinite alternate;
+}
+.cpi-mystery-release {
+  position: absolute;
+  z-index: 8;
+  inset: 0;
+  pointer-events: none;
+  color: #a4f2de;
+}
+.cpi-mystery-release.is-hostile {
+  color: #ff719e;
+}
+.cpi-released-symbol {
+  position: absolute;
+  width: 4.4rem;
+  height: 4.4rem;
+  left: 50%;
+  top: 63%;
+  translate: -50% -50%;
+  filter: drop-shadow(0 0 12px currentColor);
+  animation: cpi-hologram-flight 1.3s cubic-bezier(0.3, 0.1, 0.2, 1) both;
+}
+.cpi-released-symbol svg {
+  width: 100%;
+  height: 100%;
+}
+.cpi-release-flare {
+  position: absolute;
+  left: 50%;
+  top: 63%;
+  translate: -50% -50%;
+  width: 11rem;
+  height: 11rem;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, #c1fff13d, #56e6bb0a 45%, transparent 65%);
+  animation: cpi-release-bloom 1s ease-out both;
+}
+.is-hostile .cpi-release-flare {
+  background: radial-gradient(ellipse, #ff507862, #e634820a 45%, transparent 65%);
+  width: 16rem;
+  height: 16rem;
+}
+.cpi-mystery-readout {
+  position: absolute;
+  left: 15%;
+  right: 15%;
+  top: 35%;
+  display: grid;
+  text-align: center;
+  gap: 0.5rem;
+  animation: cpi-release-caption 1.4s ease-out both;
+}
+.cpi-mystery-readout > span {
+  font-size: 0.45rem;
+  letter-spacing: 0.26em;
+  opacity: 0.7;
+}
+.cpi-mystery-readout > strong {
+  font-size: 1.2rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+.cpi-mystery-readout > b {
+  font-size: 0.72rem;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+.cpi-dialog-heading {
+  display: flex;
+  gap: 0.8rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.cpi-dialog-heading .cpi-dialog-emblem {
+  display: grid;
+  flex: 0 0 2.1rem;
+  width: 2.1rem;
+  height: 2.6rem;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  color: #e8a4c8;
+}
+.cpi-dialog-emblem svg {
+  width: 100%;
+  height: 100%;
+  stroke: currentColor;
+  stroke-width: 1.3;
+}
+.cpi-dialog-emblem circle {
+  fill: #f17ca9;
+  stroke: none;
+}
+.cpi-dialog-heading h2 {
+  margin: 0;
+  font-size: 1.65rem;
+}
+.cpi-result-details > div {
+  animation: cpi-effect-arrive 0.45s both;
+}
+.cpi-result-details > div:nth-child(2) {
+  animation-delay: 0.12s;
+}
+.cpi-result-details > div:nth-child(3) {
+  animation-delay: 0.24s;
+}
+.cpi-result-details > div:nth-child(4) {
+  animation-delay: 0.36s;
+}
+@keyframes cpi-glass-contact {
+  50% {
+    transform: translateY(2px) scaleY(0.986);
+    filter: brightness(1.35);
+  }
+}
+@keyframes cpi-glass-fall {
+  0%,
+  7% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  24% {
+    opacity: 1;
+  }
+  62% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translate(var(--shard-x), 540px) rotate(var(--shard-turn)) scale(0.65, 0.2);
+    opacity: 0;
+  }
+}
+@keyframes cpi-led-breathe {
+  from {
+    opacity: 0.78;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes cpi-clock-beat {
+  50% {
+    opacity: 0.3;
+  }
+}
+@keyframes cpi-effect-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes cpi-beat-readout {
+  from {
+    opacity: 0;
+    letter-spacing: 0.38em;
+  }
+  to {
+    opacity: 1;
+    letter-spacing: 0.25em;
+  }
+}
+@keyframes cpi-emergency-light {
+  50% {
+    opacity: 0.25;
+  }
+}
+@keyframes cpi-stage-fog {
+  to {
+    transform: translate(30px, -20px);
+    opacity: 0.45;
+  }
+}
+@keyframes cpi-rail-collapse {
+  25% {
+    opacity: 0.8;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(240px) scaleX(0.9);
+  }
+}
+@keyframes cpi-lamp-fail {
+  35% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes cpi-death-iris {
+  from {
+    background: #4d061407;
+  }
+  40% {
+    background: #3c001319;
+  }
+  to {
+    background: #020103b3;
+    box-shadow: inset 0 0 150px #000;
+  }
+}
+@keyframes cpi-signal-loss {
+  from {
+    transform: scaleX(0.3);
+    opacity: 0;
+  }
+  40% {
+    opacity: 0.65;
+  }
+  to {
+    transform: scaleX(1.4) translateY(30px);
+    opacity: 0;
+  }
+}
+@keyframes cpi-hologram-flight {
+  0% {
+    opacity: 0;
+    transform: scale(0.2) translateY(20px);
+  }
+  18% {
+    opacity: 1;
+    transform: scale(1.3) translateY(-8px);
+  }
+  40% {
+    left: 50%;
+    top: 59%;
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  86% {
+    left: 1.6rem;
+    top: 6.4rem;
+    opacity: 0.9;
+    transform: scale(0.4);
+  }
+  100% {
+    left: 1.6rem;
+    top: 6.4rem;
+    opacity: 0;
+    transform: scale(0.35);
+  }
+}
+@keyframes cpi-release-bloom {
+  from {
+    transform: scale(0.1, 0.3);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.9, 0.5);
+    opacity: 0;
+  }
+}
+@keyframes cpi-release-caption {
+  0%,
+  6% {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+  25%,
+  65% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+@media (max-width: 600px) {
+  .cpi-stage-instruments {
+    width: 7.4rem;
+  }
+  .cpi-death-clock time {
+    font-size: 0.85rem;
+  }
+  .cpi-death-clock > svg {
+    width: 1.1rem;
+  }
+  .cpi-death-clock span {
+    font-size: 0.38rem;
+  }
+  .cpi-infinity-scene .cpi-sp-danger-copy {
+    max-width: 6.5rem;
+    gap: 0.35rem;
+    padding-right: 0.4rem;
+  }
+  .cpi-sp-danger-copy > span {
+    font-size: 0.36rem;
+  }
+  .cpi-sp-danger-copy strong {
+    font-size: 0.95rem;
+  }
+  .cpi-dialog-heading h2 {
+    font-size: 1.4rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cpi-infinity-scene *,
+  .cpi-stage-atmosphere * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+.cpi-reduced-motion *,
+.cpi-reduced-motion .cpi-rail-lamp > g {
+  animation: none !important;
+  transition: none !important;
+}

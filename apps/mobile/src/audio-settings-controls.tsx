@@ -25,7 +25,31 @@ export function AudioSettingsControls({
             checked={settings[key]}
             onChange={(event) => onChange({ ...settings, [key]: event.target.checked })}
           />
-          <span>{label}</span>
+          <span className="cpi-setting-label">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              {key === 'music' ? (
+                <>
+                  <path d="M9 17V5l11-2v12M9 8l11-2" />
+                  <ellipse cx="6" cy="18" rx="3" ry="2" />
+                  <ellipse cx="17" cy="16" rx="3" ry="2" />
+                </>
+              ) : key === 'soundEffects' ? (
+                <>
+                  <path d="M4 9h4l5-5v16l-5-5H4V9ZM17 8a6 6 0 0 1 0 8M20 5a10 10 0 0 1 0 14" />
+                </>
+              ) : key === 'haptics' ? (
+                <>
+                  <rect x="8" y="4" width="8" height="16" rx="2" />
+                  <path d="m4 7-2 5 2 5M20 7l2 5-2 5M11 17h2" />
+                </>
+              ) : (
+                <>
+                  <path d="M4 7h10M4 12h7M4 17h10M16 6l5 6-5 6" />
+                </>
+              )}
+            </svg>
+            {label}
+          </span>
         </label>
       ))}
     </fieldset>

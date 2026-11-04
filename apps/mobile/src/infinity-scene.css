@@ -27,7 +27,7 @@
   align-self: center;
   width: min(100%, 900px);
   min-height: clamp(26rem, 77dvh, 64rem);
-  overflow: hidden;
+  overflow: clip;
   margin-top: 0.5rem;
 }
 .cps-board .cpi-prism-bridge {

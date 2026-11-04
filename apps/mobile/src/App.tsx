@@ -13,7 +13,7 @@ import {
 import type { PracticeLoad, PracticeSettings } from './practice-save';
 import { InfinityPractice } from './infinity-scene';
 import { ConfirmNewPractice, MainMenu } from './main-menu';
-import { historyFlag, viewFromHash, viewHash } from './menu-navigation';
+import { canResumePractice, historyFlag, viewFromHash, viewHash } from './menu-navigation';
 import { readTutorialProgress, writeTutorialProgress } from './tutorial-progress';
 import type { TutorialProgress } from './tutorial-progress';
 import type { MenuView } from './menu-navigation';
@@ -312,7 +312,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
   };
 
   const resumePractice = () => {
-    if (saved.status !== 'ready' || saved.state.status === 'finished') return;
+    if (saved.status !== 'ready' || !canResumePractice(saved)) return;
     startPractice(saved.state);
   };
 
@@ -335,7 +335,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
 
   const requestNewPractice = () => {
     if (gameRef.current || confirmingRef.current) return;
-    if (saved.status === 'empty') {
+    if (saved.status === 'empty' || (saved.status === 'ready' && !canResumePractice(saved))) {
       startNewPractice();
       return;
     }

@@ -1,10 +1,21 @@
 import { useId } from 'react';
 
 /** Neutral black stage with reflected edge light. No gameplay or route data. */
-export function StageAtmosphere({ subdued = false }: { subdued?: boolean }) {
+export function StageAtmosphere({
+  subdued = false,
+  emergency = false,
+}: {
+  subdued?: boolean;
+  emergency?: boolean;
+}) {
   const id = useId().replace(/:/g, '');
   return (
-    <div className={'cpi-stage-atmosphere' + (subdued ? ' is-subdued' : '')} aria-hidden="true">
+    <div
+      className={
+        'cpi-stage-atmosphere' + (subdued ? ' is-subdued' : '') + (emergency ? ' is-emergency' : '')
+      }
+      aria-hidden="true"
+    >
       <svg viewBox="0 0 1000 1000" fill="none" preserveAspectRatio="xMidYMid slice">
         <defs>
           <radialGradient id={id + 'pink'}>
@@ -26,6 +37,18 @@ export function StageAtmosphere({ subdued = false }: { subdued?: boolean }) {
           d="m190 0-110 800h500L190 0ZM810 0 420 800h500L810 0Z"
           fill={'url(#' + id + 'beam)'}
         />
+        <g className="cpi-stage-ribs" stroke="#b2b3c6" strokeOpacity=".05">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <path
+              key={i}
+              d={`M${25 + i * 24} 150v${670 - i * 55}l${80 + i * 12} 120M${975 - i * 24} 150v${670 - i * 55}l${-80 - i * 12} 120`}
+            />
+          ))}
+        </g>
+        <g className="cpi-stage-fog">
+          <ellipse cx="40" cy="400" rx="260" ry="100" fill={'url(#' + id + 'cyan)'} />
+          <ellipse cx="920" cy="600" rx="280" ry="100" fill={'url(#' + id + 'pink)'} />
+        </g>
         {[110, 890].map((x, i) => (
           <g key={x}>
             <path

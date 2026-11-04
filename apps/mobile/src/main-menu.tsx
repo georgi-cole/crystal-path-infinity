@@ -23,6 +23,7 @@ import { canResumePractice, rankedServiceState } from './menu-navigation';
 import type { MenuView } from './menu-navigation';
 import './main-menu.css';
 import './intro-hub-premium.css';
+import './game-settings.css';
 
 const INTRO_HUB_BASE = import.meta.env.BASE_URL + 'intro-hub/';
 
@@ -209,12 +210,14 @@ function MenuHeader({
   onBack,
   accountConnected = false,
   rankedAvailable = false,
+  utilities,
 }: {
   view: MenuView;
   online: boolean;
   onBack: () => void;
   accountConnected?: boolean;
   rankedAvailable?: boolean;
+  utilities?: ReactNode;
 }) {
   const { t } = useLanguage();
   return (
@@ -230,10 +233,7 @@ function MenuHeader({
           <span>{t('general.back')}</span>
         </button>
       ) : (
-        <span className="cpi-menu-series">
-          <img src={import.meta.env.BASE_URL + 'brand/prism-mark.svg'} alt="" aria-hidden="true" />
-          Crystal Path <span aria-hidden="true">/</span> Infinity
-        </span>
+        utilities
       )}
       <div className="cpi-menu-status" aria-label={t('menu.status')}>
         <StatusPill>
@@ -259,16 +259,24 @@ function MenuHome({
   onNew,
   tutorialProgress,
   rankedClient,
+  settings,
 }: Pick<
   MainMenuProps,
-  'saved' | 'best' | 'onOpen' | 'onResume' | 'onNew' | 'tutorialProgress' | 'rankedClient'
+  | 'saved'
+  | 'best'
+  | 'onOpen'
+  | 'onResume'
+  | 'onNew'
+  | 'tutorialProgress'
+  | 'rankedClient'
+  | 'settings'
 >) {
   const canResume = canResumePractice(saved);
   const { t, number } = useLanguage();
   return (
     <div className="cpi-home-composition">
       <div className="cpi-home-scenery" aria-hidden="true">
-        <PrismBridge preview />
+        <PrismBridge preview reducedMotion={settings.reducedMotion} />
       </div>
       <section className="cpi-menu-hero" aria-labelledby="menu-title">
         <p className="cpi-menu-kicker">Crystal Path</p>
@@ -442,14 +450,18 @@ export function MainMenu({
           onBack={onBack}
           accountConnected={accountConnected}
           rankedAvailable={rankedClient !== null}
+          utilities={
+            view === 'home' ? (
+              <HubUtilityControls
+                settings={settings}
+                onSettingsChange={onSettingsChange}
+                onOpen={onOpen}
+              />
+            ) : undefined
+          }
         />
         {view === 'home' ? (
           <>
-            <HubUtilityControls
-              settings={settings}
-              onSettingsChange={onSettingsChange}
-              onOpen={onOpen}
-            />
             <MenuHome
               saved={saved}
               best={best}
@@ -458,6 +470,7 @@ export function MainMenu({
               onNew={onNew}
               tutorialProgress={tutorialProgress}
               rankedClient={rankedClient}
+              settings={settings}
             />
           </>
         ) : view === 'practice' ? (
@@ -585,40 +598,46 @@ export function MainMenu({
             />
           </MenuPanel>
         ) : (
-          <MenuPanel title={t('general.settings')} eyebrow={t('menu.settingsEyebrow')}>
-            <p>{t('menu.settingsIntro')}</p>
+          <section className="cpi-settings-menu" aria-labelledby="cpi-settings-title">
+            <header className="cpi-settings-title">
+              <Glyph name="settings" />
+              <h1 id="cpi-settings-title" data-menu-heading tabIndex={-1}>
+                {t('general.settings')}
+              </h1>
+            </header>
             <AudioSettingsControls settings={settings} onChange={onSettingsChange} />
-            <MenuAction
-              label={tutorialProgress === 'completed' ? t('menu.replay') : t('menu.openTutorial')}
-              description={
-                tutorialProgress === 'completed'
-                  ? t('menu.tutorialDone')
-                  : tutorialProgress === 'skipped'
-                    ? t('menu.tutorialSkipped')
-                    : t('menu.tutorialAvailable')
-              }
-              icon="practice"
-              onClick={() => onOpen('tutorial')}
-            />
             <LanguageSettings />
+            <button type="button" className="cpi-settings-link" onClick={() => onOpen('tutorial')}>
+              <Glyph name="practice" />
+              <span>
+                {t(tutorialProgress === 'completed' ? 'menu.replay' : 'menu.openTutorial')}
+              </span>
+              <span aria-hidden="true">›</span>
+            </button>
             <PrivacyAccountSupport
               accountAvailable={accountConnected && accountControlsClient !== null}
+              accountActions={
+                accountConnected && accountControlsClient ? (
+                  <AccountControls client={accountControlsClient} accountScope={accountScope} />
+                ) : undefined
+              }
             />
-            <AccountControls client={accountControlsClient} accountScope={accountScope} />
-          </MenuPanel>
+          </section>
         )}
         {warning && (
           <p className="cpi-menu-warning" role="alert">
             {warning}
           </p>
         )}
-        <footer className="cpi-menu-footer">
-          <span>Crystal Path: Infinity</span>
-          <span>
-            <span className="cpi-status-dot" aria-hidden="true" /> {t('menu.footerOffline')}
-          </span>
-          {buildLabel && <span>{buildLabel}</span>}
-        </footer>
+        {view !== 'home' && view !== 'settings' && (
+          <footer className="cpi-menu-footer">
+            <span>Crystal Path: Infinity</span>
+            <span>
+              <span className="cpi-status-dot" aria-hidden="true" /> {t('menu.footerOffline')}
+            </span>
+            {buildLabel && <span>{buildLabel}</span>}
+          </footer>
+        )}
       </div>
     </main>
   );

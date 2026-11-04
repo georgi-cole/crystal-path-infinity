@@ -49,7 +49,8 @@ describe('approved account services remain separate from default guest play', ()
     expect(menu('profile')).toContain('practice without a profile');
     expect(menu('profile')).not.toContain('<input');
     const settings = menu('settings');
-    expect(settings).toContain('Account export and deletion are unavailable');
+    expect(settings).toContain('No account is connected.');
+    expect(settings).toContain('cpi-settings-disclosure');
     expect(settings).not.toContain('Confirm account deletion</button>');
     expect(menu('play')).toContain('Practice');
     expect(menu('play')).not.toContain('Start verified run</button>');
