@@ -216,6 +216,7 @@ export class PostgresRankedRepository implements RankedRepository {
   ): Promise<T> {
     const connection = await this.pool.connect();
     let began = false;
+    let committing = false;
     let releaseError: Error | undefined;
     try {
       await connection.query('begin');
@@ -232,10 +233,12 @@ export class PostgresRankedRepository implements RankedRepository {
       );
       if (account.rows.length !== 1) throw new RankedError('account-unavailable');
       const value = await operation(new PostgresTransaction(connection, subject));
+      committing = true;
       await connection.query('commit');
       began = false;
       return value;
     } catch (error) {
+      if (!began || committing) releaseError = new Error('ranked-transaction-outcome-uncertain');
       if (began) {
         try {
           await connection.query('rollback');

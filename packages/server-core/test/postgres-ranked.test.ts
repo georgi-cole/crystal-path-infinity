@@ -116,6 +116,15 @@ describe('PostgreSQL ranked transaction adapter', () => {
     expect(connection.releases[0]?.message).toBe('ranked-transaction-rollback-failed');
   });
 
+  it('discards failed begin and uncertain commit connections even when rollback succeeds', async () => {
+    for (const failure of ['begin', 'commit']) {
+      const { connection, start } = fixture();
+      connection.fail = failure;
+      await expect(start()).rejects.toThrow('injected-database-failure');
+      expect(connection.releases[0]?.message).toBe('ranked-transaction-outcome-uncertain');
+      if (failure === 'commit') expect(connection.calls.at(-1)?.text).toBe('rollback');
+    }
+  });
   it('does not begin work when owner acquisition fails and always returns the connection', async () => {
     const { connection, start } = fixture();
     connection.missingOwner = true;
