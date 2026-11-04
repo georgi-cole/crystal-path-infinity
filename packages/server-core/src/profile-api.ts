@@ -54,6 +54,8 @@ export function createProfileHandler(options: ProfileApiOptions) {
   return async (request: Request): Promise<Response> => {
     let connection: Awaited<ReturnType<SqlPool['connect']>> | null = null;
     let began = false;
+    let beginning = false;
+    let committing = false;
     let broken: Error | undefined;
     const origin = request.headers.get('origin');
     function reply(body: unknown, status = 200): Response {
@@ -139,7 +141,9 @@ export function createProfileHandler(options: ProfileApiOptions) {
       )
         return reply({ code: 'invalid_request' }, 400);
       connection = await options.database.connect();
+      beginning = true;
       await connection.query('begin');
+      beginning = false;
       began = true;
       // The FK checks account existence; owner lock serializes profile/start edits.
       // A private mapping alone never publishes a profile or grants analytics.
@@ -173,10 +177,13 @@ export function createProfileHandler(options: ProfileApiOptions) {
         'ageResponseAt',null,'analyticsAllowed',false,'countryChangeAvailableAt',null)) as owner`,
         [actor.subject],
       );
+      committing = true;
       await connection.query('commit');
+      committing = false;
       began = false;
       return reply(result.rows[0]);
     } catch (error) {
+      if (beginning || committing) broken = new Error('Profile transaction outcome uncertain');
       if (connection && began) {
         try {
           await connection.query('rollback');

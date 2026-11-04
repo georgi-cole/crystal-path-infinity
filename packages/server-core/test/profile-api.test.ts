@@ -120,6 +120,22 @@ describe('trusted profile routes', () => {
     expect((await f.handler(request(edit))).status).toBe(503);
     expect(f.release).toHaveBeenCalledWith(expect.any(Error));
   });
+  it('discards uncertain begin/commit connections without exposing private errors', async () => {
+    for (const failure of ['begin', 'commit']) {
+      const f = fixture();
+      const healthy = f.query.getMockImplementation()!;
+      f.query.mockImplementation((sql, values) =>
+        sql === failure
+          ? Promise.reject(new Error('private transport failure'))
+          : healthy(sql, values),
+      );
+      const response = await f.handler(request(edit));
+      expect(response.status).toBe(503);
+      expect(await response.text()).toBe('{"code":"service_unavailable"}');
+      expect(f.release).toHaveBeenCalledWith(expect.any(Error));
+      if (failure === 'commit') expect(f.query).toHaveBeenLastCalledWith('rollback');
+    }
+  });
   it('supports allowlisted preflight and returns invalid JSON as a request error', async () => {
     const f = fixture();
     const preflight = new Request('https://example.invalid/cpi/profile/save', {
