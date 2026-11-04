@@ -48,7 +48,7 @@ export class PostgresTransaction implements RankedTransaction {
 
   async getActiveRun(): Promise<StoredRankedRun | null> {
     const result = await this.connection.query(
-      "select checkpoint_private from cpi_private.ranked_runs where user_id=$1::uuid and status<>'finished' for update",
+      "select checkpoint_private from cpi_private.ranked_runs where user_id=$1::uuid and lease_active and status<>'finished' for update",
       [this.subject],
     );
     if (result.rows.length > 1) throw new RankedError('inconsistent-active-runs');
@@ -127,18 +127,18 @@ export class PostgresTransaction implements RankedTransaction {
       insert into cpi_private.ranked_runs as existing
         (id,user_id,ruleset_version,status,checkpoint_private,sp,hints,last_cleared_row,current_row,
          revives_granted,revives_applied,revives_to_reach_score,active_time_ms,created_at,updated_at,
-         finalized_at,achieved_at,server_validated,country_snapshot,continent_snapshot,mapping_version,region_snapshotted_at)
+         finalized_at,achieved_at,server_validated,country_snapshot,continent_snapshot,mapping_version,region_snapshotted_at,lease_active)
       values ($1::uuid,$2::uuid,$3::text,$4::text,$5::jsonb,$6::smallint,$7::integer,$8::text,$9::text,
               $10::smallint,$11::smallint,$12::smallint,$13::bigint,
               coalesce((select created_at from cpi_private.ranked_runs where id=$1::uuid and user_id=$2::uuid),$14::timestamptz),$14::timestamptz,
-              $15::timestamptz,$16::timestamptz,true,$17::text,$18::text,$19::text,$14::timestamptz)
+              $15::timestamptz,$16::timestamptz,true,$17::text,$18::text,$19::text,$14::timestamptz,$20::boolean)
       on conflict (id) do update set
         status=excluded.status,checkpoint_private=excluded.checkpoint_private,sp=excluded.sp,hints=excluded.hints,
         last_cleared_row=excluded.last_cleared_row,current_row=excluded.current_row,
         revives_granted=excluded.revives_granted,revives_applied=excluded.revives_applied,
         revives_to_reach_score=excluded.revives_to_reach_score,active_time_ms=excluded.active_time_ms,
         updated_at=excluded.updated_at,finalized_at=excluded.finalized_at,achieved_at=excluded.achieved_at,
-        server_validated=true
+        server_validated=true,lease_active=excluded.lease_active
       where existing.user_id=excluded.user_id and existing.ruleset_version=excluded.ruleset_version
         and existing.country_snapshot is not distinct from excluded.country_snapshot
         and existing.continent_snapshot is not distinct from excluded.continent_snapshot
@@ -165,6 +165,7 @@ export class PostgresTransaction implements RankedTransaction {
         record.region.countryCode,
         record.region.continent,
         record.region.mappingVersion,
+        record.leaseActive !== false,
       ],
     );
     if (result.rows.length !== 1) throw new RankedError('immutable-run-conflict');

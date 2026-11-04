@@ -1,0 +1,26 @@
+export const rewardMessages = {
+  'rewards.title': 'Continue this run',
+  'rewards.offer': 'Continuation {ordinal} sets SP to {sp}.',
+  'rewards.set': 'The promised SP replaces your current SP; it is not added.',
+  'rewards.quota': 'Confirmed continuations: {granted}/10. Applied: {applied}/10.',
+  'rewards.watch': 'Watch an ad',
+  'rewards.end': 'End run',
+  'rewards.loading': 'Preparing your chosen ad...',
+  'rewards.showing': 'An ad is open. The run remains paused.',
+  'rewards.pending': 'Waiting for reward verification. No continuation is confirmed yet.',
+  'rewards.savedPending':
+    'Verification is still pending. Your run remains recoverable; retry or return later.',
+  'rewards.granted': 'Your continuation is verified and ready to use.',
+  'rewards.closeFirst': 'Close the ad before restoring your run.',
+  'rewards.apply': 'Use verified continuation',
+  'rewards.reviving': 'Restoring your run...',
+  'rewards.final': 'This run has finished.',
+  'rewards.unavailable': 'Rewarded continuations are unavailable. Practice remains available.',
+  'rewards.privacyUnavailable': 'An eligible ad is not available for this request.',
+  'rewards.noFill': 'No ad was available. No continuation was used.',
+  'rewards.error': 'The request could not complete. Retry to recover the same run.',
+  'rewards.offline':
+    'Connect to verify or restore your continuation. Your run remains recoverable.',
+  'rewards.retry': 'Retry verification',
+  'rewards.leave': 'Return and keep this run recoverable',
+} as const;

@@ -46,7 +46,9 @@ export function formatAccountExport(value: unknown): string {
   const next = value.next;
   if (
     !record(next) ||
-    ['consent', 'parental', 'run', 'result'].some((key) => next[key] !== null) ||
+    ['consent', 'parental', 'run', 'result', 'report', 'reward', 'adAuthorization'].some(
+      (key) => next[key] !== null,
+    ) ||
     Object.values(next).some((cursor) => cursor !== null)
   )
     throw new Error('Account export has additional pages');
@@ -55,6 +57,67 @@ export function formatAccountExport(value: unknown): string {
     if (!Array.isArray(items) || items.length > 10_000) throw new Error('Invalid account export');
     return items.map((item) => fields(item, keys));
   };
+  const rewardRows = value.rewards;
+  const authorizationRows = value.adAuthorizations;
+  if (
+    !Array.isArray(rewardRows) ||
+    rewardRows.length > 10_000 ||
+    !Array.isArray(authorizationRows) ||
+    authorizationRows.length > 10_000
+  )
+    throw new Error('Invalid account export');
+  const rewards = rewardRows.map((item: unknown) => {
+    if (!record(item)) throw new Error('Invalid account export');
+    return {
+      ...fields(item, [
+        'id',
+        'runId',
+        'deathId',
+        'rulesetVersion',
+        'state',
+        'ordinal',
+        'restoreSp',
+        'createdAt',
+        'expiresAt',
+        'resolvedAt',
+        'providerEarnedAt',
+      ]),
+      grant:
+        item.grant === null ? null : fields(item.grant, ['id', 'state', 'grantedAt', 'appliedAt']),
+    };
+  });
+  const adAuthorizations = authorizationRows.map((item: unknown) => {
+    if (
+      !record(item) ||
+      !record(item.inventory) ||
+      !Array.isArray(item.inventory.mediation) ||
+      item.inventory.mediation.length > 20
+    )
+      throw new Error('Invalid account export');
+    return {
+      ...fields(item, [
+        'id',
+        'policyVersion',
+        'context',
+        'prerequisitesSatisfied',
+        'issuedAt',
+        'validUntil',
+        'revokedAt',
+      ]),
+      flags: fields(item.flags, [
+        'childDirected',
+        'underAgeOfConsent',
+        'maxAdContentRating',
+        'nonPersonalized',
+      ]),
+      inventory: {
+        ...fields(item.inventory, ['provider', 'platform', 'sdkVersion']),
+        mediation: item.inventory.mediation.map((adapter: unknown) =>
+          fields(adapter, ['identifier', 'version']),
+        ),
+      },
+    };
+  });
   const output = {
     schemaVersion: 1,
     exportedAt: value.exportedAt,
@@ -121,7 +184,17 @@ export function formatAccountExport(value: unknown): string {
     ...(value.reports === undefined
       ? {}
       : { reports: list('reports', ['id', 'targetPublicId', 'reason', 'pending', 'createdAt']) }),
-    next: fields(value.next, ['consent', 'parental', 'run', 'result', 'report']),
+    rewards,
+    adAuthorizations,
+    next: fields(value.next, [
+      'consent',
+      'parental',
+      'run',
+      'result',
+      'report',
+      'reward',
+      'adAuthorization',
+    ]),
   };
   const text = JSON.stringify(output, null, 2);
   if (text.length > 2_000_000) throw new Error('Account export is too large to display');

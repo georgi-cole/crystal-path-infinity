@@ -7,6 +7,7 @@ import { RankedAuthority } from '../../packages/server-core/src/ranked.ts';
 import { RewardService } from '../../packages/server-core/src/reward-service.ts';
 import { createRewardHandler } from '../../packages/server-core/src/reward-api.ts';
 import { createAccountLifecycleHandler } from '../../packages/server-core/src/account-lifecycle.ts';
+import { PendingRunsService } from '../../packages/server-core/src/pending-runs.ts';
 
 /** Local keys sign synthetic Google-shaped fixtures. This is NOT live AdMob evidence. */
 export async function runRewardIntegration(adminPool, runtimePool) {
@@ -37,6 +38,8 @@ export async function runRewardIntegration(adminPool, runtimePool) {
         );
     },
   });
+  const pendingRuns = new PendingRunsService({ database: runtimePool, now: () => now });
+  let otherActive = null;
   const api = createRewardHandler({
     basePath: '/cpi',
     service,
@@ -207,6 +210,30 @@ export async function runRewardIntegration(adminPool, runtimePool) {
         ordinal - 1,
         'unconfirmed client callbacks grant nothing',
       );
+      if (ordinal === 1) {
+        latest = await authority.recover(actor, {
+          runId: latest.snapshot.runId,
+          idempotencyKey: randomUUID(),
+          takeover: false,
+        });
+        const archived = await pendingRuns.archive(actor, {
+          runId: latest.snapshot.runId,
+          sequence: latest.snapshot.nextSequence,
+          idempotencyKey: randomUUID(),
+          leaseToken: latest.lease.token,
+        });
+        assert.deepEqual(archived, { status: 'archived', runId: latest.snapshot.runId });
+        otherActive = await authority.start(actor, { idempotencyKey: randomUUID() });
+        assert.notEqual(otherActive.snapshot.runId, latest.snapshot.runId);
+        await assert.rejects(
+          authority.recover(actor, {
+            runId: latest.snapshot.runId,
+            idempotencyKey: randomUUID(),
+            takeover: true,
+          }),
+          (error) => error.code === 'active-run-exists',
+        );
+      }
       await ssv(callback(pending.intent, ordinal, { ad_unit: 'wrong-unit' }), 409);
       await ssv(callback(pending.intent, ordinal, { timestamp: String(now - 60_000) }), 409);
       if (ordinal === 2) await ssv(callback(pending.intent, 1), 409);
@@ -239,11 +266,47 @@ export async function runRewardIntegration(adminPool, runtimePool) {
           leaseToken: latest.lease.token,
           sequence: latest.snapshot.nextSequence,
         };
-        assert.equal((await post('apply', stale, 409)).code, 'reward-lease-expired');
+        assert.equal((await post('apply', stale, 409)).code, 'reward-lease-lost');
         await assert.rejects(
           service.apply({ ...actor, subject: other }, stale),
           (error) => error.code === 'reward-run-unavailable',
         );
+        const stored = await admin.query(
+          'select lease_active,checkpoint_private from cpi_private.ranked_runs where id=$1::uuid',
+          [latest.snapshot.runId],
+        );
+        assert.equal(
+          stored.rows[0].lease_active,
+          false,
+          'late SSV never reattaches a saved attempt',
+        );
+        assert.equal(stored.rows[0].checkpoint_private.leaseActive, false);
+        assert.equal(stored.rows[0].checkpoint_private.state.revivesGranted, 1);
+        const saved = await pendingRuns.saved(actor, { after: null });
+        assert.equal(saved.runs[0].runId, latest.snapshot.runId);
+        assert.equal(saved.runs[0].revivesGranted, 1);
+        assert.equal(saved.runs[0].revivesApplied, 0);
+        assert.equal(JSON.stringify(saved).includes('hmac'), false);
+        assert.deepEqual(
+          (await pendingRuns.saved({ ...actor, subject: other }, { after: null })).runs,
+          [],
+        );
+        assert.deepEqual(await authority.active(actor, {}), {
+          status: 'active',
+          runId: otherActive.snapshot.runId,
+        });
+        otherActive = await authority.recover(actor, {
+          runId: otherActive.snapshot.runId,
+          idempotencyKey: randomUUID(),
+          takeover: false,
+        });
+        await authority.execute(actor, {
+          runId: otherActive.snapshot.runId,
+          sequence: otherActive.snapshot.nextSequence,
+          idempotencyKey: randomUUID(),
+          leaseToken: otherActive.lease.token,
+          command: { type: 'end' },
+        });
       }
       latest = await authority.recover(actor, {
         runId: latest.snapshot.runId,

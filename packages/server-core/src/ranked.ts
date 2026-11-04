@@ -42,6 +42,8 @@ export type RankedCommand =
 
 /** This private record is persisted atomically; it must never be a network response. */
 export interface StoredRankedRun {
+  /** Absent on older checkpoints means attached. False preserves a saved unresolved attempt. */
+  readonly leaseActive?: boolean;
   readonly subject: string;
   readonly region: RankedRegionSnapshot;
   readonly state: RunState;
@@ -436,6 +438,7 @@ export class RankedAuthority {
         RANKED_RNG,
       );
       const record: StoredRankedRun = {
+        leaseActive: true,
         subject: actor.subject,
         region,
         state,
@@ -475,6 +478,7 @@ export class RankedAuthority {
       if (repeated) return repeated;
       let record = this.owned(await transaction.getRun(runId), actor);
       const now = this.observation();
+      if (record.leaseActive === false) fail('run-archived');
       if (record.deviceId !== actor.deviceId || record.leaseToken !== leaseToken)
         fail('lease-lost');
       if (now >= record.leaseExpiresAt) fail('lease-expired');
@@ -546,12 +550,15 @@ export class RankedAuthority {
       if (record.state.status === 'finished') {
         return this.remember(transaction, key, request, reply(record), now);
       }
+      const active = await transaction.getActiveRun();
+      if (active && active.state.runId !== runId) fail('active-run-exists');
       if (record.deviceId !== actor.deviceId && now < record.leaseExpiresAt && !input.takeover) {
         fail('takeover-required');
       }
       record = this.settle(record, now);
       record = {
         ...record,
+        leaseActive: true,
         deviceId: actor.deviceId,
         leaseToken: uuid(this.newId()),
         leaseGeneration: addDecimal(record.leaseGeneration),

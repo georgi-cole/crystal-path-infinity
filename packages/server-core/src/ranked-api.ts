@@ -26,6 +26,7 @@ const PUBLIC_ERRORS = new Set([
   'active-run-exists',
   'run-not-found',
   'run-finished',
+  'run-archived',
   'idempotency-conflict',
   'lease-lost',
   'lease-expired',

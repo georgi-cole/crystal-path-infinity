@@ -26,6 +26,8 @@ import type { LeaderboardClient } from './leaderboard/leaderboard-client';
 import type { NameReportClient } from './leaderboard/name-report-client';
 import type { RankedClient } from './ranked/ranked-client';
 import type { AccountControlsClient } from './account/account-controls-model';
+import type { RewardFlow } from './rewards/reward-flow';
+import type { SavedPendingClient } from './ranked/saved-pending-client';
 
 /** Supplied only by an approved account host; shipped builds inject nothing. */
 export interface ApprovedAccountServices {
@@ -34,6 +36,8 @@ export interface ApprovedAccountServices {
   leaderboardClient?: LeaderboardClient | null;
   nameReportClient?: NameReportClient | null;
   rankedClient?: RankedClient | null;
+  rewardFlowFactory?: ((runId: string) => RewardFlow | null) | null;
+  savedPendingClient?: SavedPendingClient | null;
   accountControlsClient?: AccountControlsClient | null;
   countries?: readonly { countryCode: string; continentCode: string }[];
   pendingPersonalResult?: boolean;
@@ -95,6 +99,49 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
   const [online, setOnline] = useState(
     () => typeof navigator === 'undefined' || navigator.onLine !== false,
   );
+  const rankedClient = accountScope ? (services?.rankedClient ?? null) : null;
+  const rewardFactory = accountScope ? (services?.rewardFlowFactory ?? null) : null;
+  const rankedRunId = useSyncExternalStore(
+    (listener) => rankedClient?.subscribe(listener) ?? (() => {}),
+    () => rankedClient?.snapshot().run?.runId ?? null,
+    () => null,
+  );
+  const [rewardOwner, setRewardOwner] = useState<{
+    scope: object;
+    client: RankedClient;
+    factory: (runId: string) => RewardFlow | null;
+    runId: string;
+    flow: RewardFlow;
+  } | null>(null);
+  const rewardFlow =
+    view === 'play' &&
+    rewardOwner?.scope === accountScope &&
+    rewardOwner?.client === rankedClient &&
+    rewardOwner?.factory === rewardFactory &&
+    rewardOwner?.runId === rankedRunId
+      ? rewardOwner.flow
+      : null;
+  useEffect(() => {
+    if (view !== 'play' || !accountScope || !rankedClient || !rewardFactory || !rankedRunId) return;
+    const flow = rewardFactory(rankedRunId);
+    if (!flow) return;
+    let active = true;
+    // Construct subscriptions after commit; fence stale owners synchronously on render.
+    void Promise.resolve().then(() => {
+      if (active)
+        setRewardOwner({
+          scope: accountScope,
+          client: rankedClient,
+          factory: rewardFactory,
+          runId: rankedRunId,
+          flow,
+        });
+    });
+    return () => {
+      active = false;
+      flow.dispose();
+    };
+  }, [accountScope, rankedClient, rewardFactory, rankedRunId, view]);
 
   useEffect(() => {
     let active = true;
@@ -410,7 +457,9 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
           leaderboardClient={services?.leaderboardClient}
           leaderboardCountries={services?.countries}
           pendingPersonalResult={services?.pendingPersonalResult}
-          rankedClient={accountScope ? services?.rankedClient : null}
+          rankedClient={rankedClient}
+          rewardFlow={rewardFlow}
+          savedPendingClient={accountScope ? services?.savedPendingClient : null}
           accountControlsClient={accountScope ? services?.accountControlsClient : null}
           accountScope={accountScope}
           accountConnected={accountScope !== null}

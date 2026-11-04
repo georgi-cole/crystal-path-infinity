@@ -1,0 +1,39 @@
+.cpi-saved-pending {
+  display: grid;
+  gap: 0.75rem;
+  margin-block: 1rem;
+  padding: 1rem;
+  border: 1px solid rgb(130 210 255 / 25%);
+  border-radius: 1rem;
+}
+.cpi-saved-pending h3,
+.cpi-saved-pending p {
+  margin: 0;
+}
+.cpi-saved-pending ul {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding-inline-start: 1.5rem;
+}
+.cpi-saved-pending li {
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  background: rgb(20 35 65 / 80%);
+}
+.cpi-saved-pending button {
+  min-block-size: 44px;
+  padding: 0.65rem 1rem;
+  border: 1px solid rgb(130 210 255 / 40%);
+  border-radius: 0.65rem;
+  background: #142341;
+  color: inherit;
+  font: inherit;
+}
+.cpi-saved-pending button:disabled {
+  opacity: 0.5;
+}
+.cpi-saved-pending button:focus-visible {
+  outline: 2px solid #9eeaff;
+  outline-offset: 3px;
+}

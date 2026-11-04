@@ -1,6 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { useLanguage } from '../language-context';
 import type { RankedClient, RankedClientState } from './ranked-client';
+import { RewardOffer } from '../rewards/reward-offer';
+import type { RewardFlow } from '../rewards/reward-flow';
+import { SavedPendingView } from './saved-pending-view';
+import type { SavedPendingClient } from './saved-pending-client';
 import './ranked-scene.css';
 
 const EMPTY: RankedClientState = {
@@ -25,12 +29,16 @@ export function RankedScene({
   online,
   recoverRunId,
   onLeave,
+  rewardFlow = null,
+  savedPendingClient = null,
 }: {
   client: RankedClient | null;
   online: boolean;
   /** Supplied by a trusted account recovery list, never a local practice checkpoint. */
   recoverRunId?: string;
   onLeave: () => void;
+  rewardFlow?: RewardFlow | null;
+  savedPendingClient?: SavedPendingClient | null;
 }) {
   const { t, number } = useLanguage();
   const [observed, setObserved] = useState<{
@@ -39,11 +47,19 @@ export function RankedScene({
   } | null>(null);
   const [confirm, setConfirm] = useState(false);
   const [interrupted, setInterrupted] = useState(false);
+  const subscribeReward = useCallback(
+    (observer: () => void) => rewardFlow?.subscribe(observer) ?? (() => {}),
+    [rewardFlow],
+  );
+  const readReward = useCallback(() => rewardFlow?.snapshot() ?? null, [rewardFlow]);
+  const rewardState = useSyncExternalStore(subscribeReward, readReward, readReward);
   const state = observed?.client === client ? observed.state : (client?.snapshot() ?? EMPTY);
   const run = state.run;
   const currentRunId = run?.runId ?? recoverRunId;
   const ready = !!client && online && state.phase === 'ready' && !interrupted;
-  const playing = ready && run?.status === 'playing' && !run.paused && !confirm;
+  const rewardBound = !!run && rewardFlow?.runId === run.runId;
+  const rewardBlocked = rewardBound && rewardState?.inputBlocked === true;
+  const playing = ready && run?.status === 'playing' && !run.paused && !confirm && !rewardBlocked;
   const busy = state.phase === 'pending';
 
   useEffect(() => {
@@ -69,6 +85,21 @@ export function RankedScene({
     client?.setOnline(online);
   }, [client, online]);
   useEffect(() => {
+    rewardFlow?.setOnline(online);
+  }, [rewardFlow, online]);
+  useEffect(() => {
+    if (rewardFlow && rewardBound && online) void rewardFlow.recover();
+  }, [
+    rewardFlow,
+    rewardBound,
+    online,
+    run?.status,
+    run?.death?.id,
+    run?.revivesGranted,
+    run?.revivesApplied,
+    run?.rewardPending,
+  ]);
+  useEffect(() => {
     if (!client) return;
     const pause = () => {
       const latest = client.snapshot();
@@ -90,20 +121,21 @@ export function RankedScene({
     };
   }, [client]);
   useEffect(() => {
-    if (!client || !online || interrupted) return;
+    if (!client || !online || interrupted || rewardBlocked) return;
     const timer = window.setInterval(() => {
       const latest = client.snapshot();
       if (
         document.visibilityState !== 'hidden' &&
         latest.phase === 'ready' &&
         latest.run?.status === 'playing' &&
-        !latest.run.paused
+        !latest.run.paused &&
+        !(rewardFlow?.runId === latest.run.runId && rewardFlow.snapshot().inputBlocked)
       ) {
         void client.command({ type: 'heartbeat' });
       }
     }, 3000);
     return () => window.clearInterval(timer);
-  }, [client, online, interrupted]);
+  }, [client, online, interrupted, rewardBlocked, rewardFlow]);
 
   const recover = async (takeover = false) => {
     if (!client) return;
@@ -113,12 +145,38 @@ export function RankedScene({
     if (client.snapshot().phase === 'ready' || client.snapshot().phase === 'finished')
       setInterrupted(false);
   };
+  const recoverSaved = async (runId: string) => {
+    if (!client || rewardFlow?.snapshot().fullscreen) return;
+    const active = client.snapshot().run;
+    if (active && active.status !== 'finished') return;
+    await client.recover(runId, false);
+    const result = client.snapshot();
+    if (result.phase !== 'ready' || result.run?.runId !== runId)
+      throw new Error('Saved run recovery unavailable');
+    setInterrupted(false);
+  };
   const leave = async () => {
-    await client?.command({ type: 'pause' });
+    if (rewardFlow?.snapshot().fullscreen) return;
+    if (run && client?.snapshot().run?.runId !== run.runId) return;
+    if (
+      client &&
+      run?.status === 'dead' &&
+      rewardBound &&
+      (rewardState?.phase === 'earned_pending' || rewardState?.phase === 'granted')
+    ) {
+      await client.archivePending(run.runId);
+    } else await client?.command({ type: 'pause' });
     onLeave();
   };
   const action = (type: 'choose' | 'hint' | 'mystery', side?: 'left' | 'right') => {
-    if (!client || !run || !playing) return;
+    if (
+      !client ||
+      !run ||
+      client.snapshot().run?.runId !== run.runId ||
+      !playing ||
+      (rewardFlow?.runId === run.runId && rewardFlow.snapshot().inputBlocked)
+    )
+      return;
     const row = run.currentRow;
     const life = run.revivesApplied;
     if (type === 'choose' && side) void client.command({ type, side, row, life });
@@ -164,13 +222,21 @@ export function RankedScene({
         {t(status)}
       </p>
       {state.rejected && <p role="alert">{t('ranked.rejected')}</p>}
+      {savedPendingClient && (
+        <SavedPendingView
+          client={savedPendingClient}
+          online={online}
+          canRecover={(!run || run.status === 'finished') && !rewardState?.fullscreen && !busy}
+          onRecover={recoverSaved}
+        />
+      )}
       {client &&
         ((!run && state.phase === 'idle') ||
           (run?.status === 'finished' && state.phase === 'finished')) && (
           <button
             className="cpi-ranked-primary"
             type="button"
-            disabled={!online}
+            disabled={!online || rewardState?.fullscreen === true}
             onClick={() => {
               void client.start();
             }}
@@ -281,8 +347,11 @@ export function RankedScene({
               {ready && (
                 <button
                   type="button"
-                  disabled={confirm}
+                  disabled={confirm || rewardBlocked}
                   onClick={() => {
+                    if (client?.snapshot().run?.runId !== run.runId) return;
+                    if (rewardFlow?.runId === run.runId && rewardFlow.snapshot().inputBlocked)
+                      return;
                     void client?.command({ type: run.paused ? 'resume' : 'pause' });
                   }}
                 >
@@ -301,18 +370,39 @@ export function RankedScene({
               </ul>
             </div>
           )}
-          {ready && run.status !== 'finished' && !run.rewardPending && !confirm && (
-            <button
-              className="cpi-ranked-end"
-              type="button"
-              onClick={() => {
+          {run.status === 'dead' && !confirm && (
+            <RewardOffer
+              flow={rewardBound ? rewardFlow : null}
+              online={online}
+              onLeave={() => {
+                void leave();
+              }}
+              onEnd={() => {
+                if (client?.snapshot().run?.runId !== run.runId) return;
+                if (!rewardFlow?.snapshot().canEnd) return;
                 setConfirm(true);
                 void client?.command({ type: 'pause' });
               }}
-            >
-              {t('ranked.end')}
-            </button>
+            />
           )}
+          {ready &&
+            run.status !== 'finished' &&
+            !run.rewardPending &&
+            !confirm &&
+            !(run.status === 'dead' && rewardBound) &&
+            !rewardBlocked && (
+              <button
+                className="cpi-ranked-end"
+                type="button"
+                onClick={() => {
+                  if (client?.snapshot().run?.runId !== run.runId) return;
+                  setConfirm(true);
+                  void client?.command({ type: 'pause' });
+                }}
+              >
+                {t('ranked.end')}
+              </button>
+            )}
           {confirm && run.status !== 'finished' && (
             <div
               className="cpi-ranked-confirm"
@@ -326,8 +416,19 @@ export function RankedScene({
               </button>
               <button
                 type="button"
-                disabled={!ready || run.rewardPending}
+                disabled={
+                  !ready ||
+                  run.rewardPending ||
+                  (rewardBound && rewardState?.canEnd !== true && rewardBlocked)
+                }
                 onClick={() => {
+                  if (client?.snapshot().run?.runId !== run.runId) return;
+                  if (
+                    rewardBound &&
+                    rewardFlow?.snapshot().inputBlocked &&
+                    !rewardFlow.snapshot().canEnd
+                  )
+                    return;
                   setConfirm(false);
                   void client?.command({ type: 'end' });
                 }}

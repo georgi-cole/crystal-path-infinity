@@ -53,7 +53,9 @@ class Repository implements RankedRepository {
     const transaction: RankedTransaction = {
       getActiveRun: () =>
         Promise.resolve(
-          [...draft.runs.values()].find((run) => run.state.status !== 'finished') ?? null,
+          [...draft.runs.values()].find(
+            (run) => run.leaseActive !== false && run.state.status !== 'finished',
+          ) ?? null,
         ),
       getRun: (runId) => Promise.resolve(draft.runs.get(runId) ?? null),
       getReceipt: (key) => Promise.resolve(draft.receipts.get(key) ?? null),
@@ -134,6 +136,65 @@ function setup(options: { heartbeatWindowMs?: number } = {}) {
 }
 
 describe('ranked authority trust boundary', () => {
+  it('keeps saved pending attempts inactive until explicit recovery with no other attached run', async () => {
+    const fixture = setup();
+    const old = await fixture.start();
+    const current = fixture.record(old);
+    const archived: StoredRankedRun = {
+      ...current,
+      leaseActive: false,
+      state: {
+        ...current.state,
+        status: 'dead',
+        sp: 0,
+        deaths: 1,
+        death: {
+          id: 'saved-death',
+          sequence: 1,
+          fatalRow: '1',
+          cause: 'wrong_tile',
+          activeTimeMs: 0,
+          observedAt: current.state.lastObservedAt,
+        },
+        pendingReward: { deathId: 'saved-death', ordinal: 1, intentId: 'saved-intent' },
+      },
+    };
+    fixture.repository.account().runs.set(old.snapshot.runId, archived);
+    expect(await fixture.authority.active(A, {})).toEqual({ status: 'none' });
+    await expect(
+      fixture.authority.execute(A, fixture.request(old, { type: 'resume' })),
+    ).rejects.toMatchObject({ code: 'run-archived' });
+    const next = await fixture.start();
+    await expect(
+      fixture.authority.recover(A, {
+        runId: old.snapshot.runId,
+        idempotencyKey: fixture.newId(),
+        takeover: true,
+      }),
+    ).rejects.toMatchObject({ code: 'active-run-exists' });
+    expect(fixture.repository.account().runs.get(old.snapshot.runId)).toEqual(archived);
+    await fixture.execute(next, { type: 'end' });
+    const recovered = await fixture.authority.recover(A, {
+      runId: old.snapshot.runId,
+      idempotencyKey: fixture.newId(),
+      takeover: false,
+    });
+    expect(fixture.record(recovered).leaseActive).toBe(true);
+    expect(recovered.snapshot).toMatchObject({
+      status: 'dead',
+      rewardPending: true,
+      sp: 0,
+      lastClearedRow: '0',
+      revivesGranted: 0,
+      revivesApplied: 0,
+    });
+    expect(fixture.record(recovered).state.rows).toEqual(archived.state.rows);
+    expect(fixture.record(recovered).state.stream).toEqual(archived.state.stream);
+    expect(await fixture.authority.active(A, {})).toEqual({
+      status: 'active',
+      runId: old.snapshot.runId,
+    });
+  });
   it('discovers only the authenticated account active run without rotating its lease or changing time', async () => {
     const fixture = setup();
     expect(await fixture.authority.active(A, {})).toEqual({ status: 'none' });

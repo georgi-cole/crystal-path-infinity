@@ -423,6 +423,8 @@ jobs:
         run: |
           psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261104000600_cpi026_028_rewards.sql
           psql -X -v ON_ERROR_STOP=1 -f backend/tests/rewards.sql
+            psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261104000650_cpi030_saved_pending.sql
+            psql -X -v ON_ERROR_STOP=1 -f backend/tests/saved-pending.sql
           # The current runtime includes reward and consent exports; execute
           # it after the complete schema, then recheck earlier adapters too.
           node --experimental-strip-types backend/tests/account-lifecycle-integration.mjs
