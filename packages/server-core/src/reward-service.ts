@@ -580,6 +580,7 @@ export class RewardService {
       if (repeated) return repeated as RankedReply;
       let run = await this.run(ranked, runId, actor.subject);
       const now = this.clock();
+      if (run.leaseActive === false) fail('reward-lease-lost');
       if (run.deviceId !== actor.deviceId || run.leaseToken !== leaseToken)
         fail('reward-lease-lost');
       if (now >= run.leaseExpiresAt) fail('reward-lease-expired');

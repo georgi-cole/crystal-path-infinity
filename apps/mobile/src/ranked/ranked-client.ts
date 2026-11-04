@@ -84,6 +84,10 @@ export interface RankedClient {
   start(): Promise<void>;
   lookupActive(): Promise<string | null>;
   command(command: RankedCommand): Promise<void>;
+  /** Explicit use of a server-verified grant; never accepts SP or client proof. */
+  applyVerifiedGrant(grantId: string, expectedRunId: string): Promise<boolean>;
+  /** Explicitly detach a dead pending/granted run while retaining its server reward. */
+  archivePending(expectedRunId: string): Promise<boolean>;
   retry(): Promise<void>;
   recover(runId: string, takeover?: boolean): Promise<void>;
   setOnline(online: boolean): void;
@@ -363,9 +367,10 @@ export function parseRankedReply(value: unknown): RankedReply | null {
 }
 
 interface PendingRequest {
-  readonly route: 'start' | 'action' | 'recover' | 'active';
+  readonly route: 'start' | 'action' | 'recover' | 'active' | 'reward_apply' | 'archive';
   readonly body: string;
   readonly runId: string | null;
+  readonly grantId?: string;
 }
 async function readPublicReply(response: Response): Promise<unknown> {
   const reader = response.body?.getReader();
@@ -469,6 +474,16 @@ export function createRankedClient(options: RankedClientOptions): RankedClient |
     syncAccount();
     notify();
   });
+  const grantRestored = (scope: object, runId: string): boolean =>
+    scope === options.session.accountScope() &&
+    latest?.snapshot.runId === runId &&
+    latest.snapshot.status === 'playing' &&
+    phase === 'ready';
+  const runArchived = (scope: object): boolean =>
+    scope === options.session.accountScope() &&
+    latest === null &&
+    pending === null &&
+    phase === 'idle';
   const client: RankedClient = {
     snapshot() {
       const scope = syncAccount();
@@ -547,6 +562,123 @@ export function createRankedClient(options: RankedClientOptions): RankedClient |
     async retry() {
       if (pending && !flight && online) await send(pending);
     },
+    async applyVerifiedGrant(grantId, expectedRunId) {
+      const scope = syncAccount();
+      if (
+        !scope ||
+        disposed ||
+        !online ||
+        flight ||
+        !latest ||
+        !UUID.test(grantId) ||
+        expectedRunId !== latest.snapshot.runId
+      )
+        return false;
+      const runId = latest.snapshot.runId;
+      if (pending?.route === 'reward_apply') {
+        if (pending.runId !== runId || pending.grantId !== grantId) return false;
+        await send(pending);
+        return grantRestored(scope, runId);
+      }
+      let recovered = false;
+      if (pending) {
+        // Preserve an uncertain recovery request too. Never overwrite a possibly
+        // committed action/application with a newly minted idempotency key.
+        if (pending.route !== 'recover' || pending.runId !== runId) return false;
+        await send(pending);
+        if (pending) return false;
+        recovered = true;
+      }
+      // An ad/SSV delay may outlast the 60-second lease. Renew only the same
+      // device; another device's ownership requires the visible takeover flow.
+      if (!recovered) await client.recover(runId, false);
+      syncAccount();
+      if (
+        scope !== account ||
+        !latest ||
+        latest.snapshot.runId !== runId ||
+        phase !== 'ready' ||
+        pending ||
+        flight
+      )
+        return false;
+      if (latest.snapshot.status === 'playing') return true;
+      if (
+        latest.snapshot.status !== 'dead' ||
+        latest.snapshot.rewardPending ||
+        latest.snapshot.revivesGranted <= latest.snapshot.revivesApplied
+      )
+        return false;
+      const key = newId();
+      if (!UUID.test(key)) return false;
+      pending = {
+        route: 'reward_apply',
+        runId,
+        grantId,
+        body: JSON.stringify({
+          runId,
+          grantId,
+          idempotencyKey: key,
+          sequence: latest.snapshot.nextSequence,
+          leaseToken: latest.lease.token,
+        }),
+      };
+      await send(pending);
+      return grantRestored(scope, runId);
+    },
+    async archivePending(expectedRunId) {
+      const scope = syncAccount();
+      if (
+        !scope ||
+        disposed ||
+        !online ||
+        flight ||
+        !latest ||
+        latest.snapshot.runId !== expectedRunId
+      )
+        return false;
+      const runId = latest.snapshot.runId;
+      if (pending?.route === 'archive') {
+        if (pending.runId !== runId) return false;
+        await send(pending);
+        return runArchived(scope);
+      }
+      let recovered = false;
+      if (pending) {
+        if (pending.route !== 'recover' || pending.runId !== runId) return false;
+        await send(pending);
+        if (pending) return false;
+        recovered = true;
+      }
+      if (!recovered) await client.recover(runId, false);
+      syncAccount();
+      if (
+        scope !== account ||
+        !latest ||
+        latest.snapshot.runId !== runId ||
+        phase !== 'ready' ||
+        pending ||
+        flight ||
+        latest.snapshot.status !== 'dead' ||
+        (!latest.snapshot.rewardPending &&
+          latest.snapshot.revivesGranted <= latest.snapshot.revivesApplied)
+      )
+        return false;
+      const key = newId();
+      if (!UUID.test(key)) return false;
+      pending = {
+        route: 'archive',
+        runId,
+        body: JSON.stringify({
+          runId,
+          sequence: latest.snapshot.nextSequence,
+          idempotencyKey: key,
+          leaseToken: latest.lease.token,
+        }),
+      };
+      await send(pending);
+      return runArchived(scope);
+    },
     async recover(runId, takeover = false) {
       syncAccount();
       if (
@@ -597,26 +729,40 @@ export function createRankedClient(options: RankedClientOptions): RankedClient |
     notify();
     try {
       const result = await options.session.withAccountRequest(async (lease) => {
-        const response = await fetcher(endpoint + request.route, {
-          method: 'POST',
-          headers: {
-            'content-type': 'application/json',
-            accept: 'application/json',
-            authorization: 'Bearer ' + lease.accessToken,
+        const response = await fetcher(
+          request.route === 'reward_apply'
+            ? base.origin + path + '/rewards/apply'
+            : endpoint + request.route,
+          {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              accept: 'application/json',
+              authorization: 'Bearer ' + lease.accessToken,
+            },
+            body: request.body,
+            signal: AbortSignal.any([lease.signal, controller.signal, AbortSignal.timeout(8000)]),
+            credentials: 'omit',
+            redirect: 'error',
+            referrerPolicy: 'no-referrer',
+            cache: 'no-store',
           },
-          body: request.body,
-          signal: AbortSignal.any([lease.signal, controller.signal, AbortSignal.timeout(8000)]),
-          credentials: 'omit',
-          redirect: 'error',
-          referrerPolicy: 'no-referrer',
-          cache: 'no-store',
-        });
+        );
         if (lease.signal.aborted || controller.signal.aborted)
           throw new Error('ranked-unavailable');
         const raw = await readPublicReply(response);
         if (!response.ok) {
           const code = object(raw, ['code']) && typeof raw.code === 'string' ? raw.code : '';
           return { error: code, reply: null, active: undefined };
+        }
+        if (request.route === 'archive') {
+          if (
+            object(raw, ['status', 'runId']) &&
+            raw.status === 'archived' &&
+            raw.runId === request.runId
+          )
+            return { error: null, reply: null, active: undefined, archived: raw.runId };
+          throw new Error('ranked-unavailable');
         }
         if (request.route === 'active') {
           if (object(raw, ['status']) && raw.status === 'none')
@@ -642,7 +788,13 @@ export function createRankedClient(options: RankedClientOptions): RankedClient |
         disposed
       )
         return;
-      if (result.active !== undefined) {
+      if ('archived' in result && result.archived === request.runId) {
+        latest = null;
+        discoveredRunId = null;
+        pending = null;
+        phase = 'idle';
+        rejected = false;
+      } else if (result.active !== undefined) {
         discoveredRunId = result.active;
         pending = null;
         phase =
@@ -676,7 +828,14 @@ export function createRankedClient(options: RankedClientOptions): RankedClient |
         rejected = !incoming.accepted;
         phase = incoming.snapshot.status === 'finished' ? 'finished' : 'ready';
       } else {
-        const code = result.error;
+        const code =
+          result.error === 'reward-lease-lost'
+            ? 'lease-lost'
+            : result.error === 'reward-lease-expired'
+              ? 'lease-expired'
+              : result.error === 'reward-sequence-conflict'
+                ? 'sequence-conflict'
+                : result.error;
         if (code === 'lease-lost' || code === 'takeover-required') {
           pending = null;
           phase = 'lease_lost';
@@ -684,7 +843,13 @@ export function createRankedClient(options: RankedClientOptions): RankedClient |
           code === 'lease-expired' ||
           code === 'sequence-conflict' ||
           code === 'recovery-required' ||
-          code === 'active-run-exists'
+          code === 'active-run-exists' ||
+          code === 'reward-not-offered' ||
+          code === 'reward-already-pending' ||
+          code === 'reward-grant-unavailable' ||
+          code === 'reward-state-conflict' ||
+          code === 'archive-not-pending' ||
+          code === 'run-archived'
         ) {
           if (code === 'active-run-exists' && latest?.snapshot.status === 'finished') {
             latest = null;
@@ -697,7 +862,12 @@ export function createRankedClient(options: RankedClientOptions): RankedClient |
           code === 'idempotency-conflict' ||
           code === 'run-finished' ||
           code === 'run-not-found' ||
-          code === 'incompatible-ruleset'
+          code === 'incompatible-ruleset' ||
+          code === 'invalid-reward-request' ||
+          code === 'reward-account-unavailable' ||
+          code === 'reward-run-unavailable' ||
+          code === 'reward-privacy-unavailable' ||
+          code === 'reward-idempotency-conflict'
         ) {
           pending = null;
           phase = 'error';

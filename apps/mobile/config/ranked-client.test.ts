@@ -126,10 +126,187 @@ async function fixture(handler: (url: string, init: RequestInit) => Promise<Resp
     },
   };
 }
-function body(input: RequestInit): Record<string, unknown> {
+function serializedBody(input: RequestInit): string {
   if (typeof input.body !== 'string') throw new Error('Expected a JSON body');
-  return JSON.parse(input.body) as Record<string, unknown>;
+  return input.body;
 }
+function body(input: RequestInit): Record<string, unknown> {
+  return JSON.parse(serializedBody(input)) as Record<string, unknown>;
+}
+
+describe('CPI-029 verified grant queue and device lease recovery', () => {
+  const grantId = '29000000-0000-4000-8000-000000000099';
+  const refreshedLease = '00000000-0000-4000-8000-000000000023';
+  const dead = (generation = '1') => {
+    const base = reply('2', '0', generation);
+    return {
+      ...base,
+      lease: {
+        ...base.lease,
+        token: generation === '1' ? LEASE : refreshedLease,
+        expiresAt: generation === '1' ? NOW - 1 : NOW + 60_000,
+      },
+      snapshot: {
+        ...base.snapshot,
+        status: 'dead',
+        sp: 0,
+        death: { id: 'death:1', fatalRow: '1', cause: 'wrong_tile' },
+        revivesGranted: 1,
+      },
+    };
+  };
+  const restored = () => {
+    const base = reply('3', '0', '2');
+    return {
+      ...base,
+      lease: { ...base.lease, token: refreshedLease },
+      snapshot: { ...base.snapshot, sp: 200, revivesGranted: 1, revivesApplied: 1 },
+    };
+  };
+  it('rejects a stale displayed run before any lease recovery, apply or archive request', async () => {
+    const f = await fixture(() => Promise.resolve(response(dead())));
+    await f.client.recover(RUN);
+    const calls = f.calls.length;
+    expect(await f.client.applyVerifiedGrant(grantId, grantId)).toBe(false);
+    expect(await f.client.archivePending(grantId)).toBe(false);
+    expect(f.calls).toHaveLength(calls);
+    f.client.dispose();
+    f.owner.dispose();
+  });
+  it('archives an owed grant only after a matching acknowledgement and retries an uncertain archive exactly', async () => {
+    let recoveries = 0;
+    let archives = 0;
+    const bodies: string[] = [];
+    const f = await fixture((url, init) => {
+      if (url.endsWith('/ranked/recover'))
+        return Promise.resolve(response(dead(String(++recoveries))));
+      if (url.endsWith('/ranked/archive')) {
+        archives++;
+        bodies.push(serializedBody(init));
+        return archives === 1
+          ? Promise.reject(new Error('Lost committed archive response'))
+          : Promise.resolve(response({ status: 'archived', runId: RUN }));
+      }
+      return Promise.resolve(response({ code: 'not_found' }, 404));
+    });
+    await f.client.recover(RUN);
+    expect(await f.client.archivePending(RUN)).toBe(false);
+    expect(f.client.snapshot().run).toMatchObject({
+      status: 'dead',
+      revivesGranted: 1,
+      revivesApplied: 0,
+    });
+    expect(await f.client.archivePending(RUN)).toBe(true);
+    expect(recoveries).toBe(2);
+    expect(bodies[0]).toBe(bodies[1]);
+    expect(f.client.snapshot()).toMatchObject({ phase: 'idle', run: null, canRetry: false });
+    expect(body(f.calls.at(-1)!.init)).toMatchObject({
+      runId: RUN,
+      sequence: '2',
+      leaseToken: refreshedLease,
+    });
+    expect(f.calls.some((call) => call.url.endsWith('/ranked/action'))).toBe(false);
+    f.client.dispose();
+    f.owner.dispose();
+  });
+  it('does not erase a recoverable run on an archive response for the wrong run', async () => {
+    let recoveries = 0;
+    const f = await fixture((url) =>
+      url.endsWith('/ranked/recover')
+        ? Promise.resolve(response(dead(String(++recoveries))))
+        : Promise.resolve(response({ status: 'archived', runId: grantId })),
+    );
+    await f.client.recover(RUN);
+    expect(await f.client.archivePending(RUN)).toBe(false);
+    expect(f.client.snapshot().run?.runId).toBe(RUN);
+    expect(f.client.snapshot().canRetry).toBe(true);
+    f.client.dispose();
+    f.owner.dispose();
+  });
+  it('renews an ad-expired same-device lease then preserves the exact apply request after response loss', async () => {
+    let recoveries = 0;
+    let applications = 0;
+    const bodies: string[] = [];
+    const f = await fixture((url, init) => {
+      if (url.endsWith('/ranked/recover'))
+        return Promise.resolve(response(dead(String(++recoveries))));
+      if (url.endsWith('/rewards/apply')) {
+        applications++;
+        bodies.push(serializedBody(init));
+        return applications === 1
+          ? Promise.reject(new Error('Response lost after commit'))
+          : Promise.resolve(response(restored()));
+      }
+      return Promise.resolve(response({ code: 'not_found' }, 404));
+    });
+    await f.client.recover(RUN);
+    expect(await f.client.applyVerifiedGrant(grantId, RUN)).toBe(false);
+    expect(recoveries).toBe(2);
+    expect(f.client.snapshot().canRetry).toBe(true);
+    expect(body(f.calls.at(-1)!.init)).toMatchObject({
+      runId: RUN,
+      grantId,
+      sequence: '2',
+      leaseToken: refreshedLease,
+    });
+    expect(await f.client.applyVerifiedGrant(grantId, RUN)).toBe(true);
+    expect(recoveries).toBe(2);
+    expect(bodies[0]).toBe(bodies[1]);
+    expect(f.client.snapshot().run).toMatchObject({
+      status: 'playing',
+      sp: 200,
+      revivesGranted: 1,
+      revivesApplied: 1,
+    });
+    f.client.dispose();
+    f.owner.dispose();
+  });
+  it('preserves a grant when another device owns recovery and never silently requests takeover', async () => {
+    let recoveries = 0;
+    let applications = 0;
+    const f = await fixture((url, init) => {
+      if (url.endsWith('/ranked/recover')) {
+        recoveries++;
+        if (recoveries === 1) return Promise.resolve(response(dead()));
+        expect(body(init).takeover).toBe(false);
+        return Promise.resolve(response({ code: 'takeover-required' }, 409));
+      }
+      applications++;
+      return Promise.resolve(response(restored()));
+    });
+    await f.client.recover(RUN);
+    expect(await f.client.applyVerifiedGrant(grantId, RUN)).toBe(false);
+    expect(applications).toBe(0);
+    expect(f.client.snapshot().phase).toBe('lease_lost');
+    expect(f.client.snapshot().run).toMatchObject({
+      status: 'dead',
+      revivesGranted: 1,
+      revivesApplied: 0,
+    });
+    f.client.dispose();
+    f.owner.dispose();
+  });
+  it('maps a server-refused expired apply lease into visible recovery without consuming the grant', async () => {
+    let recoveries = 0;
+    const f = await fixture((url) =>
+      url.endsWith('/ranked/recover')
+        ? Promise.resolve(response(dead(String(++recoveries))))
+        : Promise.resolve(response({ code: 'reward-lease-expired' }, 409)),
+    );
+    await f.client.recover(RUN);
+    expect(await f.client.applyVerifiedGrant(grantId, RUN)).toBe(false);
+    expect(f.client.snapshot().phase).toBe('recovery');
+    expect(f.client.snapshot().canRetry).toBe(false);
+    expect(f.client.snapshot().run).toMatchObject({
+      status: 'dead',
+      sp: 0,
+      revivesGranted: 1,
+      revivesApplied: 0,
+    });
+    f.client.dispose();
+    f.owner.dispose();
+  });
+});
 
 describe('strict ranked public wire projection', () => {
   it('parses actual authority start, hint, choice, mystery, death, recovery and end replies', async () => {
@@ -530,6 +707,8 @@ describe('ranked scene confirmed-state presentation', () => {
       subscribe: () => () => {},
       start: () => Promise.resolve(),
       lookupActive: () => Promise.resolve(null),
+      applyVerifiedGrant: () => Promise.resolve(false),
+      archivePending: () => Promise.resolve(false),
       command: () => Promise.resolve(),
       retry: () => Promise.resolve(),
       recover: () => Promise.resolve(),

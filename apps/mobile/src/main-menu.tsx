@@ -7,6 +7,8 @@ import { LeaderboardView } from './leaderboard/leaderboard-view';
 import type { LeaderboardClient } from './leaderboard/leaderboard-client';
 import { RankedScene } from './ranked/ranked-scene';
 import type { RankedClient } from './ranked/ranked-client';
+import type { RewardFlow } from './rewards/reward-flow';
+import type { SavedPendingClient } from './ranked/saved-pending-client';
 import { AccountControls } from './account/account-controls';
 import type { AccountControlsClient } from './account/account-controls-model';
 import type { NameReportClient } from './leaderboard/name-report-client';
@@ -234,6 +236,8 @@ export interface MainMenuProps {
   leaderboardCountries?: readonly { countryCode: string; continentCode: string }[];
   pendingPersonalResult?: boolean;
   rankedClient?: RankedClient | null;
+  rewardFlow?: RewardFlow | null;
+  savedPendingClient?: SavedPendingClient | null;
   accountControlsClient?: AccountControlsClient | null;
   accountScope?: object | null;
   accountConnected?: boolean;
@@ -454,6 +458,8 @@ export function MainMenu({
   leaderboardCountries = [],
   pendingPersonalResult = false,
   rankedClient = null,
+  rewardFlow = null,
+  savedPendingClient = null,
   accountControlsClient = null,
   accountScope = null,
   accountConnected = false,
@@ -531,7 +537,13 @@ export function MainMenu({
         ) : view === 'play' ? (
           <MenuPanel title={t('general.play')} eyebrow={t('menu.playEyebrow')}>
             {rankedClient ? (
-              <RankedScene client={rankedClient} online={online} onLeave={() => onOpen('home')} />
+              <RankedScene
+                client={rankedClient}
+                online={online}
+                onLeave={() => onOpen('home')}
+                rewardFlow={rewardFlow}
+                savedPendingClient={savedPendingClient}
+              />
             ) : (
               <>
                 <p>{t('menu.playUnavailable')}</p>

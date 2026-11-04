@@ -44,7 +44,17 @@ function exported(username = 'prism_a') {
     ],
     results: [],
     reports: [],
-    next: { consent: null, parental: null, run: null, result: null, report: null },
+    rewards: [],
+    adAuthorizations: [],
+    next: {
+      consent: null,
+      parental: null,
+      run: null,
+      result: null,
+      report: null,
+      reward: null,
+      adAuthorization: null,
+    },
     providerSecret: 'secret-provider-field',
   };
 }
@@ -107,6 +117,71 @@ describe('CPI-031 account controls', () => {
       formatAccountExport({ ...exported(), next: { ...exported().next, report: 'more-reports' } }),
     ).toThrow('additional pages');
     expect(() => formatAccountExport({ ...exported(), next: {} })).toThrow('additional pages');
+  });
+  it('includes owned rewards and authorization settings without provider capabilities', () => {
+    const result = JSON.parse(
+      formatAccountExport({
+        ...exported(),
+        rewards: [
+          {
+            id: 'reward-1',
+            runId: 'run-1',
+            ordinal: 1,
+            restoreSp: 200,
+            nonce: 'private-nonce',
+            rawSsv: 'private-query',
+            verificationRef: 'private-proof',
+            grant: {
+              id: 'grant-1',
+              state: 'applied',
+              appliedAt: '2026-11-04T00:00:00Z',
+              verificationRef: 'private-proof',
+            },
+          },
+        ],
+        adAuthorizations: [
+          {
+            id: 'authorization-1',
+            context: 'adult',
+            policyVersion: 'policy-1',
+            flags: {
+              nonPersonalized: true,
+              childDirected: false,
+              underAgeOfConsent: false,
+              maxAdContentRating: 'G',
+              accessToken: 'private-token',
+            },
+            inventory: {
+              provider: 'admob',
+              platform: 'android',
+              sdkVersion: 'reviewed-version',
+              mediation: [
+                {
+                  identifier: 'reviewed-adapter',
+                  version: 'reviewed-version',
+                  secret: 'private-key',
+                },
+              ],
+              appId: 'private-app-id',
+            },
+          },
+        ],
+      }),
+    ) as {
+      rewards: { grant: { id: string } }[];
+      adAuthorizations: { inventory: { mediation: { identifier: string }[] } }[];
+    };
+    expect(result.rewards[0].grant.id).toBe('grant-1');
+    expect(result.adAuthorizations[0].inventory.mediation[0].identifier).toBe('reviewed-adapter');
+    expect(JSON.stringify(result)).not.toContain('private-');
+    for (const key of ['reward', 'adAuthorization']) {
+      expect(() =>
+        formatAccountExport({ ...exported(), next: { ...exported().next, [key]: 'more' } }),
+      ).toThrow('additional pages');
+      const next = { ...exported().next } as Record<string, unknown>;
+      delete next[key];
+      expect(() => formatAccountExport({ ...exported(), next })).toThrow('additional pages');
+    }
   });
   it('keeps export in memory until explicit clear or scope replacement and copies only by explicit action', async () => {
     const owner = new AccountControlsOwner(client());
