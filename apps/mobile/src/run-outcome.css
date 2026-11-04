@@ -118,3 +118,9 @@
     animation: none !important;
   }
 }
+
+.cpi-dialog-emblem[data-phase='finished'] {
+  border-color: #84be9a4d;
+  color: #b8e2c5;
+  background: #6ab77b0d;
+}

@@ -285,8 +285,16 @@ export function InfinitySceneView({
             aria-modal="true"
             aria-labelledby="cpi-run-outcome-title"
           >
-            <div className="cpi-dialog-emblem" aria-hidden="true">
-              {paused ? 'Ⅱ' : '↗'}
+            <div className="cpi-dialog-emblem" data-phase={outcome.phase} aria-hidden="true">
+              {error
+                ? '!'
+                : outcome.phase === 'finished'
+                  ? '✓'
+                  : outcome.phase === 'dead'
+                    ? '×'
+                    : paused && !confirmEnd
+                      ? 'Ⅱ'
+                      : '↗'}
             </div>
             {error ? (
               <>
