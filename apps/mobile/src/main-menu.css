@@ -829,3 +829,17 @@
     min-height: calc(100dvh - 7.2rem);
   }
 }
+
+/* Utility controls occupy real layout space, including native safe areas. */
+.cpi-menu-view--home .cpi-hub-utilities {
+  position: relative;
+  top: auto;
+  right: auto;
+  align-self: flex-end;
+  flex: 0 0 auto;
+  margin: 0.7rem 0 0.3rem;
+}
+.cpi-menu-view--home .cpi-home-composition {
+  min-height: 0;
+  padding-top: 1rem;
+}
