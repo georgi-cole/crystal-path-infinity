@@ -1,0 +1,178 @@
+[data-world='chaos'] {
+  --world-accent: #ffc58e;
+  --world-soft: #79dec2;
+  --world-panel: #201a15;
+}
+[data-world='jelly'] {
+  --world-accent: #e7b3fa;
+  --world-soft: #9bdff5;
+  --world-panel: #191628;
+}
+[data-world='obsidian'] {
+  --world-accent: #d9b4cf;
+  --world-soft: #a4d5cc;
+  --world-panel: #151317;
+}
+.cpi-world-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.cpi-theme-atmosphere {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  opacity: 0.6;
+  pointer-events: none;
+}
+.cpi-theme-atmosphere::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(#06070b33, #03030766 60%, #030307e6);
+}
+.cpi-menu-shell:has(.cpi-theme-atmosphere),
+.cps-shell:has(.cpi-theme-atmosphere) {
+  background: #080b15;
+}
+.cpi-theme-companion {
+  position: absolute;
+  width: clamp(4rem, 12vw, 8rem);
+  left: 0;
+  bottom: 10%;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.85;
+  animation: cpi-companion-float 4s ease-in-out infinite;
+}
+.cpi-theme-companion svg {
+  width: 100%;
+  overflow: visible;
+}
+.cpi-theme-companion.is-panic {
+  animation: cpi-companion-panic 0.35s ease-in-out infinite alternate;
+}
+.cpi-theme-companion.is-panic .cpi-theme-eyes {
+  transform: scaleY(1.2);
+}
+.cpi-theme-companion.is-happy {
+  animation: cpi-companion-happy 0.55s ease-out 2;
+}
+.cpi-theme-gear {
+  animation: cpi-theme-turn 40s linear infinite;
+}
+.cpi-theme-bubble {
+  animation: cpi-companion-float 5s ease-in-out infinite;
+}
+.cpi-world-art.world-chaos .cpi-theme-robot,
+.cpi-world-art.world-jelly .cpi-theme-jelly {
+  filter: drop-shadow(0 14px 18px #0005);
+}
+.cpi-run-mode {
+  position: relative;
+  z-index: 3;
+  width: fit-content;
+  margin: 0.2rem auto;
+  padding: 0.3rem 0.7rem;
+  color: var(--world-accent, #cfb9d3);
+  border: 1px solid #c4a4ce30;
+  border-radius: 2rem;
+  background: #0d0b13df;
+  font-size: 0.68rem;
+  text-align: center;
+}
+.cpi-resource-panel {
+  padding: 0.9rem;
+  margin: 0.8rem 0;
+  border: 1px solid #c4a4ce35;
+  border-radius: 0.7rem;
+  background: #ffffff04;
+}
+.cpi-resource-panel h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  color: #e8d8ef;
+}
+.cpi-resource-panel p,
+.cpi-resource-panel small {
+  color: #b3a8bc;
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
+.cpi-resource-balances {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.7rem;
+  color: #d7c7e4;
+  font-size: 0.78rem;
+}
+.cpi-resource-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.6rem 0;
+}
+.cpi-resource-actions button {
+  padding: 0.65rem 0.8rem;
+  border: 1px solid #d7b0da50;
+  border-radius: 0.4rem;
+  background: #33293c;
+  color: #f6e8ff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.75rem;
+}
+.cpi-resource-actions button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+@keyframes cpi-companion-float {
+  50% {
+    translate: 0 -9px;
+  }
+}
+@keyframes cpi-companion-panic {
+  from {
+    rotate: -7deg;
+  }
+  to {
+    rotate: 7deg;
+  }
+}
+@keyframes cpi-companion-happy {
+  50% {
+    translate: 0 -18px;
+    scale: 1.08 0.93;
+  }
+}
+@keyframes cpi-theme-turn {
+  to {
+    rotate: 360deg;
+  }
+}
+.cpi-reduced-motion .cpi-theme-companion,
+.cpi-reduced-motion .cpi-theme-gear,
+.cpi-reduced-motion .cpi-theme-bubble {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cpi-theme-companion,
+  .cpi-theme-gear,
+  .cpi-theme-bubble {
+    animation: none;
+  }
+}
+
+.cpi-infinity-scene > .cpi-run-mode {
+  position: absolute;
+  top: 0.1rem;
+  left: 50%;
+  translate: -50% 0;
+  white-space: nowrap;
+  margin: 0;
+}
+.cpi-infinity-scene .cps-content {
+  padding-top: max(2.25rem, env(safe-area-inset-top, 0px));
+}

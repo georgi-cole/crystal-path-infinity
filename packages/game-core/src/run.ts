@@ -33,6 +33,9 @@ import {
   MAX_ACTIVE_EFFECTS,
   MAX_BUFFER_ROWS,
   MAX_REVIVES,
+  getMaxRevives,
+  STORE_TEST_RULESET_VERSION,
+  RESERVE_SP_PER_RUN,
   MAX_SP,
   RULESET_VERSION,
   STARTING_HINTS,
@@ -73,6 +76,8 @@ export function createRun(options: CreateRunOptions, rng: RandomSource): RunStat
   const rulesetVersion = options.rulesetVersion ?? RULESET_VERSION;
   getRuleset(rulesetVersion);
   assertNonEmpty(options.runId, 'Run ID');
+  if (rulesetVersion === STORE_TEST_RULESET_VERSION && !options.runId.startsWith('practice-'))
+    throw new RangeError('Test economy requires a local practice run.');
   assertNonNegativeInteger(options.observedAt, 'Observation timestamp');
   const activeTimeMs = options.activeTimeMs ?? 0;
   assertNonNegativeInteger(activeTimeMs, 'Active time');
@@ -85,6 +90,18 @@ export function createRun(options: CreateRunOptions, rng: RandomSource): RunStat
     rng,
   );
   return {
+    ...(rulesetVersion === STORE_TEST_RULESET_VERSION
+      ? {
+          storeTest: {
+            assisted: false,
+            reserveSpent: 0,
+            hintsSpent: 0,
+            creditContinues: 0,
+            adContinues: 0,
+            sequence: 0,
+          },
+        }
+      : {}),
     schemaVersion: 1,
     rulesetVersion,
     runId: options.runId,
@@ -96,7 +113,9 @@ export function createRun(options: CreateRunOptions, rng: RandomSource): RunStat
     achievedAt: null,
     activeTimeMs,
     lastObservedAt: options.observedAt,
-    ...([PACED_RULESET_VERSION, SCAN_RULESET_VERSION].includes(rulesetVersion)
+    ...([PACED_RULESET_VERSION, SCAN_RULESET_VERSION, STORE_TEST_RULESET_VERSION].includes(
+      rulesetVersion,
+    )
       ? { pacing: createRunPacing(activeTimeMs) }
       : {}),
     effects: [],
@@ -123,6 +142,29 @@ export function assertRunState(state: RunState, rng?: RandomSource): void {
   if (state.schemaVersion !== 1) throw new RangeError('Unsupported run schema.');
   getRuleset(state.rulesetVersion);
   assertNonEmpty(state.runId, 'Run ID');
+  if (state.rulesetVersion === STORE_TEST_RULESET_VERSION) {
+    const economy = state.storeTest;
+    if (!state.runId.startsWith('practice-') || !economy)
+      throw new RangeError('Test economy requires a local practice run.');
+    for (const value of [
+      economy.reserveSpent,
+      economy.hintsSpent,
+      economy.creditContinues,
+      economy.adContinues,
+      economy.sequence,
+    ])
+      assertNonNegativeInteger(value, 'Test resource counter');
+    if (
+      economy.reserveSpent > RESERVE_SP_PER_RUN ||
+      economy.adContinues > 10 ||
+      economy.creditContinues + economy.adContinues !== state.revivesApplied ||
+      economy.sequence < economy.hintsSpent + economy.creditContinues + economy.adContinues ||
+      economy.assisted !==
+        (economy.reserveSpent > 0 || economy.hintsSpent > 0 || economy.creditContinues > 0)
+    )
+      throw new RangeError('Invalid test resource accounting.');
+  } else if (state.storeTest !== undefined)
+    throw new RangeError('Test resources are unavailable on this ruleset.');
   assertBuffer(state.buffer);
   decimal(state.lastClearedRow);
   decimal(state.currentRow);
@@ -147,10 +189,10 @@ export function assertRunState(state: RunState, rng?: RandomSource): void {
   }
   if (
     state.sp > MAX_SP ||
-    state.revivesGranted > MAX_REVIVES ||
+    state.revivesGranted > getMaxRevives(state.rulesetVersion) ||
     state.revivesApplied > state.revivesGranted ||
     state.revivesToReachScore > state.revivesApplied ||
-    state.deaths > MAX_REVIVES + 1
+    state.deaths > getMaxRevives(state.rulesetVersion) + 1
   )
     throw new RangeError('Invalid resource counters.');
   if (!['playing', 'dead', 'finished'].includes(state.status))
@@ -163,20 +205,26 @@ export function assertRunState(state: RunState, rng?: RandomSource): void {
   }
   if (
     state.status === 'dead' &&
-    (state.sp !== 0 || state.death === null || state.revivesApplied >= MAX_REVIVES)
+    (state.sp !== 0 ||
+      state.death === null ||
+      state.revivesApplied >= getMaxRevives(state.rulesetVersion))
   ) {
     throw new RangeError('Invalid unresolved death.');
   }
   if ((state.status === 'finished') !== (state.result !== null))
     throw new RangeError('Invalid terminal result.');
-  if ([PACED_RULESET_VERSION, SCAN_RULESET_VERSION].includes(state.rulesetVersion)) {
+  if (
+    [PACED_RULESET_VERSION, SCAN_RULESET_VERSION, STORE_TEST_RULESET_VERSION].includes(
+      state.rulesetVersion,
+    )
+  ) {
     if (!state.pacing) throw new RangeError('Missing row and survival schedules.');
     assertNonNegativeInteger(state.pacing.rowEnteredAt, 'Row entry');
     assertNonNegativeInteger(state.pacing.nextSurvivalBonusAt, 'Survival schedule');
     if (state.pacing.hintScanStartedAt !== undefined) {
       assertNonNegativeInteger(state.pacing.hintScanStartedAt, 'Hint scan start');
       if (
-        state.rulesetVersion !== SCAN_RULESET_VERSION ||
+        ![SCAN_RULESET_VERSION, STORE_TEST_RULESET_VERSION].includes(state.rulesetVersion) ||
         state.pacing.hintScanStartedAt < state.pacing.rowEnteredAt ||
         state.pacing.hintScanStartedAt > state.activeTimeMs ||
         state.current.revealedSafeSide === null
@@ -262,7 +310,7 @@ export function assertRunState(state: RunState, rng?: RandomSource): void {
     assertNonEmpty(receipt.deathId, 'Death ID');
     if (
       receipt.ordinal !== position + 1 ||
-      receipt.sp !== getReviveSp(receipt.ordinal) ||
+      receipt.sp !== getReviveSp(receipt.ordinal, state.rulesetVersion) ||
       grantIds.has(receipt.grantId) ||
       deathIds.has(receipt.deathId) ||
       !['granted', 'applied', 'forfeited'].includes(receipt.status)
@@ -313,6 +361,7 @@ function eventTime(state: RunState) {
 
 function finish(state: RunState, reason: EndReason, events: RunEvent[]): RunState {
   const finalResult: RunResult = {
+    ...(state.storeTest ? { storeTest: { ...state.storeTest } } : {}),
     runId: state.runId,
     rulesetVersion: state.rulesetVersion,
     lastClearedRow: state.lastClearedRow,
@@ -351,7 +400,9 @@ function die(state: RunState, cause: DeathCause, events: RunEvent[]): RunState {
     pendingReward: null,
   };
   events.push({ ...eventTime(dead), type: 'death', death });
-  return state.revivesApplied === MAX_REVIVES ? finish(dead, 'revive-limit', events) : dead;
+  return state.revivesApplied === getMaxRevives(state.rulesetVersion)
+    ? finish(dead, 'revive-limit', events)
+    : dead;
 }
 
 /** At most nine pulses per remaining effect, independent of an arbitrarily large clock jump. */
@@ -456,7 +507,8 @@ function rewardTransition(
     case 'mark-reward-pending': {
       if (existing) return result(state, [], 'reward-already-granted');
       if (pending) return result(state, [], 'reward-pending');
-      if (state.revivesGranted >= MAX_REVIVES) return result(state, [], 'revive-limit');
+      if (state.revivesGranted >= getMaxRevives(state.rulesetVersion))
+        return result(state, [], 'revive-limit');
       const reward = {
         deathId: command.deathId,
         ordinal: command.ordinal,
@@ -482,7 +534,8 @@ function rewardTransition(
     case 'grant-revive': {
       if (state.reviveReceipts.some((receipt) => receipt.grantId === command.grantId))
         return result(state, [], 'grant-mismatch');
-      if (state.revivesGranted >= MAX_REVIVES) return result(state, [], 'revive-limit');
+      if (state.revivesGranted >= getMaxRevives(state.rulesetVersion))
+        return result(state, [], 'revive-limit');
       if (state.revivesGranted + 1 !== command.ordinal)
         return result(state, [], 'wrong-revive-ordinal');
       if (
@@ -497,7 +550,7 @@ function rewardTransition(
         deathId: command.deathId,
         ordinal: command.ordinal,
         grantId: command.grantId,
-        sp: getReviveSp(command.ordinal),
+        sp: getReviveSp(command.ordinal, state.rulesetVersion),
         status: 'granted',
       };
       return result(
@@ -550,6 +603,68 @@ function rewardTransition(
   }
 }
 
+/** Local simulator grants only; the host commits the wallet and this checkpoint atomically. */
+function testResourceTransition(
+  state: RunState,
+  command: Extract<RunCommand, { type: 'test-resource' }>,
+  context: TransitionContext,
+  events: RunEvent[],
+): TransitionResult {
+  const economy = state.storeTest;
+  if (
+    state.rulesetVersion !== STORE_TEST_RULESET_VERSION ||
+    !state.runId.startsWith('practice-') ||
+    !economy
+  )
+    return result(state, events, 'test-only');
+  if (command.sequence !== economy.sequence + 1) return result(state, events, 'duplicate-revive');
+  assertNonNegativeInteger(command.amount, 'Resource amount');
+  assertNonNegativeInteger(command.sequence, 'Resource sequence');
+  const resource = command.resource;
+  if (!['sp', 'hints', 'credit', 'ad'].includes(resource) || command.amount < 1)
+    return result(state, events, 'invalid-resource');
+  let next: RunState;
+  if (resource === 'sp' || resource === 'hints') {
+    if (state.status !== 'playing') return result(state, events, 'not-playing');
+    if (resource === 'sp') {
+      if (command.amount > Math.min(MAX_SP - state.sp, RESERVE_SP_PER_RUN - economy.reserveSpent))
+        return result(state, events, 'resource-limit');
+      next = { ...state, sp: state.sp + command.amount };
+    } else {
+      if (command.amount !== 1) return result(state, events, 'invalid-resource');
+      next = { ...state, hints: addSafeInteger(state.hints, 1, 'Hints') };
+    }
+  } else {
+    if (command.amount !== 1) return result(state, events, 'invalid-resource');
+    if (state.status !== 'dead' || !state.death) return result(state, events, 'not-dead');
+    if (resource === 'ad' && state.revivesApplied >= MAX_REVIVES)
+      return result(state, events, 'revive-limit');
+    if (state.pendingReward || state.revivesGranted !== state.revivesApplied)
+      return result(state, events, 'reward-pending');
+    const grantId = `${state.runId}:test:${command.sequence}`;
+    const identity = { deathId: state.death.id, ordinal: state.revivesApplied + 1, grantId };
+    const granted = rewardTransition(state, { type: 'grant-revive', ...identity }, context);
+    if (!granted.accepted) return result(state, events, granted.reason);
+    const applied = rewardTransition(granted.state, { type: 'apply-revive', ...identity }, context);
+    if (!applied.accepted) return result(state, events, applied.reason);
+    next = applied.state;
+    events.push(...granted.events, ...applied.events);
+  }
+  next = {
+    ...next,
+    storeTest: {
+      assisted: economy.assisted || resource !== 'ad',
+      reserveSpent: economy.reserveSpent + (resource === 'sp' ? command.amount : 0),
+      hintsSpent: economy.hintsSpent + (resource === 'hints' ? 1 : 0),
+      creditContinues: economy.creditContinues + (resource === 'credit' ? 1 : 0),
+      adContinues: economy.adContinues + (resource === 'ad' ? 1 : 0),
+      sequence: command.sequence,
+    },
+  };
+  events.push({ ...eventTime(next), type: 'test-resource-used', resource, amount: command.amount });
+  return result(next, events);
+}
+
 /** Pure transition. The caller owns authenticated commands, active clock and RNG adapter. */
 export function transitionRun(
   state: RunState,
@@ -591,6 +706,8 @@ export function transitionRun(
   switch (command.type) {
     case 'tick':
       return result(next, events);
+    case 'test-resource':
+      return testResourceTransition(next, command, context, events);
     case 'end': {
       if (next.pendingReward) return result(next, events, 'reward-pending');
       const unused = next.reviveReceipts.some((receipt) => receipt.status === 'granted');
@@ -613,7 +730,8 @@ export function transitionRun(
         ...next,
         hints: next.hints - 1,
         current: { ...next.current, revealedSafeSide: safeSide },
-        ...(next.rulesetVersion === SCAN_RULESET_VERSION && next.pacing
+        ...([SCAN_RULESET_VERSION, STORE_TEST_RULESET_VERSION].includes(next.rulesetVersion) &&
+        next.pacing
           ? { pacing: { ...next.pacing, hintScanStartedAt: next.activeTimeMs } }
           : {}),
       };

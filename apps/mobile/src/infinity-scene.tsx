@@ -1,3 +1,9 @@
+import { RunReserves } from './run-reserves';
+import { useTestStore, useThemeId } from './store-context';
+import { ThemeScope } from './store-provider';
+import { ThemeCompanion } from './theme-art';
+import type { ThemeId } from './store-catalog';
+import type { ReactNode } from 'react';
 import { StageAtmosphere } from './stage-atmosphere';
 import { useSoundtrack } from './soundtrack';
 import { PrismBridge } from './prism-bridge';
@@ -6,12 +12,15 @@ import {
   createPracticeCursor,
   createRun,
   MAX_SP,
+  getMaxRevives,
+  STORE_TEST_RULESET_VERSION,
   PRACTICE_RNG,
   presentRowPressure,
   HINT_SCAN_MS,
 } from '@crystal-path-infinity/game-core';
 import type {
   RunEvent,
+  TestResource,
   RunState,
   SessionCommand,
   TileSide,
@@ -75,6 +84,8 @@ export const INFINITY_SCENE_SKIN = DEFAULT_VISUAL_SKIN;
 
 export type { SceneFeedback } from './scene-cinematics';
 export interface InfinitySceneViewProps {
+  readonly resourcePanel?: ReactNode;
+  readonly trial?: boolean;
   readonly state: RunState;
   readonly feedback: SceneFeedback | null;
   readonly ready: boolean;
@@ -104,6 +115,8 @@ export interface InfinitySceneViewProps {
 
 /** No game-core mutations or timers. All callbacks are externally owned events. */
 export function InfinitySceneView({
+  resourcePanel,
+  trial = false,
   state,
   feedback,
   ready,
@@ -131,6 +144,7 @@ export function InfinitySceneView({
   hintCaptionRow = null,
 }: InfinitySceneViewProps) {
   const { t, number } = useLanguage();
+  const themeId = useThemeId();
   const presented = presentInfinityScene(state);
   const outcome = presentRunOutcome(state);
   const clearedRows = number(state.result?.lastClearedRow ?? state.lastClearedRow);
@@ -206,9 +220,13 @@ export function InfinitySceneView({
   return (
     <main
       className={`cps-shell ${INFINITY_SCENE_SKIN.shell} cpi-infinity-scene${catastrophic ? ' is-catastrophe' : ''}${emergency ? ' is-emergency' : ''}${paused ? ' is-paused' : ''}${pressure?.active ? ' has-death-clock' : ''}${settings.reducedMotion ? ' cpi-reduced-motion' : ''}`}
+      data-world={themeId}
       data-testid="infinity-scene"
       aria-label={INFINITY_SCENE_SKIN.title}
     >
+      <p className="cpi-run-mode">
+        {t(trial ? 'vault.trial' : state.storeTest?.assisted ? 'vault.assisted' : 'vault.classic')}
+      </p>
       <StageAtmosphere emergency={emergency || catastrophic} />
       <div className="cps-content" inert={overlayVisible}>
         <header className="cpi-hud-header">
@@ -385,6 +403,16 @@ export function InfinitySceneView({
             hintScan={hintScan}
             showHintCaption={hintCaptionRow === state.currentRow}
           />
+          <ThemeCompanion
+            theme={themeId}
+            reaction={
+              emergency || catastrophic
+                ? 'panic'
+                : cinematic?.feedback?.kind === 'safe'
+                  ? 'happy'
+                  : 'calm'
+            }
+          />
           {cinematic?.mystery && (
             <div
               key={cinematic.id}
@@ -532,7 +560,9 @@ export function InfinitySceneView({
               </>
             ) : outcome.phase === 'finished' ? (
               <>
-                <p className="cpi-run-status-label">{t('game.practiceUnverified')}</p>
+                <p className="cpi-run-status-label">
+                  {t(state.storeTest?.assisted ? 'vault.assisted' : 'game.practiceUnverified')}
+                </p>
                 <div className="cpi-result-score">
                   <span>{t('game.rowsCleared')}</span>
                   <strong>
@@ -573,7 +603,7 @@ export function InfinitySceneView({
                 </dl>
                 {localizedDeathReason && <p>{localizedDeathReason}</p>}
                 {newPersonalBest && <p className="cpi-new-best">{t('game.bestNew')}</p>}
-                <p>{t('game.resultLocal')}</p>
+                <p>{t(state.storeTest?.assisted ? 'vault.assistedResult' : 'game.resultLocal')}</p>
                 <div className="cpi-overlay-actions">
                   <button type="button" data-cpi-overlay-primary onClick={onRestart}>
                     {t('game.nextRun')}
@@ -604,13 +634,14 @@ export function InfinitySceneView({
                       })}
                     </strong>
                     <span>{t('game.bargainBody')}</span>
-                    <span>{t('game.bargainSleeping')}</span>
+                    {!resourcePanel && <span>{t('game.bargainSleeping')}</span>}
                   </div>
                 ) : outcome.phase === 'grant-ready' ? (
                   <p role="status">{t('game.grantReady')}</p>
                 ) : (
                   <p>{t('game.noContinues')}</p>
                 )}
+                {resourcePanel}
                 <div className="cpi-overlay-actions">
                   <button
                     type="button"
@@ -636,16 +667,23 @@ export function InfinitySceneView({
                       {t('game.cleared')} <strong>{clearedRows}</strong>
                     </span>
                     <span>
-                      {t('game.used')} <strong>{number(outcome.appliedContinues)} / 10</strong>
+                      {t('game.used')}{' '}
+                      <strong>
+                        {number(outcome.appliedContinues)} / {getMaxRevives(state.rulesetVersion)}
+                      </strong>
                     </span>
                     <span>
-                      {t('game.granted')} <strong>{number(outcome.grantedContinues)} / 10</strong>
+                      {t('game.granted')}{' '}
+                      <strong>
+                        {number(outcome.grantedContinues)} / {getMaxRevives(state.rulesetVersion)}
+                      </strong>
                     </span>
                     <span>
                       {t('game.quota')} <strong>{number(outcome.grantsRemaining)}</strong>
                     </span>
                   </div>
                 </details>
+                {resourcePanel}
                 <AudioSettingsControls settings={settings} onChange={onSettingsChange} />
                 <div className="cpi-overlay-actions">
                   <button type="button" data-cpi-overlay-primary disabled={busy} onClick={onPause}>
@@ -667,7 +705,7 @@ export function InfinitySceneView({
   );
 }
 
-function makeInitialRun(): RunState {
+function makeInitialRun(testEconomy = false): RunState {
   const seed = new Uint32Array(2);
   crypto.getRandomValues(seed);
   const route = (BigInt(seed[0]) << 32n) | BigInt(seed[1]);
@@ -675,7 +713,7 @@ function makeInitialRun(): RunState {
   return createRun(
     {
       runId: 'practice-' + route.toString(16),
-      rulesetVersion: PRACTICE_RULESET_VERSION,
+      rulesetVersion: testEconomy ? STORE_TEST_RULESET_VERSION : PRACTICE_RULESET_VERSION,
       routeRng: createPracticeCursor(route),
       mysteryRng: createPracticeCursor(mystery),
       observedAt: Date.now(),
@@ -686,6 +724,7 @@ function makeInitialRun(): RunState {
 }
 
 interface InfinityRunProps {
+  trial?: boolean;
   onExit: () => void;
   onViewRankings: () => void;
   onExitCancelled: () => void;
@@ -697,6 +736,7 @@ interface InfinityRunProps {
   onSettingsChange: (next: PracticeSettings) => void;
 }
 function InfinityRun({
+  trial = false,
   onExit,
   onViewRankings,
   onExitCancelled,
@@ -708,8 +748,11 @@ function InfinityRun({
   onSettingsChange,
 }: InfinityRunProps) {
   const { t } = useLanguage();
+  const { store } = useTestStore();
+  const runTheme = useThemeId();
+  const [resourceMessage, setResourceMessage] = useState('');
   const [initial] = useState(() =>
-    initialState ? upgradePracticePacing(initialState) : makeInitialRun(),
+    initialState ? upgradePracticePacing(initialState) : makeInitialRun(!!store && !trial),
   );
   const [initialAudioSettings] = useState(settings);
   const lastCommittedActiveMs = useRef(-500);
@@ -753,6 +796,7 @@ function InfinityRun({
         haptic: optionalHaptic,
       },
       { ...initialAudioSettings, music: false },
+      runTheme,
     );
     audioRef.current = audio;
     const director = createSceneDirector(
@@ -781,13 +825,17 @@ function InfinityRun({
         if (hint && hintCaptionGate.claim()) setHintCaptionRow(hint.row);
         if (result.events.length) setSignals((previous) => collectRunSignals(previous, result));
         let earnedNewBest = false;
-        if (result.events.some((event) => event.type === 'run-ended')) {
+        if (!trial && result.events.some((event) => event.type === 'run-ended')) {
           try {
-            earnedNewBest = recordPracticePersonalBest(
-              window.localStorage,
-              result.state.lastClearedRow,
+            earnedNewBest =
+              result.state.storeTest?.assisted && store
+                ? store.recordAssistedBest(result.state.lastClearedRow)
+                : recordPracticePersonalBest(window.localStorage, result.state.lastClearedRow);
+            setPersonalBest(
+              result.state.storeTest?.assisted && store
+                ? store.snapshot().assistedBest
+                : readPracticePersonalBest(window.localStorage),
             );
-            setPersonalBest(readPracticePersonalBest(window.localStorage));
             setNewPersonalBest(earnedNewBest);
           } catch {
             // A storage error must not change game result or claim a saved best.
@@ -856,7 +904,7 @@ function InfinityRun({
       unsubscribeCheckpoint();
       runtime.dispose();
     };
-  }, [initial, onCheckpoint, initialAudioSettings, hintCaptionGate]);
+  }, [initial, onCheckpoint, initialAudioSettings, hintCaptionGate, store, trial, runTheme]);
 
   useEffect(() => {
     audioRef.current?.setSettings({ ...settings, music: false });
@@ -974,6 +1022,7 @@ function InfinityRun({
       const runtime = runtimeRef.current;
       if (
         (runtime?.getState().status ?? state.status) === 'playing' &&
+        !paused &&
         !window.confirm(t('app.saveLeaveConfirm'))
       ) {
         onExitCancelled();
@@ -984,6 +1033,7 @@ function InfinityRun({
           const latest = runtime.getState();
           if (
             latest.status === 'dead' &&
+            !latest.storeTest &&
             latest.pendingReward === null &&
             !latest.reviveReceipts.some((receipt) => receipt.status === 'granted')
           ) {
@@ -1004,6 +1054,45 @@ function InfinityRun({
     }
   }, [state.status, paused, onCheckpoint, onExit, onExitCancelled, t]);
 
+  async function useResource(resource: TestResource, amount: number): Promise<boolean> {
+    const runtime = runtimeRef.current;
+    if (
+      !runtime ||
+      !store ||
+      !ready ||
+      commandLock.current ||
+      trial ||
+      directorRef.current?.isBusy()
+    )
+      return false;
+    const previous = runtime.getState();
+    if (!previous.storeTest || (previous.status === 'playing' && !paused)) return false;
+    commandLock.current = true;
+    setBusy(true);
+    setResourceMessage('');
+    try {
+      const result = await runtime.bind(
+        { type: 'test-resource', resource, amount, sequence: previous.storeTest.sequence + 1 },
+        store.commitResource,
+      )();
+      setState(result.state);
+      if (!result.accepted) {
+        setResourceMessage(`Action unavailable: ${result.reason}`);
+        return false;
+      }
+      setResourceMessage(t('vault.resourceUsed'));
+      return true;
+    } catch (cause) {
+      setResourceMessage(
+        cause instanceof Error ? cause.message : 'Test resource could not be saved.',
+      );
+      return false;
+    } finally {
+      commandLock.current = false;
+      setBusy(false);
+    }
+  }
+
   const handledExitRequest = useRef(0);
   useEffect(() => {
     if (exitRequest === 0 || handledExitRequest.current === exitRequest) return;
@@ -1012,6 +1101,12 @@ function InfinityRun({
   }, [exitRequest, exit]);
   return (
     <InfinitySceneView
+      trial={trial}
+      resourcePanel={
+        store && state.storeTest && !trial ? (
+          <RunReserves state={state} busy={busy} onUse={useResource} message={resourceMessage} />
+        ) : undefined
+      }
       state={state}
       feedback={feedback}
       cinematic={cinematic}
@@ -1073,6 +1168,7 @@ function InfinityRun({
 
 /** A new attempt and an explicitly resumed checkpoint have distinct owners. */
 export function InfinityPractice({
+  trialTheme,
   onExit,
   onViewRankings,
   onExitCancelled,
@@ -1082,6 +1178,7 @@ export function InfinityPractice({
   settings,
   onSettingsChange,
 }: {
+  trialTheme?: ThemeId;
   onExit: () => void;
   onViewRankings: () => void;
   onExitCancelled?: () => void;
@@ -1091,27 +1188,31 @@ export function InfinityPractice({
   settings: PracticeSettings;
   onSettingsChange: (next: PracticeSettings) => void;
 }) {
+  const themeId = useThemeId();
   const [attempt, setAttempt] = useState(0);
   const restartLock = useRef(false);
   useEffect(() => {
     restartLock.current = false;
   }, [attempt]);
   return (
-    <InfinityRun
-      key={attempt}
-      initialState={attempt === 0 ? initialState : null}
-      onCheckpoint={onCheckpoint}
-      settings={settings}
-      onSettingsChange={onSettingsChange}
-      onExit={onExit}
-      onViewRankings={onViewRankings}
-      onExitCancelled={onExitCancelled ?? (() => {})}
-      exitRequest={exitRequest}
-      onRestart={() => {
-        if (restartLock.current) return;
-        restartLock.current = true;
-        setAttempt((n) => n + 1);
-      }}
-    />
+    <ThemeScope theme={trialTheme ?? themeId}>
+      <InfinityRun
+        trial={!!trialTheme}
+        key={attempt}
+        initialState={attempt === 0 ? initialState : null}
+        onCheckpoint={onCheckpoint}
+        settings={settings}
+        onSettingsChange={onSettingsChange}
+        onExit={onExit}
+        onViewRankings={onViewRankings}
+        onExitCancelled={onExitCancelled ?? (() => {})}
+        exitRequest={exitRequest}
+        onRestart={() => {
+          if (restartLock.current) return;
+          restartLock.current = true;
+          setAttempt((n) => n + 1);
+        }}
+      />
+    </ThemeScope>
   );
 }

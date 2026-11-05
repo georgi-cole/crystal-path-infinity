@@ -20,7 +20,8 @@ import type { SceneCinematic } from './scene-cinematics';
 
 const WIDTH = 900,
   HEIGHT = 700;
-const COLORS = ['#fa589c', '#62dfed', '#79e3af'];
+import { useThemeId } from './store-context';
+import { THEMES } from './store-catalog';
 type Point = { x: number; y: number };
 const coordinates = (points: Point[]) =>
   points.map((p) => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' ');
@@ -285,6 +286,8 @@ export function PrismBridge({
 }) {
   const id = useId().replace(/:/g, ''),
     { t, number } = useLanguage();
+  const theme = THEMES[useThemeId()];
+  const COLORS = theme.colors;
   const osReduced = useSyncExternalStore(subscribeMotion, motionSnapshot, serverMotionSnapshot);
   const reduced = reducedMotion || osReduced;
   const currentIndex = rows?.find((r) => r.phase === 'current')?.index ?? '0';
@@ -340,7 +343,7 @@ export function PrismBridge({
           <linearGradient id={id + 'glass'} x1="0" y1="0" x2=".8" y2="1">
             <stop stopColor="#e2edf0" stopOpacity=".32" />
             <stop offset=".36" stopColor="#98adb3" stopOpacity=".09" />
-            <stop offset=".58" stopColor="#c7dae0" stopOpacity=".15" />
+            <stop offset=".58" stopColor={theme.glass} stopOpacity=".15" />
             <stop offset="1" stopColor="#101318" stopOpacity=".48" />
           </linearGradient>
           <linearGradient id={id + 'edge'} x2="1" y2=".3">

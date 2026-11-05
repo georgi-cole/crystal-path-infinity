@@ -1,12 +1,15 @@
 import { useEffect, useRef } from 'react';
 
-const LIGHTS = ['#fa589c', '#62dfed', '#79e3af'];
+import { useThemeId } from './store-context';
+import { THEMES } from './store-catalog';
 type Point = { x: number; y: number };
 
 /** Decorative, bounded canvas flight; no route data, game time or React frame updates. */
 export function BridgeFlight({ reduced }: { reduced: boolean }) {
+  const themeId = useThemeId();
   const canvas = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
+    const LIGHTS = THEMES[themeId].colors;
     const surface = canvas.current;
     const ctx = surface?.getContext('2d');
     if (!surface || !ctx) return;
@@ -172,6 +175,6 @@ export function BridgeFlight({ reduced }: { reduced: boolean }) {
       cancelAnimationFrame(frame);
       document.removeEventListener('visibilitychange', visibility);
     };
-  }, [reduced]);
+  }, [reduced, themeId]);
   return <canvas ref={canvas} className="cpi-bridge-flight" aria-hidden="true" />;
 }

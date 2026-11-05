@@ -50,6 +50,7 @@ export const GUIDE_EVENT_COVERAGE = {
   'reward-cleared': 'account',
   'revive-granted': 'account',
   'revive-applied': 'account',
+  'test-resource-used': 'account',
 } as const satisfies Record<RunEvent['type'], Intent>;
 export const GUIDE_MYSTERY_COVERAGE = {
   heal_10: 'discovery',

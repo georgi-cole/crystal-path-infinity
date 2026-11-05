@@ -1,3 +1,4 @@
+import type { ThemeId } from './store-catalog';
 import type { RunEvent, RunState } from '@crystal-path-infinity/game-core';
 import { presentRowPressure } from '@crystal-path-infinity/game-core';
 import type { PracticeSettings } from './practice-save';
@@ -47,15 +48,24 @@ export interface StandaloneAudio {
 export function createStandaloneAudio(
   ports: AudioPorts,
   settings: PracticeSettings,
+  theme: ThemeId = 'obsidian',
 ): StandaloneAudio {
   const music = ports.createMedia(CRYSTAL_AUDIO.music);
   music.loop = true;
   music.volume = 0.28;
   music.preload = 'auto';
   const sfx = {
-    safe: ports.createMedia(CRYSTAL_AUDIO.safe),
+    safe: ports.createMedia(
+      theme === 'obsidian'
+        ? CRYSTAL_AUDIO.safe
+        : import.meta.env.BASE_URL + `assets/themes/${theme}-step.wav`,
+    ),
     death: ports.createMedia(CRYSTAL_AUDIO.death),
-    record: ports.createMedia(CRYSTAL_AUDIO.record),
+    record: ports.createMedia(
+      theme === 'obsidian'
+        ? CRYSTAL_AUDIO.record
+        : import.meta.env.BASE_URL + `assets/themes/${theme}-record.wav`,
+    ),
     newTurn: ports.createMedia(CRYSTAL_AUDIO.newTurn),
     glass: ports.createMedia(CRYSTAL_AUDIO.glass),
   };

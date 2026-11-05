@@ -2,6 +2,7 @@ import { addSafeInteger, assertNonNegativeInteger } from './numbers.ts';
 import { createRunSession } from './session.ts';
 import type {
   BoundRunCommand,
+  BeforeRunCommit,
   SessionCommand,
   SessionRejectionReason,
   SessionTime,
@@ -34,7 +35,10 @@ export interface PauseLease {
 
 export interface TimedRunSession {
   readonly getState: () => RunState;
-  readonly bind: (command: SessionCommand) => () => TimedSessionResult;
+  readonly bind: (
+    command: SessionCommand,
+    beforeCommit?: BeforeRunCommit,
+  ) => () => TimedSessionResult;
   readonly tick: () => TimedSessionResult;
   readonly hold: (reason: PauseReason) => PauseLease;
   /** Release the initial hold only after the host reconciles current lifecycle state. */
@@ -157,8 +161,8 @@ export function createTimedRunSession(
     return result;
   }
 
-  function bind(command: SessionCommand): () => TimedSessionResult {
-    const bound = session.bind(command);
+  function bind(command: SessionCommand, beforeCommit?: BeforeRunCommit): () => TimedSessionResult {
+    const bound = session.bind(command, beforeCommit);
     const epoch = pauseEpoch;
     const type = command.type;
     const scopedToPause = !('deathId' in command);

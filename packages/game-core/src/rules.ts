@@ -13,6 +13,10 @@ export const MAX_ACTIVE_EFFECTS = 2;
 export const MYSTERY_MIN_GAP = 3;
 export const MYSTERY_MAX_GAP = 6;
 export const MAX_REVIVES = 10;
+/** Explicitly local/test-only economy. Historical and ranked rules keep their ten-life cap. */
+export const STORE_TEST_RULESET_VERSION = 'infinity-store-test-v1';
+export const STORE_TEST_MAX_REVIVES = 15;
+export const RESERVE_SP_PER_RUN = 200;
 /** Operational allocation bound, not a limit on route distance. */
 export const MAX_ROW_BATCH = 256;
 export const MAX_BUFFER_ROWS = 256;
@@ -53,12 +57,18 @@ export const RULESET = Object.freeze({
 
 const PACED_RULESET = Object.freeze({ ...RULESET, version: PACED_RULESET_VERSION });
 const SCAN_RULESET = Object.freeze({ ...RULESET, version: SCAN_RULESET_VERSION });
+const STORE_TEST_RULESET = Object.freeze({
+  ...RULESET,
+  version: STORE_TEST_RULESET_VERSION,
+  reviveSp: Object.freeze([...RULESET.reviveSp, 150, 150, 150, 150, 150]),
+});
 export function getRuleset(
   version: string = RULESET_VERSION,
 ): Omit<typeof RULESET, 'version'> & { readonly version: string } {
   if (version === RULESET_VERSION) return RULESET;
   if (version === PACED_RULESET_VERSION) return PACED_RULESET;
   if (version === SCAN_RULESET_VERSION) return SCAN_RULESET;
+  if (version === STORE_TEST_RULESET_VERSION) return STORE_TEST_RULESET;
   throw new RangeError(`Unsupported ruleset: ${version}`);
 }
 
@@ -70,11 +80,16 @@ export function getRowBandDamage(oneBasedRow: string | bigint | number): number 
   return 20;
 }
 
-export function getReviveSp(ordinal: number): number {
-  if (!Number.isInteger(ordinal) || ordinal < 1 || ordinal > MAX_REVIVES) {
+export function getMaxRevives(version: string): number {
+  getRuleset(version);
+  return version === STORE_TEST_RULESET_VERSION ? STORE_TEST_MAX_REVIVES : MAX_REVIVES;
+}
+
+export function getReviveSp(ordinal: number, version = RULESET_VERSION): number {
+  if (!Number.isInteger(ordinal) || ordinal < 1 || ordinal > getMaxRevives(version)) {
     throw new RangeError('Revive ordinal must be between one and ten.');
   }
-  return RULESET.reviveSp[ordinal - 1];
+  return ordinal <= 5 ? 200 : 150;
 }
 
 export function clampSp(sp: number): number {

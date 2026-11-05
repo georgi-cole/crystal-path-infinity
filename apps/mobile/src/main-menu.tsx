@@ -17,6 +17,8 @@ import type { NameReportClient } from './leaderboard/name-report-client';
 import { LanguageSettings, PrivacyAccountSupport } from './locale-settings';
 import { useLanguage } from './language-context';
 import { BridgeTutorial } from './bridge-tutorial';
+import { useThemeId } from './store-context';
+import type { ThemeId } from './store-catalog';
 import { StoreVault } from './store-vault';
 import type { TutorialProgress } from './tutorial-progress';
 import type { PracticeLoad, PracticeSettings } from './practice-save';
@@ -183,6 +185,7 @@ function StatusPill({
 }
 
 export interface MainMenuProps {
+  onTryTheme?: (theme: ThemeId) => void;
   view: MenuView;
   saved: PracticeLoad;
   best: string | null;
@@ -407,6 +410,7 @@ export function ConfirmNewPractice({
 }
 
 export function MainMenu({
+  onTryTheme,
   view,
   saved,
   best,
@@ -435,6 +439,7 @@ export function MainMenu({
   nameReportClient = null,
 }: MainMenuProps) {
   const service = rankedServiceState(online);
+  const themeId = useThemeId();
   const { t, number } = useLanguage();
   return (
     <main
@@ -443,6 +448,7 @@ export function MainMenu({
         view +
         (settings.reducedMotion ? ' cpi-reduced-motion' : '')
       }
+      data-world={themeId}
       data-testid="app-ready"
     >
       <StageAtmosphere subdued={view !== 'home'} />
@@ -514,7 +520,7 @@ export function MainMenu({
             reducedMotion={settings.reducedMotion}
           />
         ) : view === 'store' ? (
-          <StoreVault />
+          <StoreVault onTryTheme={onTryTheme} />
         ) : view === 'play' ? (
           <MenuPanel title={t('general.play')} eyebrow={t('menu.playEyebrow')}>
             {rankedClient ? (

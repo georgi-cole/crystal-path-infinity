@@ -1,3 +1,5 @@
+import { useThemeId } from './store-context';
+import { ThemeArtwork } from './theme-art';
 import { useId } from 'react';
 
 /** Neutral black stage with reflected edge light. No gameplay or route data. */
@@ -9,6 +11,13 @@ export function StageAtmosphere({
   emergency?: boolean;
 }) {
   const id = useId().replace(/:/g, '');
+  const theme = useThemeId();
+  if (theme !== 'obsidian')
+    return (
+      <div className="cpi-theme-atmosphere" aria-hidden="true">
+        <ThemeArtwork theme={theme} background />
+      </div>
+    );
   return (
     <div
       className={
