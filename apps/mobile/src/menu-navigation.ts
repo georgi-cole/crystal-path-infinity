@@ -9,6 +9,7 @@ export const MENU_VIEWS = [
   'rankings',
   'profile',
   'settings',
+  'store',
 ] as const;
 
 export type MenuView = (typeof MENU_VIEWS)[number];
@@ -24,9 +25,15 @@ export function viewHash(view: MenuView): string {
   return '#' + view;
 }
 
-/** Only an unfinished, validated local checkpoint is resumable. */
+/** Active play or a recoverable reward is resumable; a declined death is not. */
 export function canResumePractice(load: PracticeLoad): boolean {
-  return load.status === 'ready' && load.state.status !== 'finished';
+  return (
+    load.status === 'ready' &&
+    (load.state.status === 'playing' ||
+      (load.state.status === 'dead' &&
+        (load.state.pendingReward !== null ||
+          load.state.reviveReceipts.some((receipt) => receipt.status === 'granted'))))
+  );
 }
 
 /** Never translate a local checkpoint into an official leaderboard score. */

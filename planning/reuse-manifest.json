@@ -420,15 +420,27 @@
     },
     {
       "path": "src/screens/Settings/Settings.css",
-      "decision": "reference_for_CPI_016",
-      "notes": "Settings surface and controls reference only; privacy/account assumptions must be independently designed.",
+      "decision": "adapt_settings_row_pattern",
+      "notes": "CPI-011 cinematic follow-up inspected the flat settings rows, compact typography and right-aligned controls on 5 November 2026. Standalone settings now use this hierarchy with black materials and expandable privacy/account/help details. No source service, store, VIP, Redux or account assumptions are copied.",
       "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/screens/Settings/Settings.css",
       "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
       "reviewed_in": "CPI-011",
       "target_stage": "CPI-016",
-      "targets": [],
+      "targets": ["apps/mobile/src/game-settings.css"],
       "rights": "Proprietary owner source inspected by file path; no complete component or raw visual asset copied.",
       "optimization": "Use only relevant standalone behavior or CSS primitives, removing seasonal, Redux, masked-image and unsupported native dependencies."
+    },
+    {
+      "path": "src/screens/Settings/Settings.tsx",
+      "decision": "reference_flat_control_menu",
+      "notes": "Inspected ordered toggle/dropdown rows and separate legal actions on 5 November 2026. Adapted only the layout pattern to existing persisted standalone settings. Original React state, source account/service actions and VIP controls are excluded.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/src/screens/Settings/Settings.tsx",
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "reviewed_in": "CPI-011",
+      "target_stage": "CPI-016",
+      "targets": ["apps/mobile/src/main-menu.tsx", "apps/mobile/src/locale-settings.tsx"],
+      "rights": "Proprietary owner source inspected under Georgi's direction; no complete component copied.",
+      "optimization": "Keep concise control rows and semantic disclosures without importing the source runtime or unsupported services."
     },
     {
       "path": "src/screens/Profile/Profile.css",

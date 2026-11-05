@@ -1,3 +1,4 @@
+import { en } from '../src/i18n/messages';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { readFileSync } from 'node:fs';
@@ -59,12 +60,14 @@ describe('CPI-013 standalone menu and route model', () => {
     expect(html).toContain('data-testid="app-ready"');
     expect(html).toContain('Main menu');
     expect(html).toContain('Play');
-    expect(html).toContain('Ranked mode · Account needed');
+    expect(html).not.toContain('A journey beyond the ordinary');
+    expect(html).not.toContain('Trust your instinct.');
     expect(html).toContain('Practice');
     expect(html).toContain('Rankings');
     expect(html).toContain('Profile');
-    expect(html).toContain('Settings');
-    expect(html).toContain('Learn the bridge');
+    expect(html).toContain('aria-label="Open settings"');
+    expect(html).toContain('Store');
+    expect(html).toContain(en['menu.learn']);
     expect(html).toContain('Personal best · Practice only');
     expect(html).toContain('Not a ranked score');
     expect(html).toContain('Guest');
@@ -75,15 +78,15 @@ describe('CPI-013 standalone menu and route model', () => {
     const html = render('practice');
     expect(html).toContain('Practice requires no account');
     expect(html).toContain('age answer or analytics consent');
-    expect(html).toContain('New practice');
-    expect(html).toContain('Learn the bridge');
+    expect(html).toContain(en['menu.newPractice']);
+    expect(html).toContain(en['menu.learn']);
     expect(html).not.toContain('Resume · Row');
   });
 
   it('offers exact saved-row resume, never finished-run resume, and explicit replacement', () => {
     const html = render('home', { saved, best: '349' });
     expect(canResumePractice(saved)).toBe(true);
-    expect(html).toContain('Saved practice · Row 1');
+    expect(html).toContain(en['menu.savedPractice'].replace('{row}', '1'));
     expect(html).toContain('Resume');
     expect(html).toContain('New');
     expect(html).toContain('Row 349');
@@ -93,7 +96,7 @@ describe('CPI-013 standalone menu and route model', () => {
       revision: 8,
     };
     expect(canResumePractice(finished)).toBe(false);
-    expect(render('home', { saved: finished })).not.toContain('Saved practice · Row');
+    expect(render('home', { saved: finished })).not.toContain('Saved crossing · Row');
   });
 
   it('does not invent ranked services or data when online/offline', () => {
@@ -116,8 +119,24 @@ describe('CPI-013 standalone menu and route model', () => {
     expect(html).toContain('Sound effects');
     expect(html).toContain('Haptic feedback');
     expect(html).toContain('Reduce motion');
-    expect(html).toContain('Open tutorial');
+    expect(html).toContain(en['menu.openTutorial']);
     expect(html).toContain('type="checkbox"');
+  });
+
+  it('previews the requested store categories without fabricated prices or purchase controls', () => {
+    const html = render('store');
+    for (const key of [
+      'store.sp',
+      'store.hints',
+      'store.noAds',
+      'store.bridges',
+      'store.backgrounds',
+      'store.themes',
+    ] as const)
+      expect(html).toContain(en[key]);
+    expect(html).toContain(en['store.unavailable']);
+    expect(html).toContain('role="tablist"');
+    expect(html).not.toMatch(/Buy now|Purchase now|\$\d|data-price|aria-valuenow/);
   });
 
   it('requires a modal to replace a saved run and has a distinct cancel action', () => {
@@ -126,9 +145,9 @@ describe('CPI-013 standalone menu and route model', () => {
     );
     expect(html).toContain('role="dialog"');
     expect(html).toContain('aria-modal="true"');
-    expect(html).toContain('Replace saved practice?');
-    expect(html).toContain('Keep saved attempt');
-    expect(html).toContain('Start new practice');
+    expect(html).toContain(en['menu.confirmReplace']);
+    expect(html).toContain(en['menu.keepSaved']);
+    expect(html).toContain(en['menu.startFresh']);
   });
 
   it('normalizes cold deep links and connects browser/Android Back to the game owner', () => {
@@ -140,10 +159,11 @@ describe('CPI-013 standalone menu and route model', () => {
       'rankings',
       'profile',
       'settings',
+      'store',
     ] as const) {
       expect(viewFromHash(viewHash(view))).toBe(view);
     }
-    expect(render('tutorial')).toContain('Take a safe step');
+    expect(render('tutorial')).toContain(en['guide.footingTitle']);
     expect(viewFromHash('#practice-run')).toBe('practice');
     expect(viewFromHash('#new-practice')).toBe('practice');
     expect(viewFromHash('#unknown-route')).toBe('home');
@@ -181,18 +201,19 @@ describe('CPI-013 standalone menu and route model', () => {
     expect(readPracticePersonalBest(storage)).toBe(null);
   });
 
-  it('renders the original Big Eye hub silhouettes and genuinely functioning corner utilities', () => {
+  it('renders the original LED stage and functioning corner utilities', () => {
     const html = render('home');
-    expect(html).toContain('intro-hub/buttons/primary_large_normal.svg');
-    expect(html).toContain('intro-hub/buttons/secondary_wide_normal.svg');
-    expect(html).toContain('intro-hub/buttons/secondary_medium_normal.svg');
-    expect(html).toContain('intro-hub/utilities/side_utility_shell_normal.svg');
+    expect(html).toContain('cpi-home-scenery');
+    expect(html).toContain('cpi-prism-bridge is-preview');
+    expect(html).not.toContain('primary_large_normal.svg');
     expect(html).toContain('aria-label="Disable music"');
     expect(html).toContain('aria-label="Disable sound effects"');
     expect(html).toContain('aria-label="Open settings"');
+    expect(html).not.toContain('cpi-menu-action-title">Settings<');
+    expect((html.match(/cpi-menu-action-title">Store</g) ?? []).length).toBe(1);
     const css = readFileSync(new URL('../src/intro-hub-premium.css', import.meta.url), 'utf8');
-    expect(css).toContain("url('./infinity-black-hole-bg.webp')");
-    expect(css).toContain('backdrop-filter');
+    expect(css).toContain('cpi-stage-atmosphere');
+    expect(css).toContain('pointer-events: none');
     expect(css).toContain('prefers-reduced-motion');
     expect(css).toContain('max-height: 690px');
   });

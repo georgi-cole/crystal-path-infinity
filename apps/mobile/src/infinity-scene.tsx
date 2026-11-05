@@ -1,9 +1,14 @@
+import { StageAtmosphere } from './stage-atmosphere';
+import { useSoundtrack } from './soundtrack';
+import { PrismBridge } from './prism-bridge';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   createPracticeCursor,
   createRun,
   MAX_SP,
   PRACTICE_RNG,
+  presentRowPressure,
+  HINT_SCAN_MS,
 } from '@crystal-path-infinity/game-core';
 import type {
   RunEvent,
@@ -11,33 +16,53 @@ import type {
   SessionCommand,
   TileSide,
   TimedSessionResult,
+  EffectKind,
 } from '@crystal-path-infinity/game-core';
 import { getGameplayLifecycle } from './gameplay-lifecycle';
 import { createStandaloneAudio } from './standalone-audio';
 import type { StandaloneAudio } from './standalone-audio';
 import { optionalHaptic } from './optional-haptic';
-import { readPracticePersonalBest, recordPracticePersonalBest } from './practice-save';
-import { presentRunOutcome } from './run-outcome';
+import {
+  readPracticePersonalBest,
+  recordPracticePersonalBest,
+  upgradePracticePacing,
+} from './practice-save';
+import { formatActiveDuration, presentRunOutcome } from './run-outcome';
 import { useLanguage } from './language-context';
 import type { PracticeSettings } from './practice-save';
 import { AudioSettingsControls } from './audio-settings-controls';
 import { createPracticeRuntime, schedulePracticeTick } from './practice-runtime';
 import type { PracticePauseLease, PracticeRuntime } from './practice-runtime';
 import { presentInfinityScene } from './infinity-presentation';
-import type { PresentedEffect, PresentedRow } from './infinity-presentation';
+import { createSceneDirector } from './scene-cinematics';
+import type { SceneCinematic, SceneFeedback } from './scene-cinematics';
+import { EffectGlyph } from './effect-glyph';
+import { AnimatedResult } from './animated-result';
+import { DeathClock, SpCounter } from './scene-instruments';
+import { collectRunSignals, EMPTY_RUN_SIGNALS, liveSignal } from './run-signals';
+import type { RunSignals } from './run-signals';
+import { PRACTICE_RULESET_VERSION } from './practice-rules';
+import { createHintCaptionGate } from './hint-caption';
 import type { MessageKey } from './i18n/messages';
 import './infinity-scene.css';
 import './infinity-hud-premium.css';
 import './run-outcome.css';
+import './scene-cinematics.css';
+import './row-pressure.css';
 
-const particles = Array.from({ length: 6 }, (_, index) => index);
-const EFFECT_MESSAGE: Record<PresentedEffect['kind'], MessageKey> = {
+const EFFECT_MESSAGE: Record<EffectKind, MessageKey> = {
   shield_5s: 'game.effectShield',
   regen_5s: 'game.effectRegen',
   lucky_5s: 'game.effectLucky',
   fragility_5s: 'game.effectFragile',
   drain_5s: 'game.effectDrain',
   inversion_5s: 'game.effectInversion',
+  heal_10: 'game.effectHeal',
+  heal_20: 'game.effectHeal',
+  hurt_10: 'game.effectHurt',
+  hurt_15: 'game.effectHurt',
+  gain_hint: 'game.effectHintGain',
+  lose_hint: 'game.effectHintLoss',
 };
 const DEFAULT_VISUAL_SKIN = {
   id: 'infinity-glass-v1',
@@ -48,11 +73,7 @@ const DEFAULT_VISUAL_SKIN = {
 // can replace this map without changing route, hints, SP or a ranked response.
 export const INFINITY_SCENE_SKIN = DEFAULT_VISUAL_SKIN;
 
-export interface SceneFeedback {
-  readonly row: string;
-  readonly side: TileSide;
-  readonly kind: 'safe' | 'wrong';
-}
+export type { SceneFeedback } from './scene-cinematics';
 export interface InfinitySceneViewProps {
   readonly state: RunState;
   readonly feedback: SceneFeedback | null;
@@ -76,21 +97,9 @@ export interface InfinitySceneViewProps {
   readonly onRetry: () => void;
   readonly settings: PracticeSettings;
   readonly onSettingsChange: (next: PracticeSettings) => void;
-}
-
-function tileClass(row: PresentedRow, side: TileSide, feedback: SceneFeedback | null): string {
-  const currentFeedback = feedback?.row === row.index && feedback.side === side;
-  const hint = row.phase === 'current' && row.hint === side;
-  const decision = row.chosen === side;
-  return [
-    'cps-tile',
-    `cps-tile-${side}`,
-    hint ? 'is-hinted' : '',
-    decision ? (row.wrong ? 'is-cracked' : 'is-cleared') : '',
-    currentFeedback ? (feedback.kind === 'wrong' ? 'is-wrong' : 'is-safe') : '',
-  ]
-    .filter(Boolean)
-    .join(' ');
+  readonly cinematic?: SceneCinematic | null;
+  readonly signals?: RunSignals;
+  readonly hintCaptionRow?: string | null;
 }
 
 /** No game-core mutations or timers. All callbacks are externally owned events. */
@@ -117,6 +126,9 @@ export function InfinitySceneView({
   onRetry,
   settings,
   onSettingsChange,
+  cinematic = null,
+  signals = EMPTY_RUN_SIGNALS,
+  hintCaptionRow = null,
 }: InfinitySceneViewProps) {
   const { t, number } = useLanguage();
   const presented = presentInfinityScene(state);
@@ -129,79 +141,128 @@ export function InfinitySceneView({
     ? t(
         deathCause === 'wrong_tile'
           ? 'game.deathWrong'
-          : deathCause === 'mystery'
-            ? 'game.deathMystery'
-            : 'game.deathDrain',
+          : deathCause === 'idle'
+            ? 'game.deathIdle'
+            : deathCause === 'mystery'
+              ? 'game.deathMystery'
+              : 'game.deathDrain',
       )
     : null;
-  const overlayVisible = paused || confirmEnd || outcome.phase !== 'playing' || !!error;
-  const catastrophic = state.death?.cause === 'wrong_tile' && state.status !== 'playing';
+  const overlayVisible =
+    !!error || (!cinematic?.fatal && (paused || confirmEnd || outcome.phase !== 'playing'));
+  const catastrophic = state.death !== null && state.status !== 'playing';
+  const pressure = presentRowPressure(state);
+  const bonus = liveSignal(signals.bonus, state, 2400);
+  const hintScan =
+    liveSignal(signals.hint, state, HINT_SCAN_MS) ??
+    (pressure?.paused &&
+    state.pacing?.hintScanStartedAt !== undefined &&
+    state.current.revealedSafeSide
+      ? {
+          id: `${state.runId}:${state.revivesApplied}:${state.currentRow}:scan-recovery`,
+          row: state.currentRow,
+          side: state.current.revealedSafeSide,
+          activeAt: state.pacing.hintScanStartedAt,
+        }
+      : null);
+  const emergency =
+    state.status === 'playing' && ((state.sp > 0 && state.sp < 15) || pressure?.urgent);
+  const hostileReveal = cinematic?.mystery
+    ? cinematic.mystery.spDelta < 0 ||
+      ['fragility_5s', 'drain_5s', 'inversion_5s', 'lose_hint'].includes(cinematic.mystery.kind)
+    : false;
   const current = presented.rows.find((row) => row.phase === 'current');
+  const cinematicBlocks = !!cinematic && (cinematic.phase !== 'reveal' || cinematic.fatal);
   const interactive =
-    ready && !busy && !paused && !confirmEnd && !error && outcome.phase === 'playing';
+    ready &&
+    !busy &&
+    !cinematicBlocks &&
+    !paused &&
+    !confirmEnd &&
+    !error &&
+    outcome.phase === 'playing';
   const spClass = state.sp <= 60 ? 'is-danger' : state.sp <= 140 ? 'is-warn' : 'is-safe';
   const spPct = Math.max(0, Math.min(100, (state.sp / MAX_SP) * 100));
   const notice =
-    error ??
-    (outcome.phase === 'verification-pending'
-      ? t('game.noticePending')
-      : outcome.phase === 'dead' || outcome.phase === 'grant-ready'
-        ? t('game.noticeDead')
-        : outcome.phase === 'finished'
-          ? t('game.noticeFinished')
-          : !ready
-            ? t('game.noticePreparing')
-            : paused
-              ? t('game.noticePaused')
-              : current?.mysteryAvailable
-                ? t('game.noticeMystery')
-                : state.current.mysteryOutcome
-                  ? t('game.noticeMysteryDone')
-                  : t('game.noticeChoose'));
+    cinematic?.phase === 'impact'
+      ? t(cinematic.feedback?.kind === 'wrong' ? 'game.impactWrong' : 'game.impactSafe')
+      : (error ??
+        (outcome.phase === 'verification-pending'
+          ? t('game.noticePending')
+          : outcome.phase === 'dead' || outcome.phase === 'grant-ready'
+            ? t('game.noticeDead')
+            : outcome.phase === 'finished'
+              ? t('game.noticeFinished')
+              : !ready
+                ? t('game.noticePreparing')
+                : paused
+                  ? t('game.noticePaused')
+                  : current?.mysteryAvailable
+                    ? t('game.noticeMystery')
+                    : state.current.mysteryOutcome
+                      ? t('game.noticeMysteryDone')
+                      : t('game.noticeChoose')));
 
   return (
     <main
-      className={`cps-shell ${INFINITY_SCENE_SKIN.shell} cpi-infinity-scene${catastrophic ? ' is-catastrophe' : ''}${settings.reducedMotion ? ' cpi-reduced-motion' : ''}`}
+      className={`cps-shell ${INFINITY_SCENE_SKIN.shell} cpi-infinity-scene${catastrophic ? ' is-catastrophe' : ''}${emergency ? ' is-emergency' : ''}${paused ? ' is-paused' : ''}${pressure?.active ? ' has-death-clock' : ''}${settings.reducedMotion ? ' cpi-reduced-motion' : ''}`}
       data-testid="infinity-scene"
       aria-label={INFINITY_SCENE_SKIN.title}
     >
-      <div className="cps-infinity-void" aria-hidden="true">
-        <span className="cps-void-ring cps-void-ring-outer" />
-        <span className="cps-void-ring cps-void-ring-inner" />
-        <span className="cps-void-event-horizon" />
-      </div>
-      <div className="cps-tech-frame" aria-hidden="true">
-        <span />
-        <span />
-        <span />
-        <span />
-      </div>
-      <div className="cps-depth-fog" aria-hidden="true" />
-      <div className="cps-spotlight" aria-hidden="true" />
-      <div className="cps-edge-light-left" aria-hidden="true" />
-      <div className="cps-edge-light-right" aria-hidden="true" />
-      <div className="cps-particles" aria-hidden="true">
-        {particles.map((i) => (
-          <span key={i} className="cps-particle" />
-        ))}
-      </div>
-      <div className="cps-light-shafts" aria-hidden="true">
-        <span className="cps-light-shaft" />
-        <span className="cps-light-shaft" />
-        <span className="cps-light-shaft" />
-      </div>
+      <StageAtmosphere emergency={emergency || catastrophic} />
       <div className="cps-content" inert={overlayVisible}>
-        <div className="cpi-scene-toolbar">
-          <span className="cpi-practice-tag">
-            <span className="cpi-practice-indicator" aria-hidden="true" />
-            {t('game.local')}
-          </span>
+        <header className="cpi-hud-header">
+          <div className="cpi-hud-position">
+            <span className="cpi-hud-wordmark">Infinity</span>
+            <strong className="cps-row-display">
+              {t('general.row', {
+                row: number(
+                  cinematic?.rows?.find((row) => row.phase === 'current')?.label ??
+                    presented.currentRow,
+                ),
+              })}
+            </strong>
+            <span className="cpi-hud-cleared">
+              {t('game.cleared')} <b>{clearedRows}</b>
+            </span>
+          </div>
+          <div className="cpi-hud-stability">
+            <div className="cps-sp-display">
+              <span className="cps-sp-label">{t('game.stabilityShort')}</span>
+              <span className={`cps-sp-value ${spClass}`}>
+                <SpCounter value={state.sp} bonus={bonus} reduced={settings.reducedMotion} />
+                <small> / {MAX_SP}</small>
+              </span>
+            </div>
+            <div
+              className={`cps-sp-bar-main cpi-energy-meter ${state.sp <= 60 ? 'is-low' : ''}`}
+              role="meter"
+              aria-label={t('game.spAccessible')}
+              aria-valuemin={0}
+              aria-valuemax={MAX_SP}
+              aria-valuenow={state.sp}
+            >
+              <div className={`cps-sp-bar-fill ${spClass}`} style={{ width: `${spPct}%` }} />
+              <div className="cpi-energy-segments" aria-hidden="true">
+                {Array.from({ length: 14 }, (_, index) => (
+                  <span key={index} />
+                ))}
+              </div>
+              <span
+                className="cpi-energy-marker"
+                style={{ left: `${spPct}%` }}
+                aria-hidden="true"
+              />
+            </div>
+          </div>
           <div className="cpi-scene-toolbar-actions">
             <button
               type="button"
               className="cps-hint-btn cpi-hud-control cpi-hint-control"
               onClick={onHint}
-              disabled={!interactive || state.hints === 0}
+              disabled={
+                !interactive || state.hints === 0 || state.current.revealedSafeSide !== null
+              }
               aria-label={t('game.hintButton', { count: number(state.hints) })}
             >
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -212,18 +273,9 @@ export function InfinitySceneView({
             </button>
             <button
               type="button"
-              className="cpi-end-control cpi-hud-control"
-              onClick={onRequestEnd}
-              disabled={!ready || busy || !!error || !outcome.canEnd}
-              aria-label={t('general.endRun')}
-            >
-              {t('general.endRun')}
-            </button>
-            <button
-              type="button"
               className="cpi-pause-control cpi-hud-control"
               onClick={onPause}
-              disabled={!ready || busy || !!error || state.status !== 'playing'}
+              disabled={!ready || busy || cinematicBlocks || !!error || state.status !== 'playing'}
               aria-label={paused ? t('game.resumeGame') : t('game.pauseGame')}
             >
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -236,168 +288,154 @@ export function InfinitySceneView({
                   </>
                 )}
               </svg>
-              <span>{paused ? t('general.resume') : t('game.pause')}</span>
             </button>
           </div>
-        </div>
-        <header className="cps-header cpi-hud-header">
-          <div className="cps-header-left">
-            <span className="cps-protocol-label">
-              <img
-                className="cpi-scene-brand-mark"
-                src={`${import.meta.env.BASE_URL}brand/prism-mark.svg`}
-                alt=""
-                aria-hidden="true"
-              />
-              {t('game.run')}
-            </span>
-            <span className="cps-player-name">{t('game.yourPath')}</span>
-            <span className="cps-row-display">
-              {t('general.row', { row: number(presented.currentRow) })}
-            </span>
-          </div>
-          <div className="cps-header-right">
-            <span className="cps-hints-display">
-              <span className="cpi-hud-small-label">{t('game.hints')}</span> {state.hints}
-            </span>
-            <div className="cps-sp-display">
-              <span className="cps-sp-label">{t('game.sp')}</span>
-              <span className={`cps-sp-value ${spClass}`}>
-                {state.sp}
-                <span className="cpi-hud-sp-unit"> SP</span>
-              </span>
-            </div>
-          </div>
         </header>
-        <div
-          className={`cps-sp-bar-main cpi-energy-meter ${state.sp <= 60 ? 'is-low' : ''}`}
-          role="meter"
-          aria-label={t('game.spAccessible')}
-          aria-valuemin={0}
-          aria-valuemax={MAX_SP}
-          aria-valuenow={state.sp}
-        >
-          <div className={`cps-sp-bar-fill ${spClass}`} style={{ width: `${spPct}%` }} />
-          <div className="cpi-energy-segments" aria-hidden="true">
-            {Array.from({ length: 14 }, (_, index) => (
-              <span key={index} />
-            ))}
-          </div>
-          <span className="cpi-energy-marker" style={{ left: `${spPct}%` }} aria-hidden="true" />
-        </div>
-        {state.sp <= 140 && state.status === 'playing' && (
-          <p
-            className={'cpi-sp-danger-copy ' + (state.sp <= 60 ? 'is-critical' : 'is-low')}
-            role="status"
-          >
-            {t(state.sp <= 60 ? 'game.spCritical' : 'game.spLow', { sp: number(state.sp) })}
-          </p>
-        )}
-        <div className="cpi-run-metrics" aria-label={t('menu.progress')}>
-          <span>
-            {t('game.cleared')} <strong>{clearedRows}</strong>
-          </span>
-          <span>
-            {t('game.used')} <strong>{number(outcome.appliedContinues)} / 10</strong>
-          </span>
-          <span>
-            {t('game.granted')} <strong>{number(outcome.grantedContinues)} / 10</strong>
-          </span>
-          <span>
-            {t('game.quota')} <strong>{number(outcome.grantsRemaining)}</strong>
-          </span>
-        </div>
-        {presented.effects.length > 0 && (
-          <div className="cps-effects" aria-label={t('game.effects')}>
-            {presented.effects.map((effect, i) => (
-              <span
-                key={effect.kind + ':' + i}
-                className={`cps-effect ${effect.positive ? 'is-pos' : 'is-neg'}`}
-              >
-                <span className="cps-effect-name">{t(EFFECT_MESSAGE[effect.kind])}</span>
-                <span className="cps-effect-timer">{(effect.remainingMs / 1000).toFixed(1)}s</span>
-                <span
-                  className="cps-effect-bar"
-                  style={{ width: `${effect.percent}%` }}
-                  aria-hidden="true"
-                />
-              </span>
-            ))}
-          </div>
-        )}
         <section className="cps-board" aria-label={t('game.bridge')} dir="ltr">
-          <div className="cps-bridge-track">
-            {presented.rows.map((row) => (
+          <div className="cpi-stage-instruments">
+            <div
+              className={'cpi-death-clock' + (bonus ? ' is-rewarding' : '')}
+              aria-label={t('game.timeAlive')}
+            >
+              <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                <path d="M6 3h20M6 29h20M9 4v5l14 14v5M23 4v5L9 23v5M12 6h8M12 26h8" />
+              </svg>
+              <div>
+                <span>{t('game.timeAlive')}</span>
+                <time>{formatActiveDuration(state.activeTimeMs)}</time>
+              </div>
+              <i aria-hidden="true" />
+              {bonus && (
+                <span key={bonus.id} className="cpi-survival-bonus" role="status">
+                  <strong>+{bonus.amount} SP</strong>
+                  <small>{t(state.sp === MAX_SP ? 'game.maxSp' : 'game.survivalBonus')}</small>
+                </span>
+              )}
+            </div>
+            {presented.effects.length > 0 && (
+              <div className="cps-effects" aria-label={t('game.effects')}>
+                {presented.effects.map((effect, i) => (
+                  <span
+                    key={effect.kind + ':' + (state.effects[i]?.startedAt ?? i)}
+                    className={`cps-effect ${effect.positive ? 'is-pos' : 'is-neg'}`}
+                  >
+                    <span className="cpi-effect-symbol">
+                      <EffectGlyph kind={effect.kind} />
+                      <svg className="cpi-effect-orbit" viewBox="0 0 48 48" aria-hidden="true">
+                        <circle
+                          cx="24"
+                          cy="24"
+                          r="22"
+                          pathLength="100"
+                          strokeDasharray={`${effect.percent} 100`}
+                        />
+                      </svg>
+                    </span>
+                    <span className="cpi-effect-copy">
+                      <span className="cps-effect-name">{t(EFFECT_MESSAGE[effect.kind])}</span>
+                      <span className="cps-effect-timer">
+                        {(effect.remainingMs / 1000).toFixed(1)}s
+                      </span>
+                    </span>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="cpi-right-instruments">
+            {pressure?.active && <DeathClock pressure={pressure} />}
+            {state.sp <= 140 && state.status === 'playing' && (
               <div
-                key={row.index}
-                className={`cps-row tone-${row.tone} ${row.phase === 'past' ? 'is-past' : row.phase === 'current' ? 'is-current' : `is-future-${row.tone}`}`}
-                data-row={row.label}
+                className={'cpi-sp-danger-copy ' + (state.sp <= 60 ? 'is-critical' : 'is-low')}
+                role="status"
+                aria-label={t(state.sp <= 60 ? 'game.spCritical' : 'game.spLow', {
+                  sp: number(state.sp),
+                })}
               >
-                <button
-                  type="button"
-                  className={tileClass(row, 'left', feedback)}
-                  aria-label={t('game.leftTile', { row: number(row.label) })}
-                  onClick={() => onChoose('left')}
-                  disabled={!interactive || row.phase !== 'current'}
-                >
-                  {row.phase === 'past' && row.chosen === 'left' && (
-                    <span className="cpi-tile-feedback-text">
-                      {t(row.wrong ? 'game.wrongTile' : 'game.safeTile')}
-                    </span>
+                <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                  <path d="m16 3 14 25H2L16 3Z" />
+                  <path d="M16 11v8m0 4v1" />
+                </svg>
+                <span>
+                  {t(
+                    emergency
+                      ? 'game.emergency'
+                      : state.sp <= 60
+                        ? 'game.criticalLabel'
+                        : 'game.lowLabel',
                   )}
-                  {row.phase === 'current' && row.hint === 'left' && (
-                    <span className="cpi-tile-feedback-text">{t('game.hintedTile')}</span>
-                  )}
-                </button>
-                <div className="cps-center">
-                  {row.hasMystery && (
-                    <button
-                      type="button"
-                      className="cps-tile cps-tile-center"
-                      aria-label={t('game.mysteryTile', { row: number(row.label) })}
-                      onClick={onMystery}
-                      disabled={!interactive || !row.mysteryAvailable}
-                    >
-                      ?
-                    </button>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  className={tileClass(row, 'right', feedback)}
-                  aria-label={t('game.rightTile', { row: number(row.label) })}
-                  onClick={() => onChoose('right')}
-                  disabled={!interactive || row.phase !== 'current'}
-                >
-                  {row.phase === 'past' && row.chosen === 'right' && (
-                    <span className="cpi-tile-feedback-text">
-                      {t(row.wrong ? 'game.wrongTile' : 'game.safeTile')}
-                    </span>
-                  )}
-                  {row.phase === 'current' && row.hint === 'right' && (
-                    <span className="cpi-tile-feedback-text">{t('game.hintedTile')}</span>
-                  )}
-                </button>
-                <span className="cps-row-label" aria-hidden="true">
-                  {number(row.label)}
+                  <strong>
+                    {number(state.sp)} <small>SP</small>
+                  </strong>
                 </span>
               </div>
-            ))}
-            <div className="cps-bridge-reflection" aria-hidden="true">
-              {presented.rows.slice(0, 2).map((row) => (
-                <div className="cps-row" key={'reflection:' + row.index}>
-                  <div className="cps-tile" />
-                  <div className="cps-center" />
-                  <div className="cps-tile" />
-                </div>
-              ))}
-            </div>
+            )}
           </div>
+          <PrismBridge
+            rows={cinematic?.rows ?? presented.rows}
+            feedback={cinematic?.feedback ?? feedback}
+            interactive={interactive}
+            onChoose={onChoose}
+            onMystery={onMystery}
+            reducedMotion={settings.reducedMotion}
+            phase={cinematic?.phase}
+            collapsed={catastrophic && (!cinematic || cinematic.phase === 'collapse')}
+            eventId={state.death?.id ?? cinematic?.id ?? ''}
+            fractureSeed={`${state.runId}:${state.revivesApplied}`}
+            hintScan={hintScan}
+            showHintCaption={hintCaptionRow === state.currentRow}
+          />
+          {cinematic?.mystery && (
+            <div
+              key={cinematic.id}
+              className={'cpi-mystery-release' + (hostileReveal ? ' is-hostile' : '')}
+              aria-hidden="true"
+            >
+              <span className="cpi-release-flare" />
+              <span className="cpi-released-symbol">
+                <EffectGlyph kind={cinematic.mystery.kind} />
+              </span>
+              <div className="cpi-mystery-readout">
+                <span>{t(hostileReveal ? 'game.mysteryCritical' : 'game.mysterySignal')}</span>
+                <strong>{t(EFFECT_MESSAGE[cinematic.mystery.kind])}</strong>
+                <b>
+                  {cinematic.mystery.spDelta !== 0
+                    ? `${cinematic.mystery.spDelta > 0 ? '+' : ''}${cinematic.mystery.spDelta} SP`
+                    : cinematic.mystery.hintDelta !== 0
+                      ? `${cinematic.mystery.hintDelta > 0 ? '+' : ''}${cinematic.mystery.hintDelta}`
+                      : '05.0s'}
+                </b>
+              </div>
+            </div>
+          )}
+          {cinematic?.feedback && cinematic.phase !== 'contact' && cinematic.phase !== 'travel' && (
+            <div className={'cpi-step-readout is-' + cinematic.feedback.kind} aria-hidden="true">
+              {t(
+                cinematic.fatal
+                  ? 'game.collapse'
+                  : cinematic.feedback.kind === 'wrong'
+                    ? 'game.impactWrong'
+                    : 'game.impactSafe',
+              )}
+            </div>
+          )}
+          {catastrophic && (
+            <div className="cpi-death-veil" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </div>
+          )}
         </section>
         <p className="visually-hidden" role="status" aria-live="polite">
           {notice}
         </p>
-        <p className="cpi-scene-footer">{t('game.footer')}</p>
+        <p className="cpi-scene-footer">
+          <span aria-hidden="true">—</span>
+          {t('game.bridgeGuidance')}
+          <span aria-hidden="true">—</span>
+          <span className="visually-hidden">{t('game.crossingNote')}</span>
+        </p>
       </div>
       {overlayVisible && (
         <div className="cpi-overlay">
@@ -407,9 +445,41 @@ export function InfinitySceneView({
             aria-modal="true"
             aria-labelledby="cpi-run-outcome-title"
           >
+            <header className="cpi-dialog-heading">
+              <span className="cpi-dialog-emblem" data-phase={outcome.phase} aria-hidden="true">
+                <svg viewBox="0 0 48 48" fill="none">
+                  <path
+                    d={
+                      catastrophic
+                        ? 'M5 35 14 20l6 8 6-14 8 6 9 15M12 35l8-7m6-14 6 21M6 40h12m12 0h12'
+                        : outcome.phase === 'finished'
+                          ? 'M8 26l11 11L40 12M8 10h12M8 15h7'
+                          : paused && !confirmEnd
+                            ? 'M16 12v24M32 12v24'
+                            : 'M8 34 24 10l16 24M18 25h12M24 34v6'
+                    }
+                  />
+                  <circle cx="40" cy="8" r="2" />
+                </svg>
+              </span>
+              <h2 id="cpi-run-outcome-title">
+                {t(
+                  error
+                    ? 'game.clockTitle'
+                    : confirmEnd && outcome.canEnd
+                      ? 'game.confirmTitle'
+                      : outcome.phase === 'verification-pending'
+                        ? 'game.pendingTitle'
+                        : outcome.phase === 'finished'
+                          ? 'game.complete'
+                          : outcome.phase === 'dead' || outcome.phase === 'grant-ready'
+                            ? 'game.deathTitle'
+                            : 'game.paused',
+                )}
+              </h2>
+            </header>
             {error ? (
               <>
-                <h2 id="cpi-run-outcome-title">{t('game.clockTitle')}</h2>
                 <p role="alert">{error}</p>
                 <p>{t('game.clockRecover')}</p>
                 <div className="cpi-overlay-actions">
@@ -423,7 +493,6 @@ export function InfinitySceneView({
               </>
             ) : confirmEnd && outcome.canEnd ? (
               <>
-                <h2 id="cpi-run-outcome-title">{t('game.confirmTitle')}</h2>
                 <p>
                   {t('game.confirmCleared', { row: clearedRows })}{' '}
                   {fatalRow !== null
@@ -453,7 +522,6 @@ export function InfinitySceneView({
               </>
             ) : outcome.phase === 'verification-pending' ? (
               <>
-                <h2 id="cpi-run-outcome-title">{t('game.pendingTitle')}</h2>
                 <p>{t('game.pendingExplanation', { row: clearedRows })}</p>
                 <p role="status">{t('game.pendingRecovery')}</p>
                 <div className="cpi-overlay-actions">
@@ -465,15 +533,25 @@ export function InfinitySceneView({
             ) : outcome.phase === 'finished' ? (
               <>
                 <p className="cpi-run-status-label">{t('game.practiceUnverified')}</p>
-                <h2 id="cpi-run-outcome-title">{t('game.complete')}</h2>
                 <div className="cpi-result-score">
                   <span>{t('game.rowsCleared')}</span>
-                  <strong>{clearedRows}</strong>
+                  <strong>
+                    <AnimatedResult
+                      value={state.result?.lastClearedRow ?? state.lastClearedRow}
+                      reduced={settings.reducedMotion}
+                    />
+                  </strong>
                 </div>
                 <dl className="cpi-result-details">
                   <div>
                     <dt>{t('game.fatalRow')}</dt>
-                    <dd>{fatalRow ?? t('general.none')}</dd>
+                    <dd>
+                      {rawFatalRow === null ? (
+                        t('general.none')
+                      ) : (
+                        <AnimatedResult value={rawFatalRow} reduced={settings.reducedMotion} />
+                      )}
+                    </dd>
                   </div>
                   <div>
                     <dt>{t('game.activeTime')}</dt>
@@ -481,7 +559,12 @@ export function InfinitySceneView({
                   </div>
                   <div>
                     <dt>{t('game.revivesApplied')}</dt>
-                    <dd>{outcome.appliedContinues}</dd>
+                    <dd>
+                      <AnimatedResult
+                        value={String(outcome.appliedContinues)}
+                        reduced={settings.reducedMotion}
+                      />
+                    </dd>
                   </div>
                   <div>
                     <dt>{t('game.bestLocal')}</dt>
@@ -505,28 +588,23 @@ export function InfinitySceneView({
               </>
             ) : outcome.phase === 'dead' || outcome.phase === 'grant-ready' ? (
               <>
-                <h2 id="cpi-run-outcome-title">{t('game.deathTitle')}</h2>
                 {localizedDeathReason && <p>{localizedDeathReason}</p>}
                 <div className="cpi-result-score">
                   <span>{t('game.rowsCleared')}</span>
-                  <strong>{clearedRows}</strong>
+                  <strong>
+                    <AnimatedResult value={state.lastClearedRow} reduced={settings.reducedMotion} />
+                  </strong>
                 </div>
                 <p>{t('game.fatalNotCounted', { row: fatalRow ?? t('general.none') })}</p>
                 {outcome.offer ? (
                   <div className="cpi-revive-offer">
                     <strong>
-                      {t('game.offerTitle', {
-                        index: number(outcome.offer.ordinal),
+                      {t('game.bargainTitle', {
                         sp: number(outcome.offer.restoreSp),
                       })}
                     </strong>
-                    <span>
-                      {t('game.offerDetail', {
-                        sp: number(outcome.offer.restoreSp),
-                        remaining: number(outcome.offer.grantsRemaining),
-                      })}
-                    </span>
-                    <span>{t('game.offerUnavailable')}</span>
+                    <span>{t('game.bargainBody')}</span>
+                    <span>{t('game.bargainSleeping')}</span>
                   </div>
                 ) : outcome.phase === 'grant-ready' ? (
                   <p role="status">{t('game.grantReady')}</p>
@@ -543,15 +621,31 @@ export function InfinitySceneView({
                     {t('general.endRun')}
                   </button>
                   <button type="button" disabled={busy} onClick={onExit}>
-                    {t('general.saveLeave')}
+                    {t(outcome.forfeitsGrant ? 'general.saveLeave' : 'game.returnMenu')}
                   </button>
                 </div>
               </>
             ) : (
               <>
-                <h2 id="cpi-run-outcome-title">{t('game.paused')}</h2>
                 <p>{t('game.pausedExplanation')}</p>
                 <p>{t('game.pausedRows', { row: clearedRows })}</p>
+                <details className="cpi-run-ledger">
+                  <summary>{t('game.runDetails')}</summary>
+                  <div className="cpi-run-metrics" aria-label={t('menu.progress')}>
+                    <span>
+                      {t('game.cleared')} <strong>{clearedRows}</strong>
+                    </span>
+                    <span>
+                      {t('game.used')} <strong>{number(outcome.appliedContinues)} / 10</strong>
+                    </span>
+                    <span>
+                      {t('game.granted')} <strong>{number(outcome.grantedContinues)} / 10</strong>
+                    </span>
+                    <span>
+                      {t('game.quota')} <strong>{number(outcome.grantsRemaining)}</strong>
+                    </span>
+                  </div>
+                </details>
                 <AudioSettingsControls settings={settings} onChange={onSettingsChange} />
                 <div className="cpi-overlay-actions">
                   <button type="button" data-cpi-overlay-primary disabled={busy} onClick={onPause}>
@@ -581,6 +675,7 @@ function makeInitialRun(): RunState {
   return createRun(
     {
       runId: 'practice-' + route.toString(16),
+      rulesetVersion: PRACTICE_RULESET_VERSION,
       routeRng: createPracticeCursor(route),
       mysteryRng: createPracticeCursor(mystery),
       observedAt: Date.now(),
@@ -613,7 +708,9 @@ function InfinityRun({
   onSettingsChange,
 }: InfinityRunProps) {
   const { t } = useLanguage();
-  const [initial] = useState(() => initialState ?? makeInitialRun());
+  const [initial] = useState(() =>
+    initialState ? upgradePracticePacing(initialState) : makeInitialRun(),
+  );
   const [initialAudioSettings] = useState(settings);
   const lastCommittedActiveMs = useRef(-500);
   const [state, setState] = useState<RunState>(initial);
@@ -622,7 +719,16 @@ function InfinityRun({
   const [paused, setPaused] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<SceneFeedback | null>(null);
+  const [cinematic, setCinematic] = useState<SceneCinematic | null>(null);
+  const [signals, setSignals] = useState<RunSignals>(EMPTY_RUN_SIGNALS);
+  const [hintCaptionRow, setHintCaptionRow] = useState<string | null>(null);
+  const [hintCaptionGate] = useState(() => createHintCaptionGate(() => window.localStorage));
   const [confirmEnd, setConfirmEnd] = useState(false);
+  useSoundtrack(
+    state.status === 'playing' ? 'run' : cinematic?.fatal ? null : 'ended',
+    settings.music && (state.status !== 'playing' || (ready && !paused && !confirmEnd && !error)),
+    settings.music && (!!cinematic?.fatal || confirmEnd),
+  );
   const [personalBest, setPersonalBest] = useState<string | null>(null);
   const [newPersonalBest, setNewPersonalBest] = useState(false);
   const runtimeRef = useRef<PracticeRuntime | null>(null);
@@ -630,6 +736,13 @@ function InfinityRun({
   const pauseRef = useRef<PracticePauseLease | null>(null);
   const commandLock = useRef(false);
   const exitLock = useRef(false);
+  const directorRef = useRef<ReturnType<typeof createSceneDirector> | null>(null);
+  const reducedRef = useRef(settings.reducedMotion);
+
+  useEffect(() => {
+    reducedRef.current = settings.reducedMotion;
+    if (settings.reducedMotion) directorRef.current?.finish();
+  }, [settings.reducedMotion]);
 
   useEffect(() => {
     let alive = true;
@@ -639,9 +752,21 @@ function InfinityRun({
         createMedia: (source) => new Audio(source),
         haptic: optionalHaptic,
       },
-      initialAudioSettings,
+      { ...initialAudioSettings, music: false },
     );
     audioRef.current = audio;
+    const director = createSceneDirector(
+      initial,
+      (beat) => {
+        if (alive) setCinematic(beat);
+      },
+      (callback, delay) => {
+        const timer = window.setTimeout(callback, delay);
+        return () => window.clearTimeout(timer);
+      },
+      () => reducedRef.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    );
+    directorRef.current = director;
     audio.setForeground(document.visibilityState !== 'hidden');
     const runtime = createPracticeRuntime({
       state: initial,
@@ -651,6 +776,10 @@ function InfinityRun({
       playback: audio,
       onTransition: (result: TimedSessionResult) => {
         if (!alive) return;
+        director.receive(result);
+        const hint = result.events.find((event) => event.type === 'hint-used');
+        if (hint && hintCaptionGate.claim()) setHintCaptionRow(hint.row);
+        if (result.events.length) setSignals((previous) => collectRunSignals(previous, result));
         let earnedNewBest = false;
         if (result.events.some((event) => event.type === 'run-ended')) {
           try {
@@ -698,6 +827,8 @@ function InfinityRun({
     const unsubscribeCheckpoint = lifecycle.subscribe((snapshot) => {
       audio.setForeground(snapshot.active);
       if (!snapshot.active && alive) {
+        director.finish();
+        setSignals(EMPTY_RUN_SIGNALS);
         try {
           onCheckpoint(runtime.getState());
         } catch (cause) {
@@ -720,20 +851,22 @@ function InfinityRun({
       alive = false;
       if (runtimeRef.current === runtime) runtimeRef.current = null;
       if (audioRef.current === audio) audioRef.current = null;
+      if (directorRef.current === director) directorRef.current = null;
+      director.dispose();
       unsubscribeCheckpoint();
       runtime.dispose();
     };
-  }, [initial, onCheckpoint, initialAudioSettings]);
+  }, [initial, onCheckpoint, initialAudioSettings, hintCaptionGate]);
 
   useEffect(() => {
-    audioRef.current?.setSettings(settings);
+    audioRef.current?.setSettings({ ...settings, music: false });
   }, [settings]);
 
   useEffect(() => {
     if (paused || confirmEnd || state.status !== 'playing' || error) {
       document.querySelector<HTMLButtonElement>('.cpi-overlay [data-cpi-overlay-primary]')?.focus();
     }
-  }, [paused, confirmEnd, state.status, state.pendingReward, error]);
+  }, [paused, confirmEnd, state.status, state.pendingReward, error, cinematic?.fatal]);
 
   useEffect(() => {
     if (!confirmEnd) return;
@@ -753,7 +886,14 @@ function InfinityRun({
 
   async function issue(command: SessionCommand) {
     const runtime = runtimeRef.current;
-    if (!runtime || !ready || (paused && command.type !== 'end') || commandLock.current) return;
+    if (
+      !runtime ||
+      !ready ||
+      (paused && command.type !== 'end') ||
+      commandLock.current ||
+      (command.type !== 'end' && directorRef.current?.isBusy())
+    )
+      return;
     commandLock.current = true;
     setBusy(true);
     try {
@@ -762,9 +902,13 @@ function InfinityRun({
       if (
         !result.accepted &&
         result.reason &&
-        !['clock-paused', 'stale-command', 'stale-pause', 'command-consumed'].includes(
-          result.reason,
-        )
+        ![
+          'clock-paused',
+          'stale-command',
+          'stale-pause',
+          'command-consumed',
+          'died-before-command',
+        ].includes(result.reason)
       )
         setError(`Action unavailable: ${result.reason}`);
     } catch (reason) {
@@ -782,7 +926,7 @@ function InfinityRun({
     }
     if (paused) unlockAudio();
     const runtime = runtimeRef.current;
-    if (!runtime || commandLock.current) return;
+    if (!runtime || commandLock.current || directorRef.current?.isBusy()) return;
     commandLock.current = true;
     setBusy(true);
     try {
@@ -837,6 +981,15 @@ function InfinityRun({
       }
       if (runtime) {
         try {
+          const latest = runtime.getState();
+          if (
+            latest.status === 'dead' &&
+            latest.pendingReward === null &&
+            !latest.reviveReceipts.some((receipt) => receipt.status === 'granted')
+          ) {
+            // Leaving a declined death finalizes its result instead of advertising a dead Resume.
+            await runtime.bind({ type: 'end', forfeitGrantedReward: false })();
+          }
           if (!paused) await runtime.hold('recovery');
           onCheckpoint(runtime.getState());
         } catch (cause) {
@@ -861,6 +1014,9 @@ function InfinityRun({
     <InfinitySceneView
       state={state}
       feedback={feedback}
+      cinematic={cinematic}
+      signals={signals}
+      hintCaptionRow={hintCaptionRow}
       ready={ready}
       busy={busy}
       paused={paused}

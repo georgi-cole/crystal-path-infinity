@@ -1,243 +1,422 @@
-/* CPI-014: compact instructional route, not an overlay on gameplay touch targets. */
-.cpi-tutorial {
-  display: flex;
-  flex-direction: column;
-  gap: 0.85rem;
-  width: 100%;
-  padding: 0.9rem 0 1.5rem;
+/* A playable field guide, sharing the actual bridge and crystal materials. */
+html:has(.cpi-crystal-guide) {
+  scrollbar-width: thin;
+  scrollbar-color: #5a4656 #080708;
+}
+.cpi-crystal-guide {
+  width: min(100%, 1080px);
+  margin: auto;
+  padding: 1.6rem 0;
   color: var(--cpi-text);
 }
-
-.cpi-tutorial-topline {
+.cpi-guide-topline {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
   justify-content: space-between;
-  gap: 0.55rem;
-}
-
-.cpi-tutorial-proof {
-  font-size: 0.7rem;
-  font-weight: 650;
-  color: var(--cpi-safe);
-}
-
-.cpi-tutorial h1 {
-  margin: 0.25rem 0 0;
-  font: 650 clamp(1.5rem, 7vw, 2rem) / 1.13 var(--cpi-font-display);
-}
-
-.cpi-tutorial-instruction {
-  margin: 0;
-  font-size: 0.91rem;
-  line-height: 1.5;
-  color: #d3e7f6;
-}
-
-.cpi-tutorial-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem;
-}
-
-.cpi-tutorial-stats span {
-  display: inline-flex;
-  gap: 0.28rem;
-  align-items: baseline;
-  min-height: 2.3rem;
-  padding: 0.52rem 0.62rem;
-  border: 1px solid var(--cpi-glass-edge);
-  border-radius: 0.55rem;
-  background: var(--cpi-surface);
-  color: var(--cpi-muted);
-  font-size: 0.76rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.cpi-tutorial-stats strong {
-  color: var(--cpi-text);
-}
-
-.cpi-tutorial-bridge {
-  border: 1px solid rgba(130, 221, 242, 0.3);
-  border-radius: 1rem;
-  padding: 0.95rem 0.65rem 0.75rem;
-  background:
-    radial-gradient(ellipse at 50% 5%, rgba(122, 165, 224, 0.17), transparent 58%),
-    linear-gradient(170deg, #16253e, #080d20);
-}
-
-.cpi-tutorial-row-caption {
-  text-align: center;
-  font-size: 0.75rem;
-  font-weight: 750;
-  color: var(--cpi-ice);
-  letter-spacing: 0.07em;
+  gap: 1rem;
+  align-items: center;
+  color: #bda2b9;
+  font-size: 0.55rem;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  padding-bottom: 0.85rem;
 }
-
-.cpi-tutorial-glass {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(2.75rem, 0.32fr) minmax(0, 1fr);
+.cpi-guide-rehearsal {
+  display: flex;
   align-items: center;
   gap: 0.5rem;
-  max-width: 23rem;
-  margin-inline: auto;
+  color: #96b7ab;
 }
-
-.cpi-tutorial-pane {
-  min-width: 0;
-  min-height: 6.1rem;
+.cpi-guide-rehearsal i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #96d5bc;
+  box-shadow: 0 0 8px #8effc763;
+}
+.cpi-guide-chapters {
   display: grid;
-  place-content: center;
-  gap: 0.4rem;
-  padding: 0.6rem 0.3rem;
-  text-align: center;
-  border-radius: 0.8rem;
-  border: 2px solid rgba(163, 232, 248, 0.7);
-  background: linear-gradient(130deg, rgba(83, 174, 210, 0.6), rgba(67, 77, 160, 0.6));
-  color: #f3fbff;
-  font: inherit;
-  touch-action: manipulation;
-  cursor: pointer;
+  grid-template-columns: repeat(5, 1fr);
+  padding: 0;
+  margin: 1.8rem 0 2.5rem;
+  list-style: none;
+  border-bottom: 1px solid #af8aa51c;
 }
-
-.cpi-tutorial-pane:disabled {
-  cursor: default;
-  opacity: 0.49;
-  border-style: dashed;
+.cpi-guide-chapters li {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0 0 0.8rem;
+  color: #65636c;
+  font-size: 0.6rem;
+  position: relative;
 }
-
-.cpi-tutorial-pane.is-revealed {
-  border-color: var(--cpi-safe);
-  box-shadow: 0 0 0 3px rgba(103, 239, 197, 0.15);
-}
-
-.cpi-tutorial-pane-label {
-  font-size: 0.83rem;
-  font-weight: 800;
-}
-
-.cpi-tutorial-pane-note {
-  font-size: 0.67rem;
-  font-weight: 650;
-}
-
-.cpi-tutorial-centre {
+.cpi-guide-chapter-mark {
   display: grid;
   place-items: center;
-  min-width: 0;
+  font: 400 0.55rem var(--cpi-font-display);
+  border: 1px solid #b8a4b526;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
 }
-
-.cpi-tutorial-mystery {
-  width: max(2.75rem, 100%);
-  min-height: 3.6rem;
-  border-radius: 0.7rem;
-  border: 1px solid var(--cpi-warning);
-  color: var(--cpi-warning);
-  background: rgba(116, 78, 151, 0.5);
-  font: 800 1.4rem var(--cpi-font-display);
+.cpi-guide-chapters .is-current {
+  color: #e8c2de;
+}
+.cpi-guide-chapters .is-current::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, #dd9ccb, #dd9ccb00);
+}
+.cpi-guide-chapters .is-current .cpi-guide-chapter-mark {
+  border-color: #c683ad8c;
+  background: #c683ad14;
+  box-shadow: 0 0 16px #c283ad12;
+}
+.cpi-guide-chapters .is-complete {
+  color: #99c6b4;
+}
+.cpi-guide-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  align-items: center;
+  gap: clamp(1.5rem, 5vw, 5rem);
+}
+.cpi-guide-index {
+  font-size: 0.6rem;
+  letter-spacing: 0.18em;
+  color: #9d7f97;
+}
+.cpi-guide-story h1 {
+  font: 550 clamp(1.75rem, 3.8vw, 3rem)/1.12 var(--cpi-font-display);
+  letter-spacing: -0.045em;
+  margin: 1rem 0;
+  max-width: 10em;
+}
+.cpi-guide-story h1:focus {
+  outline: none;
+}
+.cpi-guide-story > p {
+  font-size: 0.85rem;
+  line-height: 1.75;
+  max-width: 30em;
+  margin: 0;
+  color: #a9a3b0;
+}
+.cpi-guide-story > .cpi-guide-whisper {
+  font-size: 0.7rem;
+  color: #84a798;
+  margin-top: 1rem;
+}
+.cpi-guide-actions {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 2rem;
+  max-width: 19rem;
+}
+.cpi-guide-primary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 2.75rem;
+  padding: 0.9rem 1.1rem;
+  border: 1px solid #b5789c82;
+  border-radius: 0.45rem;
+  background: linear-gradient(125deg, #3a2034, #130d14);
+  color: #f2dcec;
+  font: 550 0.78rem var(--cpi-font-body);
   cursor: pointer;
-  touch-action: manipulation;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
 }
-
-.cpi-tutorial-mystery:disabled {
-  opacity: 0.3;
+.cpi-guide-primary:hover {
+  border-color: #e2a4cb;
+  background: linear-gradient(125deg, #4b2b41, #1c121b);
+}
+.cpi-guide-primary > svg {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+.cpi-guide-primary > span {
+  color: #d19cbd;
+  font-size: 1.1rem;
+}
+.cpi-guide-primary:disabled {
+  opacity: 0.45;
   cursor: default;
 }
-
-.cpi-tutorial-feedback {
-  margin: 0.85rem 0 0;
-  min-height: 2.8rem;
-  font-size: 0.82rem;
-  line-height: 1.5;
-  color: #f6eac3;
-  text-align: center;
-}
-
-.cpi-tutorial-actions {
-  display: grid;
-  gap: 0.55rem;
-}
-
-.cpi-tutorial-actions button,
-.cpi-tutorial-skip {
+.cpi-guide-text-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
   min-height: 2.75rem;
-  width: 100%;
-  padding: 0.6rem 0.7rem;
-  border: 1px solid var(--cpi-glass-edge);
-  border-radius: 0.73rem;
-  background: rgba(15, 35, 56, 0.95);
-  color: var(--cpi-text);
-  font: inherit;
-  font-size: 0.85rem;
-  font-weight: 720;
+  padding: 0.5rem 0;
+  border: 0;
+  background: transparent;
+  font: 450 0.65rem var(--cpi-font-body);
+  color: #9a909f;
   cursor: pointer;
-  touch-action: manipulation;
 }
-
-.cpi-tutorial-actions .cpi-tutorial-primary {
-  background: linear-gradient(115deg, #226e91, #4b4594);
-  border-color: var(--cpi-ice);
+.cpi-crystal-guide button:focus-visible {
+  outline: 2px solid #f3c8e4;
+  outline-offset: 5px;
 }
-
-.cpi-tutorial-finished {
-  margin: 0;
-  color: var(--cpi-safe);
-  font-size: 0.86rem;
+.cpi-guide-stage {
+  position: relative;
+  isolation: isolate;
+  height: clamp(24rem, 58dvh, 34rem);
+  overflow: hidden;
+  border-radius: 0.8rem;
+  border: 1px solid #b893a826;
+  background:
+    radial-gradient(ellipse at 50% 100%, #28202a55, transparent 70%),
+    linear-gradient(135deg, #111112, #050506 60%, #0d0b0f);
+  box-shadow:
+    0 20px 75px #0005,
+    inset 0 1px #ffffff07;
 }
-
-.cpi-tutorial-facts {
+.cpi-guide-stage::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: linear-gradient(110deg, #ffffff04 10%, transparent 10% 80%, #ffffff03 80%);
+  pointer-events: none;
+}
+.cpi-guide-stage .cpi-prism-bridge {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  width: 100%;
+}
+.cpi-guide-stage .cpi-bridge-art {
+  mask-image: linear-gradient(transparent, #000 12%, #000 84%, transparent);
+}
+.cpi-guide-instruments {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  position: absolute;
+  z-index: 3;
+  top: 1.3rem;
+  left: 1.4rem;
+  right: 1.4rem;
+  pointer-events: none;
+}
+.cpi-guide-instruments > div {
   display: grid;
-  gap: 0.3rem;
-  padding: 0.85rem;
-  border-left: 3px solid var(--cpi-ice);
-  background: rgba(12, 33, 55, 0.72);
-  border-radius: 0.3rem 0.8rem 0.8rem 0.3rem;
+  gap: 0.5rem;
+  min-width: 5rem;
 }
-
-.cpi-tutorial-facts p {
-  margin: 0;
-  font-size: 0.76rem;
-  color: var(--cpi-muted);
+.cpi-guide-instruments > div > span {
+  font-size: 0.42rem;
+  color: #827986;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.cpi-guide-instruments strong {
+  font: 450 1.2rem var(--cpi-font-display);
+  font-variant-numeric: tabular-nums;
+  color: #dfc7db;
+}
+.cpi-guide-instruments small {
+  font-size: 0.4rem;
+  color: #978294;
+}
+.cpi-guide-instruments i {
+  display: block;
+  height: 2px;
+  width: 5rem;
+  background: linear-gradient(90deg, #cf95bf var(--guide-light), #ffffff0a var(--guide-light));
+}
+.cpi-guide-hints {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #b393ac;
+  font-size: 0.65rem;
+}
+.cpi-guide-hints svg {
+  width: 1.4rem;
+  height: 1.4rem;
+}
+.cpi-guide-stage-caption {
+  position: absolute;
+  bottom: 1.2rem;
+  left: 1rem;
+  right: 1rem;
+  text-align: center;
+  font-size: 0.42rem;
+  letter-spacing: 0.18em;
+  color: #78717e;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+.cpi-guide-pursuit {
+  position: absolute;
+  top: 22%;
+  right: 8%;
+  display: grid;
+  justify-items: center;
+  gap: 0.35rem;
+  color: #e788a1;
+  pointer-events: none;
+  animation: cpi-guide-heartbeat 1.2s ease-in-out infinite;
+}
+.cpi-guide-pursuit svg {
+  width: 3rem;
+  height: 3rem;
+  stroke: currentColor;
+  stroke-width: 1;
+}
+.cpi-guide-pursuit span {
+  font-size: 0.32rem;
+  letter-spacing: 0.14em;
+  max-width: 5rem;
+  text-align: center;
+  line-height: 1.7;
+}
+.cpi-guide-stage.is-pursued {
+  border-color: #e685a24d;
+  box-shadow: inset 0 -45px 90px #a9213b0f;
+}
+.cpi-guide-stage.is-pursued .cpi-rail-lamp {
+  color: #f56691;
+}
+.cpi-guide-revelation,
+.cpi-guide-complete-mark {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2rem;
+  color: #cab0e8;
+  background: radial-gradient(ellipse, #0a080dda, transparent 70%);
+  pointer-events: none;
+}
+.cpi-guide-revelation svg {
+  width: 5rem;
+  height: 5rem;
+  filter: drop-shadow(0 0 16px #b97ef960);
+  animation: cpi-guide-materialize 0.8s ease-out both;
+}
+.cpi-guide-revelation span {
+  color: #c3acd9;
+  font-size: 0.45rem;
+  letter-spacing: 0.2em;
+}
+.cpi-guide-complete-mark {
+  color: #b4daca;
+  background: radial-gradient(ellipse, #070a09f5, #09090999);
+}
+.cpi-guide-complete-mark svg {
+  width: 5rem;
+  height: 5rem;
+  stroke: currentColor;
+  stroke-width: 1;
+  filter: drop-shadow(0 0 18px #a2ffd42b);
+}
+.cpi-guide-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-top: 1px solid #b68ca51c;
+  margin-top: 2rem;
+  padding-top: 0.5rem;
+}
+.cpi-guide-footer > span {
+  font-size: 0.57rem;
+  color: #77717e;
   line-height: 1.5;
 }
-
-.cpi-tutorial-facts strong {
-  color: var(--cpi-text);
+@keyframes cpi-guide-heartbeat {
+  50% {
+    filter: drop-shadow(0 0 10px #f1487375);
+  }
 }
-
-.cpi-tutorial-skip {
-  background: transparent;
-  border-color: transparent;
-  color: var(--cpi-muted);
+@keyframes cpi-guide-materialize {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.8);
+    filter: blur(7px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
-
-.cpi-tutorial button:focus-visible {
-  outline: 3px solid var(--cpi-focus);
-  outline-offset: 3px;
+@media (max-width: 700px) {
+  .cpi-crystal-guide {
+    padding: 1rem 0 0.5rem;
+  }
+  .cpi-guide-chapters {
+    margin: 1.2rem 0 1.5rem;
+  }
+  .cpi-guide-chapters li {
+    gap: 0.35rem;
+    justify-content: center;
+  }
+  .cpi-guide-chapters li > span:last-child {
+    display: none;
+  }
+  .cpi-guide-topline {
+    font-size: 0.45rem;
+    letter-spacing: 0.14em;
+  }
+  .cpi-guide-layout {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  .cpi-guide-story {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .cpi-guide-index {
+    font-size: 0.5rem;
+  }
+  .cpi-guide-story h1 {
+    max-width: 18em;
+    font-size: clamp(1.6rem, 7vw, 2.2rem);
+    margin: 0.7rem 0;
+  }
+  .cpi-guide-story > p {
+    font-size: 0.75rem;
+    line-height: 1.65;
+    max-width: 100%;
+  }
+  .cpi-guide-actions {
+    max-width: none;
+    margin-top: 1rem;
+  }
+  .cpi-guide-stage {
+    height: clamp(20rem, 48dvh, 29rem);
+    grid-row: 2;
+  }
+  .cpi-guide-primary {
+    padding: 0.75rem 1rem;
+    font-size: 0.72rem;
+  }
+  .cpi-guide-footer {
+    margin-top: 1rem;
+  }
 }
-
 @media (prefers-reduced-motion: reduce) {
-  .cpi-tutorial *,
-  .cpi-tutorial *::before,
-  .cpi-tutorial *::after {
-    transition: none !important;
+  .cpi-crystal-guide *,
+  .cpi-crystal-guide *::before {
     animation: none !important;
+    transition: none !important;
   }
 }
-
-.cpi-tutorial.cpi-reduced-motion * {
-  transition: none !important;
+.cpi-reduced-motion .cpi-crystal-guide * {
   animation: none !important;
-}
-
-@media (max-height: 650px) {
-  .cpi-tutorial {
-    gap: 0.6rem;
-  }
-  .cpi-tutorial-pane {
-    min-height: 4.3rem;
-  }
+  transition: none !important;
 }

@@ -38,4 +38,15 @@ describe('CPI-010 offline and scoped assets', () => {
     expect(bytes.toString('ascii', 8, 12)).toBe('WAVE');
     expect(CRYSTAL_AUDIO.music).not.toContain('glass_bridge.mp3');
   });
+  it('bundles original mono glass and emergency cues at the project base path', () => {
+    for (const source of [CRYSTAL_AUDIO.glass, CRYSTAL_AUDIO.alarm]) {
+      const bytes = resource(source);
+      expect(bytes.toString('ascii', 0, 4)).toBe('RIFF');
+      expect(bytes.toString('ascii', 8, 12)).toBe('WAVE');
+      expect(bytes.readUInt16LE(22)).toBe(1);
+      expect(bytes.readUInt32LE(24)).toBe(22050);
+      expect(bytes.readUInt32LE(40)).toBe(bytes.byteLength - 44);
+      expect(bytes.byteLength).toBeLessThan(120000);
+    }
+  });
 });

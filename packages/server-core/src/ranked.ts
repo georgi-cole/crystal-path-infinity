@@ -72,6 +72,7 @@ export interface RankedSnapshot {
   readonly sp: number;
   readonly hints: number;
   readonly activeTimeMs: number;
+  readonly pacing?: RunState['pacing'];
   readonly achievedAt: number | null;
   readonly paused: boolean;
   readonly current: RunState['current'] & { readonly hasMystery: boolean };
@@ -270,6 +271,17 @@ export function rankedSnapshot(record: StoredRankedRun): RankedSnapshot {
     sp: state.sp,
     hints: state.hints,
     activeTimeMs: state.activeTimeMs,
+    ...(state.pacing
+      ? {
+          pacing: {
+            rowEnteredAt: state.pacing.rowEnteredAt,
+            nextSurvivalBonusAt: state.pacing.nextSurvivalBonusAt,
+            ...(state.pacing.hintScanStartedAt === undefined
+              ? {}
+              : { hintScanStartedAt: state.pacing.hintScanStartedAt }),
+          },
+        }
+      : {}),
     achievedAt: state.achievedAt,
     paused: record.paused,
     current: { ...visible(state.current), hasMystery: row.hasMystery },

@@ -4,8 +4,11 @@ import {
   MAX_REVIVES,
   PRACTICE_RNG,
   RULESET_VERSION,
+  PACED_RULESET_VERSION,
+  createRunPacing,
 } from '@crystal-path-infinity/game-core';
 import type { RunState } from '@crystal-path-infinity/game-core';
+import { PRACTICE_RULESET_VERSION } from './practice-rules';
 
 /**
  * These keys are practice-only. Neither ranked score writes nor ranked revive
@@ -91,13 +94,30 @@ function validatePracticeState(state: RunState): void {
   assertRunState(state, PRACTICE_RNG);
   if (
     !state.runId.startsWith('practice-') ||
-    state.rulesetVersion !== RULESET_VERSION ||
+    ![RULESET_VERSION, PACED_RULESET_VERSION, PRACTICE_RULESET_VERSION].includes(
+      state.rulesetVersion,
+    ) ||
     state.rows.length > MAX_BUFFER_ROWS ||
     state.resolutions.length > state.buffer.history ||
     state.reviveReceipts.length > MAX_REVIVES
   ) {
     throw new Error('This is not a supported standalone practice checkpoint.');
   }
+}
+
+/** Preserve paced deadlines, route/SP/progress. Unpaced v1 gets fresh grace and
+ * future bonuses. Ranked historical runs never use this adapter. */
+export function upgradePracticePacing(state: RunState): RunState {
+  validatePracticeState(state);
+  if (state.rulesetVersion === PRACTICE_RULESET_VERSION || state.status !== 'playing') return state;
+  const next: RunState = {
+    ...state,
+    rulesetVersion: PRACTICE_RULESET_VERSION,
+    stream: { ...state.stream, rulesetVersion: PRACTICE_RULESET_VERSION },
+    pacing: state.pacing ?? createRunPacing(state.activeTimeMs),
+  };
+  validatePracticeState(next);
+  return next;
 }
 
 /** Only the marked slot is committed. A partial write never resurrects old SP/rewards. */

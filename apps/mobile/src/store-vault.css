@@ -1,0 +1,215 @@
+.cpi-store-vault {
+  max-width: 55rem;
+  margin: 0 auto;
+  padding: 1.5rem 0;
+}
+html:has(.cpi-store-vault) {
+  scrollbar-width: thin;
+  scrollbar-color: #463846 #080808;
+}
+.cpi-store-heading {
+  text-align: center;
+}
+.cpi-store-heading > span:first-child {
+  color: #a49ba7;
+  font-size: 0.55rem;
+  letter-spacing: 0.35em;
+}
+.cpi-store-heading h1 {
+  margin: 0.6rem 0;
+  font-size: clamp(2.2rem, 6vw, 3.5rem);
+  font-weight: 500;
+  letter-spacing: -0.06em;
+}
+.cpi-store-heading p {
+  color: #a09aa5;
+  font-size: 0.8rem;
+}
+.cpi-store-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.7rem 0 1.5rem;
+  color: #cda8c4;
+  font-size: 0.55rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+.cpi-store-status i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #ce8db4;
+  box-shadow: 0 0 9px #d77baa7a;
+}
+.cpi-store-filters {
+  display: flex;
+  justify-content: center;
+  gap: 0.3rem;
+  margin: 0 0 1.2rem;
+}
+.cpi-store-filters button {
+  min-height: 2.75rem;
+  padding: 0.7rem 1rem;
+  color: #9f96a5;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+.cpi-store-filters button[aria-selected='true'] {
+  color: #eddaea;
+  border-color: #c484b244;
+  background: linear-gradient(135deg, #c583b218, #100e11);
+}
+.cpi-store-filters button:focus-visible {
+  outline: 2px solid #d3a6c7;
+  outline-offset: 3px;
+}
+.cpi-store-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+.cpi-store-product {
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+  padding: 1rem 1rem 1.25rem;
+  border: 1px solid #a082a32b;
+  border-radius: 9px;
+  background: linear-gradient(145deg, #ffffff06, transparent 40%, #0005), #101012;
+  box-shadow:
+    inset 0 1px #ffffff05,
+    0 8px 25px #0004;
+}
+.cpi-store-product h2 {
+  margin: 0.8rem 0 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+.cpi-store-product p {
+  margin: 0;
+  color: #8b8392;
+  font-size: 0.65rem;
+  line-height: 1.5;
+}
+.cpi-store-art {
+  display: grid;
+  place-items: center;
+  height: 6rem;
+  color: #cfadd1;
+}
+.cpi-store-art > svg {
+  width: 5rem;
+  height: 5rem;
+  stroke: currentColor;
+  stroke-width: 1;
+  filter: drop-shadow(0 0 12px #aa6fb52e);
+}
+.cpi-store-product.is-sp .cpi-store-art {
+  color: #b0dacc;
+}
+.cpi-store-product.is-noAds .cpi-store-art {
+  color: #b8bec9;
+}
+.cpi-store-product.is-bridges .cpi-store-art {
+  color: #c7c7d3;
+}
+.cpi-store-rail {
+  stroke: #e57bb1;
+  stroke-width: 2;
+}
+.cpi-store-abyss {
+  position: relative;
+  overflow: hidden;
+  width: 7.5rem;
+  height: 5rem;
+  border: 1px solid #ffffff16;
+  border-radius: 5px;
+  background: #050505;
+}
+.cpi-store-abyss i {
+  position: absolute;
+  width: 5rem;
+  height: 7rem;
+  top: -1rem;
+  left: -2rem;
+  background: radial-gradient(ellipse, #ad426d4d, transparent 70%);
+  transform: rotate(-30deg);
+}
+.cpi-store-abyss i + i {
+  left: 4rem;
+  background: radial-gradient(ellipse, #74ccb843, transparent 70%);
+}
+.cpi-store-abyss span {
+  position: absolute;
+  top: 1rem;
+  bottom: 1rem;
+  left: 50%;
+  width: 1px;
+  background: linear-gradient(transparent, #c9eee355, transparent);
+}
+.cpi-store-swatches {
+  display: flex;
+  gap: 0.4rem;
+  transform: rotate(-8deg);
+}
+.cpi-store-swatches i {
+  width: 1.7rem;
+  height: 3.6rem;
+  border: 1px solid #c98bad55;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #2d1b29, #0a090b);
+  box-shadow:
+    inset 0 3px #d48bb7,
+    0 4px 10px #0007;
+}
+.cpi-store-swatches i:nth-child(2) {
+  background: linear-gradient(135deg, #192926, #080b0a);
+  border-color: #96cbb14d;
+  box-shadow:
+    inset 0 3px #a3d5bf,
+    0 4px 10px #0007;
+  transform: translateY(-0.5rem);
+}
+.cpi-store-swatches i:nth-child(3) {
+  background: linear-gradient(135deg, #27232e, #0b0a0d);
+  border-color: #a6a4ca4d;
+  box-shadow:
+    inset 0 3px #b0a4d5,
+    0 4px 10px #0007;
+}
+.cpi-store-availability {
+  margin: 1.4rem 0 0;
+  color: #766e7e;
+  font-size: 0.65rem;
+  text-align: center;
+}
+@media (max-width: 600px) {
+  .cpi-store-vault {
+    padding-top: 1rem;
+  }
+  .cpi-store-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+  .cpi-store-product {
+    padding: 0.8rem 0.8rem 1rem;
+  }
+  .cpi-store-product h2 {
+    font-size: 0.8rem;
+  }
+  .cpi-store-product p {
+    font-size: 0.6rem;
+  }
+  .cpi-store-art {
+    height: 4.5rem;
+  }
+  .cpi-store-filters button {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.65rem;
+  }
+}

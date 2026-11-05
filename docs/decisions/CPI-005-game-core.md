@@ -1,5 +1,9 @@
 # CPI-005 — Deterministic single-player core
 
+The historical behavior below describes `infinity-v1`. The owner-requested
+[infinity-v2 follow-up](CPI-005-row-pressure-v2.md) adds row pressure and survival
+bonuses without changing v1 fixtures or authoritative historical runs.
+
 **Status: implementation for review, 2026-11-01.** Georgi merged [PR #42](https://github.com/georgi-cole/crystal-path-infinity/pull/42) and requested the next task. The base is `main@1d013c48fa8e8b3dea18dc857a9d39790df60b89`; work is isolated on `cpi-005-game-core`. [Issue #5](https://github.com/georgi-cole/crystal-path-infinity/issues/5) and its linked PR record the exact checked revision and CI results.
 
 ## What this task delivers

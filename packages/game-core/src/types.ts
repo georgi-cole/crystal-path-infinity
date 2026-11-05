@@ -69,7 +69,13 @@ export interface RowResolution extends CurrentRowState {
   readonly index: Decimal;
 }
 
-export type DeathCause = 'wrong_tile' | 'mystery' | 'drain';
+export type DeathCause = 'wrong_tile' | 'mystery' | 'drain' | 'idle';
+export interface RunPacing {
+  readonly rowEnteredAt: number;
+  readonly nextSurvivalBonusAt: number;
+  /** V3: successful hint holds row pressure for one bounded scan, once per row. */
+  readonly hintScanStartedAt?: number;
+}
 export interface DeathSnapshot {
   readonly id: string;
   readonly sequence: number;
@@ -125,6 +131,8 @@ export interface RunState {
   readonly achievedAt: number | null;
   readonly activeTimeMs: number;
   readonly lastObservedAt: number;
+  /** Required by infinity-v2/v3; absent on historical infinity-v1 checkpoints. */
+  readonly pacing?: RunPacing;
   readonly effects: readonly ActiveEffect[];
   readonly buffer: BufferPolicy;
   /** Zero-based index of rows[0], independent of bounded array positions. */
@@ -222,6 +230,13 @@ export type RunEvent = EventTime &
   (
     | { readonly type: 'effects-ticked'; readonly delta: number; readonly sp: number }
     | { readonly type: 'effects-expired'; readonly kinds: readonly TimedEffectKind[] }
+    | {
+        readonly type: 'survival-bonus';
+        readonly amount: number;
+        readonly spDelta: number;
+        readonly sp: number;
+        readonly minute: number;
+      }
     | { readonly type: 'hint-used'; readonly row: Decimal; readonly safeSide: TileSide }
     | {
         readonly type: 'mystery-resolved';

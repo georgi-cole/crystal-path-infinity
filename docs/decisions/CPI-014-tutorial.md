@@ -1,29 +1,68 @@
-# CPI-014 — Short, optional interactive tutorial
+# CPI-014 — Read the crystal
 
-## Scope and lifecycle
+Updated 5 November 2026, owner-requested revision in PR #83.
 
-The tutorial is an independent local demo route (`#tutorial`) accessible from Home, Practice, and Settings. It is not an InfinityPractice runtime and is never an official attempt, local practice checkpoint, personal-best result, ranked result, ad impression, or revive. It performs no network, native clock, audio or consent operation. Browser/Android Back returns through the existing menu router; a cold deep link can display the demo but never silently creates or destroys a practice run.
+## Rehearsal and voice
 
-Five short sections teach (1) a safe row, (2) a *survived* wrong row, (3) a limited hint, (4) an optional mystery, and (5) the score and end-run contract. Players interact with clearly labeled, large glass touch targets rather than a blocking instruction overlay. A skipped tutorial returns to Practice. Completing the explicit End training run shows a choice to open Practice, without starting or overwriting an existing checkpoint.
+The optional `#tutorial` route uses the actual perspective bridge, crystal
+fracture, row scan and mystery hologram. Five compact chapters replace the
+flat mock panes and rules article: footing, fracture, insight, pursuit and
+temptation. The player tries a safe left crystal, survives a wrong left crystal,
+uses a hint, escapes the Death Clock and either opens or leaves a mystery.
+The closing invitation returns to Practice; it never silently starts a run.
 
-The underlying transitions are actual `@crystal-path-infinity/game-core` `transitionRun` commands, applied only to a separately created, deterministic training `RunState`. Four initial rows are curated for teachability (safe left, wrong left, hinted safe left, optional centre mystery on row 4). The tutorial does **not** change gameplay RNG, live scene, snapshots, timers, or source rules.
+English and Bulgarian use short, dark field notes, including “Crystal clear?
+Not quite.” and “Death hates to be kept waiting.” The guide explains SP as a
+lifeline, finite hints and the need to move. It does not disclose an endpoint,
+exact deadlines, mystery probabilities, stacking rules or continuation quotas.
+The continuation card says “Borrowed breath” and shows the promised SP value,
+without explaining the implementation. Account, consent and privacy controls
+remain explicit. Other languages use the established English fallback for
+new keys; existing translations are retained.
 
-## Exact score behavior
+## Isolation and live rules
 
-- Start at 300 SP, 2 hints, 0 cleared rows.
-- Safe crossing of Row 1 keeps 300 SP; `lastClearedRow = 1`.
-- Wrong crossing of Row 2 costs 10 SP, leaves 290 SP, **and clears Row 2** because it was survived.
-- A hint on Row 3 reveals the safe left pane, consumes exactly 1 hint, and changes no SP. A correct crossing credits Row 3.
-- Mystery is voluntary on Row 4. Opting in calls the real mystery resolver, which can be positive or negative; skipping changes nothing.
-- The optional fatal example puts the scripted run at exactly the current row's base wrong-tile damage, removes any example-only timed effects, then selects the wrong pane. SP falls to 0. `fatalRow = 4`, but `lastClearedRow = 3`.
-- An explicit **End training run** commits only the demo's terminal state; there is no natural final row. No run result leaves the component.
+`practice-rules.ts` selects the same ruleset for the actual local run and the
+rehearsal. The deterministic demo uses the real `transitionRun` reducer with
+five curated initial rows; it reads starting resources, damage, hint cost,
+pacing and mystery resolution from current game rules. Its clock advances
+only through lesson actions, so reading cannot kill the player. A survived
+wrong step still clears its row. Mystery is voluntary on the fifth row.
 
-The current tutorial completion flag (`cpi:tutorial:v1`) stores only `skipped` or `completed` in a key distinct from practice settings, checkpoint and best score. Completing persists, and replay/skip after completion does not erase it. Unavailable storage is nonfatal, though completion cannot be retained across reloads in that case.
+The demo owns no live clock, network, music, practice checkpoint, personal
+best, advertisement or ranked result. It persists only the existing tutorial
+completion flag and the shared first-hint-caption preference. Skipping after
+completion retains completion. Home, Practice, Settings and Back keep their
+existing router behavior.
 
-## Acceptance evidence
+## Future rule changes
 
-Unit tests cover the actual reducer results for safe/wrong/hint/mystery/skip/fatal/end, out-of-order/repeated input, distinct storage key, accessible rendered controls, replay actions and reduced-motion CSS. Existing route tests include `#tutorial`. Main-menu startup and game checkpoint contracts are unchanged.
+`crystal-guide-contract.ts` classifies every ruleset field, reducer event and
+mystery effect as an essential lesson or deliberate discovery. Exhaustive
+TypeScript maps and runtime tests fail when a new mechanic has no policy.
+The demo reads mechanical values live rather than copying numbers into prose;
+behavioral tests exercise the current reducer, including hint holds, pursuit
+death and minute survival awards. Existing numerical changes update the demo
+automatically. New mechanics require an explicit guide review in a later PR.
+CI does not generate or silently rewrite narrative copy.
 
-Manual device review remains necessary: use a fresh install; finish, skip and replay from Settings; press Android Back while in the tutorial; verify focus and one-hand touch targets at 320px, 390px and large text; check VoiceOver/TalkBack and portrait/short viewport. The observed-first-play acceptance criterion requires an actual player not familiar with the minigame.
+## Hint presentation
 
-This implementation is rebased on the merged premium visual-parity PR #53. It retains its original Big Eye SVG menu resources and existing Android ANGLE/SwiftShader compositor safeguards, with no reduction to native lifecycle coverage.
+The 800 ms scan is clipped to the two current crystal faces. A perspective
+matrix and short surface sweep resolve into mint corner locks. There is no
+floating eye, button-to-row connector, ray or curve. Reduced motion reveals
+the correct pane without a sweep. “This one holds” appears visually once per
+device, shared by rehearsal and gameplay; the revealed pane retains its
+accessible description on every use. Preference storage failure is nonfatal.
+The bounded Death Clock hold is specified in
+[the v3 decision](CPI-005-hint-scan-v3.md).
+
+## Verification
+
+Tests cover actual safe/wrong/hint/pursuit/mystery/skip/end transitions,
+invalid and repeated actions, isolation, live rule coverage, accessible
+rendering, first-caption persistence and reduced motion. Browser review covers
+desktop and 390/320 px layouts plus a real practice scan/countdown observation.
+Exact test counts, screenshots, built revision and native launch results are
+recorded in PR #83. A physical-device or unfamiliar-player review is not
+implied by automated or browser checks.

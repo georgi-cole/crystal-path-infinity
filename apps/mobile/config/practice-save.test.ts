@@ -5,6 +5,8 @@ import {
   createRun,
   getCurrentRow,
   PRACTICE_RNG,
+  PACED_RULESET_VERSION,
+  presentRowPressure,
   transitionRun,
 } from '@crystal-path-infinity/game-core';
 import type { RunState } from '@crystal-path-infinity/game-core';
@@ -17,8 +19,10 @@ import {
   readPracticeSettings,
   writePracticeCheckpoint,
   writePracticeSettings,
+  upgradePracticePacing,
 } from '../src/practice-save';
 import type { PracticeStorage } from '../src/practice-save';
+import { PRACTICE_RULESET_VERSION } from '../src/practice-rules';
 
 class MemoryStorage implements PracticeStorage {
   readonly map = new Map<string, string>();
@@ -66,6 +70,75 @@ function chooseSafe(state: RunState): RunState {
   return result.state;
 }
 describe('CPI-009 atomic local practice snapshots', () => {
+  it('upgrades v2 without resetting row pressure or granting a retroactive scan hold', () => {
+    const base = createRun(
+      {
+        runId: 'practice-v2-upgrade',
+        rulesetVersion: PACED_RULESET_VERSION,
+        routeRng: createPracticeCursor(1),
+        mysteryRng: createPracticeCursor(2),
+        observedAt: 0,
+      },
+      PRACTICE_RNG,
+    );
+    const old = transitionRun(
+      base,
+      { type: 'hint', row: base.currentRow, life: 0 },
+      { activeTimeMs: 5000, achievedAt: 5000, rng: PRACTICE_RNG },
+    ).state;
+    const next = upgradePracticePacing(old);
+    expect(next.rulesetVersion).toBe(PRACTICE_RULESET_VERSION);
+    expect(next.pacing).toEqual(old.pacing);
+    expect(presentRowPressure(next)).toEqual(presentRowPressure(old));
+    expect(next.pacing?.hintScanStartedAt).toBeUndefined();
+    expect(next.current.revealedSafeSide).toBe(old.current.revealedSafeSide);
+    expect(next.hints).toBe(old.hints);
+    const store = new MemoryStorage();
+    writePracticeCheckpoint(store, next);
+    const loaded = readPracticeCheckpoint(store);
+    expect(loaded.status === 'ready' && loaded.state).toEqual(next);
+  });
+  it('upgrades only a living legacy practice without rerolling or retroactive minute rewards', () => {
+    const old = transitionRun(
+      chooseSafe(newRun()),
+      { type: 'tick' },
+      {
+        activeTimeMs: 123_456,
+        achievedAt: 124_456,
+        rng: PRACTICE_RNG,
+      },
+    ).state;
+    const next = upgradePracticePacing(old);
+    expect(next.rulesetVersion).toBe(PRACTICE_RULESET_VERSION);
+    expect(next.pacing).toEqual({ rowEnteredAt: 123_456, nextSurvivalBonusAt: 180_000 });
+    expect(presentRowPressure(next)?.active).toBe(false);
+    expect(next.rows).toEqual(old.rows);
+    expect(next.stream.rng).toEqual(old.stream.rng);
+    expect(next.mysteryRng).toEqual(old.mysteryRng);
+    expect(next.currentRow).toBe(old.currentRow);
+    expect(next.lastClearedRow).toBe(old.lastClearedRow);
+    expect(next.sp).toBe(old.sp);
+    const store = new MemoryStorage();
+    writePracticeCheckpoint(store, next);
+    const loaded = readPracticeCheckpoint(store);
+    expect(loaded.status).toBe('ready');
+    if (loaded.status !== 'ready') throw new Error('Missing paced checkpoint');
+    expect(loaded.state).toEqual(next);
+    expect(upgradePracticePacing(loaded.state)).toBe(loaded.state);
+    expect(
+      upgradePracticePacing(
+        transitionRun(
+          old,
+          { type: 'end' },
+          {
+            activeTimeMs: old.activeTimeMs,
+            achievedAt: old.lastObservedAt,
+            rng: PRACTICE_RNG,
+          },
+        ).state,
+      ).rulesetVersion,
+    ).toBe('infinity-v1');
+  });
   it('restores exact SP, hints, route/mystery cursors and resolved rows', () => {
     const store = new MemoryStorage();
     let state = newRun();
