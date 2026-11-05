@@ -28,6 +28,8 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - run: npm ci --ignore-scripts
+      - name: Verify the Pages publication scope
+        run: node --test .github/scripts/pages-policy.test.mjs
       - run: npm run typecheck
       - name: Build and verify guest assets for the project URL
         run: node --experimental-strip-types .github/scripts/build-pages.mjs
@@ -37,10 +39,14 @@ jobs:
 
   deploy:
     name: Publish guest game
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    # The owner explicitly approved publishing this PR's guest preview without merging it.
+    if: (github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')) || (github.ref == 'refs/heads/design/obsidian-glass' && github.event_name == 'workflow_dispatch')
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    concurrency:
+      group: guest-pages-live
+      cancel-in-progress: false
     permissions:
       pages: write
       id-token: write
