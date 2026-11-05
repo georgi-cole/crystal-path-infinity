@@ -3,9 +3,31 @@ import { getGameplayLifecycle } from './gameplay-lifecycle';
 
 export type SoundtrackScene = 'home' | 'run' | 'ended';
 export const SOUNDTRACKS = {
-  home: { file: 'home-ambient.m4a', start: 0, loop: true, loopStart: 0, loopEnd: 0 },
-  run: { file: 'gameplay-tension.m4a', start: 13, loop: true, loopStart: 28, loopEnd: 181 },
-  ended: { file: 'run-ended.m4a', start: 14, loop: false, loopStart: 0, loopEnd: 0 },
+  home: {
+    file: 'home-ambient.m4a',
+    start: 0,
+    duration: null,
+    loop: true,
+    loopStart: 0,
+    loopEnd: 0,
+  },
+  run: {
+    file: 'gameplay-tension.m4a',
+    start: 14,
+    duration: null,
+    loop: true,
+    loopStart: 28,
+    loopEnd: 181,
+  },
+  // Only the owner's 2:47–3:34 excerpt is bundled; zero is 2:47 in deathrow.mp3.
+  ended: {
+    file: 'run-ended-deathrow.m4a',
+    start: 0,
+    duration: 47,
+    loop: false,
+    loopStart: 0,
+    loopEnd: 0,
+  },
 } as const;
 
 export function soundtrackOffset(scene: SoundtrackScene, elapsed: number) {
@@ -14,6 +36,22 @@ export function soundtrackOffset(scene: SoundtrackScene, elapsed: number) {
   return track.loopEnd && position >= track.loopEnd
     ? track.loopStart + ((position - track.loopEnd) % (track.loopEnd - track.loopStart))
     : position;
+}
+
+/** Sample-scheduled playback window, including an exact end after pause/resume. */
+export function soundtrackPlayback(
+  scene: SoundtrackScene,
+  elapsed: number,
+  bufferDuration: number,
+) {
+  const track = SOUNDTRACKS[scene];
+  const position = soundtrackOffset(scene, elapsed);
+  const offset = track.loop && !track.loopEnd ? position % bufferDuration : position;
+  const duration =
+    track.duration === null
+      ? null
+      : Math.max(0, Math.min(bufferDuration, track.start + track.duration) - offset);
+  return { offset, duration };
 }
 
 let context: AudioContext | null = null;
@@ -122,8 +160,8 @@ export function useSoundtrack(
           )
             return;
           const track = SOUNDTRACKS[selected];
-          const offset = soundtrackOffset(selected, elapsed);
-          if (offset >= buffer.duration) {
+          const { offset, duration } = soundtrackPlayback(selected, elapsed, buffer.duration);
+          if (offset >= buffer.duration || duration === 0) {
             completed = true;
             return;
           }
@@ -139,7 +177,8 @@ export function useSoundtrack(
             source = null;
             completed = true;
           };
-          source.start(0, offset);
+          if (duration === null) source.start(0, offset);
+          else source.start(0, offset, duration);
         })
         .catch(() => {
           /* Missing audio must never interrupt a crossing. */
