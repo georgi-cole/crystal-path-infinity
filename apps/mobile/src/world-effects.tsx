@@ -87,6 +87,24 @@ export function WorldPathCompanion({
   const id = useId().replace(/:/g, '');
   const osReduced = useSyncExternalStore(subscribeReduced, reducedSnapshot, serverReduced);
   const ref = useRef<SVGSVGElement>(null);
+  useLayoutEffect(() => {
+    const surface = ref.current;
+    if (!surface) return;
+    // The bridge intentionally stretches its perspective to a portrait viewport.
+    // Cancel that stretch for the character, keeping its feet in bridge coordinates.
+    const resize = () => {
+      const bounds = surface.getBoundingClientRect();
+      if (bounds.width && bounds.height)
+        surface.style.setProperty(
+          '--companion-y-correction',
+          String((bounds.width * 700) / (bounds.height * 900)),
+        );
+    };
+    const observer = new ResizeObserver(resize);
+    observer.observe(surface);
+    resize();
+    return () => observer.disconnect();
+  }, []);
   const feedback = cinematic?.feedback;
   const impact = cinematic?.phase === 'impact' && !!feedback;
   const travel = cinematic?.phase === 'travel' && !!feedback;
@@ -116,7 +134,7 @@ export function WorldPathCompanion({
     >
       <defs>
         <clipPath id={id}>
-          <rect x={rest.x - 48} y={rest.y - 96} width="96" height="96" />
+          <rect x="-48" y="-96" width="96" height="96" />
         </clipPath>
       </defs>
       <g key={`${cinematic?.id ?? 'idle'}-${cinematic?.phase ?? 'idle'}`}>
@@ -129,14 +147,18 @@ export function WorldPathCompanion({
           />
         )}
         <ellipse cx={rest.x} cy={rest.y - 2} rx="25" ry="5" fill="#020510" opacity=".4" />
-        <image
-          href={worldAsset(WORLD_ASSETS[theme].companion)}
-          x={rest.x - 48 - frame * 96}
-          y={rest.y - 96}
-          width="288"
-          height="96"
-          clipPath={`url(#${id})`}
-        />
+        <g transform={`translate(${rest.x} ${rest.y})`}>
+          <g className="cpi-world-actor-sprite">
+            <image
+              href={worldAsset(WORLD_ASSETS[theme].companion)}
+              x={-48 - frame * 96}
+              y="-96"
+              width="288"
+              height="96"
+              clipPath={`url(#${id})`}
+            />
+          </g>
+        </g>
       </g>
     </svg>
   );

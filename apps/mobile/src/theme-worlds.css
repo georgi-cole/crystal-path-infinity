@@ -136,6 +136,10 @@
 .cpi-world-path-companion {
   opacity: 0.86;
 }
+.cpi-world-actor-sprite {
+  transform-origin: 0 0;
+  transform: scaleY(var(--companion-y-correction, 1));
+}
 .cpi-world-impact {
   color: #a7eacb;
   fill: none;
