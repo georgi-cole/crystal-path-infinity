@@ -5,6 +5,7 @@ import { useTestStore } from './store-context';
 import { STORE_PRODUCTS, storeProduct, createTestReceiptId } from './store-catalog';
 import type { StoreProduct, ThemeId } from './store-catalog';
 import { ThemeArtwork } from './theme-art';
+import { StorePackArt } from './store-pack-art';
 import './store-vault.css';
 
 function StoreDialog({
@@ -86,6 +87,7 @@ export function StoreVault({ onTryTheme }: { onTryTheme?: (theme: ThemeId) => vo
   const { t, number, locale } = useLanguage();
   const { store, snapshot, error } = useTestStore();
   const [filter, setFilter] = useState<'worlds' | 'essentials' | 'collection'>('worlds');
+  const [resource, setResource] = useState<'credit' | 'sp' | 'hints'>('credit');
   const [dialog, setDialog] = useState<Dialog>(null);
   const [notice, setNotice] = useState('');
   const modal = dialog !== null;
@@ -125,12 +127,12 @@ export function StoreVault({ onTryTheme }: { onTryTheme?: (theme: ThemeId) => vo
     dialog?.kind === 'checkout' && snapshot.pending?.id === dialog.id ? snapshot.pending : null;
   const checkoutProduct = checkout ? storeProduct(checkout.productId) : null;
   return (
-    <section className="cpi-store-vault" aria-labelledby="cpi-store-title">
+    <section className={'cpi-store-vault is-' + filter} aria-labelledby="cpi-store-title">
       <div inert={modal}>
         <header className="cpi-store-heading">
           <span>{t('store.eyebrow')}</span>
           <h1 id="cpi-store-title" data-menu-heading tabIndex={-1}>
-            {t('vault.title')}
+            {t(filter === 'essentials' ? 'vault.catalogTitle' : 'vault.title')}
           </h1>
           <p>{t('vault.intro')}</p>
           <span className="cpi-store-status">
@@ -225,20 +227,13 @@ export function StoreVault({ onTryTheme }: { onTryTheme?: (theme: ThemeId) => vo
                     <div className="cpi-vault-world-picture">
                       <ThemeArtwork theme={theme} />
                       <span className="cpi-vault-world-tag">
-                        {t(
-                          owned
-                            ? 'vault.owned'
-                            : theme === 'chaos'
-                              ? 'vault.chaosMood'
-                              : 'vault.jellyMood',
-                        )}
+                        {t(owned ? 'vault.owned' : 'vault.originalWorld')}
                       </span>
                     </div>
                     <div className="cpi-vault-world-copy">
-                      <span className="cpi-vault-kicker">{t('store.themes')}</span>
                       <h2>{t(product.name)}</h2>
-                      <p>{t(theme === 'chaos' ? 'vault.chaosDetail' : 'vault.jellyDetail')}</p>
-                      <small>{t('vault.included')}</small>
+                      <p>{t(theme === 'chaos' ? 'vault.chaosMood' : 'vault.jellyMood')}</p>
+                      <small>{t('vault.worldFeatures')}</small>
                       <div className="cpi-vault-world-actions">
                         <button
                           type="button"
@@ -246,25 +241,21 @@ export function StoreVault({ onTryTheme }: { onTryTheme?: (theme: ThemeId) => vo
                           disabled={
                             !store || !!error || !!snapshot.pending || snapshot.equipped === theme
                           }
+                          aria-label={
+                            owned
+                              ? undefined
+                              : t('vault.unlock') + ' · ' + t(product.name) + ' · ' + price(product)
+                          }
                           onClick={() => (owned ? act(() => store?.equip(theme)) : buy(product))}
                         >
-                          {t(
-                            owned
-                              ? snapshot.equipped === theme
-                                ? 'vault.equipped'
-                                : 'vault.equip'
-                              : 'vault.unlock',
-                          )}
+                          {owned
+                            ? t(snapshot.equipped === theme ? 'vault.equipped' : 'vault.equip')
+                            : t('vault.testBuyPrice', { price: price(product) })}
                         </button>
                         <button type="button" onClick={() => setDialog({ kind: 'theme', theme })}>
-                          {t('vault.preview')}
+                          {t('vault.explore')}
                         </button>
                       </div>
-                      {!owned && (
-                        <span className="cpi-vault-price">
-                          {t('vault.testPrice', { price: price(product) })}
-                        </span>
-                      )}
                     </div>
                   </article>
                 );
@@ -273,16 +264,34 @@ export function StoreVault({ onTryTheme }: { onTryTheme?: (theme: ThemeId) => vo
         )}
         {filter === 'essentials' && (
           <>
-            {(['credit', 'sp', 'hints'] as const).map((kind) => (
+            <nav className="cpi-vault-resource-filters" aria-label={t('vault.essentials')}>
+              {(['credit', 'sp', 'hints'] as const).map((kind) => (
+                <button
+                  type="button"
+                  key={kind}
+                  aria-pressed={resource === kind}
+                  onClick={() => setResource(kind)}
+                >
+                  <span aria-hidden="true">
+                    {kind === 'credit' ? '↻' : kind === 'sp' ? '✦' : '◈'}
+                  </span>
+                  {t(
+                    kind === 'credit'
+                      ? 'vault.continuations'
+                      : kind === 'sp'
+                        ? 'vault.reserve'
+                        : 'vault.hintsShort',
+                  )}
+                </button>
+              ))}
+            </nav>
+            {[resource].map((kind) => (
               <section
                 className="cpi-vault-shelf"
                 key={kind}
                 aria-labelledby={'vault-shelf-' + kind}
               >
                 <header>
-                  <span className={'cpi-vault-resource-icon is-' + kind} aria-hidden="true">
-                    {kind === 'credit' ? '↻' : kind === 'sp' ? '✦' : '◈'}
-                  </span>
                   <div>
                     <h2 id={'vault-shelf-' + kind}>
                       {t(
@@ -296,37 +305,63 @@ export function StoreVault({ onTryTheme }: { onTryTheme?: (theme: ThemeId) => vo
                     <p>
                       {t(
                         kind === 'credit'
-                          ? 'vault.creditRules'
+                          ? 'vault.creditShort'
                           : kind === 'sp'
-                            ? 'vault.spRules'
-                            : 'vault.hintRules',
+                            ? 'vault.spShort'
+                            : 'vault.hintShort',
                       )}
                     </p>
                   </div>
                 </header>
                 <div className="cpi-vault-packs">
-                  {STORE_PRODUCTS.filter((product) => product.kind === kind).map((product) => (
-                    <article key={product.id} className="cpi-vault-pack">
-                      <span className="cpi-vault-pack-number">
-                        {number(product.quantity)}
-                        <small>{kind === 'sp' ? 'SP' : kind === 'credit' ? '↻' : '◈'}</small>
-                      </span>
-                      <h3>{t(product.name)}</h3>
-                      <p>{amount(product)}</p>
-                      <button
-                        type="button"
-                        disabled={!store || !!error || !!snapshot.pending}
-                        onClick={() => buy(product)}
-                      >
-                        {t('vault.testAdd')}
-                      </button>
-                      <small>{t('vault.testPrice', { price: price(product) })}</small>
-                    </article>
-                  ))}
+                  {STORE_PRODUCTS.filter((product) => product.kind === kind).map(
+                    (product, index, products) => (
+                      <article key={product.id} className={'cpi-vault-pack is-' + kind}>
+                        <StorePackArt kind={kind} tier={index} />
+                        {index === products.length - 1 && (
+                          <span className="cpi-vault-pack-tag">{t('vault.bestValue')}</span>
+                        )}
+                        <span className="cpi-vault-pack-number">
+                          {number(product.quantity)}
+                          <small>
+                            {kind === 'sp'
+                              ? 'SP'
+                              : t(kind === 'credit' ? 'vault.creditsUnit' : 'vault.hintsUnit')}
+                          </small>
+                        </span>
+                        <h3>{t(product.name)}</h3>
+                        <button
+                          type="button"
+                          disabled={!store || !!error || !!snapshot.pending}
+                          aria-label={t('vault.testBuyLabel', {
+                            name: t(product.name),
+                            amount: amount(product),
+                            price: price(product),
+                          })}
+                          onClick={() => buy(product)}
+                        >
+                          <span>{t('vault.testBuyPrice', { price: price(product) })}</span>
+                          <span aria-hidden="true">+</span>
+                        </button>
+                      </article>
+                    ),
+                  )}
                 </div>
+                <details className="cpi-vault-details">
+                  <summary>{t('vault.howItWorks')}</summary>
+                  <p>
+                    {t(
+                      kind === 'credit'
+                        ? 'vault.creditRules'
+                        : kind === 'sp'
+                          ? 'vault.spRules'
+                          : 'vault.hintRules',
+                    )}
+                  </p>
+                  <p>{t('vault.assistedRules')}</p>
+                </details>
               </section>
             ))}
-            <p className="cpi-vault-rules">{t('vault.assistedRules')}</p>
           </>
         )}
         <footer className="cpi-vault-footer">

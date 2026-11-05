@@ -9,9 +9,13 @@ in PR #83 and the owner's approved continuation/SP proposal. Payments remain
 - Worlds, Essentials and My collection replace the category-only storefront.
   Every checkout says “Test store · No real charges”; displayed EUR prices are
   editable reference prices, not actual platform products or price quotes.
-- Continuation packs contain 3, 10 or 25 individual credits. SP reserve packs
+- Continuation packs contain 3, 5, 10 or 25 individual credits. SP reserve packs
   contain 100, 500, 1,000, 2,500, 5,000 or 10,000 SP. Hint packs contain 3 or 10.
   Unused resources persist across runs without expiry or automatic spending.
+  Resource shelves switch between continuations, SP and hints instead of stacking
+  vertically. Compact illustrated cards pair live quantities with a single test
+  price/action. Complete use limits and Assisted eligibility are expandable;
+  checkout still displays the product and test-only disclosure before approval.
 - A checkout can be approved, cancelled, failed or left pending. A pending
   purchase survives reload without granting anything. Completion is idempotent;
   owned themes cannot be repurchased. Reset removes only test store data.
@@ -84,5 +88,8 @@ localized prices, verified server-side receipts, authoritative account wallets,
 refund/revocation handling and actual Apple/Google test-store transactions.
 Local test balances and cosmetic unlocks must never migrate into live purchases.
 Signed physical-device billing/ads and production ranked assisted standings are
-not represented as implemented or tested. This change does not enable live
-services, submit a store listing, publish Pages, or authorize a public release.
+not represented as implemented or tested. The owner authorized updating the
+GitHub Pages guest preview on 6 November 2026. Its build asserts simulated payment
+mode and records that boundary in deployment-info.json. Publication is manual
+from the explicitly allowed test-store branch (or main); PR events cannot publish.
+This does not enable live services, submit a store listing or authorize live sales.

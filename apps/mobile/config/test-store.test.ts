@@ -79,6 +79,20 @@ function purchase(store: ReturnType<typeof createTestStore>, product: string, id
 }
 
 describe('test-store economy and persistence', () => {
+  it.each([3, 5, 10, 25])(
+    'delivers a %i-credit pack once and retains it after reload',
+    (quantity) => {
+      const storage = new Storage();
+      const store = createTestStore(storage);
+      store.beginPurchase('test.credits.' + quantity, 'receipt');
+      expect(store.snapshot().credits).toBe(0);
+      store.completePurchase('receipt');
+      const reloaded = createTestStore(storage);
+      expect(reloaded.snapshot().credits).toBe(quantity);
+      reloaded.completePurchase('receipt');
+      expect(reloaded.snapshot().credits).toBe(quantity);
+    },
+  );
   it('invalidates a cached test Resume after reset while preserving historical practice', () => {
     const store = createTestStore(new Storage());
     store.saveRun(initial());
@@ -281,7 +295,7 @@ describe('test-store presentation and assets', () => {
       100, 500, 1000, 2500, 5000, 10000,
     ]);
     expect(STORE_PRODUCTS.filter((p) => p.kind === 'credit').map((p) => p.quantity)).toEqual([
-      3, 10, 25,
+      3, 5, 10, 25,
     ]);
     for (const theme of ['chaos', 'jelly'] as const) {
       const html = renderToStaticMarkup(createElement(ThemeArtwork, { theme }));

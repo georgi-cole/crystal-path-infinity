@@ -866,24 +866,27 @@ async function ios() {
   const provisioningBudgetsMs = iosProvisioningBudgetsMs;
   const available = JSON.parse(text('xcrun', ['simctl', 'list', '--json', 'devices', 'available']));
   save('ios-simulators.json', JSON.stringify(available, null, 2));
-  save('ios-runtimes.json', text('xcrun', ['simctl', 'list', '--json', 'runtimes']));
+  const runtimes = JSON.parse(text('xcrun', ['simctl', 'list', '--json', 'runtimes']));
+  save('ios-runtimes.json', JSON.stringify(runtimes, null, 2));
   const runtime = 'com.apple.CoreSimulator.SimRuntime.iOS-26-5';
-  const devices = available.devices[runtime] ?? [];
-  const device =
-    devices.find((item) => item.name === 'iPhone 17' && item.isAvailable) ??
-    devices.find((item) => item.name.startsWith('iPhone') && item.isAvailable);
-  assert.ok(device, 'The Xcode 26.6 smoke requires an installed iPhone / iOS 26.5 simulator');
-  assert.ok(device.deviceTypeIdentifier, 'Simulator device type is missing');
+  assert.ok(
+    runtimes.runtimes.some((item) => item.identifier === runtime && item.isAvailable),
+    'The Xcode 26.6 smoke requires the installed iOS 26.5 runtime',
+  );
+  const types = JSON.parse(text('xcrun', ['simctl', 'list', '--json', 'devicetypes']));
+  save('ios-device-types.json', JSON.stringify(types, null, 2));
+  // The 7 GB hosted Mac reached 0% idle CPU and >2 GB compressed memory before
+  // CPI installation. An SE has 750x1334 pixels rather than 1206x2622 and no
+  // simulated Apple Intelligence hardware. Keep the SAME iOS runtime, fresh
+  // device, two processes and every app/bridge/lifecycle assertion.
+  const device = types.devicetypes.find(
+    (item) => item.identifier === 'com.apple.CoreSimulator.SimDeviceType.iPhone-SE-3rd-generation',
+  );
+  assert.ok(device, 'The native check requires the iPhone SE (3rd generation) device type');
   // Own a fresh device so the check neither depends on nor changes a precreated
   // runner/personal simulator's saved state. Only this UDID is cleaned up.
   const simulatorName = `CPI003-${Date.now()}`;
-  const udid = text('xcrun', [
-    'simctl',
-    'create',
-    simulatorName,
-    device.deviceTypeIdentifier,
-    runtime,
-  ]);
+  const udid = text('xcrun', ['simctl', 'create', simulatorName, device.identifier, runtime]);
   assert.match(udid, /^[0-9A-F-]{36}$/i, 'simctl did not return a simulator UUID');
   let child;
   let boundary;
@@ -899,7 +902,7 @@ async function ios() {
     JSON.stringify(
       {
         name: simulatorName,
-        deviceType: device.deviceTypeIdentifier,
+        deviceType: device.identifier,
         udid,
         runtime,
         provisioningBudgetsMs,

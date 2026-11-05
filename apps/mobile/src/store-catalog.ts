@@ -35,6 +35,7 @@ export interface StoreProduct {
 /** Reference prices for the simulator, never a billing quote or a live product identifier. */
 export const STORE_PRODUCTS: readonly StoreProduct[] = [
   { id: 'test.credits.3', kind: 'credit', quantity: 3, name: 'vault.breath', price: 0.99 },
+  { id: 'test.credits.5', kind: 'credit', quantity: 5, name: 'vault.encore', price: 1.49 },
   { id: 'test.credits.10', kind: 'credit', quantity: 10, name: 'vault.notToday', price: 2.49 },
   { id: 'test.credits.25', kind: 'credit', quantity: 25, name: 'vault.stillHere', price: 4.99 },
   ...([100, 500, 1000, 2500, 5000, 10000] as const).map((quantity, i) => ({
