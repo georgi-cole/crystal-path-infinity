@@ -163,6 +163,7 @@ export function PrismBridge({
   onMystery,
   preview = false,
   reducedMotion = false,
+  omen = null,
 }: {
   rows?: readonly PresentedRow[];
   feedback?: SceneFeedback | null;
@@ -171,6 +172,7 @@ export function PrismBridge({
   onMystery?: () => void;
   preview?: boolean;
   reducedMotion?: boolean;
+  omen?: TileSide | null;
 }) {
   const id = useId().replace(/:/g, ''),
     { t, number } = useLanguage();
@@ -394,6 +396,7 @@ export function PrismBridge({
               >
                 {row.phase === 'current' && (
                   <>
+                    {omen === side && <span className="cpi-omen-hint">◈ 70%</span>}
                     <span className="cpi-pane-direction" aria-hidden="true">
                       {side === 'left' ? '↖' : '↗'}
                     </span>

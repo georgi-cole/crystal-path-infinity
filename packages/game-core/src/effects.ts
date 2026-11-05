@@ -1,5 +1,12 @@
 import { addSafeInteger, assertNonNegativeInteger } from './numbers.ts';
-import { EFFECT_DURATION_MS, EFFECT_TICK_MS, MAX_ACTIVE_EFFECTS, MYSTERY_TABLE } from './rules.ts';
+import {
+  EFFECT_DURATION_MS,
+  EFFECT_TICK_MS,
+  MAX_ACTIVE_EFFECTS,
+  getRuleset,
+  RULESET_VERSION,
+} from './rules.ts';
+import { isPactKind } from './pacts.ts';
 import type { ActiveEffect, EffectKind, TimedEffectKind } from './types.ts';
 
 export interface MysteryApplied {
@@ -9,23 +16,36 @@ export interface MysteryApplied {
   readonly label: string;
 }
 
-export function rollMysteryEffect(sample: number): EffectKind {
+export function rollMysteryEffect(
+  sample: number,
+  rulesetVersion = RULESET_VERSION,
+  allowPacts = true,
+): EffectKind {
   if (!Number.isFinite(sample) || sample < 0 || sample >= 1) {
     throw new RangeError('Mystery sample must be finite and in [0, 1).');
   }
-  const total = MYSTERY_TABLE.reduce((sum, entry) => sum + entry.weight, 0);
+  const table = getRuleset(rulesetVersion).mysteryTable.filter(
+    (entry) => allowPacts || !isPactKind(entry.kind),
+  );
+  const total = table.reduce((sum, entry) => sum + entry.weight, 0);
   const roll = sample * total;
   let cumulative = 0;
-  for (const entry of MYSTERY_TABLE) {
+  for (const entry of table) {
     cumulative += entry.weight;
     if (roll < cumulative) return entry.kind;
   }
-  return MYSTERY_TABLE[MYSTERY_TABLE.length - 1].kind;
+  return table[table.length - 1].kind;
 }
 
 export function applyMysteryEffect(kind: EffectKind, now: number): MysteryApplied {
   assertNonNegativeInteger(now, 'Active time');
   switch (kind) {
+    case 'blood_oath':
+    case 'false_oracle':
+    case 'hungry_vault':
+    case 'borrowed_time':
+    case 'soul_exchange':
+      return { spDelta: 0, hintDelta: 0, addedEffect: null, label: kind };
     case 'heal_10':
       return { spDelta: 10, hintDelta: 0, addedEffect: null, label: '+10 SP' };
     case 'heal_20':

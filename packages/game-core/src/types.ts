@@ -14,7 +14,22 @@ export type EffectKind =
   | 'lose_hint'
   | 'fragility_5s'
   | 'drain_5s'
-  | 'inversion_5s';
+  | 'inversion_5s'
+  | PactKind;
+
+export type PactKind =
+  'blood_oath' | 'false_oracle' | 'hungry_vault' | 'borrowed_time' | 'soul_exchange';
+export type PactOption = 'accept' | 'decline' | 'cashout' | 'settle' | 'sp' | 'hint';
+
+/** A bounded, row-based contract. No hidden roll or future safe side is stored here. */
+export interface MysteryPact {
+  readonly kind: PactKind;
+  readonly phase: 'offered' | 'active';
+  readonly rowsLeft: number;
+  readonly bank: number;
+  /** A deliberately fallible prediction, never a confirmed hint. */
+  readonly omen: TileSide | null;
+}
 
 export type TimedEffectKind = Extract<EffectKind, `${string}_5s`>;
 
@@ -126,6 +141,8 @@ export interface RunState {
   readonly activeTimeMs: number;
   readonly lastObservedAt: number;
   readonly effects: readonly ActiveEffect[];
+  /** Absent in legacy v1 checkpoints. Only the versioned pact ruleset can use this. */
+  readonly pact?: MysteryPact | null;
   readonly buffer: BufferPolicy;
   /** Zero-based index of rows[0], independent of bounded array positions. */
   readonly bufferOffset: Decimal;
@@ -172,6 +189,12 @@ export type RunCommand =
     }
   | { readonly type: 'hint'; readonly row: Decimal; readonly life: number }
   | { readonly type: 'mystery'; readonly row: Decimal; readonly life: number }
+  | {
+      readonly type: 'pact';
+      readonly row: Decimal;
+      readonly life: number;
+      readonly option: PactOption;
+    }
   | { readonly type: 'tick' }
   | { readonly type: 'end'; readonly forfeitGrantedReward?: boolean }
   | ({ readonly type: 'mark-reward-pending' } & PendingReward)
@@ -201,6 +224,9 @@ export type RejectionReason =
   | 'already-revealed'
   | 'no-mystery'
   | 'mystery-consumed'
+  | 'pact-decision-required'
+  | 'invalid-pact-choice'
+  | 'oracle-blocks-hints'
   | 'died-before-command'
   | 'wrong-death'
   | 'wrong-revive-ordinal'
@@ -220,9 +246,23 @@ interface EventTime {
 
 export type RunEvent = EventTime &
   (
-    | { readonly type: 'effects-ticked'; readonly delta: number; readonly sp: number }
+    | {
+        readonly type: 'effects-ticked';
+        readonly delta: number;
+        readonly appliedDelta?: number;
+        readonly sp: number;
+      }
     | { readonly type: 'effects-expired'; readonly kinds: readonly TimedEffectKind[] }
     | { readonly type: 'hint-used'; readonly row: Decimal; readonly safeSide: TileSide }
+    | {
+        readonly type: 'pact-resolved';
+        readonly kind: PactKind;
+        readonly option: PactOption | 'step';
+        readonly outcome: 'accepted' | 'declined' | 'won' | 'lost' | 'banked' | 'paid' | 'expired';
+        readonly spDelta: number;
+        readonly hintDelta: number;
+        readonly bank: number;
+      }
     | {
         readonly type: 'mystery-resolved';
         readonly row: Decimal;

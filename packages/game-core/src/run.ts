@@ -14,6 +14,14 @@ import {
 import { assertRandomCursor, drawRandom } from './random.ts';
 import { assertRowStream, createRowStream, takeRows } from './rows.ts';
 import {
+  assertPact,
+  choosePact,
+  drawOmen,
+  isPactKind,
+  offerPact,
+  resolvePactStep,
+} from './pacts.ts';
+import {
   clampSp,
   EFFECT_DURATION_MS,
   EFFECT_TICK_MS,
@@ -26,6 +34,7 @@ import {
   MAX_REVIVES,
   MAX_SP,
   RULESET_VERSION,
+  PACT_RULESET_VERSION,
   STARTING_HINTS,
   STARTING_SP,
 } from './rules.ts';
@@ -88,6 +97,7 @@ export function createRun(options: CreateRunOptions, rng: RandomSource): RunStat
     activeTimeMs,
     lastObservedAt: options.observedAt,
     effects: [],
+    ...(rulesetVersion === PACT_RULESET_VERSION ? { pact: null } : {}),
     buffer,
     bufferOffset: '0',
     rows: generated.rows,
@@ -110,6 +120,7 @@ export function createRun(options: CreateRunOptions, rng: RandomSource): RunStat
 export function assertRunState(state: RunState, rng?: RandomSource): void {
   if (state.schemaVersion !== 1) throw new RangeError('Unsupported run schema.');
   getRuleset(state.rulesetVersion);
+  assertPact(state);
   assertNonEmpty(state.runId, 'Run ID');
   assertBuffer(state.buffer);
   decimal(state.lastClearedRow);
@@ -291,7 +302,13 @@ function finish(state: RunState, reason: EndReason, events: RunEvent[]): RunStat
     hints: state.hints,
   };
   events.push({ ...eventTime(state), type: 'run-ended', result: finalResult });
-  return { ...state, status: 'finished', effects: [], result: finalResult };
+  return {
+    ...state,
+    status: 'finished',
+    effects: [],
+    ...(state.pact ? { pact: null } : {}),
+    result: finalResult,
+  };
 }
 
 function die(state: RunState, cause: DeathCause, events: RunEvent[]): RunState {
@@ -311,6 +328,7 @@ function die(state: RunState, cause: DeathCause, events: RunEvent[]): RunState {
     deaths: sequence,
     death,
     pendingReward: null,
+    ...(state.pact ? { pact: null } : {}),
   };
   events.push({ ...eventTime(dead), type: 'death', death });
   return state.revivesApplied === MAX_REVIVES ? finish(dead, 'revive-limit', events) : dead;
@@ -318,6 +336,25 @@ function die(state: RunState, cause: DeathCause, events: RunEvent[]): RunState {
 
 /** At most nine pulses per remaining effect, independent of an arbitrarily large clock jump. */
 function settleTime(state: RunState, context: TransitionContext, events: RunEvent[]): RunState {
+  // Reading a contract must not burn the five-second effects already owned.
+  // This deterministic freeze also survives checkpoint/recovery, with no UI timer authority.
+  if (state.pact?.phase === 'offered') {
+    const elapsed = context.activeTimeMs - state.activeTimeMs;
+    return {
+      ...state,
+      activeTimeMs: context.activeTimeMs,
+      lastObservedAt: context.achievedAt,
+      effects: state.effects.map((effect) => ({
+        ...effect,
+        startedAt: addSafeInteger(effect.startedAt, elapsed, 'Frozen effect start'),
+        expiresAt: addSafeInteger(effect.expiresAt, elapsed, 'Frozen effect expiry'),
+        nextTickAt:
+          effect.nextTickAt === null
+            ? null
+            : addSafeInteger(effect.nextTickAt, elapsed, 'Frozen effect tick'),
+      })),
+    };
+  }
   let next = { ...state, lastObservedAt: context.achievedAt };
   while (next.effects.length > 0) {
     let due = Number.MAX_SAFE_INTEGER;
@@ -338,6 +375,7 @@ function settleTime(state: RunState, context: TransitionContext, events: RunEven
         pulses += 1;
         return { ...effect, nextTickAt: addSafeInteger(due, EFFECT_TICK_MS, 'Next effect tick') };
       });
+    const previousSp = next.sp;
     next = { ...next, effects, activeTimeMs: due, sp: clampSp(next.sp + delta) };
     if (expired.length)
       events.push({
@@ -345,7 +383,14 @@ function settleTime(state: RunState, context: TransitionContext, events: RunEven
         type: 'effects-expired',
         kinds: expired.map((effect) => effect.kind),
       });
-    if (pulses) events.push({ ...eventTime(next), type: 'effects-ticked', delta, sp: next.sp });
+    if (pulses)
+      events.push({
+        ...eventTime(next),
+        type: 'effects-ticked',
+        delta,
+        appliedDelta: next.sp - previousSp,
+        sp: next.sp,
+      });
     if (next.sp === 0) return die(next, 'drain', events);
   }
   return { ...next, activeTimeMs: context.activeTimeMs };
@@ -469,6 +514,7 @@ function rewardTransition(
           death: null,
           sp: receipt.sp,
           effects: [],
+          ...(state.pact ? { pact: null } : {}),
           revivesApplied: state.revivesApplied + 1,
           reviveReceipts: state.reviveReceipts.map((previous) =>
             previous === existing ? receipt : previous,
@@ -518,6 +564,9 @@ export function transitionRun(
   if (state.status === 'playing' && next.status !== 'playing') {
     return result(next, events, command.type === 'tick' ? null : 'died-before-command');
   }
+  if (next.pact?.phase === 'offered' && ['choose', 'hint', 'mystery'].includes(command.type)) {
+    return result(next, events, 'pact-decision-required');
+  }
   switch (command.type) {
     case 'tick':
       return result(next, events);
@@ -536,6 +585,8 @@ export function transitionRun(
       return result(finish(next, next.death ? 'death-declined' : 'user-ended', events), events);
     }
     case 'hint': {
+      if (next.pact?.kind === 'false_oracle' && next.pact.phase === 'active')
+        return result(next, events, 'oracle-blocks-hints');
       if (next.current.revealedSafeSide !== null) return result(next, events, 'already-revealed');
       if (next.hints === 0) return result(next, events, 'no-hints');
       const safeSide = getCurrentRow(next).safeSide;
@@ -551,7 +602,7 @@ export function transitionRun(
       if (!getCurrentRow(next).hasMystery) return result(next, events, 'no-mystery');
       if (next.current.mysteryOutcome !== null) return result(next, events, 'mystery-consumed');
       const draw = drawRandom(next.mysteryRng, context.rng);
-      const kind = rollMysteryEffect(draw.value);
+      const kind = rollMysteryEffect(draw.value, next.rulesetVersion, !next.pact);
       const applied = applyMysteryEffect(kind, next.activeTimeMs);
       const hints =
         applied.hintDelta < 0
@@ -572,8 +623,31 @@ export function transitionRun(
         hints,
         mysteryRng: draw.cursor,
         effects: mergeEffect(next.effects, applied.addedEffect, next.activeTimeMs),
+        ...(isPactKind(kind) ? { pact: offerPact(kind) } : {}),
         current: { ...next.current, mysteryOutcome: kind },
       };
+      return result(sp === 0 ? die(next, 'mystery', events) : next, events);
+    }
+    case 'pact': {
+      const pact = next.pact;
+      const change = choosePact(next, command.option, getCurrentRow(next).safeSide, context.rng);
+      if (!pact || !change) return result(next, events, 'invalid-pact-choice');
+      const sp = clampSp(next.sp + change.spDelta);
+      const hints =
+        change.hintDelta < 0
+          ? Math.max(0, next.hints + change.hintDelta)
+          : addSafeInteger(next.hints, change.hintDelta, 'Hints');
+      events.push({
+        ...eventTime(next),
+        type: 'pact-resolved',
+        kind: pact.kind,
+        option: command.option,
+        outcome: change.outcome,
+        spDelta: sp - next.sp,
+        hintDelta: hints - next.hints,
+        bank: change.pact?.bank ?? 0,
+      });
+      next = { ...next, sp, hints, pact: change.pact, mysteryRng: change.cursor };
       return result(sp === 0 ? die(next, 'mystery', events) : next, events);
     }
     case 'choose': {
@@ -582,7 +656,9 @@ export function transitionRun(
       const resolution = wrong
         ? resolveWrongTileDelta(getRowBandDamage(next.currentRow), next.effects, next.activeTimeMs)
         : { delta: 0, newEffects: [...next.effects] };
-      const sp = clampSp(next.sp + resolution.delta);
+      const pactChange = resolvePactStep(next, wrong, resolution.delta);
+      const tileSp = clampSp(next.sp + resolution.delta);
+      const sp = clampSp(next.sp + resolution.delta + (pactChange?.spDelta ?? 0));
       events.push({
         ...eventTime(next),
         type: 'choice-resolved',
@@ -592,17 +668,37 @@ export function transitionRun(
         spDelta: sp - next.sp,
         consumedKind: resolution.consumedKind ?? null,
       });
+      if (pactChange && next.pact)
+        events.push({
+          ...eventTime(next),
+          type: 'pact-resolved',
+          kind: next.pact.kind,
+          option: 'step',
+          outcome: pactChange.outcome,
+          spDelta: sp - clampSp(next.sp + resolution.delta),
+          hintDelta: 0,
+          bank: pactChange.pact?.bank ?? 0,
+        });
       next = {
         ...next,
         sp,
         effects: resolution.newEffects,
+        ...(pactChange ? { pact: pactChange.pact } : {}),
         current: {
           ...next.current,
           revealedSafeSide: row.safeSide,
           lastChoice: { side: command.side, wrong },
         },
       };
-      if (sp === 0) return result(die(next, 'wrong_tile', events), events);
+      if (sp === 0)
+        return result(
+          die(
+            next,
+            pactChange && pactChange.spDelta < 0 && tileSp > 0 ? 'mystery' : 'wrong_tile',
+            events,
+          ),
+          events,
+        );
       const clearedRow = next.currentRow;
       next = keepWindow(
         {
@@ -616,6 +712,10 @@ export function transitionRun(
         },
         context.rng,
       );
+      if (next.pact?.kind === 'false_oracle' && next.pact.phase === 'active') {
+        const omen = drawOmen(getCurrentRow(next).safeSide, next.mysteryRng, context.rng);
+        next = { ...next, mysteryRng: omen.cursor, pact: { ...next.pact, omen: omen.omen } };
+      }
       events.push({
         ...eventTime(next),
         type: 'row-cleared',

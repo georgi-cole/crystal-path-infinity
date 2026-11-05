@@ -180,7 +180,7 @@ export function createPracticeRuntime(options: PracticeRuntimeOptions): Practice
     bind(command) {
       const bound = session.bind(command);
       const epoch = lifecycleEpoch;
-      const gameplay = ['choose', 'hint', 'mystery', 'tick'].includes(command.type);
+      const gameplay = ['choose', 'hint', 'mystery', 'pact', 'tick'].includes(command.type);
       const scoped = !('deathId' in command);
       function blocked(): TimedSessionResult | undefined {
         if (disposed) return bound();

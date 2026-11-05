@@ -6,6 +6,8 @@ import {
   createRun,
   getCurrentRow,
   RULESET_VERSION,
+  PACT_RULESET_VERSION,
+  PACT_OPTIONS,
   transitionRun,
 } from '@crystal-path-infinity/game-core';
 import type {
@@ -14,6 +16,7 @@ import type {
   RunCommand,
   RunState,
   TileSide,
+  PactOption,
 } from '@crystal-path-infinity/game-core';
 
 /** Populated by verified server authentication, never from a request body. */
@@ -38,6 +41,12 @@ export type RankedCommand =
       readonly side: TileSide;
     }
   | { readonly type: 'hint' | 'mystery'; readonly row: string; readonly life: number }
+  | {
+      readonly type: 'pact';
+      readonly row: string;
+      readonly life: number;
+      readonly option: PactOption;
+    }
   | { readonly type: 'heartbeat' }
   | { readonly type: 'pause' }
   | { readonly type: 'resume' }
@@ -77,6 +86,7 @@ export interface RankedSnapshot {
   readonly current: RunState['current'] & { readonly hasMystery: boolean };
   readonly history: RunState['resolutions'];
   readonly effects: RunState['effects'];
+  readonly pact?: RunState['pact'];
   readonly death: Pick<NonNullable<RunState['death']>, 'id' | 'fatalRow' | 'cause'> | null;
   readonly revivesGranted: number;
   readonly revivesApplied: number;
@@ -228,10 +238,15 @@ function parseCommand(value: unknown): RankedCommand {
     object(value, ['type']);
     return { type };
   }
-  if (type !== 'choose' && type !== 'hint' && type !== 'mystery') fail('invalid-request');
+  if (type !== 'choose' && type !== 'hint' && type !== 'mystery' && type !== 'pact')
+    fail('invalid-request');
   const input = object(
     value,
-    type === 'choose' ? ['type', 'row', 'life', 'side'] : ['type', 'row', 'life'],
+    type === 'choose'
+      ? ['type', 'row', 'life', 'side']
+      : type === 'pact'
+        ? ['type', 'row', 'life', 'option']
+        : ['type', 'row', 'life'],
   );
   const row = integer(input.row, true);
   const life = input.life;
@@ -241,6 +256,14 @@ function parseCommand(value: unknown): RankedCommand {
   if (type === 'choose') {
     if (input.side !== 'left' && input.side !== 'right') fail('invalid-request');
     return { type, row, life, side: input.side };
+  }
+  if (type === 'pact') {
+    if (
+      typeof input.option !== 'string' ||
+      !(PACT_OPTIONS as readonly string[]).includes(input.option)
+    )
+      fail('invalid-request');
+    return { type, row, life, option: input.option as PactOption };
   }
   return { type, row, life };
 }
@@ -283,6 +306,19 @@ export function rankedSnapshot(record: StoredRankedRun): RankedSnapshot {
       expiresAt: effect.expiresAt,
       nextTickAt: effect.nextTickAt,
     })),
+    ...(state.rulesetVersion === PACT_RULESET_VERSION
+      ? {
+          pact: state.pact
+            ? {
+                kind: state.pact.kind,
+                phase: state.pact.phase,
+                rowsLeft: state.pact.rowsLeft,
+                bank: state.pact.bank,
+                omen: state.pact.omen,
+              }
+            : null,
+        }
+      : {}),
     death: state.death
       ? { id: state.death.id, fatalRow: state.death.fatalRow, cause: state.death.cause }
       : null,

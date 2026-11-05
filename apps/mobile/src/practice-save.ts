@@ -4,6 +4,7 @@ import {
   MAX_REVIVES,
   PRACTICE_RNG,
   RULESET_VERSION,
+  PACT_RULESET_VERSION,
 } from '@crystal-path-infinity/game-core';
 import type { RunState } from '@crystal-path-infinity/game-core';
 
@@ -91,7 +92,7 @@ function validatePracticeState(state: RunState): void {
   assertRunState(state, PRACTICE_RNG);
   if (
     !state.runId.startsWith('practice-') ||
-    state.rulesetVersion !== RULESET_VERSION ||
+    ![RULESET_VERSION, PACT_RULESET_VERSION].includes(state.rulesetVersion) ||
     state.rows.length > MAX_BUFFER_ROWS ||
     state.resolutions.length > state.buffer.history ||
     state.reviveReceipts.length > MAX_REVIVES
@@ -234,23 +235,38 @@ export function writePracticeSettings(storage: PracticeStorage, settings: Practi
 }
 
 /** Strictly local practice best, never an official ranked result or upload token. */
-export function recordPracticePersonalBest(storage: PracticeStorage, score: string): boolean {
+export function recordPracticePersonalBest(
+  storage: PracticeStorage,
+  score: string,
+  rulesetVersion = RULESET_VERSION,
+): boolean {
   if (!/^(0|[1-9][0-9]*)$/.test(score) || score.length > 1000) {
     throw new TypeError('Invalid local practice score.');
   }
-  const stored = storage.getItem(PRACTICE_SAVE_KEYS.personalBest) ?? '0';
+  const key =
+    rulesetVersion === PACT_RULESET_VERSION
+      ? 'cpi.practice.v2-pacts.best'
+      : PRACTICE_SAVE_KEYS.personalBest;
+  const stored = storage.getItem(key) ?? '0';
   if (!/^(0|[1-9][0-9]*)$/.test(stored) || stored.length > 1000) {
     throw new Error('The local personal-best record is damaged.');
   }
   if (BigInt(score) <= BigInt(stored)) return false;
-  storage.setItem(PRACTICE_SAVE_KEYS.personalBest, score);
+  storage.setItem(key, score);
   return true;
 }
 
 /** Read a completed local practice record without turning it into official rank. */
-export function readPracticePersonalBest(storage: PracticeStorage): string | null {
+export function readPracticePersonalBest(
+  storage: PracticeStorage,
+  rulesetVersion = RULESET_VERSION,
+): string | null {
   try {
-    const value = storage.getItem(PRACTICE_SAVE_KEYS.personalBest);
+    const key =
+      rulesetVersion === PACT_RULESET_VERSION
+        ? 'cpi.practice.v2-pacts.best'
+        : PRACTICE_SAVE_KEYS.personalBest;
+    const value = storage.getItem(key);
     if (value === null || value.length > 1000 || !/^(0|[1-9][0-9]*)$/.test(value)) {
       return null;
     }

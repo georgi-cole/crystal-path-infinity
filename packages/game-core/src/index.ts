@@ -4,6 +4,7 @@ export * from './rules.ts';
 export * from './random.ts';
 export * from './rows.ts';
 export * from './effects.ts';
+export * from './pacts.ts';
 export * from './run.ts';
 export * from './session.ts';
 export * from './timed-session.ts';

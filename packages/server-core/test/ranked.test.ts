@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getCurrentRow } from '@crystal-path-infinity/game-core';
+import { getCurrentRow, offerPact, PACT_RULESET_VERSION } from '@crystal-path-infinity/game-core';
 import type { RunState } from '@crystal-path-infinity/game-core';
 import { RankedAuthority, RankedError, rankedSnapshot, RANKED_RNG } from '../src/ranked.ts';
 import type {
@@ -107,7 +107,7 @@ const A: RankedActor = { subject: 'account-A', deviceId: 'device-A', clientBuild
 const B: RankedActor = { subject: 'account-A', deviceId: 'device-B', clientBuild: 1 };
 const OTHER: RankedActor = { subject: 'account-B', deviceId: 'device-A', clientBuild: 1 };
 
-function setup(options: { heartbeatWindowMs?: number } = {}) {
+function setup(options: { heartbeatWindowMs?: number; rulesetVersion?: string } = {}) {
   const repository = new Repository();
   let time = 1_000_000;
   let id = 1;
@@ -148,6 +148,52 @@ function setup(options: { heartbeatWindowMs?: number } = {}) {
 }
 
 describe('ranked authority trust boundary', () => {
+  it('projects and executes a versioned pact server-side with idempotent payment', async () => {
+    const f = setup({ rulesetVersion: PACT_RULESET_VERSION });
+    let current = await f.start();
+    expect(current.snapshot.pact).toBeNull();
+    current = await f.execute(current, { type: 'resume' });
+    const record = f.record(current);
+    f.repository.account().runs.set(record.state.runId, {
+      ...record,
+      state: {
+        ...record.state,
+        pact: offerPact('blood_oath'),
+        current: { ...record.state.current, mysteryOutcome: 'blood_oath' },
+      },
+    });
+    const request = f.request(current, { type: 'pact', row: '1', life: 0, option: 'accept' });
+    const accepted = await f.authority.execute(A, request);
+    expect(accepted.accepted).toBe(true);
+    expect(accepted.snapshot.sp).toBe(335);
+    expect(accepted.snapshot.pact).toMatchObject({
+      kind: 'blood_oath',
+      phase: 'active',
+      rowsLeft: 3,
+    });
+    expect(await f.authority.execute(A, request)).toEqual(accepted);
+    expect(JSON.stringify(accepted)).not.toMatch(/mysteryRng|routeRng|"safeSide"|"rows"|"stream"/);
+    const forged = {
+      ...f.request(accepted, { type: 'pact', row: '1', life: 0, option: 'settle' }),
+      command: { type: 'pact', row: '1', life: 0, option: 'settle', sp: 400 },
+    };
+    await expect(f.authority.execute(A, forged)).rejects.toMatchObject({ code: 'invalid-request' });
+    expect(f.record(accepted).state.sp).toBe(335);
+  });
+
+  it('keeps legacy ranked snapshots unchanged and rejects arbitrary pact options', async () => {
+    const f = setup();
+    const current = await f.start();
+    expect(current.snapshot.rulesetVersion).toBe('infinity-v1');
+    expect(current.snapshot).not.toHaveProperty('pact');
+    const request = f.request(current, { type: 'pact', row: '1', life: 0, option: 'accept' });
+    await expect(
+      f.authority.execute(A, {
+        ...request,
+        command: { ...request.command, option: 'invent-a-prize' },
+      }),
+    ).rejects.toMatchObject({ code: 'invalid-request' });
+  });
   it('gates new starts and recovery before writes, but retrieves committed receipts after a policy change', async () => {
     const f = setup();
     const input = { idempotencyKey: f.newId() };

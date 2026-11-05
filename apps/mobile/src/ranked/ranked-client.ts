@@ -1,4 +1,16 @@
 import type { AccountSessionOwner } from '../account/session-owner';
+import {
+  PACT_KINDS,
+  PACT_OPTIONS,
+  PACT_RULESET_VERSION,
+  VAULT_PAYOUTS,
+} from '@crystal-path-infinity/game-core';
+import type {
+  ActiveEffect,
+  MysteryPact,
+  PactKind,
+  PactOption,
+} from '@crystal-path-infinity/game-core';
 import { canRecheckOperation, parseOperationFailure } from '../operations/operation-failure.ts';
 import type { OperationFailure } from '../operations/operation-failure';
 
@@ -11,6 +23,12 @@ export type RankedCommand =
       readonly life: number;
     }
   | { readonly type: 'hint' | 'mystery'; readonly row: string; readonly life: number }
+  | {
+      readonly type: 'pact';
+      readonly row: string;
+      readonly life: number;
+      readonly option: PactOption;
+    }
   | { readonly type: 'heartbeat' | 'pause' | 'resume' | 'end' };
 export interface RankedCurrent {
   readonly revealedSafeSide: RankedSide | null;
@@ -36,12 +54,8 @@ export interface RankedRun {
   readonly paused: boolean;
   readonly current: RankedCurrent & { readonly hasMystery: boolean };
   readonly history: readonly (RankedCurrent & { readonly index: string })[];
-  readonly effects: readonly {
-    readonly kind: string;
-    readonly startedAt: number;
-    readonly expiresAt: number;
-    readonly nextTickAt: number | null;
-  }[];
+  readonly effects: readonly ActiveEffect[];
+  readonly pact?: MysteryPact | null;
   readonly death: {
     readonly id: string;
     readonly fatalRow: string;
@@ -116,6 +130,7 @@ const EFFECTS = [
   'fragility_5s',
   'drain_5s',
   'inversion_5s',
+  ...PACT_KINDS,
 ];
 const TIMED_EFFECTS = EFFECTS.filter((value) => value.endsWith('_5s'));
 const REASONS = new Set([
@@ -128,6 +143,9 @@ const REASONS = new Set([
   'already-revealed',
   'no-mystery',
   'mystery-consumed',
+  'pact-decision-required',
+  'invalid-pact-choice',
+  'oracle-blocks-hints',
   'died-before-command',
   'wrong-death',
   'wrong-revive-ordinal',
@@ -199,6 +217,10 @@ export function parseRankedReply(value: unknown): RankedReply | null {
   )
     return null;
   const raw = value.snapshot;
+  const usesPacts =
+    raw !== null &&
+    typeof raw === 'object' &&
+    (raw as Record<string, unknown>).rulesetVersion === PACT_RULESET_VERSION;
   const lease = value.lease;
   if (
     !object(raw, [
@@ -222,6 +244,7 @@ export function parseRankedReply(value: unknown): RankedReply | null {
       'revivesApplied',
       'revivesToReachScore',
       'rewardPending',
+      ...(usesPacts ? ['pact'] : []),
     ]) ||
     !object(lease, ['token', 'generation', 'expiresAt']) ||
     typeof lease.token !== 'string' ||
@@ -281,12 +304,57 @@ export function parseRankedReply(value: unknown): RankedReply | null {
       return null;
     history.push({ ...visible, index });
   }
-  const effects: {
-    kind: string;
-    startedAt: number;
-    expiresAt: number;
-    nextTickAt: number | null;
-  }[] = [];
+  let pact: MysteryPact | null = null;
+  if (usesPacts && raw.pact !== null) {
+    const candidate = raw.pact;
+    if (
+      !object(candidate, ['kind', 'phase', 'rowsLeft', 'bank', 'omen']) ||
+      typeof candidate.kind !== 'string' ||
+      !(PACT_KINDS as readonly string[]).includes(candidate.kind) ||
+      !['offered', 'active'].includes(String(candidate.phase)) ||
+      !integer(candidate.rowsLeft, 3) ||
+      !integer(candidate.bank, 85) ||
+      !(candidate.omen === null || side(candidate.omen)) ||
+      raw.status !== 'playing'
+    )
+      return null;
+    if (candidate.phase === 'offered') {
+      if (
+        candidate.rowsLeft !== 0 ||
+        candidate.bank !== 0 ||
+        candidate.omen !== null ||
+        current.mysteryOutcome !== candidate.kind
+      )
+        return null;
+    } else {
+      if (
+        candidate.rowsLeft < 1 ||
+        candidate.kind === 'soul_exchange' ||
+        (candidate.kind === 'hungry_vault'
+          ? candidate.bank !== VAULT_PAYOUTS[3 - candidate.rowsLeft]
+          : candidate.bank !== 0) ||
+        (candidate.kind === 'false_oracle' ? !side(candidate.omen) : candidate.omen !== null)
+      )
+        return null;
+    }
+    pact = {
+      kind: candidate.kind as PactKind,
+      phase: candidate.phase as MysteryPact['phase'],
+      rowsLeft: candidate.rowsLeft,
+      bank: candidate.bank,
+      omen: candidate.omen,
+    };
+  }
+  if (
+    !usesPacts &&
+    [current, ...history].some(
+      (row) =>
+        row.mysteryOutcome !== null &&
+        (PACT_KINDS as readonly string[]).includes(row.mysteryOutcome),
+    )
+  )
+    return null;
+  const effects: ActiveEffect[] = [];
   for (const effect of raw.effects) {
     if (
       !object(effect, ['kind', 'startedAt', 'expiresAt', 'nextTickAt']) ||
@@ -304,7 +372,7 @@ export function parseRankedReply(value: unknown): RankedReply | null {
     )
       return null;
     effects.push({
-      kind: effect.kind,
+      kind: effect.kind as ActiveEffect['kind'],
       startedAt: effect.startedAt,
       expiresAt: effect.expiresAt,
       nextTickAt: effect.nextTickAt,
@@ -354,6 +422,7 @@ export function parseRankedReply(value: unknown): RankedReply | null {
       current: { ...current, hasMystery: (raw.current as { hasMystery: boolean }).hasMystery },
       history,
       effects,
+      ...(usesPacts ? { pact } : {}),
       death:
         death === null
           ? null
@@ -529,11 +598,15 @@ export function createRankedClient(options: RankedClientOptions): RankedClient |
       const snapshot = latest.snapshot;
       const type = command.type;
       let safe: RankedCommand;
-      if (type === 'choose' || type === 'hint' || type === 'mystery') {
+      if (type === 'choose' || type === 'hint' || type === 'mystery' || type === 'pact') {
         if (
           !object(
             command,
-            type === 'choose' ? ['type', 'side', 'row', 'life'] : ['type', 'row', 'life'],
+            type === 'choose'
+              ? ['type', 'side', 'row', 'life']
+              : type === 'pact'
+                ? ['type', 'row', 'life', 'option']
+                : ['type', 'row', 'life'],
           ) ||
           command.row !== snapshot.currentRow ||
           command.life !== snapshot.revivesApplied ||
@@ -542,10 +615,14 @@ export function createRankedClient(options: RankedClientOptions): RankedClient |
         )
           return;
         if (type === 'choose' && !side(command.side)) return;
+        if (type === 'pact' && !(PACT_OPTIONS as readonly string[]).includes(command.option))
+          return;
         safe =
           type === 'choose'
             ? { type, row: command.row, life: command.life, side: command.side }
-            : { type, row: command.row, life: command.life };
+            : type === 'pact'
+              ? { type, row: command.row, life: command.life, option: command.option }
+              : { type, row: command.row, life: command.life };
       } else {
         if (!object(command, ['type']) || !['heartbeat', 'pause', 'resume', 'end'].includes(type))
           return;

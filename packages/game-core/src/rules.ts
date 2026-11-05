@@ -2,6 +2,8 @@ import { decimal } from './numbers.ts';
 import type { EffectKind } from './types.ts';
 
 export const RULESET_VERSION = 'infinity-v1';
+/** Experimental, separately identified balance; existing ranked runs remain v1. */
+export const PACT_RULESET_VERSION = 'infinity-v2-pacts';
 export const STARTING_SP = 300;
 export const MAX_SP = 400;
 export const STARTING_HINTS = 2;
@@ -50,7 +52,23 @@ export const RULESET = Object.freeze({
   reviveSp: Object.freeze([200, 200, 200, 200, 200, 150, 150, 150, 150, 150]),
 });
 
-export function getRuleset(version: string = RULESET_VERSION): typeof RULESET {
+export const PACT_MYSTERY_TABLE: typeof MYSTERY_TABLE = Object.freeze([
+  ...MYSTERY_TABLE.map((entry) => Object.freeze({ ...entry, weight: entry.weight * 0.8 })),
+  ...(
+    ['blood_oath', 'false_oracle', 'hungry_vault', 'borrowed_time', 'soul_exchange'] as const
+  ).map((kind) => Object.freeze({ kind, weight: 4 })),
+]);
+
+export const PACT_RULESET = Object.freeze({
+  ...RULESET,
+  version: PACT_RULESET_VERSION,
+  mysteryTable: PACT_MYSTERY_TABLE,
+});
+
+export function getRuleset(
+  version: string = RULESET_VERSION,
+): typeof RULESET | typeof PACT_RULESET {
+  if (version === PACT_RULESET_VERSION) return PACT_RULESET;
   if (version !== RULESET_VERSION) throw new RangeError(`Unsupported ruleset: ${version}`);
   return RULESET;
 }

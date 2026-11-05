@@ -1,3 +1,4 @@
+import { mysteryFeedbackFromEvents } from './mystery-feedback';
 import { StageAtmosphere } from './stage-atmosphere';
 import { PrismBridge } from './prism-bridge';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -6,10 +7,13 @@ import {
   createRun,
   MAX_SP,
   PRACTICE_RNG,
+  PACT_RULESET_VERSION,
+  isPactKind,
 } from '@crystal-path-infinity/game-core';
 import type {
   RunEvent,
   RunState,
+  PactOption,
   SessionCommand,
   TileSide,
   TimedSessionResult,
@@ -26,20 +30,14 @@ import { AudioSettingsControls } from './audio-settings-controls';
 import { createPracticeRuntime, schedulePracticeTick } from './practice-runtime';
 import type { PracticePauseLease, PracticeRuntime } from './practice-runtime';
 import { presentInfinityScene } from './infinity-presentation';
-import type { PresentedEffect } from './infinity-presentation';
-import type { MessageKey } from './i18n/messages';
+import { MysteryEffects, MysteryFeedbackView, PactPanel } from './mystery-effects';
+import type { MysteryFeedback } from './mystery-feedback';
+import { MysteryLab } from './mystery-lab';
+import { mysteryText } from './mystery.messages';
 import './infinity-scene.css';
 import './infinity-hud-premium.css';
 import './run-outcome.css';
 
-const EFFECT_MESSAGE: Record<PresentedEffect['kind'], MessageKey> = {
-  shield_5s: 'game.effectShield',
-  regen_5s: 'game.effectRegen',
-  lucky_5s: 'game.effectLucky',
-  fragility_5s: 'game.effectFragile',
-  drain_5s: 'game.effectDrain',
-  inversion_5s: 'game.effectInversion',
-};
 const DEFAULT_VISUAL_SKIN = {
   id: 'infinity-glass-v1',
   shell: 'cps-shell--premium',
@@ -64,6 +62,9 @@ export interface InfinitySceneViewProps {
   readonly onChoose: (side: TileSide) => void;
   readonly onHint: () => void;
   readonly onMystery: () => void;
+  readonly onPact?: (option: PactOption) => void;
+  readonly mysteryFeedback?: MysteryFeedback | null;
+  readonly onMysteryLab?: () => void;
   readonly onPause: () => void;
   readonly onEnd: () => void;
   readonly onRequestEnd: () => void;
@@ -90,6 +91,9 @@ export function InfinitySceneView({
   onChoose,
   onHint,
   onMystery,
+  onPact,
+  mysteryFeedback = null,
+  onMysteryLab,
   onPause,
   onEnd,
   onRequestEnd,
@@ -104,7 +108,7 @@ export function InfinitySceneView({
   settings,
   onSettingsChange,
 }: InfinitySceneViewProps) {
-  const { t, number } = useLanguage();
+  const { t, number, locale } = useLanguage();
   const presented = presentInfinityScene(state);
   const outcome = presentRunOutcome(state);
   const clearedRows = number(state.result?.lastClearedRow ?? state.lastClearedRow);
@@ -125,6 +129,8 @@ export function InfinitySceneView({
   const current = presented.rows.find((row) => row.phase === 'current');
   const interactive =
     ready && !busy && !paused && !confirmEnd && !error && outcome.phase === 'playing';
+  const pactOffered = state.pact?.phase === 'offered';
+  const oracleActive = state.pact?.kind === 'false_oracle' && state.pact.phase === 'active';
   const spClass = state.sp <= 60 ? 'is-danger' : state.sp <= 140 ? 'is-warn' : 'is-safe';
   const spPct = Math.max(0, Math.min(100, (state.sp / MAX_SP) * 100));
   const notice =
@@ -139,11 +145,13 @@ export function InfinitySceneView({
             ? t('game.noticePreparing')
             : paused
               ? t('game.noticePaused')
-              : current?.mysteryAvailable
-                ? t('game.noticeMystery')
-                : state.current.mysteryOutcome
-                  ? t('game.noticeMysteryDone')
-                  : t('game.noticeChoose'));
+              : pactOffered
+                ? mysteryText(locale, 'contract')
+                : current?.mysteryAvailable
+                  ? t('game.noticeMystery')
+                  : state.current.mysteryOutcome
+                    ? t('game.noticeMysteryDone')
+                    : t('game.noticeChoose'));
 
   return (
     <main
@@ -197,7 +205,7 @@ export function InfinitySceneView({
               type="button"
               className="cps-hint-btn cpi-hud-control cpi-hint-control"
               onClick={onHint}
-              disabled={!interactive || state.hints === 0}
+              disabled={!interactive || pactOffered || oracleActive || state.hints === 0}
               aria-label={t('game.hintButton', { count: number(state.hints) })}
             >
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -234,29 +242,20 @@ export function InfinitySceneView({
             {t(state.sp <= 60 ? 'game.spCritical' : 'game.spLow', { sp: number(state.sp) })}
           </p>
         )}
-        {presented.effects.length > 0 && (
-          <div className="cps-effects" aria-label={t('game.effects')}>
-            {presented.effects.map((effect, i) => (
-              <span
-                key={effect.kind + ':' + i}
-                className={`cps-effect ${effect.positive ? 'is-pos' : 'is-neg'}`}
-              >
-                <span className="cps-effect-name">{t(EFFECT_MESSAGE[effect.kind])}</span>
-                <span className="cps-effect-timer">{(effect.remainingMs / 1000).toFixed(1)}s</span>
-                <span
-                  className="cps-effect-bar"
-                  style={{ width: `${effect.percent}%` }}
-                  aria-hidden="true"
-                />
-              </span>
-            ))}
-          </div>
-        )}
+        <MysteryEffects effects={state.effects} activeTimeMs={state.activeTimeMs} />
         <section className="cps-board" aria-label={t('game.bridge')} dir="ltr">
+          <PactPanel
+            pact={state.pact}
+            hints={state.hints}
+            revealed={state.current.revealedSafeSide !== null}
+            disabled={!interactive || !onPact}
+            onChoose={(option) => onPact?.(option)}
+          />
           <PrismBridge
             rows={presented.rows}
             feedback={feedback}
-            interactive={interactive}
+            interactive={interactive && !pactOffered}
+            omen={oracleActive ? (state.pact?.omen ?? null) : null}
             onChoose={onChoose}
             onMystery={onMystery}
             reducedMotion={settings.reducedMotion}
@@ -277,6 +276,16 @@ export function InfinitySceneView({
           <span className="visually-hidden">{t('game.footer')}</span>
         </p>
       </div>
+      {!overlayVisible && (
+        <MysteryFeedbackView
+          feedback={
+            mysteryFeedback &&
+            !(isPactKind(mysteryFeedback.kind) && mysteryFeedback.action === null)
+              ? mysteryFeedback
+              : null
+          }
+        />
+      )}
       {overlayVisible && (
         <div className="cpi-overlay">
           <div
@@ -460,6 +469,11 @@ export function InfinitySceneView({
                 </details>
                 <AudioSettingsControls settings={settings} onChange={onSettingsChange} />
                 <div className="cpi-overlay-actions">
+                  {onMysteryLab && (
+                    <button type="button" disabled={busy} onClick={onMysteryLab}>
+                      {mysteryText(locale, 'lab')}
+                    </button>
+                  )}
                   <button type="button" data-cpi-overlay-primary disabled={busy} onClick={onPause}>
                     {t('general.resume')}
                   </button>
@@ -491,6 +505,7 @@ function makeInitialRun(): RunState {
       mysteryRng: createPracticeCursor(mystery),
       observedAt: Date.now(),
       buffer: { ahead: 8, history: 2 },
+      rulesetVersion: PACT_RULESET_VERSION,
     },
     PRACTICE_RNG,
   );
@@ -528,6 +543,8 @@ function InfinityRun({
   const [paused, setPaused] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<SceneFeedback | null>(null);
+  const [mysteryFeedback, setMysteryFeedback] = useState<MysteryFeedback | null>(null);
+  const [labOpen, setLabOpen] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [personalBest, setPersonalBest] = useState<string | null>(null);
   const [newPersonalBest, setNewPersonalBest] = useState(false);
@@ -563,8 +580,11 @@ function InfinityRun({
             earnedNewBest = recordPracticePersonalBest(
               window.localStorage,
               result.state.lastClearedRow,
+              result.state.rulesetVersion,
             );
-            setPersonalBest(readPracticePersonalBest(window.localStorage));
+            setPersonalBest(
+              readPracticePersonalBest(window.localStorage, result.state.rulesetVersion),
+            );
             setNewPersonalBest(earnedNewBest);
           } catch {
             // A storage error must not change game result or claim a saved best.
@@ -585,6 +605,8 @@ function InfinityRun({
           lastCommittedActiveMs.current = result.state.activeTimeMs;
         }
         setState(result.state);
+        const mysteryNotice = mysteryFeedbackFromEvents(result.events, result.state);
+        if (mysteryNotice) setMysteryFeedback(mysteryNotice);
         const choice = result.events.find(
           (event): event is Extract<RunEvent, { type: 'choice-resolved' }> =>
             event.type === 'choice-resolved',
@@ -763,10 +785,18 @@ function InfinityRun({
     handledExitRequest.current = exitRequest;
     void exit();
   }, [exitRequest, exit]);
+  if (labOpen)
+    return <MysteryLab onClose={() => setLabOpen(false)} reducedMotion={settings.reducedMotion} />;
   return (
     <InfinitySceneView
       state={state}
       feedback={feedback}
+      mysteryFeedback={mysteryFeedback}
+      onMysteryLab={() => setLabOpen(true)}
+      onPact={(option) => {
+        unlockAudio();
+        void issue({ type: 'pact', option });
+      }}
       ready={ready}
       busy={busy}
       paused={paused}

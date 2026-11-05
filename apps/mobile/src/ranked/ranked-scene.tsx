@@ -7,6 +7,9 @@ import { SavedPendingView } from './saved-pending-view';
 import type { SavedPendingClient } from './saved-pending-client';
 import './ranked-scene.css';
 import { operationMessageKeys } from '../operations/operation-failure';
+import type { EffectKind } from '@crystal-path-infinity/game-core';
+import { MysteryEffects, PactPanel, EffectGlyph } from '../mystery-effects';
+import { effectCopy } from '../mystery.messages';
 
 const EMPTY: RankedClientState = {
   phase: 'unavailable',
@@ -15,14 +18,6 @@ const EMPTY: RankedClientState = {
   canRetry: false,
   rejected: false,
 };
-const effectKeys = {
-  shield_5s: 'game.effectShield',
-  regen_5s: 'game.effectRegen',
-  lucky_5s: 'game.effectLucky',
-  fragility_5s: 'game.effectFragile',
-  drain_5s: 'game.effectDrain',
-  inversion_5s: 'game.effectInversion',
-} as const;
 
 /** Only an approved, account-scoped client can enable this view. No guest state enters it. */
 export function RankedScene({
@@ -41,7 +36,7 @@ export function RankedScene({
   rewardFlow?: RewardFlow | null;
   savedPendingClient?: SavedPendingClient | null;
 }) {
-  const { t, number } = useLanguage();
+  const { t, number, locale } = useLanguage();
   const [observed, setObserved] = useState<{
     client: RankedClient;
     state: RankedClientState;
@@ -304,6 +299,27 @@ export function RankedScene({
           {run.status === 'playing' && (
             <>
               <h3 className="cpi-ranked-row">{t('ranked.row', { row: number(run.currentRow) })}</h3>
+              <PactPanel
+                pact={run.pact}
+                hints={run.hints}
+                revealed={run.current.revealedSafeSide !== null}
+                disabled={!playing}
+                onChoose={(option) => {
+                  if (
+                    !playing ||
+                    !client ||
+                    client.snapshot().run?.runId !== run.runId ||
+                    (rewardFlow?.runId === run.runId && rewardFlow.snapshot().inputBlocked)
+                  )
+                    return;
+                  void client.command({
+                    type: 'pact',
+                    row: run.currentRow,
+                    life: run.revivesApplied,
+                    option,
+                  });
+                }}
+              />
               <div className="cpi-ranked-bridge" dir="ltr">
                 {(['left', 'right'] as const).map((side) => (
                   <button
@@ -313,7 +329,7 @@ export function RankedScene({
                       'cpi-ranked-pane' +
                       (run.current.revealedSafeSide === side ? ' cpi-ranked-pane-revealed' : '')
                     }
-                    disabled={!playing}
+                    disabled={!playing || run.pact?.phase === 'offered'}
                     onClick={() => action('choose', side)}
                     aria-label={t(side === 'left' ? 'game.leftTile' : 'game.rightTile', {
                       row: number(run.currentRow),
@@ -338,7 +354,13 @@ export function RankedScene({
               <div className="cpi-ranked-actions">
                 <button
                   type="button"
-                  disabled={!playing || run.hints === 0 || run.current.revealedSafeSide !== null}
+                  disabled={
+                    !playing ||
+                    run.hints === 0 ||
+                    run.current.revealedSafeSide !== null ||
+                    run.pact?.phase === 'offered' ||
+                    (run.pact?.kind === 'false_oracle' && run.pact.phase === 'active')
+                  }
                   onClick={() => action('hint')}
                 >
                   {t('ranked.hint')}
@@ -346,7 +368,11 @@ export function RankedScene({
                 {run.current.hasMystery && (
                   <button
                     type="button"
-                    disabled={!playing || run.current.mysteryOutcome !== null}
+                    disabled={
+                      !playing ||
+                      run.pact?.phase === 'offered' ||
+                      run.current.mysteryOutcome !== null
+                    }
                     onClick={() => action('mystery')}
                   >
                     {t('ranked.mystery')}
@@ -369,15 +395,17 @@ export function RankedScene({
               )}
             </>
           )}
-          {run.effects.length > 0 && (
-            <div className="cpi-ranked-effects">
-              <h3>{t('ranked.effects')}</h3>
-              <ul>
-                {run.effects.map((effect) => (
-                  <li key={effect.kind}>{t(effectKeys[effect.kind as keyof typeof effectKeys])}</li>
-                ))}
-              </ul>
-            </div>
+          <MysteryEffects effects={run.effects} activeTimeMs={run.activeTimeMs} />
+          {run.current.mysteryOutcome && !run.pact && (
+            <details className="cpi-force">
+              <summary>
+                <EffectGlyph kind={run.current.mysteryOutcome as EffectKind} />
+                <strong>
+                  {effectCopy(locale, run.current.mysteryOutcome as EffectKind).title}
+                </strong>
+              </summary>
+              <p>{effectCopy(locale, run.current.mysteryOutcome as EffectKind).detail}</p>
+            </details>
           )}
           {run.status === 'dead' && !confirm && (
             <RewardOffer

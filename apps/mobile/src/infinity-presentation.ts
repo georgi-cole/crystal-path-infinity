@@ -38,7 +38,7 @@ const effectLabels: Record<ActiveEffect['kind'], string> = {
   drain_5s: 'SP drain',
   inversion_5s: 'Inversion',
 };
-const good = new Set<ActiveEffect['kind']>(['shield_5s', 'regen_5s', 'lucky_5s']);
+const good = new Set<ActiveEffect['kind']>(['shield_5s', 'regen_5s', 'lucky_5s', 'inversion_5s']);
 export const MAX_PRESENTED_ROWS = 5;
 
 /**
