@@ -7,3 +7,4 @@ export * from './effects.ts';
 export * from './run.ts';
 export * from './session.ts';
 export * from './timed-session.ts';
+export * from './pacing.ts';

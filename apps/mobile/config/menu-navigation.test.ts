@@ -1,3 +1,4 @@
+import { en } from '../src/i18n/messages';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { readFileSync } from 'node:fs';
@@ -65,7 +66,7 @@ describe('CPI-013 standalone menu and route model', () => {
     expect(html).toContain('Rankings');
     expect(html).toContain('Profile');
     expect(html).toContain('Settings');
-    expect(html).toContain('Learn the bridge');
+    expect(html).toContain(en['menu.learn']);
     expect(html).toContain('Personal best · Practice only');
     expect(html).toContain('Not a ranked score');
     expect(html).toContain('Guest');
@@ -76,15 +77,15 @@ describe('CPI-013 standalone menu and route model', () => {
     const html = render('practice');
     expect(html).toContain('Practice requires no account');
     expect(html).toContain('age answer or analytics consent');
-    expect(html).toContain('New practice');
-    expect(html).toContain('Learn the bridge');
+    expect(html).toContain(en['menu.newPractice']);
+    expect(html).toContain(en['menu.learn']);
     expect(html).not.toContain('Resume · Row');
   });
 
   it('offers exact saved-row resume, never finished-run resume, and explicit replacement', () => {
     const html = render('home', { saved, best: '349' });
     expect(canResumePractice(saved)).toBe(true);
-    expect(html).toContain('Saved practice · Row 1');
+    expect(html).toContain(en['menu.savedPractice'].replace('{row}', '1'));
     expect(html).toContain('Resume');
     expect(html).toContain('New');
     expect(html).toContain('Row 349');
@@ -94,7 +95,7 @@ describe('CPI-013 standalone menu and route model', () => {
       revision: 8,
     };
     expect(canResumePractice(finished)).toBe(false);
-    expect(render('home', { saved: finished })).not.toContain('Saved practice · Row');
+    expect(render('home', { saved: finished })).not.toContain('Saved crossing · Row');
   });
 
   it('does not invent ranked services or data when online/offline', () => {
@@ -117,7 +118,7 @@ describe('CPI-013 standalone menu and route model', () => {
     expect(html).toContain('Sound effects');
     expect(html).toContain('Haptic feedback');
     expect(html).toContain('Reduce motion');
-    expect(html).toContain('Open tutorial');
+    expect(html).toContain(en['menu.openTutorial']);
     expect(html).toContain('type="checkbox"');
   });
 
@@ -127,9 +128,9 @@ describe('CPI-013 standalone menu and route model', () => {
     );
     expect(html).toContain('role="dialog"');
     expect(html).toContain('aria-modal="true"');
-    expect(html).toContain('Replace saved practice?');
-    expect(html).toContain('Keep saved attempt');
-    expect(html).toContain('Start new practice');
+    expect(html).toContain(en['menu.confirmReplace']);
+    expect(html).toContain(en['menu.keepSaved']);
+    expect(html).toContain(en['menu.startFresh']);
   });
 
   it('normalizes cold deep links and connects browser/Android Back to the game owner', () => {
@@ -144,7 +145,7 @@ describe('CPI-013 standalone menu and route model', () => {
     ] as const) {
       expect(viewFromHash(viewHash(view))).toBe(view);
     }
-    expect(render('tutorial')).toContain('Take a safe step');
+    expect(render('tutorial')).toContain(en['tutorial.safeTitle']);
     expect(viewFromHash('#practice-run')).toBe('practice');
     expect(viewFromHash('#new-practice')).toBe('practice');
     expect(viewFromHash('#unknown-route')).toBe('home');

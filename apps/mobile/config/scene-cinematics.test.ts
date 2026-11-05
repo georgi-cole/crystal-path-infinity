@@ -9,7 +9,7 @@ import {
 import { countResultAt, createSceneDirector, STEP_TIMING } from '../src/scene-cinematics';
 import type { SceneCinematic } from '../src/scene-cinematics';
 import { bridgePane } from '../src/bridge-geometry';
-import { fractureGlass } from '../src/glass-fracture';
+import { fractureGlass, glassPattern, glassSeed } from '../src/glass-fracture';
 import { canResumePractice } from '../src/menu-navigation';
 
 function fixture(sp = 300, reduced = false) {
@@ -78,6 +78,30 @@ describe('readable step and death presentation', () => {
     vi.advanceTimersByTime(STEP_TIMING.wrong - STEP_TIMING.safe);
     expect(f.updates.at(-1)?.phase).toBe('travel');
   });
+  it('lets a player leave a nonfatal mystery while its symbol is still travelling', () => {
+    const f = fixture();
+    while (!getCurrentRow(f.session.getState()).hasMystery) {
+      const step = f.session.bind({
+        type: 'choose',
+        side: getCurrentRow(f.session.getState()).safeSide,
+      })();
+      f.director.receive(step);
+      vi.advanceTimersByTime(STEP_TIMING.wrong + STEP_TIMING.travel);
+    }
+    const mystery = f.session.bind({ type: 'mystery' })();
+    expect(mystery.state.status).toBe('playing');
+    f.director.receive(mystery);
+    expect(f.updates.at(-1)?.phase).toBe('reveal');
+    expect(f.director.isBusy()).toBe(false);
+    const step = f.session.bind({
+      type: 'choose',
+      side: getCurrentRow(f.session.getState()).safeSide,
+    })();
+    f.director.receive(step);
+    expect(step.accepted).toBe(true);
+    expect(f.updates.at(-1)?.phase).toBe('contact');
+    f.director.dispose();
+  });
   it('collapses the whole bridge on fatal SP loss and reveals the dialog only after the death beat', () => {
     const f = fixture(10);
     const result = f.choose(true);
@@ -126,7 +150,8 @@ describe('glass impact mesh', () => {
       for (const distance of [0, 1, 7]) {
         const pane = bridgePane(distance, side);
         const shards = fractureGlass(pane, 91);
-        expect(shards).toHaveLength(24);
+        expect(shards.length).toBeGreaterThan(12);
+        expect(shards.length).toBeLessThan(80);
         expect(shards.reduce((sum, shard) => sum + area(shard.points), 0)).toBeCloseTo(
           area(pane),
           5,
@@ -139,5 +164,27 @@ describe('glass impact mesh', () => {
         expect(shards).toEqual(fractureGlass(pane, 91));
         expect(shards).not.toEqual(fractureGlass(pane, 92));
       }
+  });
+  it('varies the impact, fragments and retained rim chips between panes without using game randomness', () => {
+    let anchored = 0;
+    const layouts = new Set<string>();
+    for (let i = 0; i < 40; i++) {
+      const seed = glassSeed(`practice-${i}:1:left`);
+      const pattern = glassPattern(seed);
+      expect(pattern.reduce((sum, shard) => sum + area(shard.points), 0)).toBeCloseTo(1, 8);
+      const chips = pattern.filter((shard) => shard.retained);
+      const chipArea = chips.reduce((sum, shard) => sum + area(shard.points), 0);
+      if (chips.length) anchored++;
+      expect(chipArea).toBeLessThan(0.22);
+      expect(
+        chips.every((shard) =>
+          shard.points.some((p) => p.x < 0.06 || p.x > 0.94 || p.y < 0.06 || p.y > 0.94),
+        ),
+      ).toBe(true);
+      expect(pattern.filter((shard) => !shard.retained).length).toBeGreaterThan(10);
+      layouts.add(JSON.stringify(pattern.map((shard) => shard.points)));
+    }
+    expect(anchored).toBeGreaterThanOrEqual(30);
+    expect(layouts.size).toBe(40);
   });
 });

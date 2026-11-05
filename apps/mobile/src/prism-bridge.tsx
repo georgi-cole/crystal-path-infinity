@@ -1,11 +1,20 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import type { CSSProperties, SVGProps } from 'react';
 import type { TileSide } from '@crystal-path-infinity/game-core';
 import type { PresentedRow } from './infinity-presentation';
 import { useLanguage } from './language-context';
 import type { SceneFeedback } from './infinity-scene';
 import { bridgePane, projectBridgePoint, advancesOneRow } from './bridge-geometry';
-import { fractureGlass } from './glass-fracture';
+import { glassPattern, glassSeed, projectGlassPattern } from './glass-fracture';
+import type { HintScan } from './run-signals';
 import { BridgeFlight } from './bridge-flight';
 import type { SceneCinematic } from './scene-cinematics';
 
@@ -35,6 +44,25 @@ function shine(points: Point[]) {
     blend(points[3], points[2], 0.62),
     blend(points[3], points[2], 0.55),
   ];
+}
+const onFace = (p: Point[], u: number, v: number) =>
+  blend(blend(p[0], p[1], u), blend(p[3], p[2], u), v);
+function reflectedLight(points: Point[], kind: 'rail' | 'strip') {
+  return (
+    kind === 'rail'
+      ? [
+          [0.91, 0.02],
+          [0.955, 0.02],
+          [0.955, 0.98],
+          [0.91, 0.98],
+        ]
+      : [
+          [0.03, 0.16],
+          [0.97, 0.16],
+          [0.97, 0.19],
+          [0.03, 0.19],
+        ]
+  ).map(([u, v]) => onFace(points, u, v));
 }
 function inset(points: Point[]) {
   const center = points.reduce((a, p) => ({ x: a.x + p.x / 4, y: a.y + p.y / 4 }), { x: 0, y: 0 });
@@ -137,31 +165,56 @@ function PaneFragments({
   seed,
   delay = 0,
   detail = 3,
+  previous,
+  step,
+  collapsed,
+  falling,
 }: {
   points: Point[];
   seed: number;
   delay?: number;
   detail?: 1 | 3;
+  previous?: Point[];
+  step: string;
+  collapsed: boolean;
+  falling: boolean;
 }) {
+  const pattern = useMemo(() => glassPattern(seed, detail), [seed, detail]);
+  const shards = projectGlassPattern(pattern, points);
+  const old = previous ? projectGlassPattern(pattern, previous) : null;
   return (
     <g className="cpi-pane-fragments">
-      {fractureGlass(points, seed, detail).map((shard, i) => (
-        <polygon
-          key={i}
-          className="cpi-glass-shard"
-          points={coordinates([...shard.points])}
-          fill={i % 3 === 0 ? '#c9e2ee36' : i % 3 === 1 ? '#71889230' : '#cedde619'}
-          stroke={i % 4 === 0 ? '#edfcffbb' : '#bddce67a'}
-          strokeWidth={i % 3 === 0 ? 0.9 : 0.5}
-          style={
-            {
-              '--shard-x': `${shard.drift}px`,
-              '--shard-turn': `${shard.turn}deg`,
-              '--shard-delay': `${delay + shard.delay}ms`,
-            } as CSSProperties
-          }
-        />
-      ))}
+      {shards.map((shard, i) =>
+        shard.retained && !collapsed ? (
+          <MovingPolygon
+            key={i}
+            className="cpi-glass-anchor"
+            shape={[...shard.points]}
+            previous={(old && [...old[i].points]) || undefined}
+            step={step}
+            fill={shard.glint > 0.5 ? '#c7e5ee4d' : '#9bb4bb29'}
+            stroke="#d6f5ffb3"
+            strokeWidth=".65"
+          />
+        ) : falling ? (
+          <polygon
+            key={i}
+            className="cpi-glass-shard"
+            points={coordinates([...shard.points])}
+            fill={shard.glint > 0.65 ? '#e1f5ff47' : shard.glint > 0.3 ? '#839ea936' : '#cedde622'}
+            stroke={i % 4 === 0 ? '#edfcffbb' : '#bddce67a'}
+            strokeWidth={i % 3 === 0 ? 0.9 : 0.5}
+            style={
+              {
+                '--shard-x': `${shard.drift}px`,
+                '--shard-turn': `${shard.turn}deg`,
+                '--shard-delay': `${delay + shard.delay}ms`,
+                '--shard-fall': `${540 * shard.fall}px`,
+              } as CSSProperties
+            }
+          />
+        ) : null,
+      )}
     </g>
   );
 }
@@ -206,6 +259,9 @@ export function PrismBridge({
   phase,
   collapsed = false,
   eventId = '',
+  fractureSeed = 'bridge',
+  hintScan = null,
+  scanBelowClock = false,
 }: {
   rows?: readonly PresentedRow[];
   feedback?: SceneFeedback | null;
@@ -217,6 +273,9 @@ export function PrismBridge({
   phase?: SceneCinematic['phase'];
   collapsed?: boolean;
   eventId?: string | number;
+  fractureSeed?: string;
+  hintScan?: HintScan | null;
+  scanBelowClock?: boolean;
 }) {
   const id = useId().replace(/:/g, ''),
     { t, number } = useLanguage();
@@ -257,7 +316,8 @@ export function PrismBridge({
         'cpi-prism-bridge' +
         (moving ? ' is-advancing' : '') +
         (collapsed ? ' is-collapsing' : '') +
-        (phase === 'contact' ? ' is-contacting' : '')
+        (phase === 'contact' ? ' is-contacting' : '') +
+        (hintScan ? ' is-scanning' : '')
       }
       data-camera-moving={moving ? 'true' : 'false'}
       data-step-phase={phase ?? 'idle'}
@@ -272,14 +332,15 @@ export function PrismBridge({
       >
         <defs>
           <linearGradient id={id + 'glass'} x1="0" y1="0" x2=".8" y2="1">
-            <stop stopColor="#d9dbe6" stopOpacity=".22" />
-            <stop offset=".42" stopColor="#646570" stopOpacity=".14" />
-            <stop offset="1" stopColor="#141419" stopOpacity=".66" />
+            <stop stopColor="#e2edf0" stopOpacity=".32" />
+            <stop offset=".36" stopColor="#98adb3" stopOpacity=".09" />
+            <stop offset=".58" stopColor="#c7dae0" stopOpacity=".15" />
+            <stop offset="1" stopColor="#101318" stopOpacity=".48" />
           </linearGradient>
           <linearGradient id={id + 'edge'} x2="1" y2=".3">
-            <stop stopColor="#d7d9e6" stopOpacity=".75" />
-            <stop offset=".45" stopColor="#83838e" stopOpacity=".18" />
-            <stop offset="1" stopColor="#c4c5d4" stopOpacity=".6" />
+            <stop stopColor="#ecfbff" stopOpacity=".92" />
+            <stop offset=".45" stopColor="#c3dbe1" stopOpacity=".28" />
+            <stop offset="1" stopColor="#d4f0ee" stopOpacity=".8" />
           </linearGradient>
           <linearGradient id={id + 'rail'} x2="0" y2="1">
             <stop stopColor="#bfb8ce" stopOpacity="0" />
@@ -291,6 +352,21 @@ export function PrismBridge({
             <stop stopColor="#a9469c" stopOpacity=".1" />
             <stop offset="1" stopColor="#c65aa6" stopOpacity="0" />
           </radialGradient>
+          <linearGradient id={id + 'scan'} x2="0" y2="1">
+            <stop stopColor="#bafff0" stopOpacity="0" />
+            <stop offset=".85" stopColor="#a5fff2" stopOpacity=".3" />
+            <stop offset="1" stopColor="#e2fff9" stopOpacity=".95" />
+          </linearGradient>
+          <clipPath id={id + 'scan-row'}>
+            <polygon
+              points={coordinates([
+                bridgePane(0, 'left')[0],
+                bridgePane(0, 'right')[1],
+                bridgePane(0, 'right')[2],
+                bridgePane(0, 'left')[3],
+              ])}
+            />
+          </clipPath>
         </defs>
         <ellipse cx="450" cy="580" rx="440" ry="200" fill={'url(#' + id + 'under)'} />
         {[-458, 458].map((x) => {
@@ -325,7 +401,12 @@ export function PrismBridge({
               key={key}
               className={'cpi-bridge-row-art is-' + rowPhase}
               data-visual-row={key}
-              style={{ '--pane-color': color } as CSSProperties}
+              style={
+                {
+                  '--pane-color': color,
+                  '--frame-delay': `${Math.max(0, distance) * 42}ms`,
+                } as CSSProperties
+              }
               opacity={
                 distance > 4
                   ? Math.max(0.12, 0.7 - distance * 0.035)
@@ -402,25 +483,56 @@ export function PrismBridge({
                         previous={old && shine(old)}
                         step={camera.row}
                         fill="#ececf5"
-                        opacity=".07"
+                        opacity=".13"
                       />
-                    </g>
-                    {broken &&
-                      !reduced &&
-                      (collapsed || phase === 'impact' || phase === 'travel') && (
-                        <PaneFragments
-                          key={eventId}
-                          points={pts}
-                          detail={distance > 3 ? 1 : 3}
-                          seed={
-                            Number(((absolute % 1009n) + 1009n) % 1009n) * 2 +
-                            (side === 'left' ? 0 : 1)
-                          }
-                          delay={
-                            collapsed ? Math.max(0, distance) * 42 + (side === 'right' ? 24 : 0) : 0
-                          }
-                        />
+                      {distance <= 6 && (
+                        <>
+                          <MovingPolygon
+                            className="cpi-glass-reflection"
+                            shape={reflectedLight(pts, 'rail')}
+                            previous={old && reflectedLight(old, 'rail')}
+                            step={camera.row}
+                            fill={color}
+                            opacity=".14"
+                          />
+                          <MovingPolygon
+                            className="cpi-glass-reflection"
+                            shape={reflectedLight(pts, 'strip')}
+                            previous={old && reflectedLight(old, 'strip')}
+                            step={camera.row}
+                            fill="#f1fcff"
+                            opacity=".16"
+                          />
+                        </>
                       )}
+                    </g>
+                    <MovingPolygon
+                      className="cpi-pane-frame"
+                      shape={pts}
+                      previous={old}
+                      step={camera.row}
+                      fill="none"
+                      stroke="#a7a9ae"
+                      strokeOpacity={broken ? '.45' : '.22'}
+                      strokeWidth={broken ? '1.2' : '.6'}
+                    />
+                    {broken && (
+                      <PaneFragments
+                        key={eventId}
+                        points={pts}
+                        previous={old}
+                        step={camera.row}
+                        collapsed={collapsed}
+                        falling={
+                          !reduced && (collapsed || phase === 'impact' || phase === 'travel')
+                        }
+                        detail={distance > 3 ? 1 : 3}
+                        seed={glassSeed(`${fractureSeed}:${absolute}:${side}`)}
+                        delay={
+                          collapsed ? Math.max(0, distance) * 42 + (side === 'right' ? 24 : 0) : 0
+                        }
+                      />
+                    )}
                   </g>
                 );
               })}
@@ -439,6 +551,33 @@ export function PrismBridge({
             </g>
           );
         })}
+        {hintScan && !reduced && (
+          <g key={hintScan.id} className="cpi-row-scan" aria-hidden="true">
+            <path
+              className="cpi-probe-link"
+              pathLength="1"
+              d={`M870 ${scanBelowClock ? 210 : 72}Q790 ${scanBelowClock ? 280 : 180} 450 ${bridgePane(0, 'left')[0].y}`}
+              stroke="#a0fff2"
+              strokeWidth="1.2"
+            />
+            <g clipPath={'url(#' + id + 'scan-row)'}>
+              <rect
+                className="cpi-scan-band"
+                x="0"
+                y="0"
+                width="900"
+                height="26"
+                fill={'url(#' + id + 'scan)'}
+                style={
+                  {
+                    '--scan-from': `${bridgePane(0, 'left')[0].y - 26}px`,
+                    '--scan-to': `${bridgePane(0, 'left')[3].y}px`,
+                  } as CSSProperties
+                }
+              />
+            </g>
+          </g>
+        )}
       </svg>
       {feedback && phase !== 'contact' && feedback.kind === 'safe' && (
         <div
@@ -474,7 +613,13 @@ export function PrismBridge({
               })}
               style={hitRegion(bridgePane(row.distance, side))}
               onClick={() => onChoose?.(side)}
-              disabled={!interactive || moving || !!phase || collapsed || row.phase !== 'current'}
+              disabled={
+                !interactive ||
+                moving ||
+                (!!phase && phase !== 'reveal') ||
+                collapsed ||
+                row.phase !== 'current'
+              }
             >
               {row.phase === 'current' && !phase && (row.index === '0' || row.hint === side) && (
                 <>
@@ -501,7 +646,13 @@ export function PrismBridge({
                 }}
                 aria-label={t('game.mysteryTile', { row: number(row.label) })}
                 onClick={onMystery}
-                disabled={!interactive || moving || !!phase || collapsed || !row.mysteryAvailable}
+                disabled={
+                  !interactive ||
+                  moving ||
+                  (!!phase && phase !== 'reveal') ||
+                  collapsed ||
+                  !row.mysteryAvailable
+                }
               >
                 <span className="cpi-holo-projector" aria-hidden="true" />
                 <svg

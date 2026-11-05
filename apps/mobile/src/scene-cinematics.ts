@@ -73,7 +73,7 @@ export function createSceneDirector(
         return;
       }
       const id = sequence;
-      busy = true;
+      busy = !!choice || fatal;
       const beat: SceneCinematic = {
         id,
         phase: choice ? 'contact' : fatal ? 'collapse' : 'reveal',

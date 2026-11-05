@@ -71,6 +71,37 @@ const death = (id: string): RunEvent => ({
 });
 
 describe('CPI-010 standalone audio ownership', () => {
+  it('sounds the urgent Death Clock even at full SP and stops after a row reset or death', async () => {
+    const f = fixture();
+    const audio = createStandaloneAudio(f.ports, { ...DEFAULT_PRACTICE_SETTINGS, music: false });
+    const alarm = f.media.get(CRYSTAL_AUDIO.alarm)!;
+    const options = { foreground: true, personalBest: false };
+    audio.setActive(true);
+    await audio.unlock();
+    const run = {
+      ...state,
+      status: 'playing',
+      sp: 300,
+      activeTimeMs: 4_999,
+      pacing: { rowEnteredAt: 0, nextSurvivalBonusAt: 60_000 },
+    } as RunState;
+    audio.playEvents([], run, options);
+    expect(alarm.played).toBe(0);
+    audio.playEvents([], { ...run, activeTimeMs: 5_000 }, options);
+    expect(alarm.played).toBe(1);
+    await Promise.resolve();
+    audio.playEvents(
+      [],
+      { ...run, activeTimeMs: 5_100, pacing: { rowEnteredAt: 5_100, nextSurvivalBonusAt: 60_000 } },
+      options,
+    );
+    expect(alarm.paused).toBe(true);
+    audio.playEvents([], { ...run, activeTimeMs: 7_900 }, options);
+    await Promise.resolve();
+    audio.playEvents([], { ...run, status: 'dead', sp: 0, activeTimeMs: 8_000 }, options);
+    expect(alarm.paused).toBe(true);
+    audio.dispose();
+  });
   it('starts the emergency loop only below 15 SP after a gesture and silences pause, background, mute and disposal', async () => {
     const f = fixture();
     const audio = createStandaloneAudio(f.ports, { ...DEFAULT_PRACTICE_SETTINGS, music: false });

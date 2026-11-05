@@ -12,6 +12,14 @@ import {
   decimal,
 } from './numbers.ts';
 import { assertRandomCursor, drawRandom } from './random.ts';
+import {
+  createRunPacing,
+  nextSurvivalBonusAt,
+  PACED_RULESET_VERSION,
+  rowDeadline,
+  SURVIVAL_BONUS_INTERVAL_MS,
+  SURVIVAL_BONUS_SP,
+} from './pacing.ts';
 import { assertRowStream, createRowStream, takeRows } from './rows.ts';
 import {
   clampSp,
@@ -87,6 +95,7 @@ export function createRun(options: CreateRunOptions, rng: RandomSource): RunStat
     achievedAt: null,
     activeTimeMs,
     lastObservedAt: options.observedAt,
+    ...(rulesetVersion === PACED_RULESET_VERSION ? { pacing: createRunPacing(activeTimeMs) } : {}),
     effects: [],
     buffer,
     bufferOffset: '0',
@@ -157,6 +166,22 @@ export function assertRunState(state: RunState, rng?: RandomSource): void {
   }
   if ((state.status === 'finished') !== (state.result !== null))
     throw new RangeError('Invalid terminal result.');
+  if (state.rulesetVersion === PACED_RULESET_VERSION) {
+    if (!state.pacing) throw new RangeError('Missing row and survival schedules.');
+    assertNonNegativeInteger(state.pacing.rowEnteredAt, 'Row entry');
+    assertNonNegativeInteger(state.pacing.nextSurvivalBonusAt, 'Survival schedule');
+    if (
+      state.pacing.rowEnteredAt > state.activeTimeMs ||
+      state.pacing.nextSurvivalBonusAt % SURVIVAL_BONUS_INTERVAL_MS !== 0 ||
+      state.pacing.nextSurvivalBonusAt < state.activeTimeMs ||
+      (state.status === 'playing' &&
+        (rowDeadline(state.pacing) <= state.activeTimeMs ||
+          state.pacing.nextSurvivalBonusAt === state.activeTimeMs))
+    ) {
+      throw new RangeError('Invalid row or survival schedule.');
+    }
+  } else if (state.pacing !== undefined)
+    throw new RangeError('Unexpected pacing on a historical ruleset.');
   assertRowStream(state.stream, rng);
   assertRandomCursor(state.mysteryRng, rng);
   if (state.stream.rulesetVersion !== state.rulesetVersion)
@@ -319,13 +344,16 @@ function die(state: RunState, cause: DeathCause, events: RunEvent[]): RunState {
 /** At most nine pulses per remaining effect, independent of an arbitrarily large clock jump. */
 function settleTime(state: RunState, context: TransitionContext, events: RunEvent[]): RunState {
   let next = { ...state, lastObservedAt: context.achievedAt };
-  while (next.effects.length > 0) {
+  while (true) {
     let due = Number.MAX_SAFE_INTEGER;
     for (const effect of next.effects) {
       due = Math.min(due, effect.expiresAt);
       if (effect.nextTickAt !== null && effect.nextTickAt < effect.expiresAt)
         due = Math.min(due, effect.nextTickAt);
     }
+    const deadline = next.pacing ? rowDeadline(next.pacing) : null;
+    if (deadline !== null) due = Math.min(due, deadline, next.pacing!.nextSurvivalBonusAt);
+    if (due === Number.MAX_SAFE_INTEGER && next.effects.length === 0 && !next.pacing) break;
     if (due > context.activeTimeMs) break;
     const expired = next.effects.filter((effect) => effect.expiresAt <= due);
     let delta = 0;
@@ -347,6 +375,24 @@ function settleTime(state: RunState, context: TransitionContext, events: RunEven
       });
     if (pulses) events.push({ ...eventTime(next), type: 'effects-ticked', delta, sp: next.sp });
     if (next.sp === 0) return die(next, 'drain', events);
+    // An expired row and a lethal periodic pulse win over a simultaneous bonus.
+    if (deadline === due) return die(next, 'idle', events);
+    if (next.pacing?.nextSurvivalBonusAt === due) {
+      const sp = clampSp(next.sp + SURVIVAL_BONUS_SP);
+      events.push({
+        ...eventTime(next),
+        type: 'survival-bonus',
+        amount: SURVIVAL_BONUS_SP,
+        spDelta: sp - next.sp,
+        sp,
+        minute: due / SURVIVAL_BONUS_INTERVAL_MS,
+      });
+      next = {
+        ...next,
+        sp,
+        pacing: { ...next.pacing, nextSurvivalBonusAt: nextSurvivalBonusAt(due) },
+      };
+    }
   }
   return { ...next, activeTimeMs: context.activeTimeMs };
 }
@@ -469,6 +515,17 @@ function rewardTransition(
           death: null,
           sp: receipt.sp,
           effects: [],
+          ...(state.pacing
+            ? {
+                pacing: {
+                  rowEnteredAt: state.activeTimeMs,
+                  nextSurvivalBonusAt: Math.max(
+                    state.pacing.nextSurvivalBonusAt,
+                    nextSurvivalBonusAt(state.activeTimeMs),
+                  ),
+                },
+              }
+            : {}),
           revivesApplied: state.revivesApplied + 1,
           reviveReceipts: state.reviveReceipts.map((previous) =>
             previous === existing ? receipt : previous,
@@ -613,6 +670,7 @@ export function transitionRun(
           revivesToReachScore: next.revivesApplied,
           resolutions: [...next.resolutions, { index: row.index, ...next.current }],
           current: emptyCurrent(),
+          ...(next.pacing ? { pacing: { ...next.pacing, rowEnteredAt: next.activeTimeMs } } : {}),
         },
         context.rng,
       );

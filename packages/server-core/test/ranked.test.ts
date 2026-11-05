@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getCurrentRow } from '@crystal-path-infinity/game-core';
+import { getCurrentRow, PACED_RULESET_VERSION } from '@crystal-path-infinity/game-core';
 import type { RunState } from '@crystal-path-infinity/game-core';
 import { RankedAuthority, RankedError, rankedSnapshot, RANKED_RNG } from '../src/ranked.ts';
 import type {
@@ -107,7 +107,7 @@ const A: RankedActor = { subject: 'account-A', deviceId: 'device-A', clientBuild
 const B: RankedActor = { subject: 'account-A', deviceId: 'device-B', clientBuild: 1 };
 const OTHER: RankedActor = { subject: 'account-B', deviceId: 'device-A', clientBuild: 1 };
 
-function setup(options: { heartbeatWindowMs?: number } = {}) {
+function setup(options: { heartbeatWindowMs?: number; rulesetVersion?: string } = {}) {
   const repository = new Repository();
   let time = 1_000_000;
   let id = 1;
@@ -148,6 +148,44 @@ function setup(options: { heartbeatWindowMs?: number } = {}) {
 }
 
 describe('ranked authority trust boundary', () => {
+  it('enforces an explicitly selected v2 row deadline on server time and publishes only pacing fields', async () => {
+    const f = setup({ rulesetVersion: PACED_RULESET_VERSION });
+    let response = await f.execute(await f.start(), { type: 'resume' });
+    expect(response.snapshot.pacing).toEqual({ rowEnteredAt: 0, nextSurvivalBonusAt: 60_000 });
+    f.advance(8_000);
+    response = await f.execute(response, { type: 'heartbeat' });
+    expect(response.snapshot.sp).toBe(0);
+    expect(response.snapshot.death).toMatchObject({ cause: 'idle', fatalRow: '1' });
+    expect(response.snapshot.activeTimeMs).toBe(8_000);
+    expect(response.snapshot.lastClearedRow).toBe('0');
+    expect(JSON.stringify(response.snapshot)).not.toMatch(
+      /"(?:safeSide|rows|mysteryRng|stream|secret)":/,
+    );
+  });
+  it('awards a v2 survival minute once, only after continued server-confirmed row crossings', async () => {
+    const f = setup({ rulesetVersion: PACED_RULESET_VERSION });
+    let response = await f.execute(await f.start(), { type: 'resume' });
+    for (let i = 0; i < 10; i++) {
+      f.advance(5_900);
+      response = await f.choose(response);
+    }
+    expect(response.snapshot.activeTimeMs).toBe(60_000);
+    expect(response.snapshot.sp).toBe(305);
+    expect(response.snapshot.lastClearedRow).toBe('10');
+    expect(response.snapshot.pacing).toEqual({
+      rowEnteredAt: 60_000,
+      nextSurvivalBonusAt: 120_000,
+    });
+    response = await f.execute(response, { type: 'heartbeat' });
+    expect(response.snapshot.sp).toBe(305);
+    const stored = f.record(response);
+    const hidden = {
+      ...stored,
+      state: { ...stored.state, pacing: { ...stored.state.pacing!, secret: 'never-public' } },
+    };
+    expect(rankedSnapshot(hidden).pacing).toEqual(response.snapshot.pacing);
+    expect(JSON.stringify(rankedSnapshot(hidden))).not.toContain('never-public');
+  });
   it('gates new starts and recovery before writes, but retrieves committed receipts after a policy change', async () => {
     const f = setup();
     const input = { idempotencyKey: f.newId() };

@@ -135,6 +135,58 @@ function body(input: RequestInit): Record<string, unknown> {
 }
 
 describe('CPI-032/037 fixed operational refusals', () => {
+  it('accepts whitelisted v2 pacing without relaxing the v1 or private-field boundary', () => {
+    const legacy = reply();
+    expect(parseRankedReply(legacy)?.snapshot.pacing).toBeUndefined();
+    const paced = {
+      ...legacy,
+      snapshot: {
+        ...legacy.snapshot,
+        rulesetVersion: 'infinity-v2',
+        activeTimeMs: 4_000,
+        pacing: { rowEnteredAt: 0, nextSurvivalBonusAt: 60_000 },
+      },
+    };
+    expect(parseRankedReply(paced)?.snapshot.pacing).toEqual(paced.snapshot.pacing);
+    expect(
+      parseRankedReply({
+        ...paced,
+        snapshot: { ...paced.snapshot, pacing: { ...paced.snapshot.pacing, safeSide: 'left' } },
+      }),
+    ).toBeNull();
+    expect(
+      parseRankedReply({ ...paced, snapshot: { ...paced.snapshot, stream: { rng: 'private' } } }),
+    ).toBeNull();
+    expect(
+      parseRankedReply({ ...paced, snapshot: { ...paced.snapshot, pacing: undefined } }),
+    ).toBeNull();
+    expect(
+      parseRankedReply({ ...paced, snapshot: { ...paced.snapshot, activeTimeMs: 8_000 } }),
+    ).toBeNull();
+    expect(
+      parseRankedReply({
+        ...paced,
+        snapshot: { ...paced.snapshot, rulesetVersion: 'infinity-v1' },
+      }),
+    ).toBeNull();
+    const dead = {
+      ...paced,
+      snapshot: {
+        ...paced.snapshot,
+        status: 'dead',
+        activeTimeMs: 8_000,
+        sp: 0,
+        death: { id: 'v2:death:1', cause: 'idle', fatalRow: '1' },
+      },
+    };
+    expect(parseRankedReply(dead)?.snapshot.death?.cause).toBe('idle');
+    expect(
+      parseRankedReply({
+        ...legacy,
+        snapshot: { ...legacy.snapshot, status: 'dead', sp: 0, death: dead.snapshot.death },
+      }),
+    ).toBeNull();
+  });
   it.each([
     ['maintenance', 503, true],
     ['client_update_required', 426, false],

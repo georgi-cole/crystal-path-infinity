@@ -1,6 +1,7 @@
 import { getReviveSp, MAX_REVIVES } from '@crystal-path-infinity/game-core';
 import type { DeathCause, RunState } from '@crystal-path-infinity/game-core';
 import { formatRowLabel } from './menu-navigation';
+import { en } from './i18n/messages';
 
 export type RunDisplayPhase =
   'playing' | 'dead' | 'verification-pending' | 'grant-ready' | 'finished';
@@ -29,9 +30,10 @@ export interface RunDisplay {
 }
 
 export const deathLabels: Record<DeathCause, string> = {
-  wrong_tile: 'A wrong glass pane depleted your SP.',
-  mystery: 'A mystery effect depleted your SP.',
-  drain: 'An active drain depleted your SP.',
+  wrong_tile: en['game.deathWrong'],
+  mystery: en['game.deathMystery'],
+  drain: en['game.deathDrain'],
+  idle: en['game.deathIdle'],
 };
 
 export function formatActiveDuration(activeTimeMs: number): string {

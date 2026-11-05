@@ -1,4 +1,5 @@
 import type { RunEvent, RunState } from '@crystal-path-infinity/game-core';
+import { presentRowPressure } from '@crystal-path-infinity/game-core';
 import type { PracticeSettings } from './practice-save';
 
 export const CRYSTAL_AUDIO = Object.freeze({
@@ -255,7 +256,9 @@ export function createStandaloneAudio(
     },
     playEvents(events, state, options) {
       if (disposed || !foreground || !options.foreground) return;
-      emergency = state.status === 'playing' && state.sp > 0 && state.sp < 15;
+      emergency =
+        state.status === 'playing' &&
+        ((state.sp > 0 && state.sp < 15) || presentRowPressure(state)?.urgent === true);
       syncAlarm();
       const hasTerminal = events.some((event) => event.type === 'run-ended');
       if (!active && !hasTerminal) return;

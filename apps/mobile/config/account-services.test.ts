@@ -27,7 +27,7 @@ function menu(view: 'profile' | 'play' | 'settings') {
 }
 describe('approved account services remain separate from default guest play', () => {
   it('does not invoke account services during default bootstrap or server rendering', () => {
-    expect(renderToStaticMarkup(createElement(App))).toContain('Opening your path');
+    expect(renderToStaticMarkup(createElement(App))).toContain('Finding the edge');
     expect(
       renderToStaticMarkup(
         createElement(App, {

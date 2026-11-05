@@ -1,0 +1,422 @@
+.cpi-right-instruments {
+  position: absolute;
+  z-index: 7;
+  top: 3%;
+  right: 1%;
+  display: grid;
+  justify-items: end;
+  gap: 1rem;
+  width: 8.8rem;
+  pointer-events: none;
+}
+.cpi-overlay-card {
+  scrollbar-width: thin;
+  scrollbar-color: #6e4c65 transparent;
+}
+.cpi-overlay-card::-webkit-scrollbar {
+  width: 4px;
+}
+.cpi-overlay-card::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background: #6e4c65;
+}
+.cpi-overlay-card::-webkit-scrollbar-track {
+  background: transparent;
+}
+.cpi-overlay-card::-webkit-scrollbar-button {
+  display: none;
+}
+.cpi-pressure-clock {
+  position: relative;
+  width: 6.4rem;
+  height: 7.3rem;
+  color: #ee7799;
+  filter: drop-shadow(0 0 9px #fa376b19);
+  animation: cpi-pressure-arrive 0.45s ease-out both;
+}
+.cpi-pressure-clock > svg {
+  width: 100%;
+  height: 6.4rem;
+  stroke: currentColor;
+  stroke-width: 1;
+}
+.cpi-pressure-track {
+  opacity: 0.15;
+}
+.cpi-pressure-arc {
+  stroke-width: 2;
+  rotate: -90deg;
+  transform-origin: center;
+  transition: stroke-dasharray 0.1s linear;
+  filter: drop-shadow(0 0 3px #fc4d8059);
+}
+.cpi-pressure-time {
+  position: absolute;
+  inset: 0 0 0.9rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 0.3rem;
+  font: 400 1.65rem/1 var(--cpi-font-display);
+  font-variant-numeric: tabular-nums;
+  color: #ffc3d1;
+}
+.cpi-pressure-time small {
+  font: 500 0.35rem var(--cpi-font-body);
+  letter-spacing: 0.15em;
+  color: #ca708d;
+}
+.cpi-pressure-order {
+  display: block;
+  text-align: center;
+  font-size: 0.38rem;
+  letter-spacing: 0.13em;
+  color: #e18aa4;
+}
+.cpi-pressure-clock.is-urgent {
+  color: #ff3f68;
+  animation: cpi-pressure-heartbeat 0.8s ease-in-out infinite;
+}
+.cpi-pressure-clock.is-urgent .cpi-pressure-time {
+  color: #ffe0e7;
+}
+.cpi-right-instruments .cpi-sp-danger-copy {
+  position: relative;
+  top: auto;
+  right: auto;
+  margin: 0;
+}
+.cpi-hint-projector {
+  position: relative;
+  width: 5rem;
+  min-height: 5rem;
+  color: #a2f6e6;
+  text-align: center;
+  filter: drop-shadow(0 0 9px #70ffdf3b);
+  animation: cpi-projector-awake 1.2s ease-out both;
+}
+.cpi-hint-projector > svg {
+  width: 3.5rem;
+  height: 3.5rem;
+}
+.cpi-hint-projector > span {
+  display: block;
+  font-size: 0.4rem;
+  letter-spacing: 0.1em;
+  line-height: 1.4;
+}
+.cpi-hint-projector > i {
+  position: absolute;
+  top: 10%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #a5f7e36b, transparent);
+  animation: cpi-projector-lines 0.7s ease-out both;
+}
+.cpi-hint-projector > i:nth-last-child(2) {
+  top: 40%;
+  animation-delay: 0.1s;
+}
+.cpi-hint-projector > i:last-child {
+  top: 70%;
+  animation-delay: 0.2s;
+}
+.cpi-probe-link {
+  stroke-dasharray: 1;
+  animation: cpi-probe-link 0.95s ease-out both;
+  filter: drop-shadow(0 0 4px #92ffeaa6);
+}
+.cpi-scan-band {
+  animation: cpi-scan-row 0.75s 0.12s linear both;
+}
+.is-scanning .cpi-glass-pane.is-hinted .cpi-pane-face {
+  animation: cpi-hint-lock 1.1s ease-out both;
+}
+.is-scanning .cpi-bridge-pane.is-hinted :is(.cpi-pane-caption, .cpi-pane-direction) {
+  animation: cpi-hint-word 1.1s ease-out both;
+}
+.cpi-death-clock.is-rewarding {
+  color: #a4ffe0;
+}
+.cpi-death-clock.is-rewarding > svg {
+  stroke: #b5ffe5;
+  animation: cpi-minute-clock 1.6s ease-out both;
+}
+.cpi-death-clock.is-rewarding time {
+  color: #c8ffe9;
+  text-shadow: 0 0 20px #79ffd273;
+}
+.cpi-death-clock .cpi-survival-bonus {
+  position: absolute;
+  top: 85%;
+  left: 1.8rem;
+  width: 7rem;
+  display: grid;
+  gap: 0.28rem;
+  color: #adffdc;
+  animation: cpi-minute-reward 2.4s ease-out both;
+}
+.cpi-survival-bonus > strong {
+  font-size: 1.1rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 14px #68ffc66b;
+}
+.cpi-survival-bonus > small {
+  font-size: 0.35rem;
+  letter-spacing: 0.14em;
+  line-height: 1.4;
+  color: #80bdab;
+}
+.cpi-glass-reflection {
+  pointer-events: none;
+}
+.cpi-glass-anchor {
+  filter: drop-shadow(0 1px 0 #d6f6ff26);
+}
+.is-collapsing .cpi-pane-frame {
+  animation: cpi-frame-fall 1s var(--frame-delay) ease-in both;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.cpi-glass-shard {
+  animation:
+    cpi-glass-fall 0.96s var(--shard-delay) cubic-bezier(0.5, 0.02, 0.9, 0.5) both,
+    cpi-glass-glint 0.96s var(--shard-delay) linear both;
+}
+.cpi-prism-bridge .cpi-bridge-mystery {
+  width: 4.4rem;
+  height: 5.2rem;
+}
+.cpi-bridge-mystery .cpi-holo-mystery {
+  stroke-width: 1.25;
+  filter: drop-shadow(0 0 7px #c074f0b3);
+}
+.cpi-bridge-mystery .cpi-holo-shell {
+  fill: #ae63f53b;
+  stroke-dasharray: 7 1.5;
+}
+.cpi-bridge-mystery .cpi-holo-core {
+  fill: #e2b1ffbf;
+}
+.cpi-bridge-mystery .cpi-holo-projector {
+  background: radial-gradient(ellipse, #ca7aff80, #b059e524 60%, transparent 75%);
+  box-shadow: 0 -20px 30px #c26aff35;
+}
+.is-paused :is(.cpi-pressure-clock, .cpi-hint-projector, .cpi-survival-bonus, .cpi-row-scan *) {
+  animation-play-state: paused;
+}
+@keyframes cpi-pressure-arrive {
+  from {
+    opacity: 0;
+    transform: scale(0.88);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+@keyframes cpi-pressure-heartbeat {
+  50% {
+    filter: drop-shadow(0 0 13px #ff315666);
+  }
+}
+@keyframes cpi-projector-awake {
+  0% {
+    opacity: 0;
+    transform: translateY(-5px) scale(0.8);
+  }
+  20%,
+  75% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+}
+@keyframes cpi-projector-lines {
+  from {
+    transform: scaleX(0.2);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  to {
+    transform: scaleX(1.3);
+    opacity: 0;
+  }
+}
+@keyframes cpi-probe-link {
+  0% {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+  25% {
+    stroke-dashoffset: 0;
+    opacity: 0.7;
+  }
+  85%,
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+@keyframes cpi-scan-row {
+  0% {
+    transform: translateY(var(--scan-from));
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(var(--scan-to));
+    opacity: 0;
+  }
+}
+@keyframes cpi-hint-lock {
+  0%,
+  50% {
+    fill: #74858e1a;
+    stroke: #cee1e680;
+    stroke-width: 1;
+  }
+  68% {
+    fill: #c7ffed99;
+    stroke: #e5fff5;
+    stroke-width: 3;
+  }
+  100% {
+    fill: #55907d55;
+    stroke: #b4e9d1;
+    stroke-width: 2;
+  }
+}
+@keyframes cpi-hint-word {
+  0%,
+  60% {
+    opacity: 0;
+  }
+  90%,
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes cpi-minute-clock {
+  20% {
+    filter: drop-shadow(0 0 9px #a4ffd6);
+    transform: translateY(-1px);
+  }
+  60% {
+    filter: drop-shadow(0 0 3px #a4ffd666);
+  }
+  100% {
+    filter: none;
+    transform: none;
+  }
+}
+@keyframes cpi-minute-reward {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.85);
+  }
+  20%,
+  68% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+}
+@keyframes cpi-glass-fall {
+  0%,
+  7% {
+    transform: translate(0, 0) rotate(0deg) scaleY(1);
+    opacity: 1;
+  }
+  35% {
+    opacity: 0.95;
+  }
+  65% {
+    opacity: 0.65;
+  }
+  100% {
+    transform: translate(var(--shard-x), var(--shard-fall, 540px)) rotate(var(--shard-turn))
+      scale(0.65, 0.16);
+    opacity: 0;
+  }
+}
+@keyframes cpi-glass-glint {
+  0% {
+    stroke-opacity: 0.7;
+  }
+  24% {
+    fill: #d5f2ff70;
+    stroke-opacity: 1;
+  }
+  47% {
+    fill: #627c8d26;
+    stroke-opacity: 0.35;
+  }
+  65% {
+    fill: #c4efe947;
+    stroke-opacity: 0.9;
+  }
+  100% {
+    fill: #0d11181a;
+    stroke-opacity: 0;
+  }
+}
+@keyframes cpi-frame-fall {
+  20% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(390px) rotate(8deg);
+  }
+}
+@media (max-width: 600px) {
+  .cpi-right-instruments {
+    width: 6.7rem;
+  }
+  .cpi-pressure-clock {
+    width: 5.4rem;
+    height: 6.3rem;
+  }
+  .cpi-pressure-clock > svg {
+    height: 5.4rem;
+  }
+  .cpi-pressure-time {
+    font-size: 1.4rem;
+  }
+  .cpi-death-clock .cpi-survival-bonus {
+    left: 1.5rem;
+    width: 6rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cpi-pressure-clock,
+  .cpi-survival-bonus,
+  .cpi-hint-projector,
+  .cpi-row-scan *,
+  .cpi-glass-shard {
+    animation: none !important;
+  }
+  .is-scanning .cpi-glass-pane.is-hinted .cpi-pane-face {
+    fill: #55907d55;
+    stroke: #b4e9d1;
+  }
+}

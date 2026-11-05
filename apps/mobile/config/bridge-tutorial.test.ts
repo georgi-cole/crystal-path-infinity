@@ -1,3 +1,4 @@
+import { en } from '../src/i18n/messages';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { readFileSync } from 'node:fs';
@@ -138,10 +139,12 @@ describe('CPI-014 scripted, isolated tutorial', () => {
     const html = tutorialMarkup();
     expect(html).toContain('data-tutorial-heading');
     expect(html).toContain('Training bridge');
-    expect(html).toContain('Tap LEFT');
+    expect(html).toContain(en['tutorial.safeInstruction']);
     expect(html).toContain('Left glass');
     expect(html).toContain('Right glass');
-    expect(html).toContain('Survived wrong steps count');
+    expect(html).toContain(en['tutorial.ruleProgress']);
+    expect(html).toContain(en['tutorial.ruleClock']);
+    expect(html).toContain(en['tutorial.ruleSurvival']);
     expect(html).toContain('Skip tutorial');
     expect(html).toContain('aria-live="polite"');
     const model = readFileSync(new URL('../src/bridge-tutorial-model.ts', import.meta.url), 'utf8');
@@ -181,8 +184,8 @@ describe('CPI-014 scripted, isolated tutorial', () => {
         tutorialProgress: 'completed',
       }),
     );
-    expect(home).toContain('Learn the bridge');
-    expect(practice).toContain('Learn the bridge');
-    expect(settings).toContain('Replay tutorial');
+    expect(home).toContain(en['menu.learn']);
+    expect(practice).toContain(en['menu.learn']);
+    expect(settings).toContain(en['menu.replay']);
   });
 });

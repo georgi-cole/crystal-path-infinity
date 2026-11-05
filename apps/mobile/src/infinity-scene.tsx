@@ -6,6 +6,8 @@ import {
   createRun,
   MAX_SP,
   PRACTICE_RNG,
+  PACED_RULESET_VERSION,
+  presentRowPressure,
 } from '@crystal-path-infinity/game-core';
 import type {
   RunEvent,
@@ -19,7 +21,11 @@ import { getGameplayLifecycle } from './gameplay-lifecycle';
 import { createStandaloneAudio } from './standalone-audio';
 import type { StandaloneAudio } from './standalone-audio';
 import { optionalHaptic } from './optional-haptic';
-import { readPracticePersonalBest, recordPracticePersonalBest } from './practice-save';
+import {
+  readPracticePersonalBest,
+  recordPracticePersonalBest,
+  upgradePracticePacing,
+} from './practice-save';
 import { formatActiveDuration, presentRunOutcome } from './run-outcome';
 import { useLanguage } from './language-context';
 import type { PracticeSettings } from './practice-save';
@@ -31,11 +37,15 @@ import { createSceneDirector } from './scene-cinematics';
 import type { SceneCinematic, SceneFeedback } from './scene-cinematics';
 import { EffectGlyph } from './effect-glyph';
 import { AnimatedResult } from './animated-result';
+import { DeathClock, SpCounter } from './scene-instruments';
+import { collectRunSignals, EMPTY_RUN_SIGNALS, liveSignal } from './run-signals';
+import type { RunSignals } from './run-signals';
 import type { MessageKey } from './i18n/messages';
 import './infinity-scene.css';
 import './infinity-hud-premium.css';
 import './run-outcome.css';
 import './scene-cinematics.css';
+import './row-pressure.css';
 
 const EFFECT_MESSAGE: Record<EffectKind, MessageKey> = {
   shield_5s: 'game.effectShield',
@@ -85,6 +95,7 @@ export interface InfinitySceneViewProps {
   readonly settings: PracticeSettings;
   readonly onSettingsChange: (next: PracticeSettings) => void;
   readonly cinematic?: SceneCinematic | null;
+  readonly signals?: RunSignals;
 }
 
 /** No game-core mutations or timers. All callbacks are externally owned events. */
@@ -112,6 +123,7 @@ export function InfinitySceneView({
   settings,
   onSettingsChange,
   cinematic = null,
+  signals = EMPTY_RUN_SIGNALS,
 }: InfinitySceneViewProps) {
   const { t, number } = useLanguage();
   const presented = presentInfinityScene(state);
@@ -124,22 +136,35 @@ export function InfinitySceneView({
     ? t(
         deathCause === 'wrong_tile'
           ? 'game.deathWrong'
-          : deathCause === 'mystery'
-            ? 'game.deathMystery'
-            : 'game.deathDrain',
+          : deathCause === 'idle'
+            ? 'game.deathIdle'
+            : deathCause === 'mystery'
+              ? 'game.deathMystery'
+              : 'game.deathDrain',
       )
     : null;
   const overlayVisible =
-    paused || confirmEnd || (outcome.phase !== 'playing' && !cinematic?.fatal) || !!error;
+    !!error || (!cinematic?.fatal && (paused || confirmEnd || outcome.phase !== 'playing'));
   const catastrophic = state.death !== null && state.status !== 'playing';
-  const emergency = state.status === 'playing' && state.sp > 0 && state.sp < 15;
+  const pressure = presentRowPressure(state);
+  const bonus = liveSignal(signals.bonus, state, 2400);
+  const hintScan = liveSignal(signals.hint, state, 1200);
+  const emergency =
+    state.status === 'playing' && ((state.sp > 0 && state.sp < 15) || pressure?.urgent);
   const hostileReveal = cinematic?.mystery
     ? cinematic.mystery.spDelta < 0 ||
       ['fragility_5s', 'drain_5s', 'inversion_5s', 'lose_hint'].includes(cinematic.mystery.kind)
     : false;
   const current = presented.rows.find((row) => row.phase === 'current');
+  const cinematicBlocks = !!cinematic && (cinematic.phase !== 'reveal' || cinematic.fatal);
   const interactive =
-    ready && !busy && !cinematic && !paused && !confirmEnd && !error && outcome.phase === 'playing';
+    ready &&
+    !busy &&
+    !cinematicBlocks &&
+    !paused &&
+    !confirmEnd &&
+    !error &&
+    outcome.phase === 'playing';
   const spClass = state.sp <= 60 ? 'is-danger' : state.sp <= 140 ? 'is-warn' : 'is-safe';
   const spPct = Math.max(0, Math.min(100, (state.sp / MAX_SP) * 100));
   const notice =
@@ -164,7 +189,7 @@ export function InfinitySceneView({
 
   return (
     <main
-      className={`cps-shell ${INFINITY_SCENE_SKIN.shell} cpi-infinity-scene${catastrophic ? ' is-catastrophe' : ''}${emergency ? ' is-emergency' : ''}${settings.reducedMotion ? ' cpi-reduced-motion' : ''}`}
+      className={`cps-shell ${INFINITY_SCENE_SKIN.shell} cpi-infinity-scene${catastrophic ? ' is-catastrophe' : ''}${emergency ? ' is-emergency' : ''}${paused ? ' is-paused' : ''}${pressure?.active ? ' has-death-clock' : ''}${settings.reducedMotion ? ' cpi-reduced-motion' : ''}`}
       data-testid="infinity-scene"
       aria-label={INFINITY_SCENE_SKIN.title}
     >
@@ -189,7 +214,7 @@ export function InfinitySceneView({
             <div className="cps-sp-display">
               <span className="cps-sp-label">{t('game.stabilityShort')}</span>
               <span className={`cps-sp-value ${spClass}`}>
-                {state.sp}
+                <SpCounter value={state.sp} bonus={bonus} reduced={settings.reducedMotion} />
                 <small> / {MAX_SP}</small>
               </span>
             </div>
@@ -232,7 +257,7 @@ export function InfinitySceneView({
               type="button"
               className="cpi-pause-control cpi-hud-control"
               onClick={onPause}
-              disabled={!ready || busy || !!cinematic || !!error || state.status !== 'playing'}
+              disabled={!ready || busy || cinematicBlocks || !!error || state.status !== 'playing'}
               aria-label={paused ? t('game.resumeGame') : t('game.pauseGame')}
             >
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -250,7 +275,10 @@ export function InfinitySceneView({
         </header>
         <section className="cps-board" aria-label={t('game.bridge')} dir="ltr">
           <div className="cpi-stage-instruments">
-            <div className="cpi-death-clock" aria-label={t('game.timeAlive')}>
+            <div
+              className={'cpi-death-clock' + (bonus ? ' is-rewarding' : '')}
+              aria-label={t('game.timeAlive')}
+            >
               <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
                 <path d="M6 3h20M6 29h20M9 4v5l14 14v5M23 4v5L9 23v5M12 6h8M12 26h8" />
               </svg>
@@ -259,6 +287,12 @@ export function InfinitySceneView({
                 <time>{formatActiveDuration(state.activeTimeMs)}</time>
               </div>
               <i aria-hidden="true" />
+              {bonus && (
+                <span key={bonus.id} className="cpi-survival-bonus" role="status">
+                  <strong>+{bonus.amount} SP</strong>
+                  <small>{t(state.sp === MAX_SP ? 'game.maxSp' : 'game.survivalBonus')}</small>
+                </span>
+              )}
             </div>
             {presented.effects.length > 0 && (
               <div className="cps-effects" aria-label={t('game.effects')}>
@@ -290,32 +324,50 @@ export function InfinitySceneView({
               </div>
             )}
           </div>
-          {state.sp <= 140 && state.status === 'playing' && (
-            <div
-              className={'cpi-sp-danger-copy ' + (state.sp <= 60 ? 'is-critical' : 'is-low')}
-              role="status"
-              aria-label={t(state.sp <= 60 ? 'game.spCritical' : 'game.spLow', {
-                sp: number(state.sp),
-              })}
-            >
-              <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
-                <path d="m16 3 14 25H2L16 3Z" />
-                <path d="M16 11v8m0 4v1" />
-              </svg>
-              <span>
-                {t(
-                  emergency
-                    ? 'game.emergency'
-                    : state.sp <= 60
-                      ? 'game.criticalLabel'
-                      : 'game.lowLabel',
-                )}
-                <strong>
-                  {number(state.sp)} <small>SP</small>
-                </strong>
-              </span>
-            </div>
-          )}
+          <div className="cpi-right-instruments">
+            {pressure?.active && <DeathClock pressure={pressure} />}
+            {hintScan && (
+              <div key={hintScan.id} className="cpi-hint-projector" aria-hidden="true">
+                <EffectGlyph kind="gain_hint" />
+                <span>
+                  {t(
+                    state.activeTimeMs - hintScan.activeAt < 650
+                      ? 'game.hintAnalyzing'
+                      : 'game.hintLocked',
+                  )}
+                </span>
+                <i />
+                <i />
+                <i />
+              </div>
+            )}
+            {state.sp <= 140 && state.status === 'playing' && (
+              <div
+                className={'cpi-sp-danger-copy ' + (state.sp <= 60 ? 'is-critical' : 'is-low')}
+                role="status"
+                aria-label={t(state.sp <= 60 ? 'game.spCritical' : 'game.spLow', {
+                  sp: number(state.sp),
+                })}
+              >
+                <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                  <path d="m16 3 14 25H2L16 3Z" />
+                  <path d="M16 11v8m0 4v1" />
+                </svg>
+                <span>
+                  {t(
+                    emergency
+                      ? 'game.emergency'
+                      : state.sp <= 60
+                        ? 'game.criticalLabel'
+                        : 'game.lowLabel',
+                  )}
+                  <strong>
+                    {number(state.sp)} <small>SP</small>
+                  </strong>
+                </span>
+              </div>
+            )}
+          </div>
           <PrismBridge
             rows={cinematic?.rows ?? presented.rows}
             feedback={cinematic?.feedback ?? feedback}
@@ -326,6 +378,9 @@ export function InfinitySceneView({
             phase={cinematic?.phase}
             collapsed={catastrophic && (!cinematic || cinematic.phase === 'collapse')}
             eventId={state.death?.id ?? cinematic?.id ?? ''}
+            fractureSeed={`${state.runId}:${state.revivesApplied}`}
+            hintScan={hintScan}
+            scanBelowClock={pressure?.active}
           />
           {cinematic?.mystery && (
             <div
@@ -623,6 +678,7 @@ function makeInitialRun(): RunState {
   return createRun(
     {
       runId: 'practice-' + route.toString(16),
+      rulesetVersion: PACED_RULESET_VERSION,
       routeRng: createPracticeCursor(route),
       mysteryRng: createPracticeCursor(mystery),
       observedAt: Date.now(),
@@ -655,7 +711,9 @@ function InfinityRun({
   onSettingsChange,
 }: InfinityRunProps) {
   const { t } = useLanguage();
-  const [initial] = useState(() => initialState ?? makeInitialRun());
+  const [initial] = useState(() =>
+    initialState ? upgradePracticePacing(initialState) : makeInitialRun(),
+  );
   const [initialAudioSettings] = useState(settings);
   const lastCommittedActiveMs = useRef(-500);
   const [state, setState] = useState<RunState>(initial);
@@ -665,6 +723,7 @@ function InfinityRun({
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<SceneFeedback | null>(null);
   const [cinematic, setCinematic] = useState<SceneCinematic | null>(null);
+  const [signals, setSignals] = useState<RunSignals>(EMPTY_RUN_SIGNALS);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [personalBest, setPersonalBest] = useState<string | null>(null);
   const [newPersonalBest, setNewPersonalBest] = useState(false);
@@ -714,6 +773,7 @@ function InfinityRun({
       onTransition: (result: TimedSessionResult) => {
         if (!alive) return;
         director.receive(result);
+        if (result.events.length) setSignals((previous) => collectRunSignals(previous, result));
         let earnedNewBest = false;
         if (result.events.some((event) => event.type === 'run-ended')) {
           try {
@@ -762,6 +822,7 @@ function InfinityRun({
       audio.setForeground(snapshot.active);
       if (!snapshot.active && alive) {
         director.finish();
+        setSignals(EMPTY_RUN_SIGNALS);
         try {
           onCheckpoint(runtime.getState());
         } catch (cause) {
@@ -835,9 +896,13 @@ function InfinityRun({
       if (
         !result.accepted &&
         result.reason &&
-        !['clock-paused', 'stale-command', 'stale-pause', 'command-consumed'].includes(
-          result.reason,
-        )
+        ![
+          'clock-paused',
+          'stale-command',
+          'stale-pause',
+          'command-consumed',
+          'died-before-command',
+        ].includes(result.reason)
       )
         setError(`Action unavailable: ${result.reason}`);
     } catch (reason) {
@@ -944,6 +1009,7 @@ function InfinityRun({
       state={state}
       feedback={feedback}
       cinematic={cinematic}
+      signals={signals}
       ready={ready}
       busy={busy}
       paused={paused}

@@ -59,6 +59,11 @@ provenance. The app adds no runtime font/CDN requests or rendering dependency.
 
 ## Cinematic follow-up — 5 November 2026
 
+This section records the cinematic baseline at `5442547`. The later
+[Death Clock and survival follow-up](CPI-005-row-pressure-v2.md) supersedes its
+fixed fracture mesh and no-idle-penalty descriptions, and adds the darker voice,
+hint scan and minute reward.
+
 Choices now have a 110 ms contact beat, a visible result on the selected pane,
 then camera travel. Safe glass settles for 430 ms total; wrong glass gets 820 ms
 before travel so the fragments can fall. A presentation director holds only the

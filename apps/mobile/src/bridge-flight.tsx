@@ -74,14 +74,15 @@ export function BridgeFlight({ reduced }: { reduced: boolean }) {
             project(left, z),
           ];
           const gradient = ctx!.createLinearGradient(pts[0].x, pts[0].y, pts[2].x, pts[2].y);
-          gradient.addColorStop(0, '#dce6ef29');
-          gradient.addColorStop(0.45, '#64707a22');
-          gradient.addColorStop(1, '#111117bd');
+          gradient.addColorStop(0, '#e3f1f046');
+          gradient.addColorStop(0.38, '#6d8b9417');
+          gradient.addColorStop(0.6, '#c6e4e72e');
+          gradient.addColorStop(1, '#1114178c');
           polygon(
             [pts[3], pts[2], { ...pts[2], y: pts[2].y + 4 }, { ...pts[3], y: pts[3].y + 4 }],
             color + '45',
           );
-          polygon(pts, gradient, '#dbe1ef66');
+          polygon(pts, gradient, '#e1faff8a');
           polygon(pts, color + '0b', color + '51');
           const mix = (a: Point, b: Point, p: number) => ({
             x: a.x + (b.x - a.x) * p,
@@ -94,7 +95,17 @@ export function BridgeFlight({ reduced }: { reduced: boolean }) {
               mix(pts[3], pts[2], 0.67),
               mix(pts[3], pts[2], 0.59),
             ],
-            '#f2f6ff13',
+            '#f2f6ff24',
+          );
+          const face = (u: number, v: number) =>
+            mix(mix(pts[0], pts[1], u), mix(pts[3], pts[2], u), v);
+          polygon(
+            [face(0.03, 0.16), face(0.97, 0.16), face(0.97, 0.19), face(0.03, 0.19)],
+            '#e4fcff24',
+          );
+          polygon(
+            [face(0.91, 0.02), face(0.955, 0.02), face(0.955, 0.98), face(0.91, 0.98)],
+            color + '1d',
           );
         }
         for (const side of [-1, 1]) {

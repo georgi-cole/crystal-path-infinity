@@ -4,6 +4,8 @@ import {
   MAX_REVIVES,
   PRACTICE_RNG,
   RULESET_VERSION,
+  PACED_RULESET_VERSION,
+  createRunPacing,
 } from '@crystal-path-infinity/game-core';
 import type { RunState } from '@crystal-path-infinity/game-core';
 
@@ -91,13 +93,28 @@ function validatePracticeState(state: RunState): void {
   assertRunState(state, PRACTICE_RNG);
   if (
     !state.runId.startsWith('practice-') ||
-    state.rulesetVersion !== RULESET_VERSION ||
+    ![RULESET_VERSION, PACED_RULESET_VERSION].includes(state.rulesetVersion) ||
     state.rows.length > MAX_BUFFER_ROWS ||
     state.resolutions.length > state.buffer.history ||
     state.reviveReceipts.length > MAX_REVIVES
   ) {
     throw new Error('This is not a supported standalone practice checkpoint.');
   }
+}
+
+/** Local upgrade preserves route/SP/progress, grants a fresh row grace, and schedules
+ * only future minute bonuses. Ranked historical runs never use this adapter. */
+export function upgradePracticePacing(state: RunState): RunState {
+  validatePracticeState(state);
+  if (state.rulesetVersion !== RULESET_VERSION || state.status !== 'playing') return state;
+  const next: RunState = {
+    ...state,
+    rulesetVersion: PACED_RULESET_VERSION,
+    stream: { ...state.stream, rulesetVersion: PACED_RULESET_VERSION },
+    pacing: createRunPacing(state.activeTimeMs),
+  };
+  validatePracticeState(next);
+  return next;
 }
 
 /** Only the marked slot is committed. A partial write never resurrects old SP/rewards. */

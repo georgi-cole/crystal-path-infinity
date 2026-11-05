@@ -81,8 +81,11 @@ connected interval. An authenticated client sends ordered heartbeats while activ
 and `pause` on a known interruption. Defaults are a 10-second heartbeat window and
 a 60-second ownership lease. The server counts elapsed time only up to the last
 issued connected window; recovery settles due effects in that interval, freezes the
-offline remainder and never advances distance. There is no idle death or special
-finish at row 350. The server can legitimately apply ordinary due drain effects
+offline remainder and never advances distance. Historical `infinity-v1` has no
+idle death or special finish at row 350. The explicitly selected
+[infinity-v2 ruleset](CPI-005-row-pressure-v2.md) also settles row deadlines and
+minute bonuses within the issued active window; this does not change the
+deployed/default v1 policy. The server can legitimately apply ordinary due drain effects
 within the previously issued window.
 
 Actions arriving after the connected window require recovery instead of pretending

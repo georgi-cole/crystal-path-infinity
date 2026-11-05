@@ -217,6 +217,8 @@ export function BridgeTutorial({
         <p>{t('tutorial.ruleSp')}</p>
         <p>{t('tutorial.ruleProgress')}</p>
         <p>{t('tutorial.ruleInfinity')}</p>
+        <p>{t('tutorial.ruleClock')}</p>
+        <p>{t('tutorial.ruleSurvival')}</p>
       </div>
       {!didFinish && (
         <button type="button" className="cpi-tutorial-skip" onClick={onSkip}>
