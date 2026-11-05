@@ -26,7 +26,18 @@ in PR #83 and the owner's approved continuation/SP proposal. Payments remain
   Owned themes persist and can be equipped; unowned themes can be rehearsed in
   an isolated trial that changes neither the saved run nor any personal best.
 - Generated SVG/CSS visuals and deterministic synthesized WAVs are original
-  project assets. `apps/mobile/scripts/generate-theme-audio.mjs` reproduces the
+  project assets. The 6 November world revision adds original generated portrait
+  scenery and transparent three-pose companion sheets, optimized to under 1 MB
+  combined for both runtime world kits. Source masters, the final generation
+  prompts, research references, reusable layer templates and focus/motion rules
+  are retained in [the world production guide](../../design/worlds/README.md).
+  The same scene and bridge renderers compose the store preview. In actual play,
+  the scenery is subdued beneath a center veil; the live crystal path remains
+  in front. Material inlays, restrained step sparks/ripples and tinted fractures
+  use public presentation data only. Pip/Lumi hop only after a resolved choice,
+  celebrate or recoil, and stay behind the next actionable row. Core choices,
+  hit regions, scan meaning and input/cinematic timing do not change.
+  `apps/mobile/scripts/generate-theme-audio.mjs` reproduces the
   bundled audio. No Minions or other licensed character assets are included.
 
 ## Versioned test rules and score eligibility

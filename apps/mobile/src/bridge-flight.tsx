@@ -10,6 +10,7 @@ export function BridgeFlight({ reduced }: { reduced: boolean }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const LIGHTS = THEMES[themeId].colors;
+    const material = THEMES[themeId];
     const surface = canvas.current;
     const ctx = surface?.getContext('2d');
     if (!surface || !ctx) return;
@@ -77,15 +78,15 @@ export function BridgeFlight({ reduced }: { reduced: boolean }) {
             project(left, z),
           ];
           const gradient = ctx!.createLinearGradient(pts[0].x, pts[0].y, pts[2].x, pts[2].y);
-          gradient.addColorStop(0, '#e3f1f046');
+          gradient.addColorStop(0, material.surface.highlight + '46');
           gradient.addColorStop(0.38, '#6d8b9417');
-          gradient.addColorStop(0.6, '#c6e4e72e');
-          gradient.addColorStop(1, '#1114178c');
+          gradient.addColorStop(0.6, material.glass + '2e');
+          gradient.addColorStop(1, material.surface.shadow + '8c');
           polygon(
             [pts[3], pts[2], { ...pts[2], y: pts[2].y + 4 }, { ...pts[3], y: pts[3].y + 4 }],
             color + '45',
           );
-          polygon(pts, gradient, '#e1faff8a');
+          polygon(pts, gradient, material.surface.edge + '8a');
           polygon(pts, color + '0b', color + '51');
           const mix = (a: Point, b: Point, p: number) => ({
             x: a.x + (b.x - a.x) * p,

@@ -542,6 +542,34 @@ button.cpi-vault-primary {
   color: #aa99b5;
   font-size: 0.75rem;
 }
+.cpi-vault-world-includes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  list-style: none;
+  padding: 0.8rem 0;
+  border-block: 1px solid #c5b0d62b;
+}
+.cpi-vault-world-includes strong,
+.cpi-vault-world-includes span {
+  display: block;
+}
+.cpi-vault-world-includes strong {
+  color: #e7d8f0;
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.cpi-vault-world-includes span {
+  color: #b3a4c0;
+  margin-top: 0.3rem;
+  font-size: 0.65rem;
+  line-height: 1.6;
+}
+.cpi-vault-pack.is-sp .cpi-pack-art {
+  opacity: 0.45;
+  mask-image: linear-gradient(to right, transparent, #000 60%);
+}
 @media (max-width: 640px) {
   .cpi-store-vault {
     padding-top: 0.25rem;

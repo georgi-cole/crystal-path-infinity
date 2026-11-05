@@ -7,18 +7,21 @@ export const THEMES = {
     title: 'Obsidian',
     colors: ['#fa589c', '#62dfed', '#79e3af'],
     glass: '#c7dae0',
+    surface: { highlight: '#e2edf0', shadow: '#101318', edge: '#ecfbff', frame: '#87828f' },
     tempo: 0,
   },
   chaos: {
     title: 'Chaos Workshop',
     colors: ['#ffbd63', '#67f3ce', '#ff9266'],
     glass: '#ffe1b2',
+    surface: { highlight: '#fff0c9', shadow: '#152824', edge: '#ffe3ab', frame: '#c49458' },
     tempo: 112,
   },
   jelly: {
     title: 'Jellyverse',
     colors: ['#ed9efc', '#83dfff', '#b3a2ff'],
     glass: '#e9c9ff',
+    surface: { highlight: '#f5e1ff', shadow: '#1b1535', edge: '#d3f2ff', frame: '#bba5e9' },
     tempo: 92,
   },
 } as const;

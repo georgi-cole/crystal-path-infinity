@@ -254,7 +254,10 @@ jobs:
     name: Development iOS build and simulator launch
     needs: web
     if: ${{ needs.web.outputs.native_mode == 'smoke' || needs.web.outputs.native_mode == 'full' }}
-    runs-on: macos-26
+    # Standard Intel has 14 GB RAM; the 7 GB arm64 host exhausts memory
+    # running iOS 26.5 system apps before CPI is installed. Keep Xcode/iOS
+    # versions, provisioning budgets and every actual native assertion.
+    runs-on: macos-26-intel
     timeout-minutes: 45
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer

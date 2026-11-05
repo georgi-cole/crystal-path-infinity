@@ -1,7 +1,7 @@
 import { RunReserves } from './run-reserves';
 import { useTestStore, useThemeId } from './store-context';
 import { ThemeScope } from './store-provider';
-import { ThemeCompanion } from './theme-art';
+import { WorldPathCompanion, WorldStepEffect } from './world-effects';
 import type { ThemeId } from './store-catalog';
 import type { ReactNode } from 'react';
 import { StageAtmosphere } from './stage-atmosphere';
@@ -403,16 +403,28 @@ export function InfinitySceneView({
             hintScan={hintScan}
             showHintCaption={hintCaptionRow === state.currentRow}
           />
-          <ThemeCompanion
-            theme={themeId}
-            reaction={
-              emergency || catastrophic
-                ? 'panic'
-                : cinematic?.feedback?.kind === 'safe'
-                  ? 'happy'
-                  : 'calm'
-            }
-          />
+          <WorldStepEffect theme={themeId} cinematic={cinematic} reduced={settings.reducedMotion} />
+          {themeId !== 'obsidian' && (
+            <WorldPathCompanion
+              theme={themeId}
+              cinematic={cinematic}
+              previousSide={(() => {
+                const past = (cinematic?.rows ?? presented.rows).find(
+                  (row) => row.phase === 'past',
+                );
+                return past && !past.wrong ? (past.chosen ?? null) : null;
+              })()}
+              reduced={settings.reducedMotion}
+              paused={paused}
+              reaction={
+                emergency || catastrophic || cinematic?.feedback?.kind === 'wrong'
+                  ? 'panic'
+                  : cinematic?.feedback?.kind === 'safe'
+                    ? 'happy'
+                    : 'calm'
+              }
+            />
+          )}
           {cinematic?.mystery && (
             <div
               key={cinematic.id}

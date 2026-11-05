@@ -148,3 +148,14 @@ error rejection and screenshots remain required. Guest services are not disabled
 The implementation must be verified by full native CI on the final store head;
 these pressure reductions alone are not a passing iOS result or a reliability
 measurement. Physical-device testing remains separate.
+
+That first pressure reduction still failed the Settings termination control on
+head `3d168fe`, before CPI installation. The SE run reached 333 load average,
+effectively no CPU idle, 136 MB free and 2.1 GB compressed memory. Its cold boot
+was shorter, but the 7 GB host remained unhealthy. The job now uses the standard
+`macos-26-intel` runner with 14 GB RAM and four CPUs, as documented by
+[GitHub](https://docs.github.com/en/actions/how-tos/write-workflows/choose-where-workflows-run/choose-the-runner-for-a-job).
+It retains the same pinned Xcode 26.6 and iOS 26.5 (both installed on that image),
+all budgets and assertions, the fresh owned SE and every required lifecycle step.
+This is the standard runner class for this public repository, not a paid larger
+runner. Native execution is still required to establish success.

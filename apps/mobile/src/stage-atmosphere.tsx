@@ -14,7 +14,14 @@ export function StageAtmosphere({
   const theme = useThemeId();
   if (theme !== 'obsidian')
     return (
-      <div className="cpi-theme-atmosphere" aria-hidden="true">
+      <div
+        className={
+          'cpi-theme-atmosphere' +
+          (subdued ? ' is-subdued' : '') +
+          (emergency ? ' is-emergency' : '')
+        }
+        aria-hidden="true"
+      >
         <ThemeArtwork theme={theme} background />
       </div>
     );

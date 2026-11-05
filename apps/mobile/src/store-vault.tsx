@@ -6,6 +6,7 @@ import { STORE_PRODUCTS, storeProduct, createTestReceiptId } from './store-catal
 import type { StoreProduct, ThemeId } from './store-catalog';
 import { ThemeArtwork } from './theme-art';
 import { StorePackArt } from './store-pack-art';
+import { WorldExperience } from './world-experience';
 import './store-vault.css';
 
 function StoreDialog({
@@ -401,11 +402,24 @@ export function StoreVault({ onTryTheme }: { onTryTheme?: (theme: ThemeId) => vo
           title={t(dialog.theme === 'chaos' ? 'vault.chaos' : 'vault.jelly')}
           onClose={() => closeDialog()}
         >
-          <div className="cpi-vault-theme-preview" data-world={dialog.theme}>
-            <ThemeArtwork theme={dialog.theme} />
-          </div>
+          <WorldExperience theme={dialog.theme} />
           <p>{t(dialog.theme === 'chaos' ? 'vault.chaosDetail' : 'vault.jellyDetail')}</p>
-          <p>{t('vault.included')}</p>
+          <ul className="cpi-vault-world-includes">
+            <li>
+              <strong>
+                {t(dialog.theme === 'chaos' ? 'vault.copperCrystal' : 'vault.opalCrystal')}
+              </strong>
+              <span>{t('vault.materialDetail')}</span>
+            </li>
+            <li>
+              <strong>{t(dialog.theme === 'chaos' ? 'vault.meetPip' : 'vault.meetLumi')}</strong>
+              <span>{t('vault.companionDetail')}</span>
+            </li>
+            <li>
+              <strong>{t('vault.worldSound')}</strong>
+              <span>{t(dialog.theme === 'chaos' ? 'vault.chaosSound' : 'vault.jellySound')}</span>
+            </li>
+          </ul>
           <p className="cpi-vault-muted">{t('vault.trial')}</p>
           <button
             type="button"
