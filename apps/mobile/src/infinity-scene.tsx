@@ -1,4 +1,5 @@
 import { StageAtmosphere } from './stage-atmosphere';
+import { useSoundtrack } from './soundtrack';
 import { PrismBridge } from './prism-bridge';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -725,6 +726,11 @@ function InfinityRun({
   const [cinematic, setCinematic] = useState<SceneCinematic | null>(null);
   const [signals, setSignals] = useState<RunSignals>(EMPTY_RUN_SIGNALS);
   const [confirmEnd, setConfirmEnd] = useState(false);
+  useSoundtrack(
+    state.status === 'playing' ? 'run' : cinematic?.fatal ? null : 'ended',
+    settings.music && (state.status !== 'playing' || (ready && !paused && !confirmEnd && !error)),
+    settings.music && (!!cinematic?.fatal || confirmEnd),
+  );
   const [personalBest, setPersonalBest] = useState<string | null>(null);
   const [newPersonalBest, setNewPersonalBest] = useState(false);
   const runtimeRef = useRef<PracticeRuntime | null>(null);
@@ -748,7 +754,7 @@ function InfinityRun({
         createMedia: (source) => new Audio(source),
         haptic: optionalHaptic,
       },
-      initialAudioSettings,
+      { ...initialAudioSettings, music: false },
     );
     audioRef.current = audio;
     const director = createSceneDirector(
@@ -853,7 +859,7 @@ function InfinityRun({
   }, [initial, onCheckpoint, initialAudioSettings]);
 
   useEffect(() => {
-    audioRef.current?.setSettings(settings);
+    audioRef.current?.setSettings({ ...settings, music: false });
   }, [settings]);
 
   useEffect(() => {

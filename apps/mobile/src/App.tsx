@@ -12,6 +12,7 @@ import {
 } from './practice-save';
 import type { PracticeLoad, PracticeSettings } from './practice-save';
 import { InfinityPractice } from './infinity-scene';
+import { useSoundtrack } from './soundtrack';
 import { ConfirmNewPractice, MainMenu } from './main-menu';
 import { canResumePractice, historyFlag, viewFromHash, viewHash } from './menu-navigation';
 import { readTutorialProgress, writeTutorialProgress } from './tutorial-progress';
@@ -93,6 +94,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
     typeof window === 'undefined' ? 'home' : viewFromHash(window.location.hash),
   );
   const [confirmNew, setConfirmNew] = useState(false);
+  useSoundtrack(!game && view === 'home' && bootPhase === 'ready' ? 'home' : null, settings.music);
   const confirmingRef = useRef(false);
   const backExitInFlight = useRef(false);
   const [exitRequest, setExitRequest] = useState(0);
