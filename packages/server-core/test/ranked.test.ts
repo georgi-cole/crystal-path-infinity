@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { getCurrentRow, PACED_RULESET_VERSION } from '@crystal-path-infinity/game-core';
+import {
+  getCurrentRow,
+  HINT_SCAN_MS,
+  PACED_RULESET_VERSION,
+  SCAN_RULESET_VERSION,
+} from '@crystal-path-infinity/game-core';
 import type { RunState } from '@crystal-path-infinity/game-core';
 import { RankedAuthority, RankedError, rankedSnapshot, RANKED_RNG } from '../src/ranked.ts';
 import type {
@@ -148,6 +153,31 @@ function setup(options: { heartbeatWindowMs?: number; rulesetVersion?: string } 
 }
 
 describe('ranked authority trust boundary', () => {
+  it('holds a selected v3 hint scan on server time and whitelists its checkpoint field', async () => {
+    const f = setup({ rulesetVersion: SCAN_RULESET_VERSION });
+    let response = await f.execute(await f.start(), { type: 'resume' });
+    f.advance(5000);
+    response = await f.execute(response, {
+      type: 'hint',
+      row: response.snapshot.currentRow,
+      life: 0,
+    });
+    expect(response.snapshot.pacing?.hintScanStartedAt).toBe(5000);
+    f.advance(HINT_SCAN_MS + 2999);
+    response = await f.execute(response, { type: 'heartbeat' });
+    expect(response.snapshot.status).toBe('playing');
+    const stored = f.record(response);
+    const hidden = {
+      ...stored,
+      state: { ...stored.state, pacing: { ...stored.state.pacing!, secret: 'never-public' } },
+    };
+    expect(rankedSnapshot(hidden).pacing).toEqual(response.snapshot.pacing);
+    expect(JSON.stringify(rankedSnapshot(hidden))).not.toContain('never-public');
+    f.advance(1);
+    response = await f.execute(response, { type: 'heartbeat' });
+    expect(response.snapshot.death?.cause).toBe('idle');
+    expect(response.snapshot.activeTimeMs).toBe(8000 + HINT_SCAN_MS);
+  });
   it('enforces an explicitly selected v2 row deadline on server time and publishes only pacing fields', async () => {
     const f = setup({ rulesetVersion: PACED_RULESET_VERSION });
     let response = await f.execute(await f.start(), { type: 'resume' });

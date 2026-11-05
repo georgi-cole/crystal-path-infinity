@@ -8,6 +8,7 @@ import {
   createRunPacing,
 } from '@crystal-path-infinity/game-core';
 import type { RunState } from '@crystal-path-infinity/game-core';
+import { PRACTICE_RULESET_VERSION } from './practice-rules';
 
 /**
  * These keys are practice-only. Neither ranked score writes nor ranked revive
@@ -93,7 +94,9 @@ function validatePracticeState(state: RunState): void {
   assertRunState(state, PRACTICE_RNG);
   if (
     !state.runId.startsWith('practice-') ||
-    ![RULESET_VERSION, PACED_RULESET_VERSION].includes(state.rulesetVersion) ||
+    ![RULESET_VERSION, PACED_RULESET_VERSION, PRACTICE_RULESET_VERSION].includes(
+      state.rulesetVersion,
+    ) ||
     state.rows.length > MAX_BUFFER_ROWS ||
     state.resolutions.length > state.buffer.history ||
     state.reviveReceipts.length > MAX_REVIVES
@@ -102,16 +105,16 @@ function validatePracticeState(state: RunState): void {
   }
 }
 
-/** Local upgrade preserves route/SP/progress, grants a fresh row grace, and schedules
- * only future minute bonuses. Ranked historical runs never use this adapter. */
+/** Preserve paced deadlines, route/SP/progress. Unpaced v1 gets fresh grace and
+ * future bonuses. Ranked historical runs never use this adapter. */
 export function upgradePracticePacing(state: RunState): RunState {
   validatePracticeState(state);
-  if (state.rulesetVersion !== RULESET_VERSION || state.status !== 'playing') return state;
+  if (state.rulesetVersion === PRACTICE_RULESET_VERSION || state.status !== 'playing') return state;
   const next: RunState = {
     ...state,
-    rulesetVersion: PACED_RULESET_VERSION,
-    stream: { ...state.stream, rulesetVersion: PACED_RULESET_VERSION },
-    pacing: createRunPacing(state.activeTimeMs),
+    rulesetVersion: PRACTICE_RULESET_VERSION,
+    stream: { ...state.stream, rulesetVersion: PRACTICE_RULESET_VERSION },
+    pacing: state.pacing ?? createRunPacing(state.activeTimeMs),
   };
   validatePracticeState(next);
   return next;

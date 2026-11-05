@@ -9,6 +9,7 @@ export const MENU_VIEWS = [
   'rankings',
   'profile',
   'settings',
+  'store',
 ] as const;
 
 export type MenuView = (typeof MENU_VIEWS)[number];

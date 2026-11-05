@@ -73,6 +73,8 @@ export type DeathCause = 'wrong_tile' | 'mystery' | 'drain' | 'idle';
 export interface RunPacing {
   readonly rowEnteredAt: number;
   readonly nextSurvivalBonusAt: number;
+  /** V3: successful hint holds row pressure for one bounded scan, once per row. */
+  readonly hintScanStartedAt?: number;
 }
 export interface DeathSnapshot {
   readonly id: string;
@@ -129,7 +131,7 @@ export interface RunState {
   readonly achievedAt: number | null;
   readonly activeTimeMs: number;
   readonly lastObservedAt: number;
-  /** Required by infinity-v2; absent on historical infinity-v1 checkpoints. */
+  /** Required by infinity-v2/v3; absent on historical infinity-v1 checkpoints. */
   readonly pacing?: RunPacing;
   readonly effects: readonly ActiveEffect[];
   readonly buffer: BufferPolicy;

@@ -10,7 +10,14 @@ if the owner supplies them later.
 The original Downloads files are untouched. This records delivery by the owner,
 not independent verification of third-party commercial rights.
 
-Home loops Silent Descent. Active local practice starts Enjoythepath at 13 s;
+Home and all non-game menus (including Settings, Profile, Rankings and the
+crystal rehearsal) share one continuous Silent Descent loop. Changing a menu
+does not stop, recreate or seek its source. Starting a run transfers music
+ownership to gameplay; returning to a menu starts the home scene again.
+The owner subsequently retained upper-left Settings alongside the two quick
+audio toggles and replaced bottom-right Settings with Store. Store also shares
+the menu soundtrack.
+Active local practice starts Enjoythepath at 13 s;
 the owner clarified the loop as exactly 181 → 28 seconds. A Web Audio buffer
 source schedules that region without HTML media seek gaps. Its final 80 ms
 blend into the source material immediately preceding 28 s to soften the join.

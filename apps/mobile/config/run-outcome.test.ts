@@ -146,8 +146,11 @@ describe('CPI-015 HUD and result state contract', () => {
     const html = markup(dead);
     expect(html).toContain(en['game.deathTitle']);
     expect(html).toContain(en['game.fatalNotCounted'].replace('{row}', '1'));
-    expect(html).toContain(en['game.offerTitle'].replace('{index}', '1').replace('{sp}', '200'));
-    expect(html).toContain(en['game.offerUnavailable']);
+    expect(html).toContain(en['game.bargainTitle'].replace('{sp}', '200'));
+    expect(html).toContain(en['game.bargainBody']);
+    expect(html).toContain(en['game.bargainSleeping']);
+    expect(html).not.toContain('reward grants remain');
+    expect(html).not.toContain('it does not add points');
     expect(html).not.toContain(en['game.complete']);
     expect(html).not.toContain('Rankings (not live)');
     expect(html).toMatch(/aria-label="Row 1 left tile"[^>]*disabled=""/);

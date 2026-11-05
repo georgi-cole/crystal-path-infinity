@@ -261,7 +261,10 @@ export function PrismBridge({
   eventId = '',
   fractureSeed = 'bridge',
   hintScan = null,
-  scanBelowClock = false,
+  showHintCaption = false,
+  showStepCaptions = true,
+  allowChoices = true,
+  allowedSide,
 }: {
   rows?: readonly PresentedRow[];
   feedback?: SceneFeedback | null;
@@ -275,7 +278,10 @@ export function PrismBridge({
   eventId?: string | number;
   fractureSeed?: string;
   hintScan?: HintScan | null;
-  scanBelowClock?: boolean;
+  showHintCaption?: boolean;
+  showStepCaptions?: boolean;
+  allowChoices?: boolean;
+  allowedSide?: TileSide;
 }) {
   const id = useId().replace(/:/g, ''),
     { t, number } = useLanguage();
@@ -354,18 +360,15 @@ export function PrismBridge({
           </radialGradient>
           <linearGradient id={id + 'scan'} x2="0" y2="1">
             <stop stopColor="#bafff0" stopOpacity="0" />
-            <stop offset=".85" stopColor="#a5fff2" stopOpacity=".3" />
-            <stop offset="1" stopColor="#e2fff9" stopOpacity=".95" />
+            <stop offset=".55" stopColor="#73d8db" stopOpacity=".08" />
+            <stop offset=".86" stopColor="#a5fff2" stopOpacity=".36" />
+            <stop offset=".94" stopColor="#e2fff9" stopOpacity=".95" />
+            <stop offset="1" stopColor="#e2fff9" stopOpacity="0" />
           </linearGradient>
           <clipPath id={id + 'scan-row'}>
-            <polygon
-              points={coordinates([
-                bridgePane(0, 'left')[0],
-                bridgePane(0, 'right')[1],
-                bridgePane(0, 'right')[2],
-                bridgePane(0, 'left')[3],
-              ])}
-            />
+            {(['left', 'right'] as const).map((side) => (
+              <polygon key={side} points={coordinates(bridgePane(0, side))} />
+            ))}
           </clipPath>
         </defs>
         <ellipse cx="450" cy="580" rx="440" ry="200" fill={'url(#' + id + 'under)'} />
@@ -552,29 +555,75 @@ export function PrismBridge({
           );
         })}
         {hintScan && !reduced && (
-          <g key={hintScan.id} className="cpi-row-scan" aria-hidden="true">
-            <path
-              className="cpi-probe-link"
-              pathLength="1"
-              d={`M870 ${scanBelowClock ? 210 : 72}Q790 ${scanBelowClock ? 280 : 180} 450 ${bridgePane(0, 'left')[0].y}`}
-              stroke="#a0fff2"
-              strokeWidth="1.2"
-            />
+          <g key={hintScan.id} className="cpi-row-scan" data-hint-scan="row" aria-hidden="true">
             <g clipPath={'url(#' + id + 'scan-row)'}>
+              {(['left', 'right'] as const).map((side) => {
+                const pane = bridgePane(0, side);
+                return (
+                  <g
+                    key={side}
+                    className="cpi-scan-matrix"
+                    stroke="#a7eee0"
+                    strokeWidth=".65"
+                    fill="none"
+                  >
+                    {Array.from({ length: 7 }, (_, i) => (
+                      <g key={i} style={{ '--matrix-delay': `${i * 12}ms` } as CSSProperties}>
+                        <path
+                          d={`M${onFace(pane, (i + 1) / 8, 0).x} ${onFace(pane, (i + 1) / 8, 0).y}L${onFace(pane, (i + 1) / 8, 1).x} ${onFace(pane, (i + 1) / 8, 1).y}`}
+                        />
+                        <path
+                          d={`M${onFace(pane, 0, (i + 1) / 8).x} ${onFace(pane, 0, (i + 1) / 8).y}L${onFace(pane, 1, (i + 1) / 8).x} ${onFace(pane, 1, (i + 1) / 8).y}`}
+                        />
+                      </g>
+                    ))}
+                  </g>
+                );
+              })}
               <rect
                 className="cpi-scan-band"
                 x="0"
                 y="0"
                 width="900"
-                height="26"
+                height="40"
                 fill={'url(#' + id + 'scan)'}
                 style={
                   {
-                    '--scan-from': `${bridgePane(0, 'left')[0].y - 26}px`,
+                    '--scan-from': `${bridgePane(0, 'left')[0].y - 40}px`,
                     '--scan-to': `${bridgePane(0, 'left')[3].y}px`,
                   } as CSSProperties
                 }
               />
+            </g>
+            <g className="cpi-scan-lock" fill="none" stroke="#d1ffeb" strokeWidth="1.6">
+              {[
+                [0, 0],
+                [1, 0],
+                [1, 1],
+                [0, 1],
+              ].map(([u, v], index) => {
+                const pane = bridgePane(0, hintScan.side);
+                const x = u ? 0.965 : 0.035,
+                  y = v ? 0.965 : 0.035;
+                return (
+                  <g key={index}>
+                    <polyline
+                      points={coordinates([
+                        onFace(pane, u ? 0.83 : 0.17, y),
+                        onFace(pane, x, y),
+                        onFace(pane, x, v ? 0.83 : 0.17),
+                      ])}
+                    />
+                    <circle
+                      cx={onFace(pane, x, y).x}
+                      cy={onFace(pane, x, y).y}
+                      r="1.9"
+                      fill="#d1ffeb"
+                      stroke="none"
+                    />
+                  </g>
+                );
+              })}
             </g>
           </g>
         )}
@@ -611,28 +660,34 @@ export function PrismBridge({
               aria-label={t(side === 'left' ? 'game.leftTile' : 'game.rightTile', {
                 row: number(row.label),
               })}
+              aria-description={row.hint === side ? t('game.hintedTile') : undefined}
               style={hitRegion(bridgePane(row.distance, side))}
               onClick={() => onChoose?.(side)}
               disabled={
                 !interactive ||
+                !allowChoices ||
+                (!!allowedSide && allowedSide !== side) ||
                 moving ||
                 (!!phase && phase !== 'reveal') ||
                 collapsed ||
                 row.phase !== 'current'
               }
             >
-              {row.phase === 'current' && !phase && (row.index === '0' || row.hint === side) && (
-                <>
-                  <span className="cpi-pane-direction" aria-hidden="true">
-                    {side === 'left' ? '↖' : '↗'}
-                  </span>
-                  <span className="cpi-pane-caption">
-                    {row.hint === side
-                      ? t('game.hintedTile')
-                      : t(side === 'left' ? 'game.stepLeft' : 'game.stepRight')}
-                  </span>
-                </>
-              )}
+              {row.phase === 'current' &&
+                !phase &&
+                ((row.hint === side && showHintCaption) ||
+                  (row.hint !== side && row.index === '0' && showStepCaptions)) && (
+                  <>
+                    <span className="cpi-pane-direction" aria-hidden="true">
+                      {side === 'left' ? '↖' : '↗'}
+                    </span>
+                    <span className="cpi-pane-caption">
+                      {row.hint === side
+                        ? t('game.hintedTile')
+                        : t(side === 'left' ? 'game.stepLeft' : 'game.stepRight')}
+                    </span>
+                  </>
+                )}
             </button>
           ))}
           {row.hasMystery &&

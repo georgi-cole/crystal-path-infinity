@@ -1,6 +1,6 @@
 import { decimal } from './numbers.ts';
 import type { EffectKind } from './types.ts';
-import { PACED_RULESET_VERSION } from './pacing.ts';
+import { PACED_RULESET_VERSION, SCAN_RULESET_VERSION } from './pacing.ts';
 
 export const RULESET_VERSION = 'infinity-v1';
 export const STARTING_SP = 300;
@@ -52,11 +52,13 @@ export const RULESET = Object.freeze({
 });
 
 const PACED_RULESET = Object.freeze({ ...RULESET, version: PACED_RULESET_VERSION });
+const SCAN_RULESET = Object.freeze({ ...RULESET, version: SCAN_RULESET_VERSION });
 export function getRuleset(
   version: string = RULESET_VERSION,
 ): Omit<typeof RULESET, 'version'> & { readonly version: string } {
   if (version === RULESET_VERSION) return RULESET;
   if (version === PACED_RULESET_VERSION) return PACED_RULESET;
+  if (version === SCAN_RULESET_VERSION) return SCAN_RULESET;
   throw new RangeError(`Unsupported ruleset: ${version}`);
 }
 

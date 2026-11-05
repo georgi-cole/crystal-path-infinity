@@ -22,6 +22,7 @@ import {
   upgradePracticePacing,
 } from '../src/practice-save';
 import type { PracticeStorage } from '../src/practice-save';
+import { PRACTICE_RULESET_VERSION } from '../src/practice-rules';
 
 class MemoryStorage implements PracticeStorage {
   readonly map = new Map<string, string>();
@@ -69,6 +70,34 @@ function chooseSafe(state: RunState): RunState {
   return result.state;
 }
 describe('CPI-009 atomic local practice snapshots', () => {
+  it('upgrades v2 without resetting row pressure or granting a retroactive scan hold', () => {
+    const base = createRun(
+      {
+        runId: 'practice-v2-upgrade',
+        rulesetVersion: PACED_RULESET_VERSION,
+        routeRng: createPracticeCursor(1),
+        mysteryRng: createPracticeCursor(2),
+        observedAt: 0,
+      },
+      PRACTICE_RNG,
+    );
+    const old = transitionRun(
+      base,
+      { type: 'hint', row: base.currentRow, life: 0 },
+      { activeTimeMs: 5000, achievedAt: 5000, rng: PRACTICE_RNG },
+    ).state;
+    const next = upgradePracticePacing(old);
+    expect(next.rulesetVersion).toBe(PRACTICE_RULESET_VERSION);
+    expect(next.pacing).toEqual(old.pacing);
+    expect(presentRowPressure(next)).toEqual(presentRowPressure(old));
+    expect(next.pacing?.hintScanStartedAt).toBeUndefined();
+    expect(next.current.revealedSafeSide).toBe(old.current.revealedSafeSide);
+    expect(next.hints).toBe(old.hints);
+    const store = new MemoryStorage();
+    writePracticeCheckpoint(store, next);
+    const loaded = readPracticeCheckpoint(store);
+    expect(loaded.status === 'ready' && loaded.state).toEqual(next);
+  });
   it('upgrades only a living legacy practice without rerolling or retroactive minute rewards', () => {
     const old = transitionRun(
       chooseSafe(newRun()),
@@ -80,7 +109,7 @@ describe('CPI-009 atomic local practice snapshots', () => {
       },
     ).state;
     const next = upgradePracticePacing(old);
-    expect(next.rulesetVersion).toBe(PACED_RULESET_VERSION);
+    expect(next.rulesetVersion).toBe(PRACTICE_RULESET_VERSION);
     expect(next.pacing).toEqual({ rowEnteredAt: 123_456, nextSurvivalBonusAt: 180_000 });
     expect(presentRowPressure(next)?.active).toBe(false);
     expect(next.rows).toEqual(old.rows);

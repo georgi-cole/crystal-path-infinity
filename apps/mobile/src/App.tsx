@@ -94,7 +94,6 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
     typeof window === 'undefined' ? 'home' : viewFromHash(window.location.hash),
   );
   const [confirmNew, setConfirmNew] = useState(false);
-  useSoundtrack(!game && view === 'home' && bootPhase === 'ready' ? 'home' : null, settings.music);
   const confirmingRef = useRef(false);
   const backExitInFlight = useRef(false);
   const [exitRequest, setExitRequest] = useState(0);
@@ -107,6 +106,10 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
     (listener) => rankedClient?.subscribe(listener) ?? (() => {}),
     () => rankedClient?.snapshot().run?.runId ?? null,
     () => null,
+  );
+  useSoundtrack(
+    !game && !(view === 'play' && rankedRunId) && bootPhase === 'ready' ? 'home' : null,
+    settings.music,
   );
   const [rewardOwner, setRewardOwner] = useState<{
     scope: object;

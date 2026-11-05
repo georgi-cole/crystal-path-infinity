@@ -7,8 +7,8 @@ import {
   createRun,
   MAX_SP,
   PRACTICE_RNG,
-  PACED_RULESET_VERSION,
   presentRowPressure,
+  HINT_SCAN_MS,
 } from '@crystal-path-infinity/game-core';
 import type {
   RunEvent,
@@ -41,6 +41,8 @@ import { AnimatedResult } from './animated-result';
 import { DeathClock, SpCounter } from './scene-instruments';
 import { collectRunSignals, EMPTY_RUN_SIGNALS, liveSignal } from './run-signals';
 import type { RunSignals } from './run-signals';
+import { PRACTICE_RULESET_VERSION } from './practice-rules';
+import { createHintCaptionGate } from './hint-caption';
 import type { MessageKey } from './i18n/messages';
 import './infinity-scene.css';
 import './infinity-hud-premium.css';
@@ -97,6 +99,7 @@ export interface InfinitySceneViewProps {
   readonly onSettingsChange: (next: PracticeSettings) => void;
   readonly cinematic?: SceneCinematic | null;
   readonly signals?: RunSignals;
+  readonly hintCaptionRow?: string | null;
 }
 
 /** No game-core mutations or timers. All callbacks are externally owned events. */
@@ -125,6 +128,7 @@ export function InfinitySceneView({
   onSettingsChange,
   cinematic = null,
   signals = EMPTY_RUN_SIGNALS,
+  hintCaptionRow = null,
 }: InfinitySceneViewProps) {
   const { t, number } = useLanguage();
   const presented = presentInfinityScene(state);
@@ -149,7 +153,18 @@ export function InfinitySceneView({
   const catastrophic = state.death !== null && state.status !== 'playing';
   const pressure = presentRowPressure(state);
   const bonus = liveSignal(signals.bonus, state, 2400);
-  const hintScan = liveSignal(signals.hint, state, 1200);
+  const hintScan =
+    liveSignal(signals.hint, state, HINT_SCAN_MS) ??
+    (pressure?.paused &&
+    state.pacing?.hintScanStartedAt !== undefined &&
+    state.current.revealedSafeSide
+      ? {
+          id: `${state.runId}:${state.revivesApplied}:${state.currentRow}:scan-recovery`,
+          row: state.currentRow,
+          side: state.current.revealedSafeSide,
+          activeAt: state.pacing.hintScanStartedAt,
+        }
+      : null);
   const emergency =
     state.status === 'playing' && ((state.sp > 0 && state.sp < 15) || pressure?.urgent);
   const hostileReveal = cinematic?.mystery
@@ -245,7 +260,9 @@ export function InfinitySceneView({
               type="button"
               className="cps-hint-btn cpi-hud-control cpi-hint-control"
               onClick={onHint}
-              disabled={!interactive || state.hints === 0}
+              disabled={
+                !interactive || state.hints === 0 || state.current.revealedSafeSide !== null
+              }
               aria-label={t('game.hintButton', { count: number(state.hints) })}
             >
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -327,21 +344,6 @@ export function InfinitySceneView({
           </div>
           <div className="cpi-right-instruments">
             {pressure?.active && <DeathClock pressure={pressure} />}
-            {hintScan && (
-              <div key={hintScan.id} className="cpi-hint-projector" aria-hidden="true">
-                <EffectGlyph kind="gain_hint" />
-                <span>
-                  {t(
-                    state.activeTimeMs - hintScan.activeAt < 650
-                      ? 'game.hintAnalyzing'
-                      : 'game.hintLocked',
-                  )}
-                </span>
-                <i />
-                <i />
-                <i />
-              </div>
-            )}
             {state.sp <= 140 && state.status === 'playing' && (
               <div
                 className={'cpi-sp-danger-copy ' + (state.sp <= 60 ? 'is-critical' : 'is-low')}
@@ -381,7 +383,7 @@ export function InfinitySceneView({
             eventId={state.death?.id ?? cinematic?.id ?? ''}
             fractureSeed={`${state.runId}:${state.revivesApplied}`}
             hintScan={hintScan}
-            scanBelowClock={pressure?.active}
+            showHintCaption={hintCaptionRow === state.currentRow}
           />
           {cinematic?.mystery && (
             <div
@@ -432,7 +434,7 @@ export function InfinitySceneView({
           <span aria-hidden="true">—</span>
           {t('game.bridgeGuidance')}
           <span aria-hidden="true">—</span>
-          <span className="visually-hidden">{t('game.footer')}</span>
+          <span className="visually-hidden">{t('game.crossingNote')}</span>
         </p>
       </div>
       {overlayVisible && (
@@ -597,18 +599,12 @@ export function InfinitySceneView({
                 {outcome.offer ? (
                   <div className="cpi-revive-offer">
                     <strong>
-                      {t('game.offerTitle', {
-                        index: number(outcome.offer.ordinal),
+                      {t('game.bargainTitle', {
                         sp: number(outcome.offer.restoreSp),
                       })}
                     </strong>
-                    <span>
-                      {t('game.offerDetail', {
-                        sp: number(outcome.offer.restoreSp),
-                        remaining: number(outcome.offer.grantsRemaining),
-                      })}
-                    </span>
-                    <span>{t('game.offerUnavailable')}</span>
+                    <span>{t('game.bargainBody')}</span>
+                    <span>{t('game.bargainSleeping')}</span>
                   </div>
                 ) : outcome.phase === 'grant-ready' ? (
                   <p role="status">{t('game.grantReady')}</p>
@@ -679,7 +675,7 @@ function makeInitialRun(): RunState {
   return createRun(
     {
       runId: 'practice-' + route.toString(16),
-      rulesetVersion: PACED_RULESET_VERSION,
+      rulesetVersion: PRACTICE_RULESET_VERSION,
       routeRng: createPracticeCursor(route),
       mysteryRng: createPracticeCursor(mystery),
       observedAt: Date.now(),
@@ -725,6 +721,8 @@ function InfinityRun({
   const [feedback, setFeedback] = useState<SceneFeedback | null>(null);
   const [cinematic, setCinematic] = useState<SceneCinematic | null>(null);
   const [signals, setSignals] = useState<RunSignals>(EMPTY_RUN_SIGNALS);
+  const [hintCaptionRow, setHintCaptionRow] = useState<string | null>(null);
+  const [hintCaptionGate] = useState(() => createHintCaptionGate(() => window.localStorage));
   const [confirmEnd, setConfirmEnd] = useState(false);
   useSoundtrack(
     state.status === 'playing' ? 'run' : cinematic?.fatal ? null : 'ended',
@@ -779,6 +777,8 @@ function InfinityRun({
       onTransition: (result: TimedSessionResult) => {
         if (!alive) return;
         director.receive(result);
+        const hint = result.events.find((event) => event.type === 'hint-used');
+        if (hint && hintCaptionGate.claim()) setHintCaptionRow(hint.row);
         if (result.events.length) setSignals((previous) => collectRunSignals(previous, result));
         let earnedNewBest = false;
         if (result.events.some((event) => event.type === 'run-ended')) {
@@ -856,7 +856,7 @@ function InfinityRun({
       unsubscribeCheckpoint();
       runtime.dispose();
     };
-  }, [initial, onCheckpoint, initialAudioSettings]);
+  }, [initial, onCheckpoint, initialAudioSettings, hintCaptionGate]);
 
   useEffect(() => {
     audioRef.current?.setSettings({ ...settings, music: false });
@@ -1016,6 +1016,7 @@ function InfinityRun({
       feedback={feedback}
       cinematic={cinematic}
       signals={signals}
+      hintCaptionRow={hintCaptionRow}
       ready={ready}
       busy={busy}
       paused={paused}

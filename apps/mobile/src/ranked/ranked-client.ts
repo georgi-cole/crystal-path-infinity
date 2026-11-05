@@ -3,6 +3,8 @@ import { canRecheckOperation, parseOperationFailure } from '../operations/operat
 import type { OperationFailure } from '../operations/operation-failure';
 import {
   PACED_RULESET_VERSION,
+  SCAN_RULESET_VERSION,
+  HINT_SCAN_MS,
   ROW_GRACE_MS,
   DEATH_CLOCK_MS,
   SURVIVAL_BONUS_INTERVAL_MS,
@@ -38,7 +40,11 @@ export interface RankedRun {
   readonly sp: number;
   readonly hints: number;
   readonly activeTimeMs: number;
-  readonly pacing?: { readonly rowEnteredAt: number; readonly nextSurvivalBonusAt: number };
+  readonly pacing?: {
+    readonly rowEnteredAt: number;
+    readonly nextSurvivalBonusAt: number;
+    readonly hintScanStartedAt?: number;
+  };
   readonly achievedAt: number | null;
   readonly paused: boolean;
   readonly current: RankedCurrent & { readonly hasMystery: boolean };
@@ -269,17 +275,32 @@ export function parseRankedReply(value: unknown): RankedReply | null {
   )
     return null;
   const pacing = raw.pacing;
-  if (raw.rulesetVersion === PACED_RULESET_VERSION) {
+  if (raw.rulesetVersion === PACED_RULESET_VERSION || raw.rulesetVersion === SCAN_RULESET_VERSION) {
     if (
-      !object(pacing, ['rowEnteredAt', 'nextSurvivalBonusAt']) ||
+      !object(
+        pacing,
+        ['rowEnteredAt', 'nextSurvivalBonusAt'],
+        raw.rulesetVersion === SCAN_RULESET_VERSION ? ['hintScanStartedAt'] : [],
+      ) ||
       !integer(pacing.rowEnteredAt) ||
       !integer(pacing.nextSurvivalBonusAt) ||
       pacing.rowEnteredAt > raw.activeTimeMs ||
       pacing.nextSurvivalBonusAt < raw.activeTimeMs ||
       pacing.nextSurvivalBonusAt % SURVIVAL_BONUS_INTERVAL_MS !== 0 ||
       (raw.status === 'playing' &&
-        (pacing.rowEnteredAt + ROW_GRACE_MS + DEATH_CLOCK_MS <= raw.activeTimeMs ||
+        (pacing.rowEnteredAt +
+          ROW_GRACE_MS +
+          DEATH_CLOCK_MS +
+          (pacing.hintScanStartedAt === undefined ? 0 : HINT_SCAN_MS) <=
+          raw.activeTimeMs ||
           pacing.nextSurvivalBonusAt === raw.activeTimeMs))
+    )
+      return null;
+    if (
+      pacing.hintScanStartedAt !== undefined &&
+      (!integer(pacing.hintScanStartedAt) ||
+        pacing.hintScanStartedAt < pacing.rowEnteredAt ||
+        pacing.hintScanStartedAt > raw.activeTimeMs)
     )
       return null;
   } else if (pacing !== undefined) return null;
@@ -299,6 +320,8 @@ export function parseRankedReply(value: unknown): RankedReply | null {
     return null;
   const current = visibleCurrent(raw.current, ['hasMystery']);
   if (!current || typeof (raw.current as Record<string, unknown>).hasMystery !== 'boolean')
+    return null;
+  if (pacing && pacing.hintScanStartedAt !== undefined && current.revealedSafeSide === null)
     return null;
   const history: (RankedCurrent & { index: string })[] = [];
   for (const entry of raw.history) {
@@ -356,7 +379,8 @@ export function parseRankedReply(value: unknown): RankedReply | null {
   if (
     death !== null &&
     (death as { cause: string }).cause === 'idle' &&
-    raw.rulesetVersion !== PACED_RULESET_VERSION
+    raw.rulesetVersion !== PACED_RULESET_VERSION &&
+    raw.rulesetVersion !== SCAN_RULESET_VERSION
   )
     return null;
   if (
@@ -391,6 +415,12 @@ export function parseRankedReply(value: unknown): RankedReply | null {
             pacing: {
               rowEnteredAt: (pacing as NonNullable<RankedRun['pacing']>).rowEnteredAt,
               nextSurvivalBonusAt: (pacing as NonNullable<RankedRun['pacing']>).nextSurvivalBonusAt,
+              ...((pacing as NonNullable<RankedRun['pacing']>).hintScanStartedAt === undefined
+                ? {}
+                : {
+                    hintScanStartedAt: (pacing as NonNullable<RankedRun['pacing']>)
+                      .hintScanStartedAt,
+                  }),
             },
           }
         : {}),

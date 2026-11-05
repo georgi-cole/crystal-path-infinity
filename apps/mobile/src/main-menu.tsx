@@ -17,6 +17,7 @@ import type { NameReportClient } from './leaderboard/name-report-client';
 import { LanguageSettings, PrivacyAccountSupport } from './locale-settings';
 import { useLanguage } from './language-context';
 import { BridgeTutorial } from './bridge-tutorial';
+import { StoreVault } from './store-vault';
 import type { TutorialProgress } from './tutorial-progress';
 import type { PracticeLoad, PracticeSettings } from './practice-save';
 import { canResumePractice, rankedServiceState } from './menu-navigation';
@@ -27,7 +28,7 @@ import './game-settings.css';
 
 const INTRO_HUB_BASE = import.meta.env.BASE_URL + 'intro-hub/';
 
-type GlyphName = 'play' | 'practice' | 'ranking' | 'profile' | 'settings' | 'arrow';
+type GlyphName = 'play' | 'practice' | 'ranking' | 'profile' | 'settings' | 'store' | 'arrow';
 
 function Glyph({ name }: { name: GlyphName }) {
   const art: Record<GlyphName, ReactNode> = {
@@ -55,6 +56,12 @@ function Glyph({ name }: { name: GlyphName }) {
         <path d="M4 7h16M4 17h16" />
         <circle cx="9" cy="7" r="2" />
         <circle cx="15" cy="17" r="2" />
+      </>
+    ),
+    store: (
+      <>
+        <path d="M5 8h14l1 13H4L5 8Z" />
+        <path d="M8 8V6a4 4 0 0 1 8 0v2M9 13l3 3 3-3" />
       </>
     ),
     arrow: <path d="m14 5-7 7 7 7" />,
@@ -336,11 +343,7 @@ function MenuHome({
             icon="profile"
             onClick={() => onOpen('profile')}
           />
-          <MenuAction
-            label={t('general.settings')}
-            icon="settings"
-            onClick={() => onOpen('settings')}
-          />
+          <MenuAction label={t('general.store')} icon="store" onClick={() => onOpen('store')} />
         </div>
       </nav>
     </div>
@@ -510,6 +513,8 @@ export function MainMenu({
             onStartPractice={() => onOpen('practice')}
             reducedMotion={settings.reducedMotion}
           />
+        ) : view === 'store' ? (
+          <StoreVault />
         ) : view === 'play' ? (
           <MenuPanel title={t('general.play')} eyebrow={t('menu.playEyebrow')}>
             {rankedClient ? (
@@ -629,7 +634,7 @@ export function MainMenu({
             {warning}
           </p>
         )}
-        {view !== 'home' && view !== 'settings' && (
+        {view !== 'home' && view !== 'settings' && view !== 'tutorial' && view !== 'store' && (
           <footer className="cpi-menu-footer">
             <span>Crystal Path: Infinity</span>
             <span>

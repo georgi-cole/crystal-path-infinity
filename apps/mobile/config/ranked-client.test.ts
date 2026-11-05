@@ -135,6 +135,27 @@ function body(input: RequestInit): Record<string, unknown> {
 }
 
 describe('CPI-032/037 fixed operational refusals', () => {
+  it('accepts only a bounded v3 scan attached to a revealed current row', () => {
+    const legacy = reply();
+    const snapshot = {
+      ...legacy.snapshot,
+      rulesetVersion: 'infinity-v3',
+      activeTimeMs: 8300,
+      current: { ...legacy.snapshot.current, revealedSafeSide: 'left' },
+      pacing: { rowEnteredAt: 0, nextSurvivalBonusAt: 60000, hintScanStartedAt: 5000 },
+    };
+    const scanned = { ...legacy, snapshot };
+    expect(parseRankedReply(scanned)?.snapshot.pacing).toEqual(snapshot.pacing);
+    for (const invalid of [
+      { ...snapshot, rulesetVersion: 'infinity-v2' },
+      { ...snapshot, current: { ...snapshot.current, revealedSafeSide: null } },
+      { ...snapshot, activeTimeMs: 8800 },
+      { ...snapshot, pacing: { ...snapshot.pacing, hintScanStartedAt: 8400 } },
+      { ...snapshot, pacing: { ...snapshot.pacing, hintScanStartedAt: -1 } },
+      { ...snapshot, pacing: { ...snapshot.pacing, privateSeed: 'hidden' } },
+    ])
+      expect(parseRankedReply({ ...scanned, snapshot: invalid })).toBeNull();
+  });
   it('accepts whitelisted v2 pacing without relaxing the v1 or private-field boundary', () => {
     const legacy = reply();
     expect(parseRankedReply(legacy)?.snapshot.pacing).toBeUndefined();

@@ -12,7 +12,11 @@ export function DeathClock({
   const seconds = (pressure.remainingMs / 1000).toFixed(1);
   return (
     <div
-      className={'cpi-pressure-clock' + (pressure.urgent ? ' is-urgent' : '')}
+      className={
+        'cpi-pressure-clock' +
+        (pressure.urgent ? ' is-urgent' : '') +
+        (pressure.paused ? ' is-held' : '')
+      }
       role="timer"
       aria-live="off"
       aria-label={t('game.rowPressure', { seconds })}

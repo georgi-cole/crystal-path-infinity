@@ -16,6 +16,7 @@ import {
   createRunPacing,
   nextSurvivalBonusAt,
   PACED_RULESET_VERSION,
+  SCAN_RULESET_VERSION,
   rowDeadline,
   SURVIVAL_BONUS_INTERVAL_MS,
   SURVIVAL_BONUS_SP,
@@ -95,7 +96,9 @@ export function createRun(options: CreateRunOptions, rng: RandomSource): RunStat
     achievedAt: null,
     activeTimeMs,
     lastObservedAt: options.observedAt,
-    ...(rulesetVersion === PACED_RULESET_VERSION ? { pacing: createRunPacing(activeTimeMs) } : {}),
+    ...([PACED_RULESET_VERSION, SCAN_RULESET_VERSION].includes(rulesetVersion)
+      ? { pacing: createRunPacing(activeTimeMs) }
+      : {}),
     effects: [],
     buffer,
     bufferOffset: '0',
@@ -166,10 +169,20 @@ export function assertRunState(state: RunState, rng?: RandomSource): void {
   }
   if ((state.status === 'finished') !== (state.result !== null))
     throw new RangeError('Invalid terminal result.');
-  if (state.rulesetVersion === PACED_RULESET_VERSION) {
+  if ([PACED_RULESET_VERSION, SCAN_RULESET_VERSION].includes(state.rulesetVersion)) {
     if (!state.pacing) throw new RangeError('Missing row and survival schedules.');
     assertNonNegativeInteger(state.pacing.rowEnteredAt, 'Row entry');
     assertNonNegativeInteger(state.pacing.nextSurvivalBonusAt, 'Survival schedule');
+    if (state.pacing.hintScanStartedAt !== undefined) {
+      assertNonNegativeInteger(state.pacing.hintScanStartedAt, 'Hint scan start');
+      if (
+        state.rulesetVersion !== SCAN_RULESET_VERSION ||
+        state.pacing.hintScanStartedAt < state.pacing.rowEnteredAt ||
+        state.pacing.hintScanStartedAt > state.activeTimeMs ||
+        state.current.revealedSafeSide === null
+      )
+        throw new RangeError('Invalid hint scan hold.');
+    }
     if (
       state.pacing.rowEnteredAt > state.activeTimeMs ||
       state.pacing.nextSurvivalBonusAt % SURVIVAL_BONUS_INTERVAL_MS !== 0 ||
@@ -600,6 +613,9 @@ export function transitionRun(
         ...next,
         hints: next.hints - 1,
         current: { ...next.current, revealedSafeSide: safeSide },
+        ...(next.rulesetVersion === SCAN_RULESET_VERSION && next.pacing
+          ? { pacing: { ...next.pacing, hintScanStartedAt: next.activeTimeMs } }
+          : {}),
       };
       events.push({ ...eventTime(next), type: 'hint-used', row: next.currentRow, safeSide });
       return result(next, events);
@@ -670,7 +686,14 @@ export function transitionRun(
           revivesToReachScore: next.revivesApplied,
           resolutions: [...next.resolutions, { index: row.index, ...next.current }],
           current: emptyCurrent(),
-          ...(next.pacing ? { pacing: { ...next.pacing, rowEnteredAt: next.activeTimeMs } } : {}),
+          ...(next.pacing
+            ? {
+                pacing: {
+                  rowEnteredAt: next.activeTimeMs,
+                  nextSurvivalBonusAt: next.pacing.nextSurvivalBonusAt,
+                },
+              }
+            : {}),
         },
         context.rng,
       );

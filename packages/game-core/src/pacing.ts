@@ -2,6 +2,8 @@ import { addSafeInteger } from './numbers.ts';
 import type { RunPacing, RunState } from './types.ts';
 
 export const PACED_RULESET_VERSION = 'infinity-v2';
+export const SCAN_RULESET_VERSION = 'infinity-v3';
+export const HINT_SCAN_MS = 800;
 export const ROW_GRACE_MS = 3_000;
 export const DEATH_CLOCK_MS = 5_000;
 export const SURVIVAL_BONUS_INTERVAL_MS = 60_000;
@@ -20,18 +22,28 @@ export function createRunPacing(activeTimeMs: number): RunPacing {
 }
 
 export function rowDeadline(pacing: RunPacing): number {
-  return addSafeInteger(pacing.rowEnteredAt, ROW_GRACE_MS + DEATH_CLOCK_MS, 'Row deadline');
+  return addSafeInteger(
+    pacing.rowEnteredAt,
+    ROW_GRACE_MS + DEATH_CLOCK_MS + (pacing.hintScanStartedAt === undefined ? 0 : HINT_SCAN_MS),
+    'Row deadline',
+  );
 }
 
 /** Projection only. Its clock is the canonical foreground-only active timeline. */
 export function presentRowPressure(state: Pick<RunState, 'status' | 'activeTimeMs' | 'pacing'>) {
   if (!state.pacing || state.status !== 'playing') return null;
-  const elapsed = Math.max(0, state.activeTimeMs - state.pacing.rowEnteredAt);
+  const scan = state.pacing.hintScanStartedAt;
+  const paused =
+    scan !== undefined && state.activeTimeMs >= scan && state.activeTimeMs - scan < HINT_SCAN_MS;
+  const held =
+    scan === undefined ? 0 : Math.min(HINT_SCAN_MS, Math.max(0, state.activeTimeMs - scan));
+  const elapsed = Math.max(0, state.activeTimeMs - state.pacing.rowEnteredAt - held);
   const remainingMs = Math.max(0, ROW_GRACE_MS + DEATH_CLOCK_MS - elapsed);
   return {
     active: elapsed >= ROW_GRACE_MS,
+    paused,
     remainingMs,
     fraction: Math.min(1, remainingMs / DEATH_CLOCK_MS),
-    urgent: elapsed >= ROW_GRACE_MS && remainingMs <= 3_000,
+    urgent: !paused && elapsed >= ROW_GRACE_MS && remainingMs <= 3_000,
   };
 }

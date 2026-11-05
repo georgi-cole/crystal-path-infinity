@@ -276,6 +276,9 @@ export function rankedSnapshot(record: StoredRankedRun): RankedSnapshot {
           pacing: {
             rowEnteredAt: state.pacing.rowEnteredAt,
             nextSurvivalBonusAt: state.pacing.nextSurvivalBonusAt,
+            ...(state.pacing.hintScanStartedAt === undefined
+              ? {}
+              : { hintScanStartedAt: state.pacing.hintScanStartedAt }),
           },
         }
       : {}),

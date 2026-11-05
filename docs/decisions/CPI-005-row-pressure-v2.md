@@ -2,6 +2,10 @@
 
 Date: 5 November 2026. Owner-requested follow-up to PR #83.
 
+Historical v2 decision. The later [v3 hint-scan decision](CPI-005-hint-scan-v3.md)
+adds a bounded pressure hold and replaces the projected-eye presentation for
+current practice. V2 timing remains available unchanged for historical runs.
+
 ## Versioned rules
 
 The owner's request supersedes the original no-idle-death choice for new local

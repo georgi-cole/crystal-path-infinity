@@ -1,7 +1,14 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { createPracticeCursor, createRun, PRACTICE_RNG } from '@crystal-path-infinity/game-core';
+import {
+  createPracticeCursor,
+  createRun,
+  PRACTICE_RNG,
+  SCAN_RULESET_VERSION,
+  transitionRun,
+  presentRowPressure,
+} from '@crystal-path-infinity/game-core';
 import { InfinitySceneView } from '../src/infinity-scene';
 import { DEFAULT_PRACTICE_SETTINGS } from '../src/practice-save';
 import { readFileSync } from 'node:fs';
@@ -71,15 +78,49 @@ describe('CPI-008 standalone scene', () => {
     expect(html).not.toContain('class="cpi-scene-actions"');
     expect(html).toContain('class="visually-hidden" role="status" aria-live="polite"');
     expect(html).toContain('aria-label="Use hint, 2 remaining"');
-    expect(html).toContain('aria-label="Endless crystal bridge"');
+    expect(html).toContain('aria-label="Crystal bridge"');
     expect(html).not.toMatch(/VIP unlock|Season immunity|Live feed|AI standings|LOH|POS/);
-    expect(html).toContain('Not a ranked score');
+    expect(html).toContain('Local practice');
   });
   it('bounds its rows and disables input during a pause', () => {
     const html = markup({ paused: true });
     expect((html.match(/data-row=/g) || []).length).toBeLessThanOrEqual(5);
     expect(html).toContain('aria-modal="true"');
     expect(html).toMatch(/aria-label="Row 1 left tile"[^>]*disabled=""/);
+  });
+  it('recovers a row-local scan and held clock without an eye, beam or repeated caption', () => {
+    const base = createRun(
+      {
+        runId: 'practice-scan-view',
+        rulesetVersion: SCAN_RULESET_VERSION,
+        routeRng: createPracticeCursor(4),
+        mysteryRng: createPracticeCursor(9),
+        observedAt: 0,
+      },
+      PRACTICE_RNG,
+    );
+    const state = transitionRun(
+      base,
+      { type: 'hint', row: base.currentRow, life: 0 },
+      { activeTimeMs: 4000, achievedAt: 4000, rng: PRACTICE_RNG },
+    ).state;
+    const html = markup({ state });
+    expect(presentRowPressure(state)?.paused).toBe(true);
+    expect(html).toContain('data-hint-scan="row"');
+    expect(html).toContain('cpi-scan-matrix');
+    expect(html).toContain('cpi-scan-lock');
+    expect(html).toContain('cpi-pressure-clock is-held');
+    expect(html).not.toMatch(/cpi-scan-(?:probe|projector|ray)|cpi-hint-projector/);
+    expect(html).not.toContain('<span class="cpi-pane-caption">This one holds</span>');
+    expect(html).toContain('aria-description="This one holds"');
+    const first = markup({ state, hintCaptionRow: state.currentRow });
+    expect(first).toContain('<span class="cpi-pane-caption">This one holds</span>');
+    const quiet = markup({
+      state,
+      settings: { ...DEFAULT_PRACTICE_SETTINGS, reducedMotion: true },
+    });
+    expect(quiet).not.toContain('data-hint-scan="row"');
+    expect(quiet).toContain('is-hinted');
   });
   it('keeps the hint control reachable without duplicating left/right tiles', () => {
     const html = markup();

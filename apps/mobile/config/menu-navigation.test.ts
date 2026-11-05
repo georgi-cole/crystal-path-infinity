@@ -65,7 +65,8 @@ describe('CPI-013 standalone menu and route model', () => {
     expect(html).toContain('Practice');
     expect(html).toContain('Rankings');
     expect(html).toContain('Profile');
-    expect(html).toContain('Settings');
+    expect(html).toContain('aria-label="Open settings"');
+    expect(html).toContain('Store');
     expect(html).toContain(en['menu.learn']);
     expect(html).toContain('Personal best · Practice only');
     expect(html).toContain('Not a ranked score');
@@ -122,6 +123,22 @@ describe('CPI-013 standalone menu and route model', () => {
     expect(html).toContain('type="checkbox"');
   });
 
+  it('previews the requested store categories without fabricated prices or purchase controls', () => {
+    const html = render('store');
+    for (const key of [
+      'store.sp',
+      'store.hints',
+      'store.noAds',
+      'store.bridges',
+      'store.backgrounds',
+      'store.themes',
+    ] as const)
+      expect(html).toContain(en[key]);
+    expect(html).toContain(en['store.unavailable']);
+    expect(html).toContain('role="tablist"');
+    expect(html).not.toMatch(/Buy now|Purchase now|\$\d|data-price|aria-valuenow/);
+  });
+
   it('requires a modal to replace a saved run and has a distinct cancel action', () => {
     const html = renderToStaticMarkup(
       createElement(ConfirmNewPractice, { saved, onCancel: noop, onConfirm: noop }),
@@ -142,10 +159,11 @@ describe('CPI-013 standalone menu and route model', () => {
       'rankings',
       'profile',
       'settings',
+      'store',
     ] as const) {
       expect(viewFromHash(viewHash(view))).toBe(view);
     }
-    expect(render('tutorial')).toContain(en['tutorial.safeTitle']);
+    expect(render('tutorial')).toContain(en['guide.footingTitle']);
     expect(viewFromHash('#practice-run')).toBe('practice');
     expect(viewFromHash('#new-practice')).toBe('practice');
     expect(viewFromHash('#unknown-route')).toBe('home');
@@ -191,6 +209,8 @@ describe('CPI-013 standalone menu and route model', () => {
     expect(html).toContain('aria-label="Disable music"');
     expect(html).toContain('aria-label="Disable sound effects"');
     expect(html).toContain('aria-label="Open settings"');
+    expect(html).not.toContain('cpi-menu-action-title">Settings<');
+    expect((html.match(/cpi-menu-action-title">Store</g) ?? []).length).toBe(1);
     const css = readFileSync(new URL('../src/intro-hub-premium.css', import.meta.url), 'utf8');
     expect(css).toContain('cpi-stage-atmosphere');
     expect(css).toContain('pointer-events: none');
