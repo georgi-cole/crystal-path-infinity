@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useLanguage } from './language-context';
 import { useTestStore } from './store-context';
-import { STORE_PRODUCTS, storeProduct } from './store-catalog';
+import { STORE_PRODUCTS, storeProduct, createTestReceiptId } from './store-catalog';
 import type { StoreProduct, ThemeId } from './store-catalog';
 import { ThemeArtwork } from './theme-art';
 import './store-vault.css';
@@ -111,7 +111,7 @@ export function StoreVault({ onTryTheme }: { onTryTheme?: (theme: ThemeId) => vo
   function buy(product: StoreProduct) {
     if (!store) return;
     act(() => {
-      const id = 'test-' + crypto.randomUUID();
+      const id = createTestReceiptId();
       store.beginPurchase(product.id, id);
       setDialog({ kind: 'checkout', id });
     });

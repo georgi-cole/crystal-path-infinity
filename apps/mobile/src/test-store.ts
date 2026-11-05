@@ -4,7 +4,7 @@ import {
   STORE_TEST_RULESET_VERSION,
 } from '@crystal-path-infinity/game-core';
 import type { RunState, TransitionResult } from '@crystal-path-infinity/game-core';
-import type { PracticeStorage } from './practice-save';
+import type { PracticeLoad, PracticeStorage } from './practice-save';
 import { STORE_KEY, storeProduct, THEME_IDS } from './store-catalog';
 import type { ThemeId } from './store-catalog';
 
@@ -36,6 +36,18 @@ export const EMPTY_TEST_STORE: TestStoreSnapshot = Object.freeze({
   checkpoint: null,
   assistedBest: null,
 });
+
+/** The wallet checkpoint is authoritative; reset must invalidate the menu's old cached Resume. */
+export function selectTestPractice(
+  snapshot: TestStoreSnapshot,
+  fallback: PracticeLoad,
+): PracticeLoad {
+  if (snapshot.checkpoint)
+    return { status: 'ready', state: snapshot.checkpoint, revision: snapshot.revision };
+  return fallback.status === 'ready' && fallback.state.rulesetVersion === STORE_TEST_RULESET_VERSION
+    ? { status: 'empty' }
+    : fallback;
+}
 const BALANCE_LIMIT = 1_000_000_000;
 function counter(value: unknown): value is number {
   return (

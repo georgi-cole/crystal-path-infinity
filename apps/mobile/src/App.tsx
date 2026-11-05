@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { STORE_TEST_RULESET_VERSION } from '@crystal-path-infinity/game-core';
 import { useTestStore } from './store-context';
+import { selectTestPractice } from './test-store';
 import type { ThemeId } from './store-catalog';
 import type { RunState } from '@crystal-path-infinity/game-core';
 import { Capacitor } from '@capacitor/core';
@@ -73,7 +74,7 @@ interface GameOwner {
 
 export function App({ services }: { services?: ApprovedAccountServices }) {
   const { t } = useLanguage();
-  const { store } = useTestStore();
+  const { store, snapshot: testSnapshot } = useTestStore();
   const accountScope = useSyncExternalStore(
     (listener) => services?.session?.subscribeAccountScope(listener) ?? (() => {}),
     () => services?.session?.accountScope() ?? null,
@@ -83,6 +84,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
   const gameRef = useRef<GameOwner | null>(null);
   const gameSequence = useRef(0);
   const [saved, setSaved] = useState<PracticeLoad>({ status: 'empty' });
+  const visibleSaved = selectTestPractice(testSnapshot, saved);
   const [best, setBest] = useState<string | null>(null);
   const [storageWarning, setStorageWarning] = useState<string | null>(null);
   const [settings, setSettings] = useState<PracticeSettings>(DEFAULT_PRACTICE_SETTINGS);
@@ -331,8 +333,8 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
   };
 
   const resumePractice = () => {
-    if (saved.status !== 'ready' || !canResumePractice(saved)) return;
-    startPractice(saved.state);
+    if (visibleSaved.status !== 'ready' || !canResumePractice(visibleSaved)) return;
+    startPractice(visibleSaved.state);
   };
 
   const startNewPractice = () => {
@@ -355,7 +357,10 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
 
   const requestNewPractice = () => {
     if (gameRef.current || confirmingRef.current) return;
-    if (saved.status === 'empty' || (saved.status === 'ready' && !canResumePractice(saved))) {
+    if (
+      visibleSaved.status === 'empty' ||
+      (visibleSaved.status === 'ready' && !canResumePractice(visibleSaved))
+    ) {
       startNewPractice();
       return;
     }
@@ -477,7 +482,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
             window.history.pushState({ cpiNavigation: true }, '', '#practice-run');
           }}
           view={view}
-          saved={saved}
+          saved={visibleSaved}
           best={best}
           online={online}
           settings={settings}
@@ -505,7 +510,11 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
         />
       </div>
       {confirmNew && (
-        <ConfirmNewPractice saved={saved} onCancel={cancelNew} onConfirm={startNewPractice} />
+        <ConfirmNewPractice
+          saved={visibleSaved}
+          onCancel={cancelNew}
+          onConfirm={startNewPractice}
+        />
       )}
     </>
   );

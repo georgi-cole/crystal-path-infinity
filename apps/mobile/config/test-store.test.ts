@@ -15,7 +15,7 @@ import {
   transitionRun,
 } from '@crystal-path-infinity/game-core';
 import type { RunState, TestResource } from '@crystal-path-infinity/game-core';
-import { createTestStore } from '../src/test-store';
+import { createTestStore, selectTestPractice } from '../src/test-store';
 import { STORE_KEY, STORE_PRODUCTS } from '../src/store-catalog';
 import { ThemeArtwork } from '../src/theme-art';
 import { RunReserves } from '../src/run-reserves';
@@ -79,6 +79,20 @@ function purchase(store: ReturnType<typeof createTestStore>, product: string, id
 }
 
 describe('test-store economy and persistence', () => {
+  it('invalidates a cached test Resume after reset while preserving historical practice', () => {
+    const store = createTestStore(new Storage());
+    store.saveRun(initial());
+    const cachedMenu = selectTestPractice(store.snapshot(), { status: 'empty' });
+    expect(cachedMenu.status).toBe('ready');
+    store.reset();
+    expect(selectTestPractice(store.snapshot(), cachedMenu).status).toBe('empty');
+    const historical = {
+      status: 'ready',
+      state: initial(SCAN_RULESET_VERSION),
+      revision: 1,
+    } as const;
+    expect(selectTestPractice(store.snapshot(), historical)).toBe(historical);
+  });
   it('grants nothing for pending, cancelled or failed checkouts and never double-grants a receipt', () => {
     const storage = new Storage();
     const store = createTestStore(storage);

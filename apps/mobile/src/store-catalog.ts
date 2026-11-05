@@ -74,6 +74,15 @@ export const STORE_PRODUCTS: readonly StoreProduct[] = [
 ];
 export const STORE_PAYMENT_MODE = 'test' as const;
 export const STORE_KEY = 'cpi.store.test.v1';
+/** getRandomValues also works in native/custom-scheme contexts without randomUUID. */
+export function createTestReceiptId(): string {
+  return (
+    'test-' +
+    Array.from(crypto.getRandomValues(new Uint32Array(4)), (value) =>
+      value.toString(16).padStart(8, '0'),
+    ).join('')
+  );
+}
 export function storeProduct(id: string): StoreProduct {
   const product = STORE_PRODUCTS.find((item) => item.id === id);
   if (!product) throw new Error('Unknown test product.');
