@@ -22,7 +22,7 @@ with hints, SP warnings, fractures and controls visible.
 
 ## Art direction
 
-| Layer | Chaos Workshop | Jellyverse |
+| Layer | Pip | Lumi |
 | --- | --- | --- |
 | Emotion | Warm mischief, curiosity, a handmade place | Gentle wonder, buoyancy, a dreamlike place |
 | Silhouette | Copper observatories, toothed rings, hanging lanterns | Floating reefs, opal plants, ringed moon |
@@ -62,7 +62,7 @@ with hints, SP warnings, fractures and controls visible.
 
 The original raster environments and reaction sheets are paired with lightweight,
 code-native SVG props in `world-treasures.tsx`. Chaos uses a riveted copper cache,
-mint energy lens and mechanical power settings. Jellyverse uses a pearl capsule,
+mint energy lens and mechanical power settings. Lumi uses a pearl capsule,
 star clasp and opal charms. Lids, cores and bases are separate layers; opening
 and power release fit inside the existing 1.45-second mystery beat. No hidden
 reward or route affects an unopened box's appearance.
@@ -127,10 +127,10 @@ world from Pokémon, Halo or other franchises is bundled.
 
 | World | Recognizable signature | Environment and props | Sound and safety |
 | --- | --- | --- | --- |
-| Prismwilds | Mica: one giant hollow jade geode ear, one blunt basalt ear, amber seed brow | Hollow seed-vaults, fossil reeds, rough basalt seed caches, jade power settings | Hollow reed pulses, offbeat chimes; a crystal seed glider |
-| Foldrush Circuit | Rally: a living orange/graphite folded pennant, silver running shoes | Aerial race fins, incomplete cyan lap ring, angled baton cases and enamel medals | Syncopated plucks and low racing pulses; a folded rescue banner |
-| Skyhound Yard | Riff: wiry charcoal/ivory terrier, one floppy ear, copper eye patch, rescue backpack | Copper courier rooftops, teal utility tags, weathered satchel caches | Swung rooftop plucks and copper clicks; backpack parachute |
-| Moonrunner Quarter | Nyx: ink-black kitten, one white paw, ivory brow slash, indigo cape | Narrow slate rooftops, amber window cuts, moonstone weather vanes and folding moon vaults | Sparse minor glass notes and midnight bass; cape opens into a glider |
+| Rocko | Rocko: one giant hollow jade geode ear, one blunt basalt ear, amber seed brow | Hollow seed-vaults, fossil reeds, rough basalt seed caches, jade power settings | Hollow reed pulses, offbeat chimes; a crystal seed glider |
+| Dash | Dash: a living orange/graphite folded pennant, silver running shoes | Aerial race fins, incomplete cyan lap ring, angled baton cases and enamel medals | Syncopated plucks and low racing pulses; a folded rescue banner |
+| Ruff | Ruff: wiry charcoal/ivory terrier, one floppy ear, copper eye patch, rescue backpack | Copper courier rooftops, teal utility tags, weathered satchel caches | Swung rooftop plucks and copper clicks; backpack parachute |
+| Mimi | Mimi: ink-black kitten, one white paw, ivory brow slash, indigo cape | Narrow slate rooftops, amber window cuts, moonstone weather vanes and folding moon vaults | Sparse minor glass notes and midnight bass; cape opens into a glider |
 
 Puppy and kitten are separate purchases and environments. Their safety is never
 an entitlement or a consumable. Zero SP, a wrong pane, a mystery and an idle
@@ -161,3 +161,6 @@ The deterministic synth script reproduces all six original compositions.
 Payments remain simulated and local. Continuation packs are 3/5/10/25; SP reserve
 packs are 100/500/1000/2500/5000/10000. Theme ownership changes no game rule or
 ranked eligibility, and both pet worlds can be tried without buying anything.
+
+
+Public names are deliberately short and child-friendly: **Pip, Lumi, Rocko, Dash, Ruff and Mimi**. Each character and world share a name. Internal IDs and historical generation prompts stay stable so existing test ownership, receipts and reproducible art are preserved.

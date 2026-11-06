@@ -17,25 +17,25 @@ export const WORLD_ASSETS = {
   wilds: {
     environment: 'assets/worlds/wilds/environment-v2.webp',
     companion: 'assets/worlds/wilds/companion-reactions-v2.webp',
-    companionName: 'Mica',
+    companionName: 'Rocko',
     material: 'jade',
   },
   league: {
     environment: 'assets/worlds/league/environment-v2.webp',
     companion: 'assets/worlds/league/companion-reactions-v2.webp',
-    companionName: 'Rally',
+    companionName: 'Dash',
     material: 'enamel',
   },
   puppy: {
     environment: 'assets/worlds/puppy/environment-v2.webp',
     companion: 'assets/worlds/puppy/companion-reactions-v2.webp',
-    companionName: 'Riff',
+    companionName: 'Ruff',
     material: 'enamel',
   },
   kitten: {
     environment: 'assets/worlds/kitten/environment-v2.webp',
     companion: 'assets/worlds/kitten/companion-reactions-v2.webp',
-    companionName: 'Nyx',
+    companionName: 'Mimi',
     material: 'moonstone',
   },
 } as const satisfies Record<Exclude<ThemeId, 'obsidian'>, object>;

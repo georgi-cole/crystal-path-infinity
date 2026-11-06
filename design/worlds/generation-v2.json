@@ -59,5 +59,14 @@
       "alpha": true
     }
   },
-  "runtimeOnly": "PNG masters remain outside public/native assets. No franchise artwork or samples."
+  "runtimeOnly": "PNG masters remain outside public/native assets. No franchise artwork or samples.",
+  "displayNames": {
+    "chaos": "Pip",
+    "jelly": "Lumi",
+    "wilds": "Rocko",
+    "league": "Dash",
+    "puppy": "Ruff",
+    "kitten": "Mimi"
+  },
+  "namingNote": "Character and world share one short child-friendly display name. Exact historical prompts and reference identities are retained for reproduction; internal world IDs and asset paths remain stable."
 }
