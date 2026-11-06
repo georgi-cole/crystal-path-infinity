@@ -22,3 +22,14 @@ test('full-game runs reproduce exactly and deal policy needs no private route',(
   const view={sp:100,hints:1,pact:{kind:'hungry_vault'},revealed:false,get rows(){throw Error('Private route read');},get mysteryRng(){throw Error('Private RNG read');}};
   assert.equal(chooseOffer(view,.5),'decline');assert.equal(chooseOffer(view,.1),'accept');
 });
+test('ten ads use real 200/150 SP schedule and freeze the game clock',()=>{
+  const result=simulateRun({classic:false,high:100,low:100},MODES[0],20261106,7200000,{maxAdContinues:10});
+  assert.equal(result.alive,false);assert.equal(result.ads,10);assert.equal(result.deaths.length,11);
+  assert.equal(result.steps,410);assert.equal(result.timeMs,820000);assert.equal(result.wallTimeMs,1120000);
+  assert.equal(result.deaths[0].activeTimeMs,120000);assert.equal(result.deaths[5].activeTimeMs,520000);
+});
+test('paid reserve and five extra credits obey the combined run limits',()=>{
+  const result=simulateRun({classic:false,high:100,low:100},MODES[0],20261106,7200000,{maxAdContinues:10,maxCreditContinues:5,reserveSp:200});
+  assert.equal(result.alive,false);assert.equal(result.ads,10);assert.equal(result.credits,5);assert.equal(result.reserveSp,200);
+  assert.equal(result.deaths.length,16);assert.equal(result.steps,600);assert.equal(result.timeMs,1200000);assert.equal(result.wallTimeMs,1500000);
+});

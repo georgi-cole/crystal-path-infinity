@@ -1,0 +1,131 @@
+{
+  "assumptions": {
+    "seed": 20261106,
+    "runsPerScenario": 200,
+    "totalRuns": 1000,
+    "horizonActiveMinutes": 120,
+    "startingSp": 300,
+    "startingHints": 2,
+    "baseWrongTileDamage": 5,
+    "stepMs": 2000,
+    "mysteries": "All current core effects, cooldowns and pact policy from simulate-tile-balance.mjs",
+    "adAssumedSeconds": 30,
+    "adClock": "Game clock frozen during ad; wall time includes completed ads",
+    "adAcceptance": "All available continues accepted, with guaranteed availability: mechanical upper-bound scenarios, not human behaviour",
+    "credits": "Paid case takes ten ads then five credits",
+    "reserve": "Paid case transfers 100 SP at <=50 SP until the actual 200 SP per-run allowance is exhausted",
+    "excluded": "Human quitting, ad no-fill, ad skipping, consent eligibility, purchase propensity, loading/store dwell time; no bought hints",
+    "censoring": "Null median if fewer than half reach a milestone before 120 active minutes; all cases share a common active-time cutoff",
+    "node": "v24.22.1",
+    "engineSha256": "75197d8bc09cec2050a678d7ce00de4d62fa04901204e627a0ba2e44e479c5c0"
+  },
+  "results": [
+    {
+      "id": "classic",
+      "label": "Original 50/50",
+      "controls": {
+        "maxAdContinues": 10
+      },
+      "n": 200,
+      "firstDeathMedianMinutes": 5.744166666666667,
+      "firstDeathP25Minutes": 4.799166666666666,
+      "firstDeathP75Minutes": 6.5025,
+      "afterTwoAdsMedianWallMinutes": 13.3925,
+      "afterTenAdsMedianWallMinutes": 41.015,
+      "afterTenAdsP25WallMinutes": 38.998333333333335,
+      "afterTenAdsP75WallMinutes": 42.95333333333333,
+      "terminalMedianWallMinutes": 41.015,
+      "medianFirstCreditOfferWallMinutes": 41.015,
+      "fractionReachingCreditOnlyOffer": 1,
+      "aliveAt120ActiveMinutes": 0,
+      "medianSecondLifeActiveMinutes": 3.3041666666666667,
+      "averageAdsAtCutoff": 10
+    },
+    {
+      "id": "80-1",
+      "label": "80% / 1%",
+      "controls": {
+        "maxAdContinues": 10
+      },
+      "n": 200,
+      "firstDeathMedianMinutes": 7.240833333333334,
+      "firstDeathP25Minutes": 6.046666666666667,
+      "firstDeathP75Minutes": 9.2375,
+      "afterTwoAdsMedianWallMinutes": 17.565833333333334,
+      "afterTenAdsMedianWallMinutes": 52.11333333333334,
+      "afterTenAdsP25WallMinutes": 48.5675,
+      "afterTenAdsP75WallMinutes": 56.74666666666667,
+      "terminalMedianWallMinutes": 52.11333333333334,
+      "medianFirstCreditOfferWallMinutes": 52.11333333333334,
+      "fractionReachingCreditOnlyOffer": 1,
+      "aliveAt120ActiveMinutes": 0,
+      "medianSecondLifeActiveMinutes": 4.175833333333333,
+      "averageAdsAtCutoff": 10
+    },
+    {
+      "id": "70-1",
+      "label": "70% / 1%",
+      "controls": {
+        "maxAdContinues": 10
+      },
+      "n": 200,
+      "firstDeathMedianMinutes": 9.149166666666666,
+      "firstDeathP25Minutes": 7.2283333333333335,
+      "firstDeathP75Minutes": 11.835833333333333,
+      "afterTwoAdsMedianWallMinutes": 21.819166666666668,
+      "afterTenAdsMedianWallMinutes": 63.748333333333335,
+      "afterTenAdsP25WallMinutes": 58.810833333333335,
+      "afterTenAdsP75WallMinutes": 69.11666666666666,
+      "terminalMedianWallMinutes": 63.748333333333335,
+      "medianFirstCreditOfferWallMinutes": 63.748333333333335,
+      "fractionReachingCreditOnlyOffer": 1,
+      "aliveAt120ActiveMinutes": 0,
+      "medianSecondLifeActiveMinutes": 4.9975,
+      "averageAdsAtCutoff": 10
+    },
+    {
+      "id": "60-1",
+      "label": "60% / 1%",
+      "controls": {
+        "maxAdContinues": 10
+      },
+      "n": 200,
+      "firstDeathMedianMinutes": 11.9575,
+      "firstDeathP25Minutes": 9.156666666666666,
+      "firstDeathP75Minutes": 15.165,
+      "afterTwoAdsMedianWallMinutes": 28.005,
+      "afterTenAdsMedianWallMinutes": 82.23166666666667,
+      "afterTenAdsP25WallMinutes": 74.80416666666666,
+      "afterTenAdsP75WallMinutes": 88.73583333333333,
+      "terminalMedianWallMinutes": 82.23166666666667,
+      "medianFirstCreditOfferWallMinutes": 82.23166666666667,
+      "fractionReachingCreditOnlyOffer": 1,
+      "aliveAt120ActiveMinutes": 0,
+      "medianSecondLifeActiveMinutes": 6.164166666666667,
+      "averageAdsAtCutoff": 10
+    },
+    {
+      "id": "classic-paid",
+      "label": "Original 50/50",
+      "controls": {
+        "maxAdContinues": 10,
+        "maxCreditContinues": 5,
+        "reserveSp": 200
+      },
+      "n": 200,
+      "firstDeathMedianMinutes": 9.111666666666666,
+      "firstDeathP25Minutes": 7.980833333333333,
+      "firstDeathP75Minutes": 10.459166666666667,
+      "afterTwoAdsMedianWallMinutes": 17.101666666666667,
+      "afterTenAdsMedianWallMinutes": 44.64,
+      "afterTenAdsP25WallMinutes": 42.87166666666667,
+      "afterTenAdsP75WallMinutes": 46.556666666666665,
+      "terminalMedianWallMinutes": 57.40833333333333,
+      "medianFirstCreditOfferWallMinutes": 44.64,
+      "fractionReachingCreditOnlyOffer": 1,
+      "aliveAt120ActiveMinutes": 0,
+      "medianSecondLifeActiveMinutes": 3.2891666666666666,
+      "averageAdsAtCutoff": 10
+    }
+  ]
+}

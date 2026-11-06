@@ -45,7 +45,9 @@ export function chooseOffer(view, estimatedBreakRate) {
 function viewOf(state) {
   return {sp:state.sp,hints:state.hints,pact:state.pact,revealed:state.current.revealedSafeSide!==null||!!state.current.noSafeTile};
 }
-export function simulateRun(combination, mode, seed, horizonMs=600000) {
+export function simulateRun(combination, mode, seed, horizonMs=600000, controls={}) {
+  const {maxAdContinues=0,maxCreditContinues=0,reserveSp=0,adDurationMs=30000}=controls;
+  if(!Number.isInteger(maxAdContinues)||maxAdContinues<0||maxAdContinues>10||!Number.isInteger(maxCreditContinues)||maxCreditContinues<0||maxCreditContinues+maxAdContinues>15||!Number.isInteger(reserveSp)||reserveSp<0||reserveSp>200||!Number.isFinite(adDurationMs)||adDurationMs<0)throw new Error('Invalid continuation controls.');
   const version=combination.classic?CLASSIC_STORE_RULESET_VERSION:tileExperimentVersion(combination.high,combination.low,true);
   const routeSeed=BigInt(seed)+0x71fa9b4d832e1471n;
   let state=createRun({runId:`practice-simulation-${seed}`,rulesetVersion:version,routeRng:createPracticeCursor(routeSeed),mysteryRng:createPracticeCursor(routeSeed^0x9e3779b97f4a7c15n),observedAt:0},PRACTICE_RNG);
@@ -53,6 +55,13 @@ export function simulateRun(combination, mode, seed, horizonMs=600000) {
   let breakObservations=0,blindObservations=0;
   let lowSp=false,wrong=0,steps=0,hints=0,boxes=0,clockLoss=0,positiveSp=0,negativeSp=0;
   let guard=0;
+  let ads=0,credits=0,adWallMs=0;
+  const deaths=[];
+  function resource(kind,amount=1) {
+    const result=transitionRun(state,{type:'test-resource',resource:kind,amount,sequence:state.storeTest.sequence+1},{rng:PRACTICE_RNG,activeTimeMs:state.activeTimeMs,achievedAt:state.activeTimeMs});
+    if(!result.accepted)throw new Error(`Resource rejected: ${result.reason} (${kind})`);
+    state=result.state;
+  }
   function act(command, delay=0) {
     if(state.status!=='playing'||state.activeTimeMs>=horizonMs)return false;
     const previousSp=state.sp;
@@ -71,10 +80,18 @@ export function simulateRun(combination, mode, seed, horizonMs=600000) {
       if(event.type==='death-clock-ticked')clockLoss-=event.delta;
       if(event.type==='choice-resolved'){steps++;if(event.wrong)wrong++;}
     }
+    if(state.status!=='playing' && state.death) {
+      deaths.push({ordinal:deaths.length+1,activeTimeMs:state.activeTimeMs,wallTimeMs:state.activeTimeMs+adWallMs,rows:Number(state.lastClearedRow),ads,credits,cause:state.death.cause});
+      if(state.status==='dead' && !clipped && state.activeTimeMs<horizonMs) {
+        if(ads<maxAdContinues) {resource('ad');ads++;adWallMs+=adDurationMs;}
+        else if(credits<maxCreditContinues) {resource('credit');credits++;}
+      }
+    }
     return !clipped && state.status==='playing' && state.activeTimeMs<horizonMs;
   }
   while(state.status==='playing' && state.activeTimeMs<horizonMs) {
     if(++guard>10000)throw new Error('Simulation command budget exceeded.');
+    if(state.sp<=50 && state.storeTest && state.storeTest.reserveSpent<reserveSp)resource('sp',Math.min(100,reserveSp-state.storeTest.reserveSpent));
     const estimated=(breakObservations+2)/(blindObservations+4);
     if(mode.mysteries && state.pact?.phase==='active') {
       if(state.pact.kind==='hungry_vault' && state.pact.bank>0) {
@@ -106,7 +123,7 @@ export function simulateRun(combination, mode, seed, horizonMs=600000) {
     if(!act({type:'choose',side},mode.stepMs))break;
     if(!confirmed && !omen) {blindObservations++;breakObservations+=wrong-oldWrong;}
   }
-  return {timeMs:state.activeTimeMs,alive:state.status==='playing',rows:Number(state.lastClearedRow),sp:state.sp,lowSp,wrong,steps,hints,boxes,clockLoss,positiveSp,negativeSp,deathCause:state.death?.cause??null};
+  return {timeMs:state.activeTimeMs,alive:state.status==='playing',rows:Number(state.lastClearedRow),sp:state.sp,lowSp,wrong,steps,hints,boxes,clockLoss,positiveSp,negativeSp,deathCause:state.death?.cause??null,...(Object.keys(controls).length?{deaths,ads,credits,wallTimeMs:state.activeTimeMs+adWallMs,reserveSp:state.storeTest.reserveSpent}:{} )};
 }
 export function wilson(success,n) {
   if(!n)return [0,0];
@@ -131,7 +148,7 @@ export function summarize(runs,horizonMs) {
     survivalCurve:Array.from({length:21},(_,i)=>{const at=horizonMs*i/20;return {minutes:at/60000,fraction:runs.filter(r=>r.timeMs>at || (r.alive && r.timeMs>=at)).length/n};}),
   };
 }
-function engineFingerprint() {
+export function engineFingerprint() {
   const folder=fileURLToPath(new URL('../packages/game-core/src/',import.meta.url));
   const hash=createHash('sha256');
   for(const name of readdirSync(folder).filter(n=>n.endsWith('.ts')).sort())hash.update(name).update(readFileSync(resolve(folder,name)));

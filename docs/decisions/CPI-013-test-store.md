@@ -1,5 +1,7 @@
 # CPI-013 / CPI-005 — Test store, resource reserve and original worlds
 
+**Version note · 6 November 2026:** the implementation details below describe the original `infinity-store-test-v1` baseline. The combined v9 playtest uses [the current rules](../CURRENT_GAME_RULES.md), including uncapped active SP, fixed 5 SP base damage, 5–7-row mystery spacing and the current effects/death clock. Wallet prices, the 200 SP cumulative direct-reserve allowance, 10/15 continuation slots and Assisted separation remain applicable. Ads and purchases remain simulated. Commercial proposals are in [the business plan](../BUSINESS_PLAN.md).
+
 Owner-authorized implementation, 5 November 2026. Follows the catalog preview
 in PR #83 and the owner's approved continuation/SP proposal. Payments remain
 **simulated**, with no financial transaction, provider account or live billing SDK.
