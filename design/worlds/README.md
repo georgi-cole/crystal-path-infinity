@@ -169,8 +169,9 @@ Public names are deliberately short and child-friendly: **Boltmuffin, Squishphon
 ## Meaningful name system
 
 Names combine a familiar word with a character trait, material or sensory
-promise. Sound alone is not the brief. The working international names are the
-same in English and Bulgarian; surrounding copy is translated. Character and
+promise. Sound alone is not the brief. Bulgarian uses the owner-selected names below throughout the store,
+home identity, introductions, descriptions, journals and safe endings.
+English names are maintained separately. Character and
 world share the name, while technical IDs and existing receipts stay stable.
 
 | Name | Wordplay | Character promise |
@@ -187,3 +188,17 @@ screening, not a claim of trademark exclusivity. Historical generation prompts
 retain their source aliases for reproduction; `generation-v2.json` records the
 current public names and wordplay. No unrelated personal search results are
 retained in the repository.
+
+
+## Approved Bulgarian names
+
+| World ID | Character | Bulgarian name |
+| --- | --- | --- |
+| jelly | Jelly companion | Жилибон |
+| kitten | Kitten | Котерина |
+| puppy | Puppy | Шарокоп |
+| wilds | Stone creature | Скалинко |
+| league | Athlete | Баткото |
+| chaos | Copper robot | Меденко |
+
+These spellings are supplied by the owner. Display names follow the selected UI language; technical IDs, asset paths, ownership and receipts stay stable. Historical image-generation prompts retain their original aliases. Purchases remain simulated test-only.
