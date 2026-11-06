@@ -1,4 +1,4 @@
-import { getReviveSp, MAX_REVIVES } from '@crystal-path-infinity/game-core';
+import { getReviveSp, getMaxRevives } from '@crystal-path-infinity/game-core';
 import type { DeathCause, RunState } from '@crystal-path-infinity/game-core';
 import { formatRowLabel } from './menu-navigation';
 import { en } from './i18n/messages';
@@ -54,14 +54,15 @@ export function presentRunOutcome(state: RunState): RunDisplay {
   const pending = state.pendingReward !== null;
   const finished = state.status === 'finished' && state.result !== null && !pending;
   const earnedButUnused = state.reviveReceipts.some((receipt) => receipt.status === 'granted');
-  const grantsRemaining = MAX_REVIVES - state.revivesGranted;
+  const maxRevives = getMaxRevives(state.rulesetVersion);
+  const grantsRemaining = maxRevives - state.revivesGranted;
   const nextOrdinal = state.revivesApplied + 1;
   const hasOffer =
     state.status === 'dead' &&
     !pending &&
     !earnedButUnused &&
     grantsRemaining > 0 &&
-    nextOrdinal <= MAX_REVIVES;
+    nextOrdinal <= maxRevives;
   const phase: RunDisplayPhase = pending
     ? 'verification-pending'
     : finished
@@ -86,7 +87,7 @@ export function presentRunOutcome(state: RunState): RunDisplay {
     offer: hasOffer
       ? {
           ordinal: nextOrdinal,
-          restoreSp: getReviveSp(nextOrdinal),
+          restoreSp: getReviveSp(nextOrdinal, state.rulesetVersion),
           grantsRemaining,
         }
       : null,

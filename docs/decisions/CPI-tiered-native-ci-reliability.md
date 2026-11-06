@@ -127,3 +127,35 @@ prebridge, background/resume, bridge round-trip, screenshot and runtime-error
 assertion. Unit tests exercise each provisioning failure boundary and malformed
 Settings responses. Required native CI must pass on the updated PR head; this
 provisioning change does not claim a measured long-term reliability rate.
+
+## iOS host pressure and smaller framebuffer (6 November 2026)
+
+Store PR #84's two failed attempts still failed before CPI installation. Its
+second `ios-host-pressure.log` reached 281 load average, effectively 0% CPU idle,
+91 MB free memory and 2.3 GB of compressed memory on the 7 GB hosted Mac. Even
+terminating Settings and taking a screenshot timed out. More app retries or
+larger application timeouts would not establish healthy startup behavior.
+
+The disposable GitHub runner now mounts the runtime and disables **host** search
+indexing before simulator boot, retaining hardware and indexing diagnostics.
+The harness creates its own iPhone SE (3rd generation), with a 750×1334 framebuffer
+instead of the iPhone 17's 1206×2622. It selects the device type directly rather
+than requiring a precreated runner device. iOS 26.5, Xcode 26.6, the fresh device,
+post-migration restart, Settings control round trip, two distinct CPI processes,
+prebridge interruption, native bridge checks, actual background/resume, runtime
+error rejection and screenshots remain required. Guest services are not disabled.
+
+The implementation must be verified by full native CI on the final store head;
+these pressure reductions alone are not a passing iOS result or a reliability
+measurement. Physical-device testing remains separate.
+
+That first pressure reduction still failed the Settings termination control on
+head `3d168fe`, before CPI installation. The SE run reached 333 load average,
+effectively no CPU idle, 136 MB free and 2.1 GB compressed memory. Its cold boot
+was shorter, but the 7 GB host remained unhealthy. The job now uses the standard
+`macos-26-intel` runner with 14 GB RAM and four CPUs, as documented by
+[GitHub](https://docs.github.com/en/actions/how-tos/write-workflows/choose-where-workflows-run/choose-the-runner-for-a-job).
+It retains the same pinned Xcode 26.6 and iOS 26.5 (both installed on that image),
+all budgets and assertions, the fresh owned SE and every required lifecycle step.
+This is the standard runner class for this public repository, not a paid larger
+runner. Native execution is still required to establish success.

@@ -70,6 +70,10 @@ The [verification run on `84baa153`](https://github.com/georgi-cole/crystal-path
 
 The driver now allows up to 900 seconds for the fresh simulator's initial boot and 180 seconds for the first native process gate. The iOS smoke step has a 30-minute ceiling within the existing 45-minute job ceiling. Configured budgets are recorded in `ios-smoke-device.json`. These are bounded provisioning allowances, not fixed sleeps or additional retries; the driver proceeds immediately when each required predicate succeeds. Page readiness, identity, pause/resume, foreground-time and error assertions remain mandatory. More time does not prove that a stuck OS migration will recover: a deadline failure still fails CI and preserves its diagnostics.
 
+The [CPI-013 run on `12b85aff`](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/42234357054) retained two additional Tahoe/iOS 26.5 host failures: initial post-migration shutdown exceeded 180 seconds; a fresh-host rerun reached both recreated app processes and their bridge/lifecycle observations without runtime errors, then timed out capturing the second required screenshot at 60 seconds. The host-pressure sample recorded 0% idle CPU, a load average above 500 and only 414 MB free on the 14 GB host. These are not passing launch results.
+
+The required app workflow therefore pins the supported 14 GB macOS 15 Intel / Xcode 26.3 / iOS 26.2 baseline, while retaining asynchronous OS control and all app assertions. Screenshot capture receives its own bounded 180-second OS allowance and remains mandatory for each attempt. This changes the tested OS baseline, not the number or meaning of startup, identity, pause/resume, foreground-time or error checks. The recorded evidence identifies the actual runtime; it is not presented as iOS 26.5 validation.
+
 Executed counts, exact revision, workflow links and artifact digests are recorded in the issue/PR. Local generation is not native compile/launch evidence. Emulator/simulator results do not replace physical-device, real-ad, server, performance or long-session gates in CPI-002/CPI-034.
 
 ## Sources inspected

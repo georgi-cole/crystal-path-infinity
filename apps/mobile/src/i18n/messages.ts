@@ -10,7 +10,10 @@ import { rewardMessages } from '../rewards/reward.messages';
 import { savedPendingMessages } from '../ranked/saved-pending-messages';
 import { operationMessages } from '../operations/operations.messages';
 
+import { storeEn } from './store-messages';
+
 export const en = {
+  ...storeEn,
   ...crystalGuideEn,
   ...accountControlMessages,
   ...nameReportMessages,

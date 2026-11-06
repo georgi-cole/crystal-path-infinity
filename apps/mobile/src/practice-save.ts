@@ -1,7 +1,8 @@
 import {
   assertRunState,
   MAX_BUFFER_ROWS,
-  MAX_REVIVES,
+  getMaxRevives,
+  STORE_TEST_RULESET_VERSION,
   PRACTICE_RNG,
   RULESET_VERSION,
   PACED_RULESET_VERSION,
@@ -94,12 +95,15 @@ function validatePracticeState(state: RunState): void {
   assertRunState(state, PRACTICE_RNG);
   if (
     !state.runId.startsWith('practice-') ||
-    ![RULESET_VERSION, PACED_RULESET_VERSION, PRACTICE_RULESET_VERSION].includes(
-      state.rulesetVersion,
-    ) ||
+    ![
+      RULESET_VERSION,
+      PACED_RULESET_VERSION,
+      PRACTICE_RULESET_VERSION,
+      STORE_TEST_RULESET_VERSION,
+    ].includes(state.rulesetVersion) ||
     state.rows.length > MAX_BUFFER_ROWS ||
     state.resolutions.length > state.buffer.history ||
-    state.reviveReceipts.length > MAX_REVIVES
+    state.reviveReceipts.length > getMaxRevives(state.rulesetVersion)
   ) {
     throw new Error('This is not a supported standalone practice checkpoint.');
   }
@@ -109,7 +113,11 @@ function validatePracticeState(state: RunState): void {
  * future bonuses. Ranked historical runs never use this adapter. */
 export function upgradePracticePacing(state: RunState): RunState {
   validatePracticeState(state);
-  if (state.rulesetVersion === PRACTICE_RULESET_VERSION || state.status !== 'playing') return state;
+  if (
+    [PRACTICE_RULESET_VERSION, STORE_TEST_RULESET_VERSION].includes(state.rulesetVersion) ||
+    state.status !== 'playing'
+  )
+    return state;
   const next: RunState = {
     ...state,
     rulesetVersion: PRACTICE_RULESET_VERSION,

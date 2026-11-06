@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { STORE_TEST_RULESET_VERSION } from '@crystal-path-infinity/game-core';
+import { useTestStore } from './store-context';
+import { selectTestPractice } from './test-store';
+import type { ThemeId } from './store-catalog';
 import type { RunState } from '@crystal-path-infinity/game-core';
 import { Capacitor } from '@capacitor/core';
 import {
@@ -60,13 +64,17 @@ function loadLocalPractice(): PracticeLoad {
   }
 }
 
+const ignoreTrialCheckpoint = () => {};
+
 interface GameOwner {
+  trialTheme?: ThemeId;
   initial: RunState | null;
   token: number;
 }
 
 export function App({ services }: { services?: ApprovedAccountServices }) {
   const { t } = useLanguage();
+  const { store, snapshot: testSnapshot } = useTestStore();
   const accountScope = useSyncExternalStore(
     (listener) => services?.session?.subscribeAccountScope(listener) ?? (() => {}),
     () => services?.session?.accountScope() ?? null,
@@ -76,6 +84,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
   const gameRef = useRef<GameOwner | null>(null);
   const gameSequence = useRef(0);
   const [saved, setSaved] = useState<PracticeLoad>({ status: 'empty' });
+  const visibleSaved = selectTestPractice(testSnapshot, saved);
   const [best, setBest] = useState<string | null>(null);
   const [storageWarning, setStorageWarning] = useState<string | null>(null);
   const [settings, setSettings] = useState<PracticeSettings>(DEFAULT_PRACTICE_SETTINGS);
@@ -151,7 +160,10 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
   useEffect(() => {
     let active = true;
     void settleStartup(() => {
-      const checkpoint = loadLocalPractice();
+      const testRun = store?.snapshot().checkpoint;
+      const checkpoint: PracticeLoad = testRun
+        ? { status: 'ready', state: testRun, revision: store?.snapshot().revision ?? 1 }
+        : loadLocalPractice();
       let preferences = DEFAULT_PRACTICE_SETTINGS;
       try {
         preferences = readPracticeSettings(window.localStorage).settings;
@@ -180,7 +192,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
     return () => {
       active = false;
     };
-  }, [bootAttempt]);
+  }, [bootAttempt, store]);
 
   useEffect(() => {
     const onConnection = () => setOnline(navigator.onLine !== false);
@@ -296,16 +308,20 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
       setStorageWarning('Tutorial progress could not be saved on this device.');
     }
   };
-  const onCheckpoint = useCallback((state: RunState) => {
-    try {
-      writePracticeCheckpoint(window.localStorage, state);
-      setStorageWarning(null);
-    } catch {
-      setStorageWarning(
-        'Local storage could not save this checkpoint. You can keep playing, but progress might not survive an app restart.',
-      );
-    }
-  }, []);
+  const onCheckpoint = useCallback(
+    (state: RunState) => {
+      try {
+        if (state.rulesetVersion === STORE_TEST_RULESET_VERSION && store) store.saveRun(state);
+        else writePracticeCheckpoint(window.localStorage, state);
+        setStorageWarning(null);
+      } catch {
+        setStorageWarning(
+          'Local storage could not save this checkpoint. You can keep playing, but progress might not survive an app restart.',
+        );
+      }
+    },
+    [store],
+  );
 
   const startPractice = (initial: RunState | null) => {
     if (gameRef.current) return;
@@ -317,8 +333,8 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
   };
 
   const resumePractice = () => {
-    if (saved.status !== 'ready' || !canResumePractice(saved)) return;
-    startPractice(saved.state);
+    if (visibleSaved.status !== 'ready' || !canResumePractice(visibleSaved)) return;
+    startPractice(visibleSaved.state);
   };
 
   const startNewPractice = () => {
@@ -329,6 +345,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
       window.history.replaceState({ cpiNavigation: true }, '', viewHash(view));
     }
     try {
+      store?.clearRun();
       clearPracticeCheckpoint(window.localStorage);
       setSaved({ status: 'empty' });
       setStorageWarning(null);
@@ -340,7 +357,10 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
 
   const requestNewPractice = () => {
     if (gameRef.current || confirmingRef.current) return;
-    if (saved.status === 'empty' || (saved.status === 'ready' && !canResumePractice(saved))) {
+    if (
+      visibleSaved.status === 'empty' ||
+      (visibleSaved.status === 'ready' && !canResumePractice(visibleSaved))
+    ) {
       startNewPractice();
       return;
     }
@@ -353,7 +373,12 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
     gameRef.current = null;
     setGame(null);
     backExitInFlight.current = false;
-    setSaved(loadLocalPractice());
+    const testRun = store?.snapshot().checkpoint;
+    setSaved(
+      testRun
+        ? { status: 'ready', state: testRun, revision: store?.snapshot().revision ?? 1 }
+        : loadLocalPractice(),
+    );
     try {
       setBest(readPracticePersonalBest(window.localStorage));
     } catch {
@@ -423,7 +448,8 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
           onViewRankings={() => closePractice('rankings')}
           onExitCancelled={cancelGameExit}
           exitRequest={exitRequest}
-          onCheckpoint={onCheckpoint}
+          onCheckpoint={game.trialTheme ? ignoreTrialCheckpoint : onCheckpoint}
+          trialTheme={game.trialTheme}
           settings={settings}
           onSettingsChange={changeSettings}
         />
@@ -444,7 +470,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
       <div inert={confirmNew}>
         <MainMenu
           view={view}
-          saved={saved}
+          saved={visibleSaved}
           best={best}
           online={online}
           settings={settings}
@@ -472,7 +498,11 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
         />
       </div>
       {confirmNew && (
-        <ConfirmNewPractice saved={saved} onCancel={cancelNew} onConfirm={startNewPractice} />
+        <ConfirmNewPractice
+          saved={visibleSaved}
+          onCancel={cancelNew}
+          onConfirm={startNewPractice}
+        />
       )}
     </>
   );

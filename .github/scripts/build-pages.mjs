@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { build, loadEnv } from 'vite';
 import { assertBuiltEnvironment } from '../../apps/mobile/config/environments.ts';
 import { assertUnsignedPublicVariables } from '../../apps/mobile/config/release-build.ts';
+import { STORE_PAYMENT_MODE } from '../../apps/mobile/src/store-catalog.ts';
 
 const repository = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const app = join(repository, 'apps/mobile');
@@ -16,6 +17,7 @@ const base = '/crystal-path-infinity/';
 // or the runner. Reuse the existing strict no-public-service-variable guard.
 assertUnsignedPublicVariables(loadEnv('production', app, 'VITE_'));
 assertUnsignedPublicVariables(process.env);
+assert.equal(STORE_PAYMENT_MODE, 'test', 'Pages purchases must remain simulated.');
 if (Object.keys(process.env).some((name) => name.startsWith('CPI_RELEASE_')))
   throw new Error('Pages preview is separate from unsigned native release preparation.');
 
@@ -46,6 +48,7 @@ const deployment = {
   sourceSha,
   base,
   liveServices: { accounts: 'disabled', ranked: 'disabled', ads: 'disabled' },
+  purchases: 'simulated-test-only',
 };
 writeFileSync(join(output, 'deployment-info.json'), JSON.stringify(deployment, null, 2) + '\n');
 console.log(JSON.stringify(deployment));
