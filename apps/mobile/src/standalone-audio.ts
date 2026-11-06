@@ -60,7 +60,11 @@ export function createStandaloneAudio(
         ? CRYSTAL_AUDIO.safe
         : import.meta.env.BASE_URL + `assets/themes/${theme}-step.wav`,
     ),
-    death: ports.createMedia(CRYSTAL_AUDIO.death),
+    death: ports.createMedia(
+      theme === 'obsidian'
+        ? CRYSTAL_AUDIO.death
+        : import.meta.env.BASE_URL + `assets/themes/${theme}-rescue.wav`,
+    ),
     record: ports.createMedia(
       theme === 'obsidian'
         ? CRYSTAL_AUDIO.record

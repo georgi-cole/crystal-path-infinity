@@ -2,6 +2,8 @@ import { useLayoutEffect, useRef } from 'react';
 import type { presentRowPressure } from '@crystal-path-infinity/game-core';
 import type { SurvivalReward } from './run-signals';
 import { useLanguage } from './language-context';
+import { useThemeId } from './store-context';
+import { isPetWorld } from './world-kits';
 
 export function DeathClock({
   pressure,
@@ -9,6 +11,7 @@ export function DeathClock({
   pressure: NonNullable<ReturnType<typeof presentRowPressure>>;
 }) {
   const { t } = useLanguage();
+  const petWorld = isPetWorld(useThemeId());
   const seconds = (pressure.remainingMs / 1000).toFixed(1);
   return (
     <div
@@ -38,10 +41,10 @@ export function DeathClock({
       </svg>
       <div className="cpi-pressure-time" aria-hidden="true">
         {seconds}
-        <small>{t('game.deathClock')}</small>
+        <small>{t(petWorld ? 'vault.petClock' : 'game.deathClock')}</small>
       </div>
       <span className="cpi-pressure-order" aria-hidden="true">
-        {t('game.moveOrFall')}
+        {t(petWorld ? 'vault.petMove' : 'game.moveOrFall')}
       </span>
     </div>
   );

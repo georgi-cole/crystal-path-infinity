@@ -44,6 +44,60 @@
   height: 100%;
   opacity: 0.18;
 }
+.cpi-world-edge-details {
+  color: var(--world-soft, #b6d8d0);
+  stroke-width: 2;
+}
+.world-wilds .cpi-world-edge-details {
+  color: #a9cba0;
+}
+.world-league .cpi-world-edge-details {
+  color: #f0a86f;
+}
+.world-puppy .cpi-world-edge-details {
+  color: #b9d9c4;
+}
+.world-kitten .cpi-world-edge-details {
+  color: #e1c29d;
+}
+.cpi-world-speed-flags {
+  animation: cpi-world-sway 8s ease-in-out infinite alternate;
+}
+.world-wilds .cpi-world-mote {
+  color: #b5d8a5;
+  border-radius: 0;
+  rotate: 35deg;
+}
+.world-league .cpi-world-mote {
+  width: 7px;
+  height: 1px;
+  color: #f5b67d;
+  rotate: -30deg;
+}
+.world-puppy .cpi-world-mote {
+  color: #d5b78e;
+  box-shadow: none;
+}
+.world-kitten .cpi-world-mote {
+  color: #dec29a;
+  width: 3px;
+  height: 1px;
+  box-shadow: none;
+  rotate: -45deg;
+}
+:is(.world-wilds, .world-league, .world-puppy, .world-kitten) .cpi-world-mote:nth-of-type(n + 7) {
+  display: none;
+}
+:is(.world-wilds, .world-league, .world-puppy, .world-kitten) .cpi-world-haze {
+  background:
+    radial-gradient(ellipse at 0 70%, #b8cb9610, transparent 36%),
+    radial-gradient(ellipse at 100% 85%, #c9996d12, transparent 35%);
+}
+.world-kitten .cpi-world-haze {
+  background:
+    radial-gradient(ellipse at 0 60%, #b9a8dc18, transparent 36%),
+    radial-gradient(ellipse at 100% 80%, #d8b17a12, transparent 35%);
+}
 .cpi-world-cog {
   animation: cpi-theme-turn 85s linear infinite;
 }
@@ -273,8 +327,23 @@
   position: absolute;
   right: 3%;
   bottom: 1%;
-  width: 24%;
+  width: 43%;
   max-width: 6rem;
+}
+.cpi-world-impact.world-wilds {
+  color: #b0dca2;
+}
+.cpi-world-impact.world-league {
+  color: #efa66e;
+}
+.cpi-world-impact.world-puppy {
+  color: #b2d9cb;
+}
+.cpi-world-impact.world-kitten {
+  color: #d8c1ec;
+}
+.cpi-world-impact.is-wrong {
+  color: #ff7898;
 }
 .cpi-world-experience {
   position: relative;
@@ -306,6 +375,7 @@
 }
 /* Freeze decoration when hidden/native-suspended, paused, or motion is reduced. */
 .cpi-world-art.is-still *,
+.cpi-world-path-companion.is-still *,
 .cpi-theme-companion.is-still,
 .is-paused .cpi-world-art *,
 .is-paused .cpi-theme-companion,

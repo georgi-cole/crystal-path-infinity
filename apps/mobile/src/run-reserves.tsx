@@ -33,12 +33,15 @@ export function RunReserves({
   const request = (resource: TestResource, amount: number, label: string) =>
     setConfirmation({ resource, amount, label });
   return (
-    <section className="cpi-resource-panel" aria-label={t('vault.manage')}>
-      <h3>{t('vault.manage')}</h3>
+    <section
+      className={'cpi-resource-panel' + (dead ? ' is-continuation' : '')}
+      aria-label={t('vault.manage')}
+    >
+      <h3>{t(dead ? 'vault.continuations' : 'vault.manage')}</h3>
       <div className="cpi-resource-balances">
-        <span>{number(snapshot.sp)} SP</span>
+        {!dead && <span>{number(snapshot.sp)} SP</span>}
         <span>{t('vault.creditAmount', { count: number(snapshot.credits) })}</span>
-        <span>{t('vault.hintAmount', { count: number(snapshot.hints) })}</span>
+        {!dead && <span>{t('vault.hintAmount', { count: number(snapshot.hints) })}</span>}
       </div>
       <small>{t('vault.test')}</small>
       {confirmation ? (
@@ -74,13 +77,15 @@ export function RunReserves({
               </p>
               {state.revivesApplied >= 10 && <p>{t('vault.extra')}</p>}
               <div className="cpi-resource-actions">
-                <button
-                  type="button"
-                  disabled={busy || snapshot.credits < 1 || !!error}
-                  onClick={() => request('credit', 1, t('vault.useCredit', { sp: number(sp) }))}
-                >
-                  {t('vault.useCredit', { sp: number(sp) })}
-                </button>
+                {(snapshot.credits > 0 || state.revivesApplied >= 10) && (
+                  <button
+                    type="button"
+                    disabled={busy || snapshot.credits < 1 || !!error}
+                    onClick={() => request('credit', 1, t('vault.useCredit', { sp: number(sp) }))}
+                  >
+                    {t('vault.useCredit', { sp: number(sp) })}
+                  </button>
+                )}
                 {state.revivesApplied < 10 && (
                   <button
                     type="button"
@@ -93,7 +98,9 @@ export function RunReserves({
                   </button>
                 )}
               </div>
-              {snapshot.credits === 0 && <p>{t('vault.emptyCredits')}</p>}
+              {snapshot.credits === 0 && state.revivesApplied >= 10 && (
+                <p>{t('vault.emptyCredits')}</p>
+              )}
             </>
           ) : (
             <>

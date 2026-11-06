@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useLanguage } from './language-context';
-import { useTestStore } from './store-context';
+import { useTestStore, useThemeId } from './store-context';
 import { STORE_PRODUCTS, storeProduct, createTestReceiptId } from './store-catalog';
-import type { StoreProduct, ThemeId } from './store-catalog';
+import type { StoreProduct, ThemeId, WorldId } from './store-catalog';
+import { WORLD_KITS, WORLD_ORDER } from './world-kits';
 import { ThemeArtwork } from './theme-art';
 import { StorePackArt } from './store-pack-art';
 import { WorldExperience } from './world-experience';
@@ -13,11 +14,14 @@ function StoreDialog({
   title,
   onClose,
   children,
+  world,
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
+  world?: ThemeId;
 }) {
+  const equipped = useThemeId();
   const ref = useRef<HTMLDivElement>(null);
   const close = useRef(onClose);
   useEffect(() => {
@@ -53,6 +57,7 @@ function StoreDialog({
   return (
     <div
       className="cpi-vault-backdrop"
+      data-world={world ?? equipped}
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -80,15 +85,14 @@ function StoreDialog({
 }
 
 type Dialog =
-  | { kind: 'theme'; theme: 'chaos' | 'jelly' }
-  | { kind: 'checkout'; id: string }
-  | { kind: 'reset' }
-  | null;
+  { kind: 'theme'; theme: WorldId } | { kind: 'checkout'; id: string } | { kind: 'reset' } | null;
 export function StoreVault({ onTryTheme }: { onTryTheme?: (theme: ThemeId) => void }) {
   const { t, number, locale } = useLanguage();
   const { store, snapshot, error } = useTestStore();
   const [filter, setFilter] = useState<'worlds' | 'essentials' | 'collection'>('worlds');
   const [resource, setResource] = useState<'credit' | 'sp' | 'hints'>('credit');
+  const [family, setFamily] = useState<'all' | 'adventure' | 'sport' | 'pets'>('all');
+  const [worldPage, setWorldPage] = useState(0);
   const [dialog, setDialog] = useState<Dialog>(null);
   const [notice, setNotice] = useState('');
   const modal = dialog !== null;
@@ -123,7 +127,15 @@ export function StoreVault({ onTryTheme }: { onTryTheme?: (theme: ThemeId) => vo
     if (cancel && dialog?.kind === 'checkout') act(() => store?.cancelPurchase(dialog.id));
     setDialog(null);
   }
-  const themeProducts = STORE_PRODUCTS.filter((product) => product.kind === 'theme');
+  const themeProducts = STORE_PRODUCTS.filter((product) => product.kind === 'theme')
+    .sort((a, b) => WORLD_ORDER.indexOf(a.theme!) - WORLD_ORDER.indexOf(b.theme!))
+    .filter((product) =>
+      filter === 'collection'
+        ? snapshot.owned.includes(product.theme!)
+        : family === 'all' || WORLD_KITS[product.theme!].family === family,
+    );
+  const pages = Math.max(1, Math.ceil(themeProducts.length / 2));
+  const page = Math.min(worldPage, pages - 1);
   const checkout =
     dialog?.kind === 'checkout' && snapshot.pending?.id === dialog.id ? snapshot.pending : null;
   const checkoutProduct = checkout ? storeProduct(checkout.productId) : null;
@@ -133,7 +145,13 @@ export function StoreVault({ onTryTheme }: { onTryTheme?: (theme: ThemeId) => vo
         <header className="cpi-store-heading">
           <span>{t('store.eyebrow')}</span>
           <h1 id="cpi-store-title" data-menu-heading tabIndex={-1}>
-            {t(filter === 'essentials' ? 'vault.catalogTitle' : 'vault.title')}
+            {t(
+              filter === 'essentials'
+                ? 'vault.catalogTitle'
+                : filter === 'collection'
+                  ? 'vault.collection'
+                  : 'vault.worldCollectionTitle',
+            )}
           </h1>
           <p>{t('vault.intro')}</p>
           <span className="cpi-store-status">
@@ -182,7 +200,10 @@ export function StoreVault({ onTryTheme }: { onTryTheme?: (theme: ThemeId) => vo
               type="button"
               key={id}
               aria-pressed={filter === id}
-              onClick={() => setFilter(id)}
+              onClick={() => {
+                setFilter(id);
+                setWorldPage(0);
+              }}
             >
               {t(
                 id === 'worlds'
@@ -194,6 +215,31 @@ export function StoreVault({ onTryTheme }: { onTryTheme?: (theme: ThemeId) => vo
             </button>
           ))}
         </nav>
+        {filter === 'worlds' && (
+          <nav className="cpi-vault-world-families" aria-label={t('vault.worlds')}>
+            {(['all', 'adventure', 'sport', 'pets'] as const).map((id) => (
+              <button
+                type="button"
+                key={id}
+                aria-pressed={family === id}
+                onClick={() => {
+                  setFamily(id);
+                  setWorldPage(0);
+                }}
+              >
+                {t(
+                  id === 'all'
+                    ? 'vault.allWorlds'
+                    : id === 'adventure'
+                      ? 'vault.adventureWorlds'
+                      : id === 'sport'
+                        ? 'vault.sportWorlds'
+                        : 'vault.petWorlds',
+                )}
+              </button>
+            ))}
+          </nav>
+        )}
         {filter !== 'essentials' && (
           <div className="cpi-vault-worlds">
             {filter === 'collection' && (
@@ -212,56 +258,75 @@ export function StoreVault({ onTryTheme }: { onTryTheme?: (theme: ThemeId) => vo
                 </button>
               </article>
             )}
-            {themeProducts
-              .filter(
-                (product) => filter !== 'collection' || snapshot.owned.includes(product.theme!),
-              )
-              .map((product) => {
-                const theme = product.theme!;
-                const owned = snapshot.owned.includes(theme);
-                return (
-                  <article
-                    className={'cpi-vault-world world-' + theme}
-                    key={product.id}
-                    data-world={theme}
-                  >
-                    <div className="cpi-vault-world-picture">
-                      <ThemeArtwork theme={theme} />
-                      <span className="cpi-vault-world-tag">
-                        {t(owned ? 'vault.owned' : 'vault.originalWorld')}
-                      </span>
+            {themeProducts.slice(page * 2, page * 2 + 2).map((product) => {
+              const theme = product.theme!;
+              const owned = snapshot.owned.includes(theme);
+              return (
+                <article
+                  className={'cpi-vault-world world-' + theme}
+                  key={product.id}
+                  data-world={theme}
+                >
+                  <div className="cpi-vault-world-picture">
+                    <ThemeArtwork theme={theme} />
+                    <span className="cpi-vault-world-tag">
+                      {t(owned ? 'vault.owned' : 'vault.originalWorld')}
+                    </span>
+                  </div>
+                  <div className="cpi-vault-world-copy">
+                    <h2>{t(product.name)}</h2>
+                    <p>{t(WORLD_KITS[theme].mood)}</p>
+                    <small>{t('vault.worldFeatures')}</small>
+                    <div className="cpi-vault-world-actions">
+                      <button
+                        type="button"
+                        className="is-primary"
+                        disabled={
+                          !store || !!error || !!snapshot.pending || snapshot.equipped === theme
+                        }
+                        aria-label={
+                          owned
+                            ? undefined
+                            : t('vault.unlock') + ' · ' + t(product.name) + ' · ' + price(product)
+                        }
+                        onClick={() => (owned ? act(() => store?.equip(theme)) : buy(product))}
+                      >
+                        {owned
+                          ? t(snapshot.equipped === theme ? 'vault.equipped' : 'vault.equip')
+                          : t('vault.testBuyPrice', { price: price(product) })}
+                      </button>
+                      <button type="button" onClick={() => setDialog({ kind: 'theme', theme })}>
+                        {t('vault.explore')}
+                      </button>
                     </div>
-                    <div className="cpi-vault-world-copy">
-                      <h2>{t(product.name)}</h2>
-                      <p>{t(theme === 'chaos' ? 'vault.chaosMood' : 'vault.jellyMood')}</p>
-                      <small>{t('vault.worldFeatures')}</small>
-                      <div className="cpi-vault-world-actions">
-                        <button
-                          type="button"
-                          className="is-primary"
-                          disabled={
-                            !store || !!error || !!snapshot.pending || snapshot.equipped === theme
-                          }
-                          aria-label={
-                            owned
-                              ? undefined
-                              : t('vault.unlock') + ' · ' + t(product.name) + ' · ' + price(product)
-                          }
-                          onClick={() => (owned ? act(() => store?.equip(theme)) : buy(product))}
-                        >
-                          {owned
-                            ? t(snapshot.equipped === theme ? 'vault.equipped' : 'vault.equip')
-                            : t('vault.testBuyPrice', { price: price(product) })}
-                        </button>
-                        <button type="button" onClick={() => setDialog({ kind: 'theme', theme })}>
-                          {t('vault.explore')}
-                        </button>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
+                  </div>
+                </article>
+              );
+            })}
           </div>
+        )}
+        {filter !== 'essentials' && pages > 1 && (
+          <nav className="cpi-vault-world-pages" aria-label={t('vault.worlds')}>
+            <button
+              type="button"
+              disabled={page === 0}
+              aria-label={t('vault.previousWorlds')}
+              onClick={() => setWorldPage(page - 1)}
+            >
+              ‹
+            </button>
+            <span role="status">
+              {t('vault.worldPage', { current: number(page + 1), total: number(pages) })}
+            </span>
+            <button
+              type="button"
+              disabled={page === pages - 1}
+              aria-label={t('vault.nextWorlds')}
+              onClick={() => setWorldPage(page + 1)}
+            >
+              ›
+            </button>
+          </nav>
         )}
         {filter === 'essentials' && (
           <>
@@ -399,27 +464,30 @@ export function StoreVault({ onTryTheme }: { onTryTheme?: (theme: ThemeId) => vo
       )}
       {dialog?.kind === 'theme' && (
         <StoreDialog
-          title={t(dialog.theme === 'chaos' ? 'vault.chaos' : 'vault.jelly')}
+          title={t(WORLD_KITS[dialog.theme].title)}
+          world={dialog.theme}
           onClose={() => closeDialog()}
         >
           <WorldExperience theme={dialog.theme} />
-          <p>{t(dialog.theme === 'chaos' ? 'vault.chaosDetail' : 'vault.jellyDetail')}</p>
+          <p>{t(WORLD_KITS[dialog.theme].detail)}</p>
           <ul className="cpi-vault-world-includes">
             <li>
-              <strong>
-                {t(dialog.theme === 'chaos' ? 'vault.copperCrystal' : 'vault.opalCrystal')}
-              </strong>
+              <strong>{t(WORLD_KITS[dialog.theme].surface)}</strong>
               <span>{t('vault.materialDetail')}</span>
             </li>
             <li>
-              <strong>{t(dialog.theme === 'chaos' ? 'vault.meetPip' : 'vault.meetLumi')}</strong>
+              <strong>{t(WORLD_KITS[dialog.theme].meet)}</strong>
               <span>{t('vault.companionDetail')}</span>
             </li>
             <li>
               <strong>{t('vault.worldSound')}</strong>
-              <span>{t(dialog.theme === 'chaos' ? 'vault.chaosSound' : 'vault.jellySound')}</span>
+              <span>{t(WORLD_KITS[dialog.theme].sound)}</span>
             </li>
           </ul>
+          <p className="cpi-vault-safe-note">
+            <strong>{t('vault.safeCompanions')}</strong>
+            <span>{t('vault.safeCompanionsDetail')}</span>
+          </p>
           <p className="cpi-vault-muted">{t('vault.trial')}</p>
           <button
             type="button"
@@ -436,7 +504,11 @@ export function StoreVault({ onTryTheme }: { onTryTheme?: (theme: ThemeId) => vo
         </StoreDialog>
       )}
       {checkout && checkoutProduct && (
-        <StoreDialog title={t('vault.checkout')} onClose={() => closeDialog()}>
+        <StoreDialog
+          title={t('vault.checkout')}
+          world={checkoutProduct.theme}
+          onClose={() => closeDialog()}
+        >
           <span className="cpi-store-status">{t('vault.test')}</span>
           <h3>{t(checkoutProduct.name)}</h3>
           <p>{checkoutProduct.kind === 'theme' ? t('vault.included') : amount(checkoutProduct)}</p>

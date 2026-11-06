@@ -23,6 +23,7 @@ const WIDTH = 900,
   HEIGHT = 700;
 import { useThemeId } from './store-context';
 import { THEMES } from './store-catalog';
+import type { WorldId } from './store-catalog';
 type Point = { x: number; y: number };
 const coordinates = (points: Point[]) =>
   points.map((p) => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' ');
@@ -70,24 +71,57 @@ function inset(points: Point[]) {
   const center = points.reduce((a, p) => ({ x: a.x + p.x / 4, y: a.y + p.y / 4 }), { x: 0, y: 0 });
   return points.map((p) => blend(p, center, 0.045));
 }
-function worldInlay(points: Point[], theme: 'chaos' | 'jelly') {
-  const motif =
-    theme === 'chaos'
-      ? [
-          [0.1, 0.25],
-          [0.1, 0.72],
-          [0.28, 0.72],
-          [0.28, 0.78],
-          [0.06, 0.78],
-          [0.06, 0.25],
-        ]
-      : [
-          [0.48, 0.19],
-          [0.57, 0.5],
-          [0.48, 0.8],
-          [0.39, 0.5],
-        ];
-  return motif.map(([u, v]) => onFace(points, u, v));
+function worldInlay(points: Point[], theme: WorldId) {
+  const motifs: Record<WorldId, number[][]> = {
+    chaos: [
+      [0.1, 0.25],
+      [0.1, 0.72],
+      [0.28, 0.72],
+      [0.28, 0.78],
+      [0.06, 0.78],
+      [0.06, 0.25],
+    ],
+    jelly: [
+      [0.48, 0.19],
+      [0.57, 0.5],
+      [0.48, 0.8],
+      [0.39, 0.5],
+    ],
+    wilds: [
+      [0.09, 0.27],
+      [0.23, 0.35],
+      [0.18, 0.61],
+      [0.12, 0.48],
+      [0.07, 0.65],
+      [0.04, 0.39],
+    ],
+    league: [
+      [0.09, 0.25],
+      [0.26, 0.25],
+      [0.17, 0.5],
+      [0.26, 0.5],
+      [0.09, 0.78],
+      [0.15, 0.54],
+      [0.04, 0.54],
+    ],
+    puppy: [
+      [0.07, 0.24],
+      [0.24, 0.31],
+      [0.21, 0.55],
+      [0.15, 0.48],
+      [0.12, 0.7],
+      [0.04, 0.61],
+    ],
+    kitten: [
+      [0.2, 0.22],
+      [0.1, 0.45],
+      [0.19, 0.72],
+      [0.08, 0.62],
+      [0.04, 0.43],
+      [0.1, 0.28],
+    ],
+  };
+  return motifs[theme].map(([u, v]) => onFace(points, u, v));
 }
 function MovingPolygon({
   shape,

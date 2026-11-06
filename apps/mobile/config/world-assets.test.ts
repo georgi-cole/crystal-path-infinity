@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { WORLD_ASSETS } from '../src/world-assets';
+import { WORLD_ORDER } from '../src/world-kits';
 import { WorldStepEffect } from '../src/world-effects';
 import type { SceneCinematic } from '../src/scene-cinematics';
 
@@ -20,7 +21,7 @@ function image(path: string) {
 }
 
 describe('portable world assets', () => {
-  it.each(['chaos', 'jelly'] as const)(
+  it.each(WORLD_ORDER)(
     '%s ships a bounded portrait plate and three transparent reaction frames',
     (theme) => {
       const plate = image(WORLD_ASSETS[theme].environment);
@@ -31,14 +32,14 @@ describe('portable world assets', () => {
       expect(plate.size + companion.size).toBeLessThan(500_000);
     },
   );
-  it('keeps both runtime world kits together below one megabyte', () => {
+  it('keeps the six runtime art kits below three megabytes', () => {
     const total = Object.values(WORLD_ASSETS).reduce(
       (sum, world) => sum + image(world.environment).size + image(world.companion).size,
       0,
     );
-    expect(total).toBeLessThan(1_000_000);
+    expect(total).toBeLessThan(3_000_000);
   });
-  it.each(['chaos', 'jelly'])(
+  it.each(WORLD_ORDER)(
     '%s music has a bounded duration, silent loop edges and headroom',
     (theme) => {
       const bytes = readFileSync(
@@ -69,18 +70,15 @@ describe('cosmetic feedback boundary', () => {
     mystery: null,
     fatal: false,
   };
-  it.each(['chaos', 'jelly'] as const)(
-    '%s emits only a bounded, noninteractive resolved-step effect',
-    (theme) => {
-      const html = renderToStaticMarkup(
-        createElement(WorldStepEffect, { theme, cinematic: beat, reduced: false }),
-      );
-      expect(html).toContain('aria-hidden="true"');
-      expect(html.match(/<circle /g)).toHaveLength(10);
-      expect(html).not.toContain('<button');
-      expect(html).not.toContain('<animate');
-    },
-  );
+  it.each(WORLD_ORDER)('%s emits only a bounded, noninteractive resolved-step effect', (theme) => {
+    const html = renderToStaticMarkup(
+      createElement(WorldStepEffect, { theme, cinematic: beat, reduced: false }),
+    );
+    expect(html).toContain('aria-hidden="true"');
+    expect(html.match(/<circle /g)).toHaveLength(10);
+    expect(html).not.toContain('<button');
+    expect(html).not.toContain('<animate');
+  });
   it('emits no extra effect before impact, on the original world, or with reduced motion', () => {
     for (const props of [
       { theme: 'obsidian' as const, cinematic: beat, reduced: false },

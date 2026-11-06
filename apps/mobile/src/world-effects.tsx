@@ -8,6 +8,7 @@ import type { PresentedEffect } from './infinity-presentation';
 import { useWorldMotion } from './world-motion';
 import { WorldAvatarAura } from './world-treasures';
 import { WORLD_ASSETS, worldAsset } from './world-assets';
+import { WorldRescueRig } from './world-props';
 
 /** Brief material feedback uses only a choice that has already resolved. */
 export function WorldStepEffect({
@@ -32,11 +33,24 @@ export function WorldStepEffect({
       <g transform={`translate(${center.x} ${center.y})`}>
         {theme === 'chaos' ? (
           <path className="cpi-world-circuit" d="M-73 16h22V-7h31v-12h42v12h31v23h22" />
-        ) : (
+        ) : theme === 'jelly' ? (
           <>
             <ellipse className="cpi-world-ripple" rx="76" ry="23" />
             <ellipse className="cpi-world-ripple is-second" rx="52" ry="16" />
           </>
+        ) : (
+          <path
+            className="cpi-world-circuit"
+            d={
+              theme === 'wilds'
+                ? 'm-64 15 21-23 31 11 29-17 44 20m-64-3 8-13 10 12'
+                : theme === 'league'
+                  ? 'm-75 16 25-18h31l-10 18h31l25-18h42m-52 8 16-11'
+                  : theme === 'puppy'
+                    ? 'M-70 13q20-30 40-10l30 10L30 3q20-20 40 10m-78-12 8-9 8 9'
+                    : 'M-73 14q38-36 73 0 35-36 73 0m-78-20 5-8 5 8'
+            }
+          />
         )}
         {Array.from({ length: 10 }, (_, i) => (
           <circle
@@ -107,11 +121,12 @@ export function WorldPathCompanion({
   if (!motion.visible) return null;
   // Static/reduced-motion presentation still stands on the actual intact pane.
   const anchor = animated ? motion.anchor : motion.end;
-  const frame = reaction === 'happy' ? 1 : reaction === 'panic' ? 2 : 0;
+  const frame =
+    motion.action === 'rescue' || reaction === 'happy' ? 1 : reaction === 'panic' ? 2 : 0;
   return (
     <svg
       ref={ref}
-      className="cpi-world-path-companion"
+      className={'cpi-world-path-companion' + (motionPreferences.suspended ? ' is-still' : '')}
       viewBox="0 0 900 700"
       preserveAspectRatio="none"
       aria-hidden="true"
@@ -135,18 +150,21 @@ export function WorldPathCompanion({
             keySplines={motion.action === 'travel' ? '.22 .65 .3 1' : undefined}
           />
         )}
-        {motion.action === 'fall' && animated && (
+        {motion.action === 'rescue' && animated && (
           <animate
             attributeName="opacity"
             values="1;1;0"
-            keyTimes="0;.35;1"
+            keyTimes="0;.85;1"
             dur={`${motion.duration}s`}
             fill="freeze"
           />
         )}
-        <ellipse cx={anchor.x} cy={anchor.y - 2} rx="30" ry="5" fill="#020510" opacity=".4" />
+        {motion.action !== 'rescue' && (
+          <ellipse cx={anchor.x} cy={anchor.y - 2} rx="30" ry="5" fill="#020510" opacity=".4" />
+        )}
         <g transform={`translate(${anchor.x} ${anchor.y})`}>
           <g className="cpi-world-actor-sprite">
+            {motion.action === 'rescue' && <WorldRescueRig theme={theme} />}
             <WorldAvatarAura theme={theme} effects={effects} />
             <image
               href={worldAsset(WORLD_ASSETS[theme].companion)}

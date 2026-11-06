@@ -80,16 +80,17 @@ describe('companions follow only the resolved crystal path', () => {
     expect(planCompanionMotion(300, 'left').end).toEqual(companionFooting('left'));
   });
 
-  it('falls at zero SP instead of presenting a successful rescue, then disappears', () => {
+  it('deploys free safety equipment at zero SP, lifts away and then leaves the ended path', () => {
     const fatal = planCompanionMotion(0, 'left', { ...wrong, phase: 'collapse', fatal: true });
-    expect(fatal.action).toBe('fall');
+    expect(fatal.action).toBe('rescue');
     expect(fatal.side).toBe('left');
-    expect(fatal.end.y).toBeGreaterThan(700);
+    expect(fatal.end.y).toBeLessThan(companionLanding('left').y);
+    expect(fatal.path).not.toContain('1080');
     expect(fatal.duration * 1000).toBeLessThan(STEP_TIMING.death - STEP_TIMING.contact);
     expect(planCompanionMotion(0, 'left').visible).toBe(false);
   });
 
-  it('also falls when a mystery or the clock exhausts SP without a glass choice', () => {
+  it('also rescues when a mystery or the clock exhausts SP without a glass choice', () => {
     for (const mystery of [null, { kind: 'hurt_15' as const, spDelta: -15, hintDelta: 0 }]) {
       const motion = planCompanionMotion(0, 'right', {
         ...wrong,
@@ -99,7 +100,8 @@ describe('companions follow only the resolved crystal path', () => {
         fatal: true,
       });
       expect(motion.anchor).toEqual(companionFooting('right'));
-      expect(motion.action).toBe('fall');
+      expect(motion.action).toBe('rescue');
+      expect(motion.end.y).toBeLessThan(motion.anchor.y);
     }
   });
 
@@ -113,7 +115,7 @@ describe('companions follow only the resolved crystal path', () => {
     const pixelsX = (96 * scale.x * width) / 900;
     const pixelsY = (96 * scale.y * height) / 700;
     expect(pixelsX).toBeCloseTo(pixelsY);
-    expect(pixelsX).toBeGreaterThanOrEqual(56);
-    expect(pixelsX).toBeLessThanOrEqual(104);
+    expect(pixelsX).toBeGreaterThanOrEqual(68);
+    expect(pixelsX).toBeLessThanOrEqual(112);
   });
 });

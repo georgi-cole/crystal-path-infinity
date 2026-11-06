@@ -132,6 +132,64 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.8rem;
 }
+.cpi-vault-world-families {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.25rem;
+  margin: 0 0 0.7rem;
+}
+.cpi-vault-world-families button {
+  min-height: 44px;
+  padding: 0.45rem 0.2rem;
+  border: 1px solid transparent;
+  border-radius: 0.3rem;
+  background: none;
+  color: #b5acbe;
+  font-size: 0.68rem;
+}
+.cpi-vault-world-families button[aria-pressed='true'] {
+  border-color: #cbb5d53b;
+  background: #bba7d011;
+  color: #f1e4fa;
+}
+.cpi-vault-world-pages {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  margin-top: 0.65rem;
+}
+.cpi-vault-world-pages button {
+  min-width: 48px;
+  min-height: 44px;
+  border: 1px solid #c2a5ce38;
+  border-radius: 0.4rem;
+  color: #eddaf5;
+  background: #211b28;
+  font-size: 1.45rem;
+}
+.cpi-vault-world-pages span {
+  color: #b9acc3;
+  font-size: 0.65rem;
+  text-align: center;
+}
+.cpi-vault-safe-note {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--world-soft) 25%, transparent);
+  border-radius: 0.4rem;
+  background: #b5e3c406;
+}
+.cpi-vault-safe-note strong {
+  font-size: 0.73rem;
+  color: var(--world-soft);
+}
+.cpi-vault-safe-note span {
+  font-size: 0.68rem;
+  color: #c1b8c8;
+  line-height: 1.6;
+}
 .cpi-vault-world {
   min-width: 0;
   overflow: hidden;
@@ -578,7 +636,8 @@ button.cpi-vault-primary {
     padding-bottom: 0.65rem;
   }
   .cpi-store-heading h1 {
-    max-width: 18rem;
+    max-width: 22rem;
+    font-size: 1.85rem;
   }
   .cpi-store-heading p {
     max-width: 19rem;
@@ -602,16 +661,16 @@ button.cpi-vault-primary {
   }
   .cpi-vault-world-copy h2 {
     font-size: 1.2rem;
-    min-height: 2.7rem;
+    min-height: 2.25rem;
     line-height: 1.15;
   }
   .cpi-vault-world-copy p {
     font-size: 0.7rem;
-    min-height: 3.15rem;
+    min-height: 2.6rem;
   }
   .cpi-vault-world-copy > small {
     font-size: 0.56rem;
-    min-height: 1.8rem;
+    min-height: 1.3rem;
   }
   .cpi-vault-world-actions {
     flex-direction: column;

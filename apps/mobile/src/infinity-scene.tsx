@@ -5,6 +5,7 @@ import { WorldPathCompanion, WorldStepEffect } from './world-effects';
 import { companionStandingSide } from './world-companion';
 import { MysteryCache, WorldOutcomeHero } from './world-treasures';
 import type { ThemeId } from './store-catalog';
+import { isPetWorld, WORLD_KITS } from './world-kits';
 import type { ReactNode } from 'react';
 import { StageAtmosphere } from './stage-atmosphere';
 import { useSoundtrack } from './soundtrack';
@@ -147,6 +148,7 @@ export function InfinitySceneView({
 }: InfinitySceneViewProps) {
   const { t, number } = useLanguage();
   const themeId = useThemeId();
+  const petWorld = isPetWorld(themeId);
   const presented = presentInfinityScene(state);
   const outcome = presentRunOutcome(state);
   const worldOutcomeTheme =
@@ -163,12 +165,20 @@ export function InfinitySceneView({
   const localizedDeathReason = deathCause
     ? t(
         deathCause === 'wrong_tile'
-          ? 'game.deathWrong'
+          ? petWorld
+            ? 'vault.petWrong'
+            : 'game.deathWrong'
           : deathCause === 'idle'
-            ? 'game.deathIdle'
+            ? petWorld
+              ? 'vault.petIdle'
+              : 'game.deathIdle'
             : deathCause === 'mystery'
-              ? 'game.deathMystery'
-              : 'game.deathDrain',
+              ? petWorld
+                ? 'vault.petMystery'
+                : 'game.deathMystery'
+              : petWorld
+                ? 'vault.petDrain'
+                : 'game.deathDrain',
       )
     : null;
   const overlayVisible =
@@ -213,7 +223,7 @@ export function InfinitySceneView({
         (outcome.phase === 'verification-pending'
           ? t('game.noticePending')
           : outcome.phase === 'dead' || outcome.phase === 'grant-ready'
-            ? t('game.noticeDead')
+            ? t(petWorld ? 'vault.petRestTitle' : 'game.noticeDead')
             : outcome.phase === 'finished'
               ? t('game.noticeFinished')
               : !ready
@@ -413,7 +423,7 @@ export function InfinitySceneView({
             showHintCaption={hintCaptionRow === state.currentRow}
           />
           <WorldStepEffect theme={themeId} cinematic={cinematic} reduced={settings.reducedMotion} />
-          {themeId !== 'obsidian' && (
+          {themeId !== 'obsidian' && outcome.phase !== 'finished' && (
             <WorldPathCompanion
               theme={themeId}
               cinematic={cinematic}
@@ -467,14 +477,16 @@ export function InfinitySceneView({
             <div className={'cpi-step-readout is-' + cinematic.feedback.kind} aria-hidden="true">
               {t(
                 cinematic.fatal
-                  ? 'game.collapse'
+                  ? petWorld
+                    ? 'vault.safeCompanions'
+                    : 'game.collapse'
                   : cinematic.feedback.kind === 'wrong'
                     ? 'game.impactWrong'
                     : 'game.impactSafe',
               )}
             </div>
           )}
-          {catastrophic && (
+          {catastrophic && !petWorld && (
             <div className="cpi-death-veil" aria-hidden="true">
               <span />
               <span />
@@ -487,7 +499,7 @@ export function InfinitySceneView({
         </p>
         <p className="cpi-scene-footer">
           <span aria-hidden="true">—</span>
-          {t('game.bridgeGuidance')}
+          {t(petWorld ? 'vault.petGuidance' : 'game.bridgeGuidance')}
           <span aria-hidden="true">—</span>
           <span className="visually-hidden">{t('game.crossingNote')}</span>
         </p>
@@ -522,7 +534,7 @@ export function InfinitySceneView({
                   <circle cx="40" cy="8" r="2" />
                 </svg>
               </span>
-              <h2 id="cpi-run-outcome-title">
+              <h2 id="cpi-run-outcome-title" tabIndex={-1}>
                 {t(
                   error
                     ? 'game.clockTitle'
@@ -531,13 +543,28 @@ export function InfinitySceneView({
                       : outcome.phase === 'verification-pending'
                         ? 'game.pendingTitle'
                         : outcome.phase === 'finished'
-                          ? 'game.complete'
+                          ? petWorld
+                            ? 'vault.petFinishedTitle'
+                            : themeId === 'league'
+                              ? 'vault.leagueFinishedTitle'
+                              : 'game.complete'
                           : outcome.phase === 'dead' || outcome.phase === 'grant-ready'
-                            ? 'game.deathTitle'
-                            : 'game.paused',
+                            ? petWorld
+                              ? 'vault.petRestTitle'
+                              : themeId === 'league'
+                                ? 'vault.leagueRestTitle'
+                                : 'game.deathTitle'
+                            : petWorld
+                              ? 'vault.petPaused'
+                              : 'game.paused',
                 )}
               </h2>
             </header>
+            {worldOutcomeTheme && (
+              <p className="cpi-world-safe-home" role="status">
+                {t(WORLD_KITS[worldOutcomeTheme].safe)}
+              </p>
+            )}
             {error ? (
               <>
                 <p role="alert">{error}</p>
@@ -596,7 +623,7 @@ export function InfinitySceneView({
                   {t(state.storeTest?.assisted ? 'vault.assisted' : 'game.practiceUnverified')}
                 </p>
                 <div className="cpi-result-score">
-                  <span>{t('game.rowsCleared')}</span>
+                  <span>{t(petWorld ? 'vault.rowsExplored' : 'game.rowsCleared')}</span>
                   <strong>
                     <AnimatedResult
                       value={state.result?.lastClearedRow ?? state.lastClearedRow}
@@ -606,7 +633,7 @@ export function InfinitySceneView({
                 </div>
                 <dl className="cpi-result-details">
                   <div>
-                    <dt>{t('game.fatalRow')}</dt>
+                    <dt>{t(petWorld ? 'vault.uncrossedRow' : 'game.fatalRow')}</dt>
                     <dd>
                       {rawFatalRow === null ? (
                         t('general.none')
@@ -652,20 +679,24 @@ export function InfinitySceneView({
               <>
                 {localizedDeathReason && <p>{localizedDeathReason}</p>}
                 <div className="cpi-result-score">
-                  <span>{t('game.rowsCleared')}</span>
+                  <span>{t(petWorld ? 'vault.rowsExplored' : 'game.rowsCleared')}</span>
                   <strong>
                     <AnimatedResult value={state.lastClearedRow} reduced={settings.reducedMotion} />
                   </strong>
                 </div>
-                <p>{t('game.fatalNotCounted', { row: fatalRow ?? t('general.none') })}</p>
+                <p>
+                  {t(petWorld ? 'vault.petFatalNotCounted' : 'game.fatalNotCounted', {
+                    row: fatalRow ?? t('general.none'),
+                  })}
+                </p>
                 {outcome.offer ? (
                   <div className="cpi-revive-offer">
                     <strong>
-                      {t('game.bargainTitle', {
+                      {t(petWorld ? 'vault.petContinueTitle' : 'game.bargainTitle', {
                         sp: number(outcome.offer.restoreSp),
                       })}
                     </strong>
-                    <span>{t('game.bargainBody')}</span>
+                    <span>{t(petWorld ? 'vault.petContinueBody' : 'game.bargainBody')}</span>
                     {!resourcePanel && <span>{t('game.bargainSleeping')}</span>}
                   </div>
                 ) : outcome.phase === 'grant-ready' ? (
@@ -690,7 +721,7 @@ export function InfinitySceneView({
               </>
             ) : (
               <>
-                <p>{t('game.pausedExplanation')}</p>
+                <p>{t(petWorld ? 'vault.petPausedDetail' : 'game.pausedExplanation')}</p>
                 <p>{t('game.pausedRows', { row: clearedRows })}</p>
                 <details className="cpi-run-ledger">
                   <summary>{t('game.runDetails')}</summary>
@@ -944,7 +975,16 @@ function InfinityRun({
 
   useEffect(() => {
     if (paused || confirmEnd || state.status !== 'playing' || error) {
-      document.querySelector<HTMLButtonElement>('.cpi-overlay [data-cpi-overlay-primary]')?.focus();
+      const heading = document.querySelector<HTMLElement>('.cpi-overlay .is-world-outcome h2');
+      if (heading) {
+        heading.focus({ preventScroll: true });
+        const card = heading.closest('.cpi-overlay-card');
+        if (card) card.scrollTop = 0;
+      } else {
+        document
+          .querySelector<HTMLButtonElement>('.cpi-overlay [data-cpi-overlay-primary]')
+          ?.focus();
+      }
     }
   }, [paused, confirmEnd, state.status, state.pendingReward, error, cinematic?.fatal]);
 

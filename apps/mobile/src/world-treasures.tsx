@@ -6,6 +6,8 @@ import { useLanguage } from './language-context';
 import { CompanionSprite } from './theme-art';
 import { WORLD_ASSETS, worldAsset } from './world-assets';
 import { useWorldMotion } from './world-motion';
+import { WORLD_KITS } from './world-kits';
+import { WorldRelicCache, WorldRelicFrame } from './world-props';
 import './world-treasures.css';
 
 type World = Exclude<ThemeId, 'obsidian'>;
@@ -14,6 +16,7 @@ type World = Exclude<ThemeId, 'obsidian'>;
 export function MysteryCache({ theme, open = false }: { theme: World; open?: boolean }) {
   const id = useId().replace(/:/g, '');
   const motion = useWorldMotion();
+  if (theme !== 'chaos' && theme !== 'jelly') return <WorldRelicCache theme={theme} open={open} />;
   return (
     <svg
       className={`cpi-world-cache world-${theme}${open ? ' is-open' : ''}${motion.reduced || motion.suspended ? ' is-still' : ''}`}
@@ -163,7 +166,7 @@ export function WorldPowerGlyph({ theme, kind }: { theme: World; kind: EffectKin
           <circle className="cpi-power-lens" cx="32" cy="32" r="21" />
           <path className="cpi-power-trim" d="M17 19h3M44 19h3M17 45h3M44 45h3" />
         </>
-      ) : (
+      ) : theme === 'jelly' ? (
         <>
           <path
             className="cpi-power-setting"
@@ -177,6 +180,8 @@ export function WorldPowerGlyph({ theme, kind }: { theme: World; kind: EffectKin
           <circle cx="53" cy="10" r="2" />
           <circle cx="9" cy="53" r="1.5" />
         </>
+      ) : (
+        <WorldRelicFrame theme={theme} />
       )}
       <g className="cpi-power-mark">
         {kind === 'shield_5s' ? (
@@ -250,7 +255,15 @@ export function WorldAvatarAura({
           d={
             theme === 'chaos'
               ? 'm0-100 42 18v36c0 28-42 48-42 48s-42-20-42-48v-36l42-18Z'
-              : 'M0-101c-34 0-49 22-47 49S-31-1 0-1s49-23 47-51-13-49-47-49Z'
+              : theme === 'jelly'
+                ? 'M0-101c-34 0-49 22-47 49S-31-1 0-1s49-23 47-51-13-49-47-49Z'
+                : theme === 'wilds'
+                  ? 'm0-105 37 20 14 35-28 43-40 7-34-41 11-43 40-21Z'
+                  : theme === 'league'
+                    ? 'M-29-105h82L26-1h-78l23-104Z'
+                    : theme === 'puppy'
+                      ? 'm-26-101 57 6 18 31-9 50-38 14-47-24-4-50 23-27Z'
+                      : 'm0-109 37 28 17 33-29 46-41-2-38-41 17-42 37-22Z'
           }
         />
       )}
@@ -282,8 +295,8 @@ export function WorldOutcomeHero({ theme, finished }: { theme: World; finished: 
         <CompanionSprite theme={theme} reaction={finished ? 'happy' : 'calm'} />
       </div>
       <div className="cpi-world-outcome-label">
-        <span>{t(theme === 'chaos' ? 'vault.chaos' : 'vault.jelly')}</span>
-        <strong>{t(theme === 'chaos' ? 'vault.workshopJournal' : 'vault.starlightJournal')}</strong>
+        <span>{t(WORLD_KITS[theme].title)}</span>
+        <strong>{t(WORLD_KITS[theme].journal)}</strong>
       </div>
     </div>
   );

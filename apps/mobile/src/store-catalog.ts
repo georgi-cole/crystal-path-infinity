@@ -1,7 +1,16 @@
 import type { MessageKey } from './i18n/messages';
 
-export type ThemeId = 'obsidian' | 'chaos' | 'jelly';
-export const THEME_IDS: readonly ThemeId[] = ['obsidian', 'chaos', 'jelly'];
+export type ThemeId = 'obsidian' | 'chaos' | 'jelly' | 'wilds' | 'league' | 'puppy' | 'kitten';
+export type WorldId = Exclude<ThemeId, 'obsidian'>;
+export const THEME_IDS: readonly ThemeId[] = [
+  'obsidian',
+  'chaos',
+  'jelly',
+  'wilds',
+  'league',
+  'puppy',
+  'kitten',
+];
 export const THEMES = {
   obsidian: {
     title: 'Obsidian',
@@ -23,6 +32,34 @@ export const THEMES = {
     glass: '#e9c9ff',
     surface: { highlight: '#f5e1ff', shadow: '#1b1535', edge: '#d3f2ff', frame: '#bba5e9' },
     tempo: 92,
+  },
+  wilds: {
+    title: 'Prismwilds',
+    colors: ['#91edb1', '#f5cf83', '#7bdde8'],
+    glass: '#c6f0d2',
+    surface: { highlight: '#f0ffe1', shadow: '#132b2a', edge: '#bcffe2', frame: '#9ab58b' },
+    tempo: 96,
+  },
+  league: {
+    title: 'Neon League',
+    colors: ['#ffb15f', '#7dccff', '#a7f4c1'],
+    glass: '#c6e4f3',
+    surface: { highlight: '#f1f9ff', shadow: '#152b42', edge: '#a4e1ff', frame: '#9bafc3' },
+    tempo: 120,
+  },
+  puppy: {
+    title: 'Skyhound Yard',
+    colors: ['#dfaa75', '#92d8c9', '#edce9c'],
+    glass: '#ddd4b8',
+    surface: { highlight: '#fff3d7', shadow: '#253537', edge: '#f2dcb5', frame: '#b68c65' },
+    tempo: 104,
+  },
+  kitten: {
+    title: 'Moonrunner Quarter',
+    colors: ['#c5b6e0', '#9eafc8', '#efc181'],
+    glass: '#dfd5f3',
+    surface: { highlight: '#fff0fa', shadow: '#211f3b', edge: '#e6ddff', frame: '#b5abc8' },
+    tempo: 90,
   },
 } as const;
 
@@ -75,6 +112,14 @@ export const STORE_PRODUCTS: readonly StoreProduct[] = [
     name: 'vault.jelly',
     price: 4.99,
   },
+  ...(['wilds', 'league', 'puppy', 'kitten'] as const).map((theme) => ({
+    id: 'test.theme.' + theme,
+    kind: 'theme' as const,
+    quantity: 1,
+    theme,
+    name: ('vault.' + theme) as MessageKey,
+    price: 4.99,
+  })),
 ];
 export const STORE_PAYMENT_MODE = 'test' as const;
 export const STORE_KEY = 'cpi.store.test.v1';

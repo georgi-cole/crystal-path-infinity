@@ -28,13 +28,13 @@ export function companionFooting(side: TileSide): CompanionPoint {
 }
 
 export function companionScale(width: number, height: number) {
-  const pixels = Math.min(104, Math.max(56, width * 0.16));
+  const pixels = Math.min(112, Math.max(68, width * 0.2));
   return { x: (pixels * 900) / (width * 96), y: (pixels * 700) / (height * 96) };
 }
 
 export interface CompanionMotion {
   readonly visible: boolean;
-  readonly action: 'stand' | 'hop' | 'escape' | 'travel' | 'fall';
+  readonly action: 'stand' | 'hop' | 'escape' | 'travel' | 'rescue';
   readonly anchor: CompanionPoint;
   readonly end: CompanionPoint;
   readonly path: string | null;
@@ -66,10 +66,10 @@ export function planCompanionMotion(
       dy = target.y - rest.y;
     return {
       ...base,
-      action: 'fall',
-      end: { x: target.x + 24, y: 1080 },
-      duration: 0.92,
-      path: `M0 0Q${dx * 0.5} ${dy - 35} ${dx} ${dy}Q${dx + 14} ${dy + 120} ${dx + 24} ${1080 - rest.y}`,
+      action: 'rescue',
+      end: { x: target.x, y: 150 },
+      duration: 1.15,
+      path: `M0 0Q${dx * 0.5} ${dy - 55} ${dx} ${dy - 30}Q${dx + 35} ${dy - 130} ${dx} ${150 - rest.y}`,
     };
   }
   if (!feedback) return base;

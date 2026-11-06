@@ -17,6 +17,8 @@ import {
 import type { RunState, TestResource } from '@crystal-path-infinity/game-core';
 import { createTestStore, selectTestPractice } from '../src/test-store';
 import { STORE_KEY, STORE_PRODUCTS } from '../src/store-catalog';
+import { WORLD_ORDER } from '../src/world-kits';
+import { ThemeScope } from '../src/store-provider';
 import { ThemeArtwork } from '../src/theme-art';
 import { RunReserves } from '../src/run-reserves';
 import {
@@ -290,22 +292,40 @@ describe('versioned local resource rules', () => {
 });
 
 describe('test-store presentation and assets', () => {
-  it('provides every requested resource denomination and two original complete worlds', () => {
+  it('provides every requested resource denomination and six original complete worlds', () => {
     expect(STORE_PRODUCTS.filter((p) => p.kind === 'sp').map((p) => p.quantity)).toEqual([
       100, 500, 1000, 2500, 5000, 10000,
     ]);
     expect(STORE_PRODUCTS.filter((p) => p.kind === 'credit').map((p) => p.quantity)).toEqual([
       3, 5, 10, 25,
     ]);
-    for (const theme of ['chaos', 'jelly'] as const) {
+    expect(
+      STORE_PRODUCTS.filter((p) => p.kind === 'theme')
+        .map((p) => p.theme)
+        .sort(),
+    ).toEqual([...WORLD_ORDER].sort());
+    for (const theme of WORLD_ORDER) {
       const html = renderToStaticMarkup(createElement(ThemeArtwork, { theme }));
       expect(html).toContain('world-' + theme);
-      for (const cue of ['loop', 'step', 'record', 'ended']) {
+      for (const cue of ['loop', 'step', 'record', 'ended', 'rescue']) {
         const asset = new URL(`../public/assets/themes/${theme}-${cue}.wav`, import.meta.url);
         expect(statSync(asset).size).toBeGreaterThan(1000);
         expect(readFileSync(asset).subarray(0, 4).toString()).toBe('RIFF');
       }
     }
+  });
+  it.each(WORLD_ORDER)('keeps %s ownership, receipts and equipping across a reload', (theme) => {
+    const storage = new Storage();
+    const store = createTestStore(storage);
+    purchase(store, 'test.theme.' + theme);
+    store.equip(theme);
+    const reloaded = createTestStore(storage);
+    expect(reloaded.snapshot().equipped).toBe(theme);
+    expect(reloaded.snapshot().owned).toContain(theme);
+    expect(reloaded.snapshot().sp).toBe(0);
+    expect(reloaded.snapshot().credits).toBe(0);
+    reloaded.completePurchase('test.theme.' + theme);
+    expect(reloaded.snapshot().owned.filter((id) => id === theme)).toHaveLength(1);
   });
   it('labels a resource-assisted scene and offers simulator recovery without claiming live ads', () => {
     const state = die(apply(initial(), 'sp', 100).state);
@@ -348,4 +368,50 @@ describe('test-store presentation and assets', () => {
     expect(html).toContain('Test store · No real charges');
     expect(html).not.toContain('Watch ad');
   });
+  it.each(['puppy', 'kitten'] as const)(
+    '%s is explicitly safe at zero SP with an empty wallet',
+    (theme) => {
+      const noop = () => {};
+      const state = die(initial());
+      const html = renderToStaticMarkup(
+        createElement(ThemeScope, {
+          theme,
+          children: createElement(InfinitySceneView, {
+            state,
+            feedback: null,
+            ready: true,
+            busy: false,
+            paused: false,
+            error: null,
+            onChoose: noop,
+            onHint: noop,
+            onMystery: noop,
+            onPause: noop,
+            onEnd: noop,
+            onRequestEnd: noop,
+            onCancelEnd: noop,
+            confirmEnd: false,
+            onExit: noop,
+            onViewRankings: noop,
+            personalBest: null,
+            newPersonalBest: false,
+            onRestart: noop,
+            onRetry: noop,
+            settings: DEFAULT_PRACTICE_SETTINGS,
+            onSettingsChange: noop,
+          }),
+        }),
+      );
+      expect(state.sp).toBe(0);
+      expect(state.status).toBe('dead');
+      expect(html).toContain('Home, safe and sound');
+      expect(html).toContain('safely');
+      expect(html).toContain(theme === 'puppy' ? 'Riff' : 'Nyx');
+      expect(html).toContain('Your friend is already safe');
+      expect(html).not.toContain('The abyss remembers');
+      expect(html).not.toContain('DEATH CLOCK');
+      expect(html).not.toContain('cpi-death-veil');
+      expect(html).not.toContain('data-companion-action="fall"');
+    },
+  );
 });

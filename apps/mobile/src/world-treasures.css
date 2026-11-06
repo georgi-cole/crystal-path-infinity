@@ -45,15 +45,39 @@
   display: block;
   width: 100%;
   height: 100%;
-  color: #c5f9df;
+  color: var(--relic-core, #c5f9df);
+}
+.world-wilds {
+  --relic-rim: #c8d5a8;
+  --relic-shell: #536959;
+  --relic-lens: #253e36;
+  --relic-core: #c1e3ac;
+}
+.world-league {
+  --relic-rim: #f5c38d;
+  --relic-shell: #b36536;
+  --relic-lens: #1a3444;
+  --relic-core: #b7e6ed;
+}
+.world-puppy {
+  --relic-rim: #ebc69d;
+  --relic-shell: #946443;
+  --relic-lens: #293b3c;
+  --relic-core: #b3ded1;
+}
+.world-kitten {
+  --relic-rim: #daccec;
+  --relic-shell: #625d7d;
+  --relic-lens: #272b48;
+  --relic-core: #efd0a2;
 }
 .cpi-power-setting {
-  fill: #4c3530;
-  stroke: #e1b27c;
+  fill: var(--relic-shell, #4c3530);
+  stroke: var(--relic-rim, #e1b27c);
 }
 .cpi-power-lens {
-  fill: #122c2d;
-  stroke: #b7e8d2;
+  fill: var(--relic-lens, #122c2d);
+  stroke: var(--relic-core, #b7e8d2);
 }
 .cpi-power-trim {
   stroke: #fff1cf;
@@ -103,9 +127,82 @@
 }
 .cpi-avatar-shield {
   fill: #b2edee0a;
-  stroke: #a9eed9;
+  stroke: var(--relic-core, #a9eed9);
   stroke-width: 1.2;
   opacity: 0.7;
+}
+.cpi-world-rescue-rig {
+  filter: drop-shadow(0 2px 3px #0005);
+}
+.cpi-rescue-canopy {
+  transform-origin: 0 -60px;
+  animation: cpi-rescue-open 0.18s ease-out both;
+}
+@keyframes cpi-rescue-open {
+  from {
+    scale: 0.35 0.6;
+  }
+  to {
+    scale: 1;
+  }
+}
+.is-paused .cpi-world-rescue-rig * {
+  animation-play-state: paused !important;
+}
+.cpi-reduced-motion .cpi-world-rescue-rig * {
+  animation: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cpi-world-rescue-rig * {
+    animation: none !important;
+  }
+}
+.cpi-world-safe-home {
+  padding: 0.45rem 0.65rem;
+  border-inline-start: 2px solid var(--world-soft);
+  background: #c5dfc706;
+  color: var(--world-soft);
+  font-size: 0.72rem;
+}
+.cpi-run-outcome .cpi-resource-panel.is-continuation {
+  padding: 0.65rem;
+}
+.cpi-resource-panel.is-continuation h3 {
+  display: none;
+}
+.cpi-resource-panel.is-continuation .cpi-resource-balances {
+  margin-bottom: 0.25rem;
+  font-size: 0.68rem;
+}
+.cpi-run-outcome .cpi-resource-panel.is-continuation p {
+  margin: 0.35rem 0;
+  font-size: 0.68rem;
+}
+.cpi-resource-panel.is-continuation > small {
+  font-size: 0.6rem;
+}
+.cpi-resource-panel.is-continuation .cpi-resource-actions {
+  margin-bottom: 0;
+}
+.cpi-run-outcome .cpi-revive-offer {
+  gap: 0.35rem;
+}
+.world-wilds .cpi-world-outcome-orbit {
+  border-radius: 25% 50% 20% 40%;
+  rotate: -17deg;
+}
+.world-league .cpi-world-outcome-orbit {
+  border-radius: 0;
+  transform: skewX(-12deg);
+  border-width: 2px;
+}
+.world-puppy .cpi-world-outcome-orbit {
+  border-radius: 15% 35% 15% 35%;
+  border-style: dashed;
+}
+.world-kitten .cpi-world-outcome-orbit {
+  border-radius: 50% 50% 20% 50%;
+  rotate: -25deg;
 }
 .world-jelly .cpi-avatar-shield {
   stroke: #edd1ff;
@@ -252,6 +349,9 @@
 .cpi-run-outcome.is-world-outcome h2 {
   font-size: 1.45rem;
   margin: 0;
+}
+.cpi-run-outcome h2:focus {
+  outline: none;
 }
 .cpi-run-outcome.is-world-outcome p {
   line-height: 1.6;

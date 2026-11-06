@@ -125,8 +125,10 @@ describe('CPI-013 standalone menu and route model', () => {
 
   it('presents original worlds and an explicit simulated checkout, without a no-ads promise', () => {
     const html = render('store');
-    expect(html).toContain(en['vault.chaos']);
-    expect(html).toContain(en['vault.jelly']);
+    expect(html).toContain(en['vault.wilds']);
+    expect(html).toContain(en['vault.league']);
+    expect(html.match(/<article class="cpi-vault-world /g)).toHaveLength(2);
+    expect(html).toContain(en['vault.nextWorlds']);
     expect(html).toContain(en['vault.test']);
     expect(html).toContain(en['vault.testDetail']);
     expect(html).toContain(en['vault.reserve']);
