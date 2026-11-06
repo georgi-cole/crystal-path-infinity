@@ -219,7 +219,7 @@
   width: 65%;
   max-width: 11rem;
   bottom: 5%;
-  right: 8%;
+  left: 50%;
 }
 .cpi-vault-worlds.has-one-world .cpi-vault-world-copy {
   align-self: center;

@@ -130,7 +130,9 @@
     radial-gradient(ellipse 34% 55% at 50% 58%, #03060ddd 25%, #03060d8c 70%, transparent 100%);
 }
 .is-poster .cpi-world-focus-veil {
-  background: linear-gradient(transparent 70%, #03060d55);
+  background:
+    radial-gradient(ellipse 45% 85% at 50% 65%, #080e1899, transparent 100%),
+    linear-gradient(transparent 70%, #03060d55);
 }
 .is-poster .cpi-world-near,
 .is-poster .cpi-world-haze,
@@ -325,10 +327,12 @@
 }
 .cpi-world-poster-companion {
   position: absolute;
-  right: 3%;
-  bottom: 1%;
-  width: 43%;
+  left: 50%;
+  bottom: 4%;
+  width: 48%;
   max-width: 6rem;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 3px 5px #050910b3);
 }
 .cpi-world-impact.world-wilds {
   color: #b0dca2;

@@ -202,3 +202,21 @@ retained in the repository.
 | chaos | Copper robot | Меденко |
 
 These spellings are supplied by the owner. Display names follow the selected UI language; technical IDs, asset paths, ownership and receipts stay stable. Historical image-generation prompts retain their original aliases. Purchases remain simulated test-only.
+
+
+## Catalogue readability and pricing review — 2026-11-06
+
+Catalogue companions are centered horizontally in both two-card and single-world layouts. A restrained center veil and soft silhouette shadow separate them from edge scenery; the playable bridge scene retains its existing focus treatment. Checked at 390px: both card centers and the single-world center align with their artwork container, with no horizontal overflow. Development build/type checking and changed CSS formatting passed.
+
+Six worlds provide enough choice for the first collection. The next art pass should distinguish shape, material, lighting and dominant hue rather than add more similar worlds. Proposed directions (not regenerated artwork): wilds jade/bone and rounded mineral forms; sport electric cyan/navy with racing arcs and stripes; puppy terracotta/cream daylight and worn courier materials; kitten ink/silver moonlight and narrow rooftops; robot copper/mint mechanical circles; jelly rose/opal translucent curves. The path stays dominant and functional warnings retain their meanings.
+
+Observed public retail examples, checked 2026-11-06; USD and EUR are separate storefront prices, not currency conversions or evidence of actual sales:
+
+| Comparator | Listed price | Purchased content | Source |
+| --- | --- | --- | --- |
+| Crossy Road, US iOS | $0.99 for listed chicken characters | Character unlock | https://apps.apple.com/us/app/crossy-road/id924373886 |
+| Monument Valley, US iOS | $3.99 base game; $1.99 Forgotten Shores | Full game; expansion with eight additional chapters | https://apps.apple.com/us/app/monument-valley/id728293409 |
+| Minecraft, EU PlayStation | €2.99 texture packs; €5.99 mythology mash-ups | Texture replacement; mash-up adds a designed world, textures, themed UI and soundtrack | https://www.playstation.com/en-mt/games/minecraft/ and https://store.playstation.com/en-us/product/UP4433-CUSA00744_00-KMP0000000000006/ |
+| Sky, official indexed web catalogue | $2.99 Feline Friend; $14.99 Impish Wings; $19.99 Cat Costume Pack | Cosmetic accessory, wings or costume pack, rather than an entire new game | https://store.thatskygame.com/ |
+
+Working recommendation: consider €2.99 per current world at launch, €3.99 for a visibly more distinctive finished premium world, and retain €4.99 as a possible future flagship price rather than the default for all six. This is product judgment, not a measured optimum. Our worlds bundle companion reactions/rescue, background, UI, props and original sound, but do not add a new gameplay mode or authored level campaign. Established games' higher cosmetic prices do not establish equivalent willingness to pay for a new title. Current test prices are unchanged pending the owner's pricing decision; purchases remain simulated.
