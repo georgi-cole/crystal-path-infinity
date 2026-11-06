@@ -47,12 +47,36 @@ with hints, SP warnings, fractures and controls visible.
 - Companion sheets contain three equal square frames: calm, happy, worried.
   Reactions select frames; short celebration/worry animations run twice, then
   settle. In play the small actor rests behind the next actionable row. A hop
-  starts only after a resolved choice; safe landings celebrate, wrong steps recoil.
+  starts only after a resolved choice; safe landings celebrate; a surviving wrong choice makes a quick escape onto
+  the now-public intact pane. The companion stays on that pane through camera
+  travel and checkpoint recovery. At zero SP it falls, then disappears. Its
+  square frame measures 56–104 CSS pixels, with both axes corrected to retain
+  its proportions at any board aspect ratio.
   The actor follows the shared perspective geometry and camera travel. It never
   offers a route suggestion or creates an additional input target.
 - Hidden/native-suspended scenes freeze decoration. Pause and reduced-motion
   settings freeze it too. CSS transforms/opacity avoid per-frame React state.
   Sound follows the existing mute, foreground and disposal lifecycle.
+
+## A complete crossing
+
+The original raster environments and reaction sheets are paired with lightweight,
+code-native SVG props in `world-treasures.tsx`. Chaos uses a riveted copper cache,
+mint energy lens and mechanical power settings. Jellyverse uses a pearl capsule,
+star clasp and opal charms. Lids, cores and bases are separate layers; opening
+and power release fit inside the existing 1.45-second mystery beat. No hidden
+reward or route affects an unopened box's appearance.
+
+The reveal object becomes the same glyph in the timed effect HUD. Shielding
+adds a restrained field around the companion; other active effects add at most
+a small positive charm and one negative accent. Names, remaining time, SP damage
+and outcomes keep their canonical gameplay meaning. Negative powers retain red
+warning accents. No ornament grants a gameplay benefit.
+
+Run summaries use a compact environment crop, a companion portrait and the
+world's materials around the actual result. The pause sheet stays compact.
+English and Bulgarian labels, controls, local/unverified qualifications and
+resource disclosures remain present. Original Obsidian presentation is retained.
 
 ## Asset organization and reproduction
 

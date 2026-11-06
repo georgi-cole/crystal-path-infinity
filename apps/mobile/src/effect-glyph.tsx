@@ -1,7 +1,11 @@
 import type { EffectKind } from '@crystal-path-infinity/game-core';
+import { useThemeId } from './store-context';
+import { WorldPowerGlyph } from './world-treasures';
 
 /** Original line holograms, shared by the mystery reveal and its destination. */
 export function EffectGlyph({ kind }: { kind: EffectKind }) {
+  const theme = useThemeId();
+  if (theme !== 'obsidian') return <WorldPowerGlyph theme={theme} kind={kind} />;
   return (
     <svg
       viewBox="0 0 64 64"

@@ -4,12 +4,16 @@ import { describe, expect, it } from 'vitest';
 import {
   createPracticeCursor,
   createRun,
+  getCurrentRow,
   PRACTICE_RNG,
   SCAN_RULESET_VERSION,
   transitionRun,
   presentRowPressure,
 } from '@crystal-path-infinity/game-core';
 import { InfinitySceneView } from '../src/infinity-scene';
+import { ThemeContext } from '../src/store-context';
+import type { ThemeId } from '../src/store-catalog';
+import { en } from '../src/i18n/messages';
 import { DEFAULT_PRACTICE_SETTINGS } from '../src/practice-save';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -26,33 +30,37 @@ function makeState() {
     PRACTICE_RNG,
   );
 }
-function markup(modifiers: Record<string, unknown> = {}) {
+function markup(modifiers: Record<string, unknown> = {}, theme: ThemeId = 'obsidian') {
   return renderToStaticMarkup(
-    createElement(InfinitySceneView, {
-      state: makeState(),
-      ready: true,
-      busy: false,
-      paused: false,
-      error: null,
-      feedback: null,
-      onChoose: noop,
-      onHint: noop,
-      onMystery: noop,
-      onPause: noop,
-      onEnd: noop,
-      onRequestEnd: noop,
-      onCancelEnd: noop,
-      confirmEnd: false,
-      onExit: noop,
-      onViewRankings: noop,
-      personalBest: null,
-      newPersonalBest: false,
-      onRestart: noop,
-      onRetry: noop,
-      settings: DEFAULT_PRACTICE_SETTINGS,
-      onSettingsChange: noop,
-      ...modifiers,
-    }),
+    createElement(
+      ThemeContext.Provider,
+      { value: theme },
+      createElement(InfinitySceneView, {
+        state: makeState(),
+        ready: true,
+        busy: false,
+        paused: false,
+        error: null,
+        feedback: null,
+        onChoose: noop,
+        onHint: noop,
+        onMystery: noop,
+        onPause: noop,
+        onEnd: noop,
+        onRequestEnd: noop,
+        onCancelEnd: noop,
+        confirmEnd: false,
+        onExit: noop,
+        onViewRankings: noop,
+        personalBest: null,
+        newPersonalBest: false,
+        onRestart: noop,
+        onRetry: noop,
+        settings: DEFAULT_PRACTICE_SETTINGS,
+        onSettingsChange: noop,
+        ...modifiers,
+      }),
+    ),
   );
 }
 describe('CPI-008 standalone scene', () => {
@@ -158,4 +166,65 @@ describe('CPI-008 standalone scene', () => {
     expect(markup()).toContain('aria-hidden="true"');
     expect(css).toContain('pointer-events: none');
   });
+});
+
+describe('complete world presentation', () => {
+  it.each(['chaos', 'jelly'] as const)(
+    '%s carries the real mystery and effect into matching props',
+    (theme) => {
+      const base = makeState();
+      const state = {
+        ...base,
+        effects: [{ kind: 'shield_5s' as const, expiresAt: base.activeTimeMs + 2500 }],
+      };
+      const html = markup(
+        {
+          state,
+          cinematic: {
+            id: 4,
+            phase: 'reveal',
+            rows: null,
+            feedback: null,
+            fatal: false,
+            mystery: { kind: 'shield_5s', spDelta: 0, hintDelta: 0 },
+          },
+        },
+        theme,
+      );
+      expect(html).toContain(`cpi-world-cache world-${theme} is-open`);
+      expect(html).toContain(`cpi-world-power world-${theme}`);
+      expect(html).toContain(en['game.effectShield']);
+      expect(html).toContain('2.5s');
+      expect(html).toContain('data-companion-action="stand"');
+      expect(html).toContain('cpi-avatar-shield');
+      expect(html).toContain('aria-label="Row 1 left tile"');
+      expect(html).not.toContain('safeSide');
+    },
+  );
+  it.each(['chaos', 'jelly'] as const)(
+    '%s frames an honest result and leaves pause compact',
+    (theme) => {
+      const paused = markup({ paused: true }, theme);
+      expect(paused).not.toContain('cpi-world-outcome-hero');
+      const base = makeState();
+      const dead = transitionRun(
+        { ...base, sp: 10 },
+        {
+          type: 'choose',
+          row: base.currentRow,
+          life: 0,
+          side: getCurrentRow(base).safeSide === 'left' ? 'right' : 'left',
+        },
+        { activeTimeMs: 0, achievedAt: 100, rng: PRACTICE_RNG },
+      ).state;
+      expect(dead.sp).toBe(0);
+      const html = markup({ state: dead }, theme);
+      expect(html).toContain('cpi-world-outcome-hero');
+      expect(html).toContain('aria-modal="true"');
+      expect(html).toContain(en['game.rowsCleared']);
+      expect(html).toContain('cpi-result-score');
+      expect(html).not.toContain('cpi-world-path-companion');
+      expect(html).not.toContain(en['game.bestNew']);
+    },
+  );
 });

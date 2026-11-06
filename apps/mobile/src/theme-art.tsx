@@ -116,7 +116,7 @@ export function ThemeArtwork({
   );
 }
 
-function CompanionSprite({
+export function CompanionSprite({
   theme,
   reaction,
 }: {

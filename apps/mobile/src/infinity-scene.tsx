@@ -2,6 +2,8 @@ import { RunReserves } from './run-reserves';
 import { useTestStore, useThemeId } from './store-context';
 import { ThemeScope } from './store-provider';
 import { WorldPathCompanion, WorldStepEffect } from './world-effects';
+import { companionStandingSide } from './world-companion';
+import { MysteryCache, WorldOutcomeHero } from './world-treasures';
 import type { ThemeId } from './store-catalog';
 import type { ReactNode } from 'react';
 import { StageAtmosphere } from './stage-atmosphere';
@@ -147,6 +149,13 @@ export function InfinitySceneView({
   const themeId = useThemeId();
   const presented = presentInfinityScene(state);
   const outcome = presentRunOutcome(state);
+  const worldOutcomeTheme =
+    themeId !== 'obsidian' &&
+    !error &&
+    !confirmEnd &&
+    ['dead', 'grant-ready', 'finished'].includes(outcome.phase)
+      ? themeId
+      : null;
   const clearedRows = number(state.result?.lastClearedRow ?? state.lastClearedRow);
   const rawFatalRow = state.result?.fatalRow ?? state.death?.fatalRow ?? null;
   const fatalRow = rawFatalRow === null ? null : number(rawFatalRow);
@@ -408,18 +417,15 @@ export function InfinitySceneView({
             <WorldPathCompanion
               theme={themeId}
               cinematic={cinematic}
-              previousSide={(() => {
-                const past = (cinematic?.rows ?? presented.rows).find(
-                  (row) => row.phase === 'past',
-                );
-                return past && !past.wrong ? (past.chosen ?? null) : null;
-              })()}
+              standingSide={companionStandingSide(cinematic?.rows ?? presented.rows)}
+              sp={state.sp}
+              effects={presented.effects}
               reduced={settings.reducedMotion}
               paused={paused}
               reaction={
-                emergency || catastrophic || cinematic?.feedback?.kind === 'wrong'
+                emergency || catastrophic || hostileReveal || cinematic?.feedback?.kind === 'wrong'
                   ? 'panic'
-                  : cinematic?.feedback?.kind === 'safe'
+                  : cinematic?.feedback?.kind === 'safe' || cinematic?.mystery
                     ? 'happy'
                     : 'calm'
               }
@@ -428,10 +434,19 @@ export function InfinitySceneView({
           {cinematic?.mystery && (
             <div
               key={cinematic.id}
-              className={'cpi-mystery-release' + (hostileReveal ? ' is-hostile' : '')}
+              className={
+                'cpi-mystery-release' +
+                (themeId !== 'obsidian' ? ' cpi-world-reveal' : '') +
+                (hostileReveal ? ' is-hostile' : '')
+              }
               aria-hidden="true"
             >
               <span className="cpi-release-flare" />
+              {themeId !== 'obsidian' && (
+                <span className="cpi-world-reveal-cache">
+                  <MysteryCache theme={themeId} open />
+                </span>
+              )}
               <span className="cpi-released-symbol">
                 <EffectGlyph kind={cinematic.mystery.kind} />
               </span>
@@ -480,11 +495,16 @@ export function InfinitySceneView({
       {overlayVisible && (
         <div className="cpi-overlay">
           <div
-            className="cpi-overlay-card cpi-run-outcome"
+            className={
+              'cpi-overlay-card cpi-run-outcome' + (worldOutcomeTheme ? ' is-world-outcome' : '')
+            }
             role="dialog"
             aria-modal="true"
             aria-labelledby="cpi-run-outcome-title"
           >
+            {worldOutcomeTheme && (
+              <WorldOutcomeHero theme={worldOutcomeTheme} finished={outcome.phase === 'finished'} />
+            )}
             <header className="cpi-dialog-heading">
               <span className="cpi-dialog-emblem" data-phase={outcome.phase} aria-hidden="true">
                 <svg viewBox="0 0 48 48" fill="none">

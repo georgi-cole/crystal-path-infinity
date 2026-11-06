@@ -16,6 +16,7 @@ import { bridgePane, projectBridgePoint, advancesOneRow } from './bridge-geometr
 import { glassPattern, glassSeed, projectGlassPattern } from './glass-fracture';
 import type { HintScan } from './run-signals';
 import { BridgeFlight } from './bridge-flight';
+import { MysteryCache } from './world-treasures';
 import type { SceneCinematic } from './scene-cinematics';
 
 const WIDTH = 900,
@@ -746,19 +747,25 @@ export function PrismBridge({
                   !row.mysteryAvailable
                 }
               >
-                <span className="cpi-holo-projector" aria-hidden="true" />
-                <svg
-                  className="cpi-holo-mystery"
-                  viewBox="0 0 64 76"
-                  fill="none"
-                  aria-hidden="true"
-                >
-                  <path className="cpi-holo-shell" d="m32 6 23 13v27L32 60 9 46V19L32 6Z" />
-                  <path d="m9 19 23 14 23-14M32 33v27M21 13l23 14v13M20 40l24-14" />
-                  <path className="cpi-holo-core" d="m32 22 8 10-8 11-8-11 8-10Z" />
-                  <path d="M16 65h32M23 70h18" />
-                </svg>
-                <span className="cpi-holo-scan" aria-hidden="true" />
+                {themeId !== 'obsidian' ? (
+                  <MysteryCache theme={themeId} />
+                ) : (
+                  <>
+                    <span className="cpi-holo-projector" aria-hidden="true" />
+                    <svg
+                      className="cpi-holo-mystery"
+                      viewBox="0 0 64 76"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <path className="cpi-holo-shell" d="m32 6 23 13v27L32 60 9 46V19L32 6Z" />
+                      <path d="m9 19 23 14 23-14M32 33v27M21 13l23 14v13M20 40l24-14" />
+                      <path className="cpi-holo-core" d="m32 22 8 10-8 11-8-11 8-10Z" />
+                      <path d="M16 65h32M23 70h18" />
+                    </svg>
+                    <span className="cpi-holo-scan" aria-hidden="true" />
+                  </>
+                )}
               </button>
             )}
         </div>
