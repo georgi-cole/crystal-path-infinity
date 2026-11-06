@@ -861,17 +861,17 @@ async function android() {
 }
 
 async function ios() {
-  // Use the explicit iOS 26.5 runtime and drain logs during OS control commands.
+  // Use the explicit iOS 26.2 baseline and drain logs during OS control commands.
   // Bound OS provisioning separately from the unchanged app/lifecycle checks.
   const provisioningBudgetsMs = iosProvisioningBudgetsMs;
   const available = JSON.parse(text('xcrun', ['simctl', 'list', '--json', 'devices', 'available']));
   save('ios-simulators.json', JSON.stringify(available, null, 2));
   const runtimes = JSON.parse(text('xcrun', ['simctl', 'list', '--json', 'runtimes']));
   save('ios-runtimes.json', JSON.stringify(runtimes, null, 2));
-  const runtime = 'com.apple.CoreSimulator.SimRuntime.iOS-26-5';
+  const runtime = 'com.apple.CoreSimulator.SimRuntime.iOS-26-2';
   assert.ok(
     runtimes.runtimes.some((item) => item.identifier === runtime && item.isAvailable),
-    'The Xcode 26.6 smoke requires the installed iOS 26.5 runtime',
+    'The Xcode 26.3 smoke requires the installed iOS 26.2 runtime',
   );
   const types = JSON.parse(text('xcrun', ['simctl', 'list', '--json', 'devicetypes']));
   save('ios-device-types.json', JSON.stringify(types, null, 2));
@@ -920,7 +920,7 @@ async function ios() {
   );
   try {
     console.log(
-      `Booting fresh ${device.name} / iOS 26.5 simulator (budget ${provisioningBudgetsMs.coldBoot / 1000}s); progress is recorded in ios-boot.log`,
+      `Booting fresh ${device.name} / iOS 26.2 simulator (budget ${provisioningBudgetsMs.coldBoot / 1000}s); progress is recorded in ios-boot.log`,
     );
     await prepareIosSimulator(async (step, timeout) => {
       console.log(`iOS provisioning: ${step} (budget ${timeout / 1000}s)`);
@@ -1066,6 +1066,7 @@ async function ios() {
       await control(
         ['simctl', 'io', udid, 'screenshot', screenshot],
         `ios-attempt-${attempt}-screenshot.log`,
+        provisioningBudgetsMs.screenshot,
       );
       assertPng(screenshot);
       recordLifecycleAction('observation-complete');
