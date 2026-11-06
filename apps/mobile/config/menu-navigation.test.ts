@@ -128,12 +128,11 @@ describe('CPI-013 standalone menu and route model', () => {
     expect(html).toContain(en['vault.wilds']);
     expect(html).toContain(en['vault.league']);
     expect(html.match(/<article class="cpi-vault-world /g)).toHaveLength(2);
-    expect(html).toContain('6 worlds. Find your favourite.');
+    expect(html).toContain('6 worlds');
     expect(html).toContain(en['vault.nextWorlds']);
     expect(html).toContain(en['vault.test']);
     expect(html).toContain(en['vault.testDetail']);
-    expect(html).toContain(en['vault.reserve']);
-    expect(html).toContain(en['vault.credits']);
+    expect(html).not.toContain('class="cpi-vault-wallet"');
     expect(html).not.toContain(en['store.noAds']);
     expect(html).toContain('aria-pressed="true"');
   });

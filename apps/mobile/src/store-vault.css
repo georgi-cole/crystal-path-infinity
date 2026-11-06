@@ -777,3 +777,47 @@ button.cpi-vault-primary {
     transition: none;
   }
 }
+
+.cpi-world-showcase {
+  position: relative;
+  isolation: isolate;
+  height: min(32dvh, 16rem);
+  min-height: 11rem;
+  overflow: hidden;
+  border-radius: 0.7rem;
+}
+.cpi-world-showcase > .cpi-world-art {
+  position: absolute;
+  inset: 0;
+}
+.cpi-showcase-companion {
+  position: absolute;
+  left: 50%;
+  bottom: 12%;
+  transform: translateX(-50%);
+  width: min(65%, 10rem);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  filter: drop-shadow(0 5px 8px #0008);
+}
+.cpi-showcase-companion:focus-visible {
+  outline: 2px solid var(--world-accent);
+  outline-offset: 3px;
+  border-radius: 50%;
+}
+.cpi-showcase-hint {
+  position: absolute;
+  bottom: 4%;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-size: 0.7rem;
+  color: #d6d0dc;
+  pointer-events: none;
+}
+.cpi-vault-unlock {
+  width: 100%;
+  min-height: 44px;
+}

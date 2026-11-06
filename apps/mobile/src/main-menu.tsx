@@ -18,7 +18,6 @@ import { LanguageSettings, PrivacyAccountSupport } from './locale-settings';
 import { useLanguage } from './language-context';
 import { BridgeTutorial } from './bridge-tutorial';
 import { useThemeId } from './store-context';
-import type { ThemeId } from './store-catalog';
 import { StoreVault } from './store-vault';
 import { WorldHomeIdentity, WorldNavGlyph } from './world-navigation';
 import { isPetWorld } from './world-kits';
@@ -198,7 +197,6 @@ function StatusPill({
 }
 
 export interface MainMenuProps {
-  onTryTheme?: (theme: ThemeId) => void;
   view: MenuView;
   saved: PracticeLoad;
   best: string | null;
@@ -429,7 +427,6 @@ export function ConfirmNewPractice({
 }
 
 export function MainMenu({
-  onTryTheme,
   view,
   saved,
   best,
@@ -539,7 +536,7 @@ export function MainMenu({
             reducedMotion={settings.reducedMotion}
           />
         ) : view === 'store' ? (
-          <StoreVault onTryTheme={onTryTheme} />
+          <StoreVault />
         ) : view === 'play' ? (
           <MenuPanel title={t('general.play')} eyebrow={t('menu.playEyebrow')}>
             {rankedClient ? (

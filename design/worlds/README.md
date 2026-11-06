@@ -14,7 +14,7 @@ with hints, SP warnings, fractures and controls visible.
 - [Team Alto's official press kit](https://altosodyssey.com/press/): the developers
   combine distinct biomes, lighting/weather, fluid movement and original audio.
   Our application: pair each environment with coherent materials, restrained
-  ambient motion, a companion and an arranged local soundtrack.
+  ambient motion and a companion. All worlds currently share the owner-approved Black Obsidian soundtrack.
 - [Sky's art-development account](https://thatskyshop.com/blogs/designer-insight/the-art-of-sky-designer-insight):
   concept work and retained iterations communicate a world's identity. Our
   application: retain source masters, generation prompts and this design record
@@ -29,7 +29,7 @@ with hints, SP warnings, fractures and controls visible.
 | Material | Brushed copper frames, champagne crystal, mint light | Opal crystal, lilac facets, cyan edges |
 | Ambient motion | Very slow edge cogs, drifting steam, sparse sparks | Swaying edge tendrils, haze, sparse bubbles |
 | Companion | Boltmuffin, an asymmetric copper robot with a mint heart | Squishphony, an opalescent jelly with a cyan star |
-| Audio | Warm bell melody, bass, sustained harmony, soft ticks | Spacious glass melody, long harmony, light bubble notes |
+| Music | Shared owner-approved Black Obsidian scene tracks | Shared owner-approved Black Obsidian scene tracks |
 
 ## Focus and animation rules
 
@@ -96,8 +96,7 @@ resource disclosures remain present. Original Obsidian presentation is retained.
   `theme-art.tsx` supplies layers and reactions; `world-experience.tsx` composes
   the same scenery and bridge for the store preview. Assets use Vite's base path
   and work under the GitHub Pages project URL and native packages.
-- `apps/mobile/scripts/generate-theme-audio.mjs` reproduces original synthesized
-  WAVs; no samples or streaming services are involved. Local audio loads only
+- `apps/mobile/scripts/generate-theme-audio.mjs` reproduces short synthesized effect cues and archives unapproved music sketches outside runtime assets. Runtime music uses the existing owner-supplied Black Obsidian files. Local audio loads only
   for the selected world and has bounded ownership.
 
 Future world template: define the emotion and material language, create masters
@@ -155,8 +154,7 @@ The whole six-world runtime art collection is approximately 2.1 MB, bounded to
 500 KB per plate + companion pair and 3 MB overall. Source PNGs are never shipped
 in the web/native bundle. Only the selected world and visible catalogue cards
 load art; category filters and two-card pagination bound catalogue scrolling.
-All four new sound sets include loop, step, record, ending and gentle rescue WAVs.
-The deterministic synth script reproduces all six original compositions.
+Short themed step, record and gentle rescue effects remain. Unapproved loop and ending music sketches are retained in `audio-prototypes/` outside the application bundle. They are not used as world soundtracks.
 
 Payments remain simulated and local. Continuation packs are 3/5/10/25; SP reserve
 packs are 100/500/1000/2500/5000/10000. Theme ownership changes no game rule or
@@ -181,7 +179,7 @@ world share the name, while technical IDs and existing receipts stay stable.
 | Pawrachute | paw + parachute | A rooftop puppy whose rescue backpack always gets him home |
 | Purralune | purr + lune (moon) | A moonlit rooftop kitten with an unfolding flight cape |
 | Boltmuffin | bolt + muffin | A small mechanical troublemaker with a sweet side |
-| Squishphony | squish + symphony | Soft luminous jelly, buoyancy and its own original melody |
+| Squishphony | squish + symphony | Soft luminous jelly and buoyancy |
 
 Exact-name searches and official-store searches are first-pass creative
 screening, not a claim of trademark exclusivity. Historical generation prompts
@@ -219,4 +217,18 @@ Observed public retail examples, checked 2026-11-06; USD and EUR are separate st
 | Minecraft, EU PlayStation | €2.99 texture packs; €5.99 mythology mash-ups | Texture replacement; mash-up adds a designed world, textures, themed UI and soundtrack | https://www.playstation.com/en-mt/games/minecraft/ and https://store.playstation.com/en-us/product/UP4433-CUSA00744_00-KMP0000000000006/ |
 | Sky, official indexed web catalogue | $2.99 Feline Friend; $14.99 Impish Wings; $19.99 Cat Costume Pack | Cosmetic accessory, wings or costume pack, rather than an entire new game | https://store.thatskygame.com/ |
 
-Working recommendation: consider €2.99 per current world at launch, €3.99 for a visibly more distinctive finished premium world, and retain €4.99 as a possible future flagship price rather than the default for all six. This is product judgment, not a measured optimum. Our worlds bundle companion reactions/rescue, background, UI, props and original sound, but do not add a new gameplay mode or authored level campaign. Established games' higher cosmetic prices do not establish equivalent willingness to pay for a new title. The owner approved €2.99 per world as the accessible launch price. All six theme products now use this reference price in the simulated checkout; resource prices are unchanged. Purchases remain simulated.
+Working recommendation: consider €2.99 per current world at launch, €3.99 for a visibly more distinctive finished premium world, and retain €4.99 as a possible future flagship price rather than the default for all six. This is product judgment, not a measured optimum. Our worlds bundle companion reactions/rescue, background, UI and props, but do not add a new gameplay mode or authored level campaign. Established games' higher cosmetic prices do not establish equivalent willingness to pay for a new title. The owner approved €2.99 per world as the accessible launch price. All six theme products now use this reference price in the simulated checkout; resource prices are unchanged. Purchases remain simulated.
+
+
+## Compact world showcase — owner direction
+
+Explore opens a touchable companion portrait with world artwork, one short world-specific description, a compact inclusion summary and an Unlock world / EUR 2.99 action. Touch changes the companion's expression. There is no audio audition button. All worlds use the same owner-approved Black Obsidian soundtrack, with separate home, active-run and final tracks.
+
+The shop no longer exposes Try in practice or constructs a trial GameOwner. The showcase has no playable bridge, staged run, scripted jump/box reveal, starting-screen gallery or safety promotion. Actual free rescue and normal unlocked gameplay remain intact. Cards omit repeated Original world and feature labels; reserve balances appear on the resource/collection tabs. Test-mode disclosures remain visible. Historical trial runtime helpers are not a purchase entry point.
+
+
+## Approved shared soundtrack
+
+Owner direction: use the existing Black Obsidian music for every world. `soundtrack.ts` supplies `home-ambient.m4a` on the home screen, `gameplay-tension.m4a` during an active run and the existing 47-second `run-ended-deathrow.m4a` excerpt on the final screen. Existing playback offsets, looping, mute and OS background/resume behavior remain. The original media files are unchanged. Themes do not provide exclusive music and the shop offers no listening control.
+
+The earlier programmatically synthesized music was not owner-approved. Its six loop sketches and six 2.1-second ending cues are archived outside public/native assets in `audio-prototypes/`; generation writes music sketches there as well. Short themed sound effects, including gentle pet rescue, are distinct from the shared soundtrack and remain. Historical art-direction sound ideas in the table above describe abandoned sketches, not current paid features.

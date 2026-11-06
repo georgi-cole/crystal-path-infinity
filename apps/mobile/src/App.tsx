@@ -469,18 +469,6 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
     <>
       <div inert={confirmNew}>
         <MainMenu
-          onTryTheme={(theme) => {
-            if (gameRef.current) return;
-            const next: GameOwner = {
-              initial: null,
-              token: ++gameSequence.current,
-              trialTheme: theme,
-            };
-            gameRef.current = next;
-            setGame(next);
-            setExitRequest(0);
-            window.history.pushState({ cpiNavigation: true }, '', '#practice-run');
-          }}
           view={view}
           saved={visibleSaved}
           best={best}

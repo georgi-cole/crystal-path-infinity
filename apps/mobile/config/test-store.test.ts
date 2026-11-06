@@ -307,7 +307,7 @@ describe('test-store presentation and assets', () => {
     for (const theme of WORLD_ORDER) {
       const html = renderToStaticMarkup(createElement(ThemeArtwork, { theme }));
       expect(html).toContain('world-' + theme);
-      for (const cue of ['loop', 'step', 'record', 'ended', 'rescue']) {
+      for (const cue of ['step', 'record', 'rescue']) {
         const asset = new URL(`../public/assets/themes/${theme}-${cue}.wav`, import.meta.url);
         expect(statSync(asset).size).toBeGreaterThan(1000);
         expect(readFileSync(asset).subarray(0, 4).toString()).toBe('RIFF');
