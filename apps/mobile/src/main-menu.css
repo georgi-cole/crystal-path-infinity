@@ -835,11 +835,23 @@
   position: relative;
   top: auto;
   right: auto;
-  align-self: flex-end;
+  align-self: center;
   flex: 0 0 auto;
-  margin: 0.7rem 0 0.3rem;
+  margin: 0;
 }
 .cpi-menu-view--home .cpi-home-composition {
   min-height: 0;
-  padding-top: 1rem;
+  padding-top: clamp(1.8rem, 5dvh, 3.5rem);
+}
+.cpi-menu-view--home .cpi-hub-chip {
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+  padding: 0.55rem;
+}
+.cpi-menu-view--home .cpi-menu-header {
+  min-height: 3.1rem;
+}
+.cpi-menu-view--home .cpi-home-scenery {
+  top: 22%;
+  bottom: -8%;
 }

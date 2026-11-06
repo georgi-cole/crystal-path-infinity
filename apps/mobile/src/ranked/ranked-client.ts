@@ -25,6 +25,14 @@ import type {
 } from '@crystal-path-infinity/game-core';
 import { canRecheckOperation, parseOperationFailure } from '../operations/operation-failure.ts';
 import type { OperationFailure } from '../operations/operation-failure';
+import {
+  PACED_RULESET_VERSION,
+  SCAN_RULESET_VERSION,
+  HINT_SCAN_MS,
+  ROW_GRACE_MS,
+  DEATH_CLOCK_MS,
+  SURVIVAL_BONUS_INTERVAL_MS,
+} from '@crystal-path-infinity/game-core';
 
 export type RankedSide = 'left' | 'right';
 export type RankedCommand =
@@ -64,6 +72,11 @@ export interface RankedRun {
   readonly sp: number;
   readonly hints: number;
   readonly activeTimeMs: number;
+  readonly pacing?: {
+    readonly rowEnteredAt: number;
+    readonly nextSurvivalBonusAt: number;
+    readonly hintScanStartedAt?: number;
+  };
   readonly achievedAt: number | null;
   readonly paused: boolean;
   readonly current: RankedCurrent & { readonly hasMystery: boolean };
@@ -76,7 +89,7 @@ export interface RankedRun {
   readonly death: {
     readonly id: string;
     readonly fatalRow: string;
-    readonly cause: 'wrong_tile' | 'mystery' | 'drain' | 'death_clock';
+    readonly cause: 'wrong_tile' | 'mystery' | 'drain' | 'death_clock' | 'idle';
   } | null;
   readonly revivesGranted: number;
   readonly revivesApplied: number;
@@ -182,12 +195,17 @@ const REASONS = new Set([
   'forfeiture-required',
 ]);
 
-function object(value: unknown, keys: readonly string[]): value is Record<string, unknown> {
+function object(
+  value: unknown,
+  keys: readonly string[],
+  optional: readonly string[] = [],
+): value is Record<string, unknown> {
   return (
     value !== null &&
     typeof value === 'object' &&
     !Array.isArray(value) &&
-    JSON.stringify(Object.keys(value).sort()) === JSON.stringify([...keys].sort())
+    keys.every((key) => Object.hasOwn(value, key)) &&
+    Object.keys(value).every((key) => keys.includes(key) || optional.includes(key))
   );
 }
 function decimal(value: unknown, positive = false): value is string {
@@ -275,31 +293,35 @@ export function parseRankedReply(value: unknown): RankedReply | null {
     supportsPacts(String((raw as Record<string, unknown>).rulesetVersion));
   const lease = value.lease;
   if (
-    !object(raw, [
-      'runId',
-      'rulesetVersion',
-      'status',
-      'region',
-      'nextSequence',
-      'lastClearedRow',
-      'currentRow',
-      'sp',
-      'hints',
-      'activeTimeMs',
-      'achievedAt',
-      'paused',
-      'current',
-      'history',
-      'effects',
-      'death',
-      'revivesGranted',
-      'revivesApplied',
-      'revivesToReachScore',
-      'rewardPending',
-      ...(usesPacts ? ['pact'] : []),
-      ...(directorRules ? ['mysteryRhythm', 'deathClock'] : []),
-      ...(discoveryRules ? ['discovery'] : []),
-    ]) ||
+    !object(
+      raw,
+      [
+        'runId',
+        'rulesetVersion',
+        'status',
+        'region',
+        'nextSequence',
+        'lastClearedRow',
+        'currentRow',
+        'sp',
+        'hints',
+        'activeTimeMs',
+        'achievedAt',
+        'paused',
+        'current',
+        'history',
+        'effects',
+        'death',
+        'revivesGranted',
+        'revivesApplied',
+        'revivesToReachScore',
+        'rewardPending',
+        ...(usesPacts ? ['pact'] : []),
+        ...(directorRules ? ['mysteryRhythm', 'deathClock'] : []),
+        ...(discoveryRules ? ['discovery'] : []),
+      ],
+      ['pacing'],
+    ) ||
     !object(lease, ['token', 'generation', 'expiresAt']) ||
     typeof lease.token !== 'string' ||
     !UUID.test(lease.token) ||
@@ -329,6 +351,36 @@ export function parseRankedReply(value: unknown): RankedReply | null {
     raw.effects.length > 2
   )
     return null;
+  const pacing = raw.pacing;
+  if (raw.rulesetVersion === PACED_RULESET_VERSION || raw.rulesetVersion === SCAN_RULESET_VERSION) {
+    if (
+      !object(
+        pacing,
+        ['rowEnteredAt', 'nextSurvivalBonusAt'],
+        raw.rulesetVersion === SCAN_RULESET_VERSION ? ['hintScanStartedAt'] : [],
+      ) ||
+      !integer(pacing.rowEnteredAt) ||
+      !integer(pacing.nextSurvivalBonusAt) ||
+      pacing.rowEnteredAt > raw.activeTimeMs ||
+      pacing.nextSurvivalBonusAt < raw.activeTimeMs ||
+      pacing.nextSurvivalBonusAt % SURVIVAL_BONUS_INTERVAL_MS !== 0 ||
+      (raw.status === 'playing' &&
+        (pacing.rowEnteredAt +
+          ROW_GRACE_MS +
+          DEATH_CLOCK_MS +
+          (pacing.hintScanStartedAt === undefined ? 0 : HINT_SCAN_MS) <=
+          raw.activeTimeMs ||
+          pacing.nextSurvivalBonusAt === raw.activeTimeMs))
+    )
+      return null;
+    if (
+      pacing.hintScanStartedAt !== undefined &&
+      (!integer(pacing.hintScanStartedAt) ||
+        pacing.hintScanStartedAt < pacing.rowEnteredAt ||
+        pacing.hintScanStartedAt > raw.activeTimeMs)
+    )
+      return null;
+  } else if (pacing !== undefined) return null;
   const region = raw.region;
   if (
     !object(region, ['countryCode', 'continent', 'mappingVersion']) ||
@@ -346,6 +398,8 @@ export function parseRankedReply(value: unknown): RankedReply | null {
   const riskRules = usesRiskRules(raw.rulesetVersion);
   const current = visibleCurrent(raw.current, ['hasMystery'], riskRules, directorRules);
   if (!current || typeof (raw.current as Record<string, unknown>).hasMystery !== 'boolean')
+    return null;
+  if (pacing && pacing.hintScanStartedAt !== undefined && current.revealedSafeSide === null)
     return null;
   const history: (RankedCurrent & { index: string })[] = [];
   for (const entry of raw.history) {
@@ -557,9 +611,15 @@ export function parseRankedReply(value: unknown): RankedReply | null {
       death.id.length > 120 ||
       !/^[A-Za-z0-9:_-]+$/.test(death.id) ||
       !decimal(death.fatalRow, true) ||
-      !['wrong_tile', 'mystery', 'drain', ...(directorRules ? ['death_clock'] : [])].includes(
-        String(death.cause),
-      ))
+      ![
+        'wrong_tile',
+        'mystery',
+        'drain',
+        ...(directorRules ? ['death_clock'] : []),
+        ...([PACED_RULESET_VERSION, SCAN_RULESET_VERSION].includes(String(raw.rulesetVersion))
+          ? ['idle']
+          : []),
+      ].includes(String(death.cause)))
   )
     return null;
   if (
@@ -589,6 +649,20 @@ export function parseRankedReply(value: unknown): RankedReply | null {
       sp: raw.sp,
       hints: raw.hints,
       activeTimeMs: raw.activeTimeMs,
+      ...(pacing
+        ? {
+            pacing: {
+              rowEnteredAt: (pacing as NonNullable<RankedRun['pacing']>).rowEnteredAt,
+              nextSurvivalBonusAt: (pacing as NonNullable<RankedRun['pacing']>).nextSurvivalBonusAt,
+              ...((pacing as NonNullable<RankedRun['pacing']>).hintScanStartedAt === undefined
+                ? {}
+                : {
+                    hintScanStartedAt: (pacing as NonNullable<RankedRun['pacing']>)
+                      .hintScanStartedAt,
+                  }),
+            },
+          }
+        : {}),
       achievedAt: raw.achievedAt,
       paused: raw.paused,
       current: { ...current, hasMystery: (raw.current as { hasMystery: boolean }).hasMystery },

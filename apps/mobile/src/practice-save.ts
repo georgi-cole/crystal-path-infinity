@@ -3,6 +3,9 @@ import {
   MAX_BUFFER_ROWS,
   MAX_REVIVES,
   PRACTICE_RNG,
+  PACED_RULESET_VERSION,
+  SCAN_RULESET_VERSION,
+  createRunPacing,
   RULESET_VERSION,
   PACT_RULESET_VERSION,
   BALANCE_RULESET_VERSION,
@@ -99,6 +102,8 @@ function validatePracticeState(state: RunState): void {
     !state.runId.startsWith('practice-') ||
     ![
       RULESET_VERSION,
+      PACED_RULESET_VERSION,
+      SCAN_RULESET_VERSION,
       PACT_RULESET_VERSION,
       BALANCE_RULESET_VERSION,
       RISK_RULESET_VERSION,
@@ -112,6 +117,25 @@ function validatePracticeState(state: RunState): void {
   ) {
     throw new Error('This is not a supported standalone practice checkpoint.');
   }
+}
+
+/** Preserve paced deadlines, route/SP/progress. Unpaced v1 gets fresh grace and
+ * future bonuses. Ranked historical runs never use this adapter. */
+export function upgradePracticePacing(state: RunState): RunState {
+  validatePracticeState(state);
+  if (
+    ![RULESET_VERSION, PACED_RULESET_VERSION].includes(state.rulesetVersion) ||
+    state.status !== 'playing'
+  )
+    return state;
+  const next: RunState = {
+    ...state,
+    rulesetVersion: SCAN_RULESET_VERSION,
+    stream: { ...state.stream, rulesetVersion: SCAN_RULESET_VERSION },
+    pacing: state.pacing ?? createRunPacing(state.activeTimeMs),
+  };
+  validatePracticeState(next);
+  return next;
 }
 
 /** Only the marked slot is committed. A partial write never resurrects old SP/rewards. */

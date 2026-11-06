@@ -267,7 +267,7 @@ export function MysteryLab({
             >
               {mysteryText(locale, 'advanceTime')}
             </button>
-            <span>{mysteryText(locale, 'noLimit')}</span>
+
             {state.pact?.phase === 'offered' && (
               <button type="button" onClick={() => issue({ type: 'tick' }, 60_000)}>
                 {locale === 'bg' ? 'Демо: изчакай 1 минута' : 'Demo: wait one minute'}

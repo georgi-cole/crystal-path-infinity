@@ -14,8 +14,9 @@ import {
 } from './practice-save';
 import type { PracticeLoad, PracticeSettings } from './practice-save';
 import { InfinityPractice } from './infinity-scene';
+import { useSoundtrack } from './soundtrack';
 import { ConfirmNewPractice, MainMenu } from './main-menu';
-import { historyFlag, viewFromHash, viewHash } from './menu-navigation';
+import { canResumePractice, historyFlag, viewFromHash, viewHash } from './menu-navigation';
 import { readTutorialProgress, writeTutorialProgress } from './tutorial-progress';
 import type { TutorialProgress } from './tutorial-progress';
 import type { MenuView } from './menu-navigation';
@@ -115,6 +116,10 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
     (listener) => rankedClient?.subscribe(listener) ?? (() => {}),
     () => rankedClient?.snapshot().run?.runId ?? null,
     () => null,
+  );
+  useSoundtrack(
+    !game && !(view === 'play' && rankedRunId) && bootPhase === 'ready' ? 'home' : null,
+    settings.music,
   );
   const [rewardOwner, setRewardOwner] = useState<{
     scope: object;
@@ -328,7 +333,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
   };
 
   const resumePractice = () => {
-    if (saved.status !== 'ready' || saved.state.status === 'finished') return;
+    if (saved.status !== 'ready' || !canResumePractice(saved)) return;
     startPractice(saved.state);
   };
 
@@ -351,7 +356,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
 
   const requestNewPractice = () => {
     if (gameRef.current || confirmingRef.current) return;
-    if (saved.status === 'empty') {
+    if (saved.status === 'empty' || (saved.status === 'ready' && !canResumePractice(saved))) {
       startNewPractice();
       return;
     }

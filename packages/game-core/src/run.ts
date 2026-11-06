@@ -1,4 +1,13 @@
 import {
+  createRunPacing,
+  nextSurvivalBonusAt,
+  PACED_RULESET_VERSION,
+  SCAN_RULESET_VERSION,
+  rowDeadline,
+  SURVIVAL_BONUS_INTERVAL_MS,
+  SURVIVAL_BONUS_SP,
+} from './pacing.ts';
+import {
   assertDiscovery,
   discoverMystery,
   settleDiscoveryIntroduction,
@@ -134,6 +143,9 @@ export function createRun(options: CreateRunOptions, rng: RandomSource): RunStat
     achievedAt: null,
     activeTimeMs,
     lastObservedAt: options.observedAt,
+    ...([PACED_RULESET_VERSION, SCAN_RULESET_VERSION].includes(rulesetVersion)
+      ? { pacing: createRunPacing(activeTimeMs) }
+      : {}),
     effects: [],
     ...(rulesetVersion === DISCOVERY_RULESET_VERSION
       ? { discovery: { known: [...(options.discoveredMysteries ?? [])], introduction: null } }
@@ -230,6 +242,32 @@ export function assertRunState(state: RunState, rng?: RandomSource): void {
   }
   if ((state.status === 'finished') !== (state.result !== null))
     throw new RangeError('Invalid terminal result.');
+  if ([PACED_RULESET_VERSION, SCAN_RULESET_VERSION].includes(state.rulesetVersion)) {
+    if (!state.pacing) throw new RangeError('Missing row and survival schedules.');
+    assertNonNegativeInteger(state.pacing.rowEnteredAt, 'Row entry');
+    assertNonNegativeInteger(state.pacing.nextSurvivalBonusAt, 'Survival schedule');
+    if (state.pacing.hintScanStartedAt !== undefined) {
+      assertNonNegativeInteger(state.pacing.hintScanStartedAt, 'Hint scan start');
+      if (
+        state.rulesetVersion !== SCAN_RULESET_VERSION ||
+        state.pacing.hintScanStartedAt < state.pacing.rowEnteredAt ||
+        state.pacing.hintScanStartedAt > state.activeTimeMs ||
+        state.current.revealedSafeSide === null
+      )
+        throw new RangeError('Invalid hint scan hold.');
+    }
+    if (
+      state.pacing.rowEnteredAt > state.activeTimeMs ||
+      state.pacing.nextSurvivalBonusAt % SURVIVAL_BONUS_INTERVAL_MS !== 0 ||
+      state.pacing.nextSurvivalBonusAt < state.activeTimeMs ||
+      (state.status === 'playing' &&
+        (rowDeadline(state.pacing) <= state.activeTimeMs ||
+          state.pacing.nextSurvivalBonusAt === state.activeTimeMs))
+    ) {
+      throw new RangeError('Invalid row or survival schedule.');
+    }
+  } else if (state.pacing !== undefined)
+    throw new RangeError('Unexpected pacing on a historical ruleset.');
   assertRowStream(state.stream, rng);
   assertRandomCursor(state.mysteryRng, rng);
   if (state.stream.rulesetVersion !== state.rulesetVersion)
@@ -436,15 +474,10 @@ function settleTime(state: RunState, context: TransitionContext, events: RunEven
     if (!usesMysteryDirectorRules(state.rulesetVersion)) return state;
   }
   let next = { ...state, lastObservedAt: context.achievedAt };
-  while (
-    next.effects.some(isTimedEffect) ||
-    (clock !== null &&
-      clock.warningAt <= context.activeTimeMs &&
-      next.activeTimeMs < clock.expiresAt)
-  ) {
+  while (true) {
     let due = Number.MAX_SAFE_INTEGER;
     const pressure = next.mysteryDirector?.pressure;
-    if (clock && clock.warningAt <= context.activeTimeMs)
+    if (clock && clock.warningAt <= context.activeTimeMs && next.activeTimeMs < clock.expiresAt)
       due = pressure
         ? clock.warningAt + (Math.floor((next.activeTimeMs - clock.warningAt) / 100) + 1) * 100
         : clock.warningAt;
@@ -454,6 +487,9 @@ function settleTime(state: RunState, context: TransitionContext, events: RunEven
       if (effect.nextTickAt !== null && effect.nextTickAt < effect.expiresAt)
         due = Math.min(due, effect.nextTickAt);
     }
+    const deadline = next.pacing ? rowDeadline(next.pacing) : null;
+    if (deadline !== null) due = Math.min(due, deadline, next.pacing!.nextSurvivalBonusAt);
+    if (due === Number.MAX_SAFE_INTEGER) break;
     if (due > context.activeTimeMs) break;
     const expired = next.effects.filter(
       (effect) => isTimedEffect(effect) && effect.expiresAt <= due,
@@ -522,6 +558,23 @@ function settleTime(state: RunState, context: TransitionContext, events: RunEven
         sp: next.sp,
       });
     if (next.sp === 0) return die(next, pressureLoss > 0 ? 'death_clock' : 'drain', events);
+    if (deadline === due) return die(next, 'idle', events);
+    if (next.pacing?.nextSurvivalBonusAt === due) {
+      const sp = clampSp(next.sp + SURVIVAL_BONUS_SP, next.rulesetVersion);
+      events.push({
+        ...eventTime(next),
+        type: 'survival-bonus',
+        amount: SURVIVAL_BONUS_SP,
+        spDelta: sp - next.sp,
+        sp,
+        minute: due / SURVIVAL_BONUS_INTERVAL_MS,
+      });
+      next = {
+        ...next,
+        sp,
+        pacing: { ...next.pacing, nextSurvivalBonusAt: nextSurvivalBonusAt(due) },
+      };
+    }
   }
   next = { ...next, activeTimeMs: context.activeTimeMs };
   return clockExpired ? die(next, 'death_clock', events) : next;
@@ -653,6 +706,17 @@ function rewardTransition(
                 },
               }
             : {}),
+          ...(state.pacing
+            ? {
+                pacing: {
+                  rowEnteredAt: state.activeTimeMs,
+                  nextSurvivalBonusAt: Math.max(
+                    state.pacing.nextSurvivalBonusAt,
+                    nextSurvivalBonusAt(state.activeTimeMs),
+                  ),
+                },
+              }
+            : {}),
           effects: [],
           ...(state.pact ? { pact: null } : {}),
           revivesApplied: state.revivesApplied + 1,
@@ -741,6 +805,9 @@ export function transitionRun(
         ...next,
         hints: next.hints - 1,
         current: { ...next.current, revealedSafeSide: safeSide },
+        ...(next.rulesetVersion === SCAN_RULESET_VERSION && next.pacing
+          ? { pacing: { ...next.pacing, hintScanStartedAt: next.activeTimeMs } }
+          : {}),
       };
       events.push({ ...eventTime(next), type: 'hint-used', row: next.currentRow, safeSide });
       return result(next, events);
@@ -948,6 +1015,14 @@ export function transitionRun(
           revivesToReachScore: next.revivesApplied,
           resolutions: [...next.resolutions, { index: row.index, ...next.current }],
           current: emptyCurrent(),
+          ...(next.pacing
+            ? {
+                pacing: {
+                  rowEnteredAt: next.activeTimeMs,
+                  nextSurvivalBonusAt: next.pacing.nextSurvivalBonusAt,
+                },
+              }
+            : {}),
         },
         context.rng,
       );

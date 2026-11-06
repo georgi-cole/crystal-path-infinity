@@ -1,10 +1,7 @@
 import {
   createPracticeCursor,
   createRun,
-  getRowBandDamage,
   PRACTICE_RNG,
-  STARTING_SP,
-  RISK_RULESET_VERSION,
   transitionRun,
 } from '@crystal-path-infinity/game-core';
 import type {
@@ -13,201 +10,149 @@ import type {
   RunState,
   TransitionResult,
 } from '@crystal-path-infinity/game-core';
+import { GUIDE_PACING } from './crystal-guide-contract';
+import { PRACTICE_RULESET_VERSION } from './practice-rules';
 
 export type TutorialStep =
-  'safe' | 'wrong' | 'hint' | 'hint-revealed' | 'mystery' | 'end' | 'fatal' | 'complete';
-
+  | 'safe'
+  | 'wrong'
+  | 'hint'
+  | 'hint-revealed'
+  | 'pressure'
+  | 'mystery'
+  | 'mystery-opened'
+  | 'complete';
 export type TutorialAction =
   | 'choose-safe'
   | 'choose-wrong'
   | 'use-hint'
   | 'choose-hinted'
+  | 'escape-pressure'
   | 'try-mystery'
   | 'skip-mystery'
-  | 'show-fatal'
   | 'end-run';
-
 export interface TutorialSession {
   readonly step: TutorialStep;
   readonly run: RunState;
-  readonly notice: string;
+  readonly lastTransition: TransitionResult | null;
   readonly mysteryChoice: 'pending' | 'tried' | 'skipped';
 }
 
-/**
- * A deliberately scripted LOCAL demonstration. Only its instance of the pure
- * game-core reducer is used. Never pass this run to practice save, audio,
- * analytics, ads, or ranked services.
- */
+/** A contained rehearsal using the live practice reducer. Its clock advances
+ * only with lesson actions: reading never costs a life. Never persist this run. */
 export function createTutorialSession(): TutorialSession {
   const run = createRun(
     {
       runId: 'tutorial-only-not-a-score',
+      rulesetVersion: PRACTICE_RULESET_VERSION,
       routeRng: createPracticeCursor(14014),
-      mysteryRng: createPracticeCursor(3),
-      rulesetVersion: RISK_RULESET_VERSION,
+      mysteryRng: createPracticeCursor(14141),
       observedAt: 0,
       buffer: { ahead: 8, history: 2 },
     },
     PRACTICE_RNG,
   );
   const rows = run.rows.map((row, index): BridgeRow =>
-    index < 4
+    index < 5
       ? {
           ...row,
-          safeSide: index % 2 === 0 ? 'left' : 'right',
+          safeSide: index === 1 ? 'right' : 'left',
+          hasMystery: index === 4,
           risk: {
-            lowRiskSide: index % 2 === 0 ? 'left' : 'right',
-            broken: { left: index % 2 !== 0, right: index % 2 === 0 },
+            lowRiskSide: index === 1 ? 'right' : 'left',
+            broken: { left: index === 1, right: index !== 1 },
           },
-          hasMystery: index === 3,
         }
       : row,
   );
   return {
     step: 'safe',
-    run: { ...run, rows },
-    notice: 'Training only. Start with the left pane to cross Row 1 safely.',
+    run: { ...run, rows, mysteryDirector: { ...run.mysteryDirector!, nextRow: '5' } },
+    lastTransition: null,
     mysteryChoice: 'pending',
   };
 }
 
-function advance(run: RunState, command: RunCommand): TransitionResult {
+function advance(run: RunState, command: RunCommand, time = run.activeTimeMs): TransitionResult {
   const result = transitionRun(run, command, {
     rng: PRACTICE_RNG,
-    activeTimeMs: run.activeTimeMs,
-    achievedAt: run.lastObservedAt,
+    activeTimeMs: time,
+    achievedAt: time,
   });
-  if (!result.accepted) {
-    throw new Error('Scripted tutorial rejected ' + command.type + ': ' + result.reason);
-  }
+  if (!result.accepted) throw new Error('Crystal rehearsal needs review: ' + result.reason);
   return result;
 }
-
-function choice(run: RunState, side: 'left' | 'right'): RunState {
-  return advance(run, {
-    type: 'choose',
-    row: run.currentRow,
-    life: run.revivesApplied,
-    side,
-  }).state;
+function cross(run: RunState, time = run.activeTimeMs) {
+  return advance(
+    run,
+    { type: 'choose', row: run.currentRow, life: run.revivesApplied, side: 'left' },
+    time,
+  );
 }
-
-/** Single-action transitions make repeated taps and out-of-order clicks harmless. */
+function next(
+  session: TutorialSession,
+  step: TutorialStep,
+  result: TransitionResult,
+): TutorialSession {
+  return { ...session, step, run: result.state, lastTransition: result };
+}
 export function applyTutorialAction(
   session: TutorialSession,
   action: TutorialAction,
 ): TutorialSession {
-  const run = session.run;
+  const { run, step } = session;
   switch (action) {
     case 'choose-safe':
-      if (session.step !== 'safe') return session;
-      return {
-        ...session,
-        step: 'wrong',
-        run: choice(run, 'left'),
-        notice: 'Safe! Row 1 counts, and your SP remains ' + STARTING_SP + '.',
-      };
+      return step === 'safe' ? next(session, 'wrong', cross(run)) : session;
     case 'choose-wrong':
-      if (session.step !== 'wrong') return session;
-      return {
-        ...session,
-        step: 'hint',
-        run: choice(run, 'left'),
-        notice:
-          'Wrong glass cost ' +
-          getRowBandDamage(run.currentRow, run.rulesetVersion) +
-          ' SP, but you survived. Row 2 still counts.',
-      };
+      return step === 'wrong' ? next(session, 'hint', cross(run)) : session;
     case 'use-hint':
-      if (session.step !== 'hint') return session;
-      return {
-        ...session,
-        step: 'hint-revealed',
-        run: advance(run, {
-          type: 'hint',
-          row: run.currentRow,
-          life: run.revivesApplied,
-        }).state,
-        notice: 'The safe pane is LEFT. One hint was spent; SP did not change.',
-      };
-    case 'choose-hinted':
-      if (session.step !== 'hint-revealed') return session;
-      return {
-        ...session,
-        step: 'mystery',
-        run: choice(run, 'left'),
-        notice: 'Row 3 cleared. The centre mystery is optional, never guaranteed safe.',
-      };
-    case 'try-mystery': {
-      if (session.step !== 'mystery') return session;
-      const result = advance(run, {
-        type: 'mystery',
-        row: run.currentRow,
-        life: run.revivesApplied,
+      return step === 'hint'
+        ? next(
+            session,
+            'hint-revealed',
+            advance(run, { type: 'hint', row: run.currentRow, life: run.revivesApplied }),
+          )
+        : session;
+    case 'choose-hinted': {
+      if (step !== 'hint-revealed') return session;
+      const crossed = cross(run);
+      const pressure = advance(
+        crossed.state,
+        { type: 'tick' },
+        crossed.state.activeTimeMs + GUIDE_PACING.grace,
+      );
+      return next(session, 'pressure', {
+        ...pressure,
+        events: [...crossed.events, ...pressure.events],
       });
-      const event = result.events.find((item) => item.type === 'mystery-resolved');
-      const effect =
-        event?.type === 'mystery-resolved'
-          ? event.kind.replaceAll('_', ' ') +
-            ' (' +
-            (event.spDelta > 0 ? '+' : '') +
-            event.spDelta +
-            ' SP, ' +
-            (event.hintDelta > 0 ? '+' : '') +
-            event.hintDelta +
-            ' hints)'
-          : 'an uncertain effect';
-      return {
-        ...session,
-        step: 'end',
-        run: result.state,
-        mysteryChoice: 'tried',
-        notice: 'Mystery outcome: ' + effect + '. Real mysteries can help or hurt.',
-      };
     }
+    case 'escape-pressure':
+      return step === 'pressure'
+        ? next(
+            session,
+            'mystery',
+            cross(run, run.activeTimeMs + Math.floor(GUIDE_PACING.countdown / 2)),
+          )
+        : session;
+    case 'try-mystery':
+      return step === 'mystery'
+        ? {
+            ...next(
+              session,
+              'mystery-opened',
+              advance(run, { type: 'mystery', row: run.currentRow, life: run.revivesApplied }),
+            ),
+            mysteryChoice: 'tried',
+          }
+        : session;
     case 'skip-mystery':
-      if (session.step !== 'mystery') return session;
-      return {
-        ...session,
-        step: 'end',
-        mysteryChoice: 'skipped',
-        notice: 'You skipped the optional mystery. There is no penalty for skipping it.',
-      };
-    case 'show-fatal': {
-      if (session.step !== 'end') return session;
-      // Set up a transparent fatal teaching example, independent of any random
-      // mystery buff or damage mitigation. The actual reducer still resolves it.
-      const fatalExample: RunState = {
-        ...run,
-        sp: getRowBandDamage(run.currentRow, run.rulesetVersion),
-        effects: [],
-        pact: null,
-      };
-      const fatal = choice(fatalExample, 'left');
-      if (fatal.status !== 'dead' || fatal.lastClearedRow !== run.lastClearedRow) {
-        throw new Error('Fatal teaching example broke the score contract.');
-      }
-      return {
-        ...session,
-        step: 'fatal',
-        run: fatal,
-        notice:
-          'Fatal Row ' +
-          fatal.currentRow +
-          ' did NOT count. Last cleared remains ' +
-          fatal.lastClearedRow +
-          '.',
-      };
-    }
+      return step === 'mystery'
+        ? { ...next(session, 'complete', advance(run, { type: 'end' })), mysteryChoice: 'skipped' }
+        : session;
     case 'end-run':
-      if (session.step !== 'end' && session.step !== 'fatal') return session;
-      return {
-        ...session,
-        step: 'complete',
-        run: advance(run, { type: 'end', forfeitGrantedReward: true }).state,
-        notice:
-          'Tutorial complete. The result is only a demo: no saved practice, ranking, ad or reward.',
-      };
+      return step === 'mystery-opened'
+        ? next(session, 'complete', advance(run, { type: 'end' }))
+        : session;
   }
 }

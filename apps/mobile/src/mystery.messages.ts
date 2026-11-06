@@ -378,7 +378,6 @@ const en = {
   sellOne: 'Sell 1 hint · +20 SP',
   sellAll: 'Sell {hints} hints · +{sp} SP',
   beforeAfter: 'Your resources after the trade',
-  noLimit: 'No SP limit',
   demoWrong: 'Demo: step on a broken tile',
   demoSafe: 'Demo: take the safe tile',
   demoOnly: 'Demonstration controls reveal the chosen outcome only inside this test room.',
@@ -454,7 +453,6 @@ const bg: Record<CopyKey, string> = {
   sellOne: 'Продай 1 подсказка · +20 SP',
   sellAll: 'Продай {hints} подсказки · +{sp} SP',
   beforeAfter: 'Ресурсите ти след сделката',
-  noLimit: 'Без таван на SP',
   demoWrong: 'Демо: стъпи върху счупена плочка',
   demoSafe: 'Демо: стъпи върху здрава плочка',
   demoOnly: 'Демонстрационните бутони разкриват резултата само в тази тестова стая.',
@@ -498,8 +496,8 @@ export function effectCopy(
   const detail =
     locale === 'bg'
       ? {
-          heal_10: 'Възстановява 10 SP веднага. Няма горен лимит на SP.',
-          heal_20: 'Възстановява 20 SP веднага. Няма горен лимит на SP.',
+          heal_10: 'Възстановява 10 SP веднага.',
+          heal_20: 'Възстановява 20 SP веднага.',
           lucky_5s:
             'За 5 секунди: следващата грешна плочка дава +5 SP вместо −5 SP. След това талисманът се пръсва и изчезва. Един заряд.',
           inversion_5s:
@@ -508,8 +506,8 @@ export function effectCopy(
             'Вземи +50 SP сега. След 3 избора връщаш 65 SP. След първия можеш да погасиш за 55 SP. Отказът струва 8 SP. Това е кратък авариен запас; без нови ресурси дългът може да те убие.',
         }
       : {
-          heal_10: 'Restore 10 SP immediately. SP has no upper limit.',
-          heal_20: 'Restore 20 SP immediately. SP has no upper limit.',
+          heal_10: 'Restore 10 SP immediately.',
+          heal_20: 'Restore 20 SP immediately.',
           lucky_5s:
             'For 5 seconds: the NEXT wrong tile gives +5 SP instead of −5 SP. The charm then bursts and disappears. One charge.',
           inversion_5s:

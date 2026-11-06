@@ -1,3 +1,4 @@
+import { en } from '../src/i18n/messages';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { readFileSync } from 'node:fs';
@@ -9,6 +10,7 @@ import {
   getCurrentRow,
   getReviveSp,
   PRACTICE_RNG,
+  PACED_RULESET_VERSION,
   transitionRun,
 } from '@crystal-path-infinity/game-core';
 import type { RunState } from '@crystal-path-infinity/game-core';
@@ -17,10 +19,11 @@ import { formatActiveDuration, presentRunOutcome } from '../src/run-outcome';
 import { DEFAULT_PRACTICE_SETTINGS } from '../src/practice-save';
 
 const noop = () => {};
-function initial() {
+function initial(rulesetVersion?: string) {
   return createRun(
     {
       runId: 'practice-run-ui',
+      rulesetVersion,
       routeRng: createPracticeCursor(100),
       mysteryRng: createPracticeCursor(200),
       observedAt: 1000,
@@ -84,6 +87,36 @@ function markup(
 }
 
 describe('CPI-015 HUD and result state contract', () => {
+  it('gives idle death its own copy and holds its card behind the bridge collapse', () => {
+    const dead = transitionRun(
+      initial(PACED_RULESET_VERSION),
+      { type: 'tick' },
+      {
+        rng: PRACTICE_RNG,
+        activeTimeMs: 8_000,
+        achievedAt: 9_000,
+      },
+    ).state;
+    expect(dead.death?.cause).toBe('idle');
+    expect(presentRunOutcome(dead).deathReason).toBe(en['game.deathIdle']);
+    const collapse = markup(dead, {
+      paused: true,
+      cinematic: {
+        id: 1,
+        phase: 'collapse',
+        rows: null,
+        feedback: null,
+        mystery: null,
+        fatal: true,
+      },
+    });
+    expect(collapse).toContain('is-collapsing');
+    expect(collapse).not.toContain('role="dialog"');
+    const result = markup(dead);
+    expect(result).toContain(en['game.deathIdle']);
+    expect(result).toContain('role="dialog"');
+    expect(result).not.toContain('Save and leave');
+  });
   it('keeps confirmed grants, applied revives and quota separate in pause details', () => {
     const live = presentRunOutcome(initial());
     expect(live.appliedContinues).toBe(0);
@@ -92,13 +125,13 @@ describe('CPI-015 HUD and result state contract', () => {
     expect(live.offer).toBe(null);
     expect(live.canEnd).toBe(true);
     const html = markup(initial(), { paused: true });
-    expect(html).toContain('Cleared');
+    expect(html).toContain(en['game.cleared']);
     expect(html).toContain('Continues used');
     expect(html).toContain('Grants earned');
     expect(html).toContain('Grant quota left');
     expect(html).toContain('End run');
     expect(html).toContain('aria-label="Survival points"');
-    expect(html).not.toContain('Run complete');
+    expect(html).not.toContain(en['game.complete']);
     expect(html).not.toContain('Victory');
   });
 
@@ -109,14 +142,16 @@ describe('CPI-015 HUD and result state contract', () => {
     expect(view.clearedRows).toBe('0');
     expect(view.currentRow).toBe('1');
     expect(view.fatalRow).toBe('1');
-    expect(view.deathReason).toContain('wrong glass');
+    expect(view.deathReason).toBe(en['game.deathWrong']);
     const html = markup(dead);
-    expect(html).toContain('The bridge gave way');
-    expect(html).toContain('Fatal row 1 does not count');
-    expect(html).toContain('Continue #1');
-    expect(html).toContain('Restore 200 SP');
-    expect(html).toContain('Rewarded continue is not connected');
-    expect(html).not.toContain('Run complete');
+    expect(html).toContain(en['game.deathTitle']);
+    expect(html).toContain(en['game.fatalNotCounted'].replace('{row}', '1'));
+    expect(html).toContain(en['game.bargainTitle'].replace('{sp}', '200'));
+    expect(html).toContain(en['game.bargainBody']);
+    expect(html).toContain(en['game.bargainSleeping']);
+    expect(html).not.toContain('reward grants remain');
+    expect(html).not.toContain('it does not add points');
+    expect(html).not.toContain(en['game.complete']);
     expect(html).not.toContain('Rankings (not live)');
     expect(html).toMatch(/aria-label="Row 1 left tile"[^>]*disabled=""/);
   });
@@ -124,10 +159,10 @@ describe('CPI-015 HUD and result state contract', () => {
   it('uses the same terminal death UI for mystery and drain causes', () => {
     for (const cause of ['mystery', 'drain'] as const) {
       const state = died(cause);
-      expect(presentRunOutcome(state).deathReason).toContain(
-        cause === 'mystery' ? 'mystery' : 'drain',
+      expect(presentRunOutcome(state).deathReason).toBe(
+        en[cause === 'mystery' ? 'game.deathMystery' : 'game.deathDrain'],
       );
-      expect(markup(state)).toContain('The bridge gave way');
+      expect(markup(state)).toContain(en['game.deathTitle']);
     }
   });
 
@@ -160,11 +195,11 @@ describe('CPI-015 HUD and result state contract', () => {
     expect(view.canEnd).toBe(false);
     expect(view.canViewRankings).toBe(false);
     const html = markup(pending);
-    expect(html).toContain('Verification pending');
+    expect(html).toContain(en['game.pendingTitle']);
     expect(html).toContain('Save and leave · Pending');
-    expect(html).not.toContain('Confirm End run');
-    expect(html).not.toContain('Next run');
-    expect(html).not.toContain('Run complete');
+    expect(html).not.toContain(en['game.confirmEnd']);
+    expect(html).not.toContain(en['game.nextRun']);
+    expect(html).not.toContain(en['game.complete']);
   });
 
   it('treats a granted-but-unapplied continue as earned, not available for another ad', () => {
@@ -223,10 +258,10 @@ describe('CPI-015 HUD and result state contract', () => {
     expect(view.localResult).toBe(true);
     const html = markup(end.state, { personalBest: '348', newPersonalBest: true });
     expect(html).toContain('OFFLINE PRACTICE · NOT VERIFIED');
-    expect(html).toContain('Rows cleared');
-    expect(html).toContain('New local personal best');
+    expect(html).toContain(en['game.rowsCleared']);
+    expect(html).toContain(en['game.bestNew']);
     expect(html).toContain('348');
-    expect(html).toContain('Next run');
+    expect(html).toContain(en['game.nextRun']);
     expect(html).toContain('Rankings (not live)');
     expect(html).toContain('Return to menu');
     expect(html).not.toContain('Victory');
@@ -274,14 +309,14 @@ describe('CPI-015 HUD and result state contract', () => {
     expect(snapshot.status).toBe('playing');
     expect(snapshot.result).toBe(null);
     const paused = markup(initial(), { paused: true });
-    expect(paused).toContain('game clock and every timed effect are frozen');
+    expect(paused).toContain(en['game.pausedExplanation']);
     expect(paused).toContain('Save and leave');
     expect(paused).toContain('End run');
     expect(paused).toContain('inert=""');
     const confirm = markup(initial(), { paused: true, confirmEnd: true });
-    expect(confirm).toContain('End this run?');
-    expect(confirm).toContain('Confirm End run');
-    expect(confirm).toContain('Keep attempt');
+    expect(confirm).toContain(en['game.confirmTitle']);
+    expect(confirm).toContain(en['game.confirmEnd']);
+    expect(confirm).toContain(en['game.keepAttempt']);
   });
 
   it('keeps signed native gates and app navigation unchanged', () => {

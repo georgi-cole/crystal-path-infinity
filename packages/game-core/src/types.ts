@@ -154,7 +154,12 @@ export interface RowResolution extends CurrentRowState {
   readonly index: Decimal;
 }
 
-export type DeathCause = 'wrong_tile' | 'mystery' | 'drain' | 'death_clock';
+export type DeathCause = 'wrong_tile' | 'mystery' | 'drain' | 'death_clock' | 'idle';
+export interface RunPacing {
+  readonly rowEnteredAt: number;
+  readonly nextSurvivalBonusAt: number;
+  readonly hintScanStartedAt?: number;
+}
 export interface DeathSnapshot {
   readonly id: string;
   readonly sequence: number;
@@ -210,6 +215,8 @@ export interface RunState {
   readonly achievedAt: number | null;
   readonly activeTimeMs: number;
   readonly lastObservedAt: number;
+  /** Required by infinity-v2/v3; absent on historical infinity-v1 checkpoints. */
+  readonly pacing?: RunPacing;
   readonly effects: readonly ActiveEffect[];
   /** Absent in legacy v1 checkpoints. Only the versioned pact ruleset can use this. */
   readonly pact?: MysteryPact | null;
@@ -333,6 +340,13 @@ export type RunEvent = EventTime &
         readonly delta: number;
         readonly sp: number;
         readonly rowsLeft: number;
+      }
+    | {
+        readonly type: 'survival-bonus';
+        readonly amount: number;
+        readonly spDelta: number;
+        readonly sp: number;
+        readonly minute: number;
       }
     | { readonly type: 'hint-used'; readonly row: Decimal; readonly safeSide: TileSide }
     | { readonly type: 'hint-unavailable'; readonly row: Decimal }

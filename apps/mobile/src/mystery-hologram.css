@@ -519,7 +519,7 @@
   font-weight: 500;
   flex: 1;
 }
-.cpi-death-clock {
+.cpi-idle-pressure {
   position: relative;
   display: flex;
   gap: 0.8rem;
@@ -532,10 +532,10 @@
   margin: 0.25rem auto;
   border-bottom: 1px solid #ffffff14;
 }
-.cpi-death-clock > span {
+.cpi-idle-pressure > span {
   flex: 1;
 }
-.cpi-death-clock i {
+.cpi-idle-pressure i {
   position: absolute;
   left: 0;
   right: 0;
@@ -544,11 +544,11 @@
   background: #bcb3d1;
   transform-origin: left;
 }
-.cpi-death-clock.is-active {
+.cpi-idle-pressure.is-active {
   color: #ff9db4;
   background: #ff63860a;
 }
-.cpi-death-clock.is-active i {
+.cpi-idle-pressure.is-active i {
   background: #ff8faa;
 }
 .cpi-infinity-scene.is-death-clock::after {

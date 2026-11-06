@@ -292,12 +292,11 @@ export function MysteryEffects({
             <summary>
               <EffectGlyph kind={effect.kind} />
               <span>
-                <strong>{copy.title}</strong>
-                <small>{mysteryText(locale, copy.positive ? 'beneficial' : 'dangerous')}</small>
+                <strong>{copy.title.replace(/\s*·\s*\d+s$/, '')}</strong>
               </span>
               <b>
                 {effect.expiresAt === null
-                  ? `${remaining} ${mysteryText(locale, 'rows')}`
+                  ? `${remaining} ${locale === 'bg' ? 'реда' : 'rows'}`
                   : `${(remaining / 1000).toFixed(1)}s`}
               </b>
               <span
@@ -341,6 +340,53 @@ export function PactPanel({
 }) {
   const { locale } = useLanguage();
   if (!pact) return null;
+  if (pact.phase === 'active') {
+    const copy = effectCopy(locale, pact.kind, rulesetVersion);
+    return (
+      <div className="cpi-active-pact" data-pact={pact.kind}>
+        <details>
+          <summary>
+            <EffectGlyph kind={pact.kind} />
+            <strong>{copy.title}</strong>
+            <b>
+              {pact.rowsLeft} {locale === 'bg' ? 'реда' : 'rows'}
+            </b>
+            <span className="cpi-pact-info" aria-hidden="true">
+              ⓘ
+            </span>
+          </summary>
+          <p>{copy.detail}</p>
+        </details>
+        {pact.kind === 'false_oracle' && (
+          <span className="cpi-pact-inline-value">
+            {pact.omen === 'left' ? '↖' : '↗'}{' '}
+            {mysteryText(locale, pact.omen === 'left' ? 'left' : 'right')} · 70%
+          </span>
+        )}
+        {pact.kind === 'borrowed_time' && <span className="cpi-pact-inline-value">−65 SP</span>}
+        {pact.kind === 'hungry_vault' && pact.bank > 0 && (
+          <button
+            type="button"
+            disabled={disabled}
+            data-pact-option="cashout"
+            onClick={() => onChoose('cashout')}
+          >
+            {mysteryText(locale, 'cashout').replace('{bank}', String(pact.bank))}
+          </button>
+        )}
+        {pact.kind === 'borrowed_time' && pact.rowsLeft < 3 && (
+          <button
+            type="button"
+            disabled={disabled}
+            data-pact-option="settle"
+            onClick={() => onChoose('settle')}
+          >
+            {mysteryText(locale, 'settle')}
+          </button>
+        )}
+      </div>
+    );
+  }
   if (pact.phase === 'offered' && usesMysteryDirectorRules(rulesetVersion))
     return (
       <HolographicOffer

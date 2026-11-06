@@ -299,7 +299,7 @@ export function DeathClockBadge({
   if (!clock || offered) return null;
   const active = activeTimeMs >= clock.warningAt;
   return (
-    <div className={'cpi-death-clock' + (active ? ' is-active' : '')} role="timer">
+    <div className={'cpi-idle-pressure' + (active ? ' is-active' : '')} role="timer">
       <span>
         {active ? 'Death clock · SP ↓' : locale === 'bg' ? 'Следваща стъпка' : 'Next step'}
       </span>
@@ -311,7 +311,9 @@ export function DeathClockBadge({
         s
       </b>
       <i
-        style={{ transform: `scaleX(${Math.max(0, (clock.expiresAt - activeTimeMs) / 13000)})` }}
+        style={{
+          transform: `scaleX(${Math.max(0, (clock.expiresAt - activeTimeMs) / DEATH_COUNTDOWN_MS)})`,
+        }}
       />
     </div>
   );

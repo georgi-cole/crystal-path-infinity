@@ -4,7 +4,7 @@ Issue: [#7](https://github.com/georgi-cole/crystal-path-infinity/issues/7). Base
 
 ## Shared active time
 
-`createTimedRunSession` wraps the existing run/session with an injected monotonic source. Choices, hints, mysteries and effect settlement use this same clock. The reducer, `infinity-v1`, checkpoint schema, SP balance and revive schedule are unchanged. There is no idle death, forced movement timer or progress from waiting.
+`createTimedRunSession` wraps the existing run/session with an injected monotonic source. Choices, hints, mysteries and effect settlement use this same clock. The original `infinity-v1` has no idle death, forced movement timer or progress from waiting. The later [infinity-v2 follow-up](CPI-005-row-pressure-v2.md) uses this same active timeline for its row deadline and survival rewards. Holds and lifecycle ownership remain unchanged.
 
 The initial recovery hold excludes time spent constructing the owner and reconciling its page. Independent leases cover user pause, ads, verification and recovery; releasing one cannot release another. Ordinary animations do not acquire a hold. Dead and finished states freeze active time automatically.
 

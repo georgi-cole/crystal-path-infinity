@@ -71,6 +71,104 @@ const death = (id: string): RunEvent => ({
 });
 
 describe('CPI-010 standalone audio ownership', () => {
+  it('sounds the urgent Death Clock even at full SP and stops after a row reset or death', async () => {
+    const f = fixture();
+    const audio = createStandaloneAudio(f.ports, { ...DEFAULT_PRACTICE_SETTINGS, music: false });
+    const alarm = f.media.get(CRYSTAL_AUDIO.alarm)!;
+    const options = { foreground: true, personalBest: false };
+    audio.setActive(true);
+    await audio.unlock();
+    const run = {
+      ...state,
+      status: 'playing',
+      sp: 300,
+      activeTimeMs: 4_999,
+      pacing: { rowEnteredAt: 0, nextSurvivalBonusAt: 60_000 },
+    } as RunState;
+    audio.playEvents([], run, options);
+    expect(alarm.played).toBe(0);
+    audio.playEvents([], { ...run, activeTimeMs: 5_000 }, options);
+    expect(alarm.played).toBe(1);
+    await Promise.resolve();
+    audio.playEvents(
+      [],
+      { ...run, activeTimeMs: 5_100, pacing: { rowEnteredAt: 5_100, nextSurvivalBonusAt: 60_000 } },
+      options,
+    );
+    expect(alarm.paused).toBe(true);
+    audio.playEvents([], { ...run, activeTimeMs: 7_900 }, options);
+    await Promise.resolve();
+    audio.playEvents([], { ...run, status: 'dead', sp: 0, activeTimeMs: 8_000 }, options);
+    expect(alarm.paused).toBe(true);
+    audio.dispose();
+  });
+  it('starts the emergency loop only below 15 SP after a gesture and silences pause, background, mute and disposal', async () => {
+    const f = fixture();
+    const audio = createStandaloneAudio(f.ports, { ...DEFAULT_PRACTICE_SETTINGS, music: false });
+    const alarm = f.media.get(CRYSTAL_AUDIO.alarm)!;
+    const low = { ...state, status: 'playing', sp: 14 } as RunState;
+    const options = { foreground: true, personalBest: false };
+    audio.setActive(true);
+    audio.playEvents([], low, options);
+    expect(alarm.played).toBe(0);
+    await audio.unlock();
+    audio.playEvents([], low, options);
+    expect(alarm.played).toBe(1);
+    expect(alarm.loop).toBe(true);
+    await Promise.resolve();
+    await Promise.resolve();
+    audio.setActive(false);
+    expect(alarm.paused).toBe(true);
+    audio.setActive(true);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(alarm.played).toBe(2);
+    audio.setForeground(false);
+    expect(alarm.paused).toBe(true);
+    audio.setForeground(true);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(alarm.played).toBe(3);
+    audio.playEvents([], { ...low, sp: 15 }, options);
+    expect(alarm.paused).toBe(true);
+    audio.playEvents([], low, options);
+    await Promise.resolve();
+    await Promise.resolve();
+    audio.setSettings({ ...DEFAULT_PRACTICE_SETTINGS, soundEffects: false });
+    expect(alarm.paused).toBe(true);
+    audio.dispose();
+    expect(alarm.paused).toBe(true);
+  });
+  it('uses falling glass for a survived wrong pane and stops the alarm before a fatal tail', async () => {
+    const f = fixture();
+    const audio = createStandaloneAudio(f.ports, DEFAULT_PRACTICE_SETTINGS);
+    audio.setActive(true);
+    await audio.unlock();
+    audio.playEvents(
+      [choose('1', true)],
+      { ...state, status: 'playing', sp: 10 },
+      {
+        foreground: true,
+        personalBest: false,
+      },
+    );
+    expect(f.media.get(CRYSTAL_AUDIO.glass)?.played).toBe(1);
+    expect(f.media.get(CRYSTAL_AUDIO.safe)?.played).toBe(0);
+    await Promise.resolve();
+    audio.playEvents(
+      [death('fatal')],
+      { ...state, status: 'dead', sp: 0 },
+      {
+        foreground: true,
+        personalBest: false,
+      },
+    );
+    expect(f.media.get(CRYSTAL_AUDIO.alarm)?.paused).toBe(true);
+    expect(f.media.get(CRYSTAL_AUDIO.death)?.played).toBe(1);
+    audio.setActive(false);
+    expect(f.media.get(CRYSTAL_AUDIO.death)?.paused).toBe(false);
+    audio.dispose();
+  });
   it('separates looping music from independent cues and starts only after a gesture', async () => {
     const f = fixture();
     const audio = createStandaloneAudio(f.ports, DEFAULT_PRACTICE_SETTINGS);

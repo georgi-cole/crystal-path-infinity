@@ -1,5 +1,6 @@
 import { decimal } from './numbers.ts';
 import type { EffectKind } from './types.ts';
+import { PACED_RULESET_VERSION, SCAN_RULESET_VERSION } from './pacing.ts';
 
 export const RULESET_VERSION = 'infinity-v1';
 /** Experimental, separately identified balance; existing ranked runs remain v1. */
@@ -155,6 +156,9 @@ export function supportsPacts(version: string): boolean {
   return version === PACT_RULESET_VERSION || usesBalanceRules(version);
 }
 
+const PACED_RULESET = Object.freeze({ ...RULESET, version: PACED_RULESET_VERSION });
+const SCAN_RULESET = Object.freeze({ ...RULESET, version: SCAN_RULESET_VERSION });
+
 export function getRuleset(
   version: string = RULESET_VERSION,
 ):
@@ -164,7 +168,11 @@ export function getRuleset(
   | typeof RISK_RULESET
   | typeof DIRECTOR_RULESET
   | typeof RELIC_RULESET
-  | typeof DISCOVERY_RULESET {
+  | typeof DISCOVERY_RULESET
+  | typeof PACED_RULESET
+  | typeof SCAN_RULESET {
+  if (version === PACED_RULESET_VERSION) return PACED_RULESET;
+  if (version === SCAN_RULESET_VERSION) return SCAN_RULESET;
   if (version === DISCOVERY_RULESET_VERSION) return DISCOVERY_RULESET;
   if (version === RELIC_RULESET_VERSION) return RELIC_RULESET;
   if (version === DIRECTOR_RULESET_VERSION) return DIRECTOR_RULESET;

@@ -56,3 +56,61 @@ provenance. The app adds no runtime font/CDN requests or rendering dependency.
 - Browser and web builds are distinct from physical-device performance testing.
   Native emulator/simulator results belong to the PR checks; no physical-device
   or live ranked/ad-service verification is claimed here.
+
+## Cinematic follow-up — 5 November 2026
+
+This section records the cinematic baseline at `5442547`. The later
+[Death Clock and survival follow-up](CPI-005-row-pressure-v2.md) supersedes its
+fixed fracture mesh and no-idle-penalty descriptions, and adds the darker voice,
+hint scan and minute reward.
+
+Choices now have a 110 ms contact beat, a visible result on the selected pane,
+then camera travel. Safe glass settles for 430 ms total; wrong glass gets 820 ms
+before travel so the fragments can fall. A presentation director holds only the
+old renderer-safe row projection. The canonical command, checkpoints and clock
+settle immediately, with input fenced until the visual beat ends. Fatal wrong,
+mystery and drain events cascade through the whole bridge for 1.8 seconds before
+the original result card appears. Background/unmount cancels presentation work.
+Reduced motion skips the travel, fragments and score animation.
+
+Glass fractures use deterministic closed impact meshes. Near glass has 24
+irregular pieces, distant collapse panes use eight. Their initial combined area
+equals the pane area; independent drift, rotation and accelerating fall leave
+an actual gap. The decorative home flight uses a bounded 30 fps canvas with
+continuous projective travel, curved rails, slowly changing camera angle and
+LED reflections. It stops in the background and has a static reduced-motion
+frame. No scene animation changes the route or rules.
+
+Mysteries are projected wire holograms. Each rolled effect creates its own
+original line symbol, bloom and readout, then sends the symbol toward the upper
+left effect indicator. Hostile outcomes have a stronger red treatment. The
+elapsed-time instrument reports actual active time; it introduces no deadline,
+countdown to death or idle penalty. Below 15 SP the stage enters a red emergency
+state and a restrained original alarm loops. Pause, background, mute, recovery
+above the threshold and disposal stop the alarm.
+
+The home utilities occupy the upper left header, the tagline is “Don't look
+down”, and the home footer is removed. Step captions are limited to the first
+row; hinted glass retains its accessible feedback. Row numbers are removed from
+between panes. Persistent guidance sits below the bridge. Warning instruments
+are short side indicators rather than banners.
+
+Settings follows the inspected Big Eye flat row pattern: right-aligned switches,
+one language row and short tutorial/privacy/account/help actions. Long service
+and privacy explanations are available in closed-by-default semantic details.
+Existing setting persistence, account controls and confirmations remain owned
+by their original components. The inspected source paths and commit are in the
+reuse manifest. No Big Eye source file is modified.
+
+Dead checkpoints without pending/earned rewards no longer advertise Resume.
+Leaving that death finalizes the attempt, saves its local record, and returns to
+Play. Pending verification and granted but unapplied rewards keep their recovery
+path. Result numbers count from zero with exact integer interpolation, including
+values beyond Number precision. The heading uses an original broken-bridge
+sigil on the same line as the title.
+
+Original synthesized mono WAV cues are reproducible with
+`node apps/mobile/scripts/cinematic-audio.mjs`; no sampled recordings are used.
+They add approximately 148 KB. [MDN SVG transforms](https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Element/animateTransform)
+and [reduced motion](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/@media/prefers-reduced-motion)
+were consulted for the presentation behavior.

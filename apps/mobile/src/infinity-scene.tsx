@@ -2,7 +2,15 @@ import { DiscoveryIntroduction } from './mystery-introduction';
 import { MysteryJournal } from './mystery-discovery';
 import { readMysteryJournal } from './mystery-journal-model';
 import { mysteryFeedbackFromEvents, runCuesFromEvents } from './mystery-feedback';
+import type { MysteryFeedback, RunCues } from './mystery-feedback';
+import { MysteryEffects, MysteryFeedbackView, PactPanel, EffectGlyph } from './mystery-effects';
+import { EffectConsumption, HintCounter } from './resource-feedback';
+import { MysteryRhythmBadge, DeathClockBadge } from './mystery-box';
+import { MysteryLab } from './mystery-lab';
+import { effectCopy, mysteryText } from './mystery.messages';
+import './run-status.css';
 import { StageAtmosphere } from './stage-atmosphere';
+import { useSoundtrack } from './soundtrack';
 import { PrismBridge } from './prism-bridge';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -10,25 +18,31 @@ import {
   createRun,
   getRuleset,
   STARTING_SP,
-  PRACTICE_RNG,
   DISCOVERY_RULESET_VERSION,
   getDeathClock,
   isPactKind,
+  PRACTICE_RNG,
+  presentRowPressure,
+  HINT_SCAN_MS,
 } from '@crystal-path-infinity/game-core';
 import type {
   RunEvent,
-  EffectKind,
   RunState,
-  PactOption,
   SessionCommand,
   TileSide,
   TimedSessionResult,
+  EffectKind,
+  PactOption,
 } from '@crystal-path-infinity/game-core';
 import { getGameplayLifecycle } from './gameplay-lifecycle';
 import { createStandaloneAudio } from './standalone-audio';
 import type { StandaloneAudio } from './standalone-audio';
 import { optionalHaptic } from './optional-haptic';
-import { readPracticePersonalBest, recordPracticePersonalBest } from './practice-save';
+import {
+  readPracticePersonalBest,
+  recordPracticePersonalBest,
+  upgradePracticePacing,
+} from './practice-save';
 import { presentRunOutcome } from './run-outcome';
 import { useLanguage } from './language-context';
 import type { PracticeSettings } from './practice-save';
@@ -36,15 +50,18 @@ import { AudioSettingsControls } from './audio-settings-controls';
 import { createPracticeRuntime, schedulePracticeTick } from './practice-runtime';
 import type { PracticePauseLease, PracticeRuntime } from './practice-runtime';
 import { presentInfinityScene } from './infinity-presentation';
-import { MysteryEffects, MysteryFeedbackView, PactPanel } from './mystery-effects';
-import type { MysteryFeedback, RunCues } from './mystery-feedback';
-import { EffectConsumption, HintCounter } from './resource-feedback';
-import { MysteryRhythmBadge, DeathClockBadge } from './mystery-box';
-import { MysteryLab } from './mystery-lab';
-import { mysteryText } from './mystery.messages';
+import { createSceneDirector } from './scene-cinematics';
+import type { SceneCinematic, SceneFeedback } from './scene-cinematics';
+import { AnimatedResult } from './animated-result';
+import { DeathClock, SpCounter } from './scene-instruments';
+import { collectRunSignals, EMPTY_RUN_SIGNALS, liveSignal } from './run-signals';
+import type { RunSignals } from './run-signals';
+import { createHintCaptionGate } from './hint-caption';
 import './infinity-scene.css';
 import './infinity-hud-premium.css';
 import './run-outcome.css';
+import './scene-cinematics.css';
+import './row-pressure.css';
 
 const DEFAULT_VISUAL_SKIN = {
   id: 'infinity-glass-v1',
@@ -55,11 +72,7 @@ const DEFAULT_VISUAL_SKIN = {
 // can replace this map without changing route, hints, SP or a ranked response.
 export const INFINITY_SCENE_SKIN = DEFAULT_VISUAL_SKIN;
 
-export interface SceneFeedback {
-  readonly row: string;
-  readonly side: TileSide;
-  readonly kind: 'safe' | 'wrong';
-}
+export type { SceneFeedback } from './scene-cinematics';
 export interface InfinitySceneViewProps {
   readonly state: RunState;
   readonly feedback: SceneFeedback | null;
@@ -88,6 +101,9 @@ export interface InfinitySceneViewProps {
   readonly onRetry: () => void;
   readonly settings: PracticeSettings;
   readonly onSettingsChange: (next: PracticeSettings) => void;
+  readonly cinematic?: SceneCinematic | null;
+  readonly signals?: RunSignals;
+  readonly hintCaptionRow?: string | null;
 }
 
 /** No game-core mutations or timers. All callbacks are externally owned events. */
@@ -119,6 +135,9 @@ export function InfinitySceneView({
   onRetry,
   settings,
   onSettingsChange,
+  cinematic = null,
+  signals = EMPTY_RUN_SIGNALS,
+  hintCaptionRow = null,
 }: InfinitySceneViewProps) {
   const { t, number, locale } = useLanguage();
   const presented = presentInfinityScene(state);
@@ -127,73 +146,104 @@ export function InfinitySceneView({
   const rawFatalRow = state.result?.fatalRow ?? state.death?.fatalRow ?? null;
   const fatalRow = rawFatalRow === null ? null : number(rawFatalRow);
   const deathCause = state.result?.deathCause ?? state.death?.cause ?? null;
-  const localizedDeathReason =
-    deathCause === 'death_clock'
-      ? locale === 'bg'
-        ? 'Death clock изтече преди следващия избор.'
-        : 'The death clock expired before the next choice.'
-      : deathCause
-        ? t(
-            deathCause === 'wrong_tile'
-              ? 'game.deathWrong'
-              : deathCause === 'mystery'
-                ? 'game.deathMystery'
-                : 'game.deathDrain',
-          )
-        : null;
-  const overlayVisible = paused || confirmEnd || outcome.phase !== 'playing' || !!error;
-  const catastrophic =
-    (state.death?.cause === 'wrong_tile' || state.death?.cause === 'death_clock') &&
-    state.status !== 'playing';
+  const localizedDeathReason = deathCause
+    ? t(
+        deathCause === 'wrong_tile'
+          ? 'game.deathWrong'
+          : deathCause === 'idle' || deathCause === 'death_clock'
+            ? 'game.deathIdle'
+            : deathCause === 'mystery'
+              ? 'game.deathMystery'
+              : 'game.deathDrain',
+      )
+    : null;
+  const overlayVisible =
+    !!error || (!cinematic?.fatal && (paused || confirmEnd || outcome.phase !== 'playing'));
+  const catastrophic = state.death !== null && state.status !== 'playing';
+  const pressure = presentRowPressure(state);
   const deathClock = getDeathClock(state);
-  const clockActive = deathClock !== null && state.activeTimeMs >= deathClock.warningAt;
-  const current = presented.rows.find((row) => row.phase === 'current');
-  const interactive =
-    ready && !busy && !paused && !confirmEnd && !error && outcome.phase === 'playing';
   const pactOffered = state.pact?.phase === 'offered';
+  const clockActive = deathClock !== null && state.activeTimeMs >= deathClock.warningAt;
   const oracleActive = state.pact?.kind === 'false_oracle' && state.pact.phase === 'active';
   const maxSp = getRuleset(state.rulesetVersion).maxSp;
   const criticalSp = maxSp === null ? 10 : 60;
   const warningSp = maxSp === null ? 30 : 140;
+  const bonus = liveSignal(signals.bonus, state, 2400);
+  const hintScan =
+    liveSignal(signals.hint, state, HINT_SCAN_MS) ??
+    (pressure?.paused &&
+    state.pacing?.hintScanStartedAt !== undefined &&
+    state.current.revealedSafeSide
+      ? {
+          id: `${state.runId}:${state.revivesApplied}:${state.currentRow}:scan-recovery`,
+          row: state.currentRow,
+          side: state.current.revealedSafeSide,
+          activeAt: state.pacing.hintScanStartedAt,
+        }
+      : null);
+  const emergency =
+    state.status === 'playing' &&
+    ((state.sp > 0 && state.sp < 15) || pressure?.urgent || clockActive);
+  const hostileReveal = cinematic?.mystery
+    ? cinematic.mystery.spDelta < 0 ||
+      cinematic.mystery.hintDelta < 0 ||
+      !effectCopy(locale, cinematic.mystery.kind, state.rulesetVersion).positive
+    : false;
+  const current = presented.rows.find((row) => row.phase === 'current');
+  const cinematicBlocks = !!cinematic && (cinematic.phase !== 'reveal' || cinematic.fatal);
+  const interactive =
+    ready &&
+    !busy &&
+    !cinematicBlocks &&
+    !pactOffered &&
+    !paused &&
+    !confirmEnd &&
+    !error &&
+    outcome.phase === 'playing';
   const spClass =
     state.sp <= criticalSp ? 'is-danger' : state.sp <= warningSp ? 'is-warn' : 'is-safe';
-  const spPct =
-    maxSp === null
-      ? (state.sp / (state.sp + STARTING_SP)) * 100
-      : Math.max(0, Math.min(100, (state.sp / maxSp) * 100));
+  const spPct = Math.max(
+    0,
+    Math.min(100, (state.sp / (maxSp ?? Math.max(STARTING_SP, state.sp))) * 100),
+  );
   const notice =
-    error ??
-    (outcome.phase === 'verification-pending'
-      ? t('game.noticePending')
-      : outcome.phase === 'dead' || outcome.phase === 'grant-ready'
-        ? t('game.noticeDead')
-        : outcome.phase === 'finished'
-          ? t('game.noticeFinished')
-          : !ready
-            ? t('game.noticePreparing')
-            : paused
-              ? t('game.noticePaused')
-              : pactOffered
-                ? mysteryText(locale, 'contract')
-                : current?.mysteryAvailable
-                  ? t('game.noticeMystery')
-                  : state.current.mysteryOutcome
-                    ? t('game.noticeMysteryDone')
-                    : t('game.noticeChoose'));
+    cinematic?.phase === 'impact'
+      ? t(cinematic.feedback?.kind === 'wrong' ? 'game.impactWrong' : 'game.impactSafe')
+      : (error ??
+        (outcome.phase === 'verification-pending'
+          ? t('game.noticePending')
+          : outcome.phase === 'dead' || outcome.phase === 'grant-ready'
+            ? t('game.noticeDead')
+            : outcome.phase === 'finished'
+              ? t('game.noticeFinished')
+              : !ready
+                ? t('game.noticePreparing')
+                : paused
+                  ? t('game.noticePaused')
+                  : current?.mysteryAvailable
+                    ? t('game.noticeMystery')
+                    : state.current.mysteryOutcome
+                      ? t('game.noticeMysteryDone')
+                      : t('game.noticeChoose')));
 
   return (
     <main
-      className={`cps-shell ${INFINITY_SCENE_SKIN.shell} cpi-infinity-scene${catastrophic ? ' is-catastrophe' : ''}${clockActive ? ' is-death-clock' : ''}${settings.reducedMotion ? ' cpi-reduced-motion' : ''}`}
+      className={`cps-shell ${INFINITY_SCENE_SKIN.shell} cpi-infinity-scene${catastrophic ? ' is-catastrophe' : ''}${emergency ? ' is-emergency' : ''}${paused ? ' is-paused' : ''}${pressure?.active || clockActive ? ' is-death-clock' : ''}${settings.reducedMotion ? ' cpi-reduced-motion' : ''}`}
       data-testid="infinity-scene"
       aria-label={INFINITY_SCENE_SKIN.title}
     >
-      <StageAtmosphere />
+      <StageAtmosphere emergency={emergency || catastrophic} />
       <div className="cps-content" inert={overlayVisible}>
         <header className="cpi-hud-header">
           <div className="cpi-hud-position">
             <span className="cpi-hud-wordmark">Infinity</span>
             <strong className="cps-row-display">
-              {t('general.row', { row: number(presented.currentRow) })}
+              {t('general.row', {
+                row: number(
+                  cinematic?.rows?.find((row) => row.phase === 'current')?.label ??
+                    presented.currentRow,
+                ),
+              })}
             </strong>
             <span className="cpi-hud-cleared">
               {t('game.cleared')} <b>{clearedRows}</b>
@@ -203,7 +253,7 @@ export function InfinitySceneView({
             <div className="cps-sp-display">
               <span className="cps-sp-label">{t('game.stabilityShort')}</span>
               <span className={`cps-sp-value ${spClass}`}>
-                {state.sp}
+                <SpCounter value={state.sp} bonus={bonus} reduced={settings.reducedMotion} />
                 {maxSp !== null && <small> / {maxSp}</small>}
               </span>
             </div>
@@ -211,9 +261,13 @@ export function InfinitySceneView({
               className={`cps-sp-bar-main cpi-energy-meter ${state.sp <= criticalSp ? 'is-low' : ''}`}
               role={maxSp === null ? 'img' : 'meter'}
               aria-label={
-                maxSp === null
-                  ? `${t('game.spAccessible')}: ${state.sp} SP · ${mysteryText(locale, 'noLimit')}`
-                  : t('game.spAccessible')
+                state.sp <= warningSp
+                  ? t(state.sp <= criticalSp ? 'game.spCritical' : 'game.spLow', {
+                      sp: number(state.sp),
+                    })
+                  : maxSp === null
+                    ? `${number(state.sp)} SP`
+                    : t('game.spAccessible')
               }
               aria-valuemin={maxSp === null ? undefined : 0}
               aria-valuemax={maxSp ?? undefined}
@@ -239,11 +293,10 @@ export function InfinitySceneView({
               onClick={onHint}
               disabled={
                 !interactive ||
-                pactOffered ||
                 oracleActive ||
+                !!state.discovery?.introduction ||
                 state.hints === 0 ||
-                state.current.revealedSafeSide !== null ||
-                state.current.noSafeTile
+                state.current.revealedSafeSide !== null
               }
               aria-label={t('game.hintButton', { count: number(state.hints) })}
             >
@@ -253,7 +306,7 @@ export function InfinitySceneView({
               type="button"
               className="cpi-pause-control cpi-hud-control"
               onClick={onPause}
-              disabled={!ready || busy || !!error || state.status !== 'playing'}
+              disabled={!ready || busy || cinematicBlocks || !!error || state.status !== 'playing'}
               aria-label={paused ? t('game.resumeGame') : t('game.pauseGame')}
             >
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -269,88 +322,133 @@ export function InfinitySceneView({
             </button>
           </div>
         </header>
-        {state.sp <= warningSp && state.status === 'playing' && (
-          <p
-            className={'cpi-sp-danger-copy ' + (state.sp <= criticalSp ? 'is-critical' : 'is-low')}
-            role="status"
-          >
-            {t(state.sp <= criticalSp ? 'game.spCritical' : 'game.spLow', { sp: number(state.sp) })}
-          </p>
-        )}
-        <MysteryEffects
-          effects={state.effects}
-          activeTimeMs={state.activeTimeMs}
-          rulesetVersion={state.rulesetVersion}
-        />
-        <MysteryRhythmBadge
-          rhythm={state.mysteryDirector?.rhythm}
-          activeTimeMs={state.activeTimeMs}
-        />
-        <DeathClockBadge
-          clock={getDeathClock(state)}
-          activeTimeMs={state.activeTimeMs}
-          offered={pactOffered || !!state.discovery?.introduction}
-        />
-        {state.current.noSafeTile && (
-          <p className="cpi-sp-danger-copy is-low" role="status">
-            {locale === 'bg'
-              ? 'И двете плочки са счупени. Подсказката е запазена; защитата може да помогне.'
-              : 'Both tiles are broken. Your hint was kept; protection can help.'}
-          </p>
-        )}
+        <aside
+          className={'cpi-run-status' + (pactOffered ? ' is-choosing' : '')}
+          aria-label={t('game.effects')}
+        >
+          <div className="cpi-status-clock-slot">
+            {clockActive && (
+              <DeathClockBadge clock={deathClock} activeTimeMs={state.activeTimeMs} />
+            )}
+            {pressure?.active && <DeathClock pressure={pressure} />}
+          </div>
+          <div className="cpi-status-forces">
+            <MysteryEffects
+              effects={state.effects}
+              activeTimeMs={state.activeTimeMs}
+              rulesetVersion={state.rulesetVersion}
+            />
+            {state.pact?.phase === 'active' && (
+              <PactPanel
+                pact={state.pact}
+                hints={state.hints}
+                revealed={state.current.revealedSafeSide !== null}
+                disabled={!interactive}
+                onChoose={(option) => onPact?.(option)}
+                sp={state.sp}
+                rulesetVersion={state.rulesetVersion}
+                activeTimeMs={state.activeTimeMs}
+              />
+            )}
+            <MysteryRhythmBadge
+              rhythm={state.mysteryDirector?.rhythm}
+              activeTimeMs={state.activeTimeMs}
+            />
+          </div>
+          <div className="cpi-status-feedback-slot">
+            {!overlayVisible && (
+              <MysteryFeedbackView
+                rulesetVersion={state.rulesetVersion}
+                feedback={
+                  mysteryFeedback &&
+                  !(isPactKind(mysteryFeedback.kind) && mysteryFeedback.action === null)
+                    ? mysteryFeedback
+                    : null
+                }
+              />
+            )}
+            {bonus && (
+              <span className="cpi-status-bonus" role="status">
+                +{bonus.amount} SP
+              </span>
+            )}
+          </div>
+        </aside>
         <section className="cps-board" aria-label={t('game.bridge')} dir="ltr">
           <DiscoveryIntroduction
             discovery={state.discovery}
             activeTimeMs={state.activeTimeMs}
             rulesetVersion={state.rulesetVersion}
           />
-          <PactPanel
-            sp={state.sp}
-            rulesetVersion={state.rulesetVersion}
-            activeTimeMs={state.activeTimeMs}
-            pact={state.pact}
-            hints={state.hints}
-            revealed={state.current.revealedSafeSide !== null || !!state.current.noSafeTile}
-            disabled={!interactive || !onPact}
-            onChoose={(option) => onPact?.(option)}
-          />
+          {pactOffered && (
+            <PactPanel
+              pact={state.pact}
+              hints={state.hints}
+              revealed={state.current.revealedSafeSide !== null}
+              disabled={!ready || busy || paused || !!error}
+              onChoose={(option) => onPact?.(option)}
+              sp={state.sp}
+              rulesetVersion={state.rulesetVersion}
+              activeTimeMs={state.activeTimeMs}
+            />
+          )}
           <PrismBridge
-            rows={presented.rows}
-            feedback={feedback}
-            interactive={interactive && !pactOffered}
-            omen={oracleActive ? (state.pact?.omen ?? null) : null}
+            rows={cinematic?.rows ?? presented.rows}
+            feedback={cinematic?.feedback ?? feedback}
+            interactive={interactive}
             onChoose={onChoose}
+            omen={oracleActive ? state.pact?.omen : null}
             onMystery={onMystery}
             reducedMotion={settings.reducedMotion}
+            phase={cinematic?.phase}
+            collapsed={catastrophic && (!cinematic || cinematic.phase === 'collapse')}
+            eventId={state.death?.id ?? cinematic?.id ?? ''}
+            fractureSeed={`${state.runId}:${state.revivesApplied}`}
+            hintScan={hintScan}
+            showHintCaption={hintCaptionRow === state.currentRow}
           />
-          <div className="cpi-bridge-guidance" aria-hidden="true">
-            <span />
-            {t('game.bridgeGuidance')}
-            <span />
-          </div>
+          {cinematic?.mystery && !state.discovery?.introduction && !pactOffered && (
+            <div
+              key={cinematic.id}
+              className={'cpi-mystery-release' + (hostileReveal ? ' is-hostile' : '')}
+              aria-hidden="true"
+            >
+              <span className="cpi-release-flare" />
+              <span className="cpi-released-symbol">
+                <EffectGlyph kind={cinematic.mystery.kind} />
+              </span>
+            </div>
+          )}
+          {cinematic?.feedback && cinematic.phase !== 'contact' && cinematic.phase !== 'travel' && (
+            <div className={'cpi-step-readout is-' + cinematic.feedback.kind} aria-hidden="true">
+              {t(
+                cinematic.fatal
+                  ? 'game.collapse'
+                  : cinematic.feedback.kind === 'wrong'
+                    ? 'game.impactWrong'
+                    : 'game.impactSafe',
+              )}
+            </div>
+          )}
+          {catastrophic && (
+            <div className="cpi-death-veil" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </div>
+          )}
         </section>
         <p className="visually-hidden" role="status" aria-live="polite">
           {notice}
         </p>
         <p className="cpi-scene-footer">
-          <img src={import.meta.env.BASE_URL + 'brand/prism-mark.svg'} alt="" aria-hidden="true" />
-          {t('general.practice')}
-          <span>∞</span>
-          <span className="visually-hidden">{t('game.footer')}</span>
+          <span aria-hidden="true">—</span>
+          {t('game.bridgeGuidance')}
+          <span aria-hidden="true">—</span>
+          <span className="visually-hidden">{t('game.crossingNote')}</span>
         </p>
       </div>
       <EffectConsumption cue={resourceCues.consumption} hidden={overlayVisible} />
-      {!overlayVisible && (
-        <MysteryFeedbackView
-          rulesetVersion={state.rulesetVersion}
-          feedback={
-            mysteryFeedback &&
-            !(isPactKind(mysteryFeedback.kind) && mysteryFeedback.action === null)
-              ? mysteryFeedback
-              : null
-          }
-        />
-      )}
       {overlayVisible && (
         <div className="cpi-overlay">
           <div
@@ -359,20 +457,41 @@ export function InfinitySceneView({
             aria-modal="true"
             aria-labelledby="cpi-run-outcome-title"
           >
-            <div className="cpi-dialog-emblem" data-phase={outcome.phase} aria-hidden="true">
-              {error
-                ? '!'
-                : outcome.phase === 'finished'
-                  ? '✓'
-                  : outcome.phase === 'dead'
-                    ? '×'
-                    : paused && !confirmEnd
-                      ? 'Ⅱ'
-                      : '↗'}
-            </div>
+            <header className="cpi-dialog-heading">
+              <span className="cpi-dialog-emblem" data-phase={outcome.phase} aria-hidden="true">
+                <svg viewBox="0 0 48 48" fill="none">
+                  <path
+                    d={
+                      catastrophic
+                        ? 'M5 35 14 20l6 8 6-14 8 6 9 15M12 35l8-7m6-14 6 21M6 40h12m12 0h12'
+                        : outcome.phase === 'finished'
+                          ? 'M8 26l11 11L40 12M8 10h12M8 15h7'
+                          : paused && !confirmEnd
+                            ? 'M16 12v24M32 12v24'
+                            : 'M8 34 24 10l16 24M18 25h12M24 34v6'
+                    }
+                  />
+                  <circle cx="40" cy="8" r="2" />
+                </svg>
+              </span>
+              <h2 id="cpi-run-outcome-title">
+                {t(
+                  error
+                    ? 'game.clockTitle'
+                    : confirmEnd && outcome.canEnd
+                      ? 'game.confirmTitle'
+                      : outcome.phase === 'verification-pending'
+                        ? 'game.pendingTitle'
+                        : outcome.phase === 'finished'
+                          ? 'game.complete'
+                          : outcome.phase === 'dead' || outcome.phase === 'grant-ready'
+                            ? 'game.deathTitle'
+                            : 'game.paused',
+                )}
+              </h2>
+            </header>
             {error ? (
               <>
-                <h2 id="cpi-run-outcome-title">{t('game.clockTitle')}</h2>
                 <p role="alert">{error}</p>
                 <p>{t('game.clockRecover')}</p>
                 <div className="cpi-overlay-actions">
@@ -386,7 +505,6 @@ export function InfinitySceneView({
               </>
             ) : confirmEnd && outcome.canEnd ? (
               <>
-                <h2 id="cpi-run-outcome-title">{t('game.confirmTitle')}</h2>
                 <p>
                   {t('game.confirmCleared', { row: clearedRows })}{' '}
                   {fatalRow !== null
@@ -416,7 +534,6 @@ export function InfinitySceneView({
               </>
             ) : outcome.phase === 'verification-pending' ? (
               <>
-                <h2 id="cpi-run-outcome-title">{t('game.pendingTitle')}</h2>
                 <p>{t('game.pendingExplanation', { row: clearedRows })}</p>
                 <p role="status">{t('game.pendingRecovery')}</p>
                 <div className="cpi-overlay-actions">
@@ -428,15 +545,25 @@ export function InfinitySceneView({
             ) : outcome.phase === 'finished' ? (
               <>
                 <p className="cpi-run-status-label">{t('game.practiceUnverified')}</p>
-                <h2 id="cpi-run-outcome-title">{t('game.complete')}</h2>
                 <div className="cpi-result-score">
                   <span>{t('game.rowsCleared')}</span>
-                  <strong>{clearedRows}</strong>
+                  <strong>
+                    <AnimatedResult
+                      value={state.result?.lastClearedRow ?? state.lastClearedRow}
+                      reduced={settings.reducedMotion}
+                    />
+                  </strong>
                 </div>
                 <dl className="cpi-result-details">
                   <div>
                     <dt>{t('game.fatalRow')}</dt>
-                    <dd>{fatalRow ?? t('general.none')}</dd>
+                    <dd>
+                      {rawFatalRow === null ? (
+                        t('general.none')
+                      ) : (
+                        <AnimatedResult value={rawFatalRow} reduced={settings.reducedMotion} />
+                      )}
+                    </dd>
                   </div>
                   <div>
                     <dt>{t('game.activeTime')}</dt>
@@ -444,7 +571,12 @@ export function InfinitySceneView({
                   </div>
                   <div>
                     <dt>{t('game.revivesApplied')}</dt>
-                    <dd>{outcome.appliedContinues}</dd>
+                    <dd>
+                      <AnimatedResult
+                        value={String(outcome.appliedContinues)}
+                        reduced={settings.reducedMotion}
+                      />
+                    </dd>
                   </div>
                   <div>
                     <dt>{t('game.bestLocal')}</dt>
@@ -468,28 +600,23 @@ export function InfinitySceneView({
               </>
             ) : outcome.phase === 'dead' || outcome.phase === 'grant-ready' ? (
               <>
-                <h2 id="cpi-run-outcome-title">{t('game.deathTitle')}</h2>
                 {localizedDeathReason && <p>{localizedDeathReason}</p>}
                 <div className="cpi-result-score">
                   <span>{t('game.rowsCleared')}</span>
-                  <strong>{clearedRows}</strong>
+                  <strong>
+                    <AnimatedResult value={state.lastClearedRow} reduced={settings.reducedMotion} />
+                  </strong>
                 </div>
                 <p>{t('game.fatalNotCounted', { row: fatalRow ?? t('general.none') })}</p>
                 {outcome.offer ? (
                   <div className="cpi-revive-offer">
                     <strong>
-                      {t('game.offerTitle', {
-                        index: number(outcome.offer.ordinal),
+                      {t('game.bargainTitle', {
                         sp: number(outcome.offer.restoreSp),
                       })}
                     </strong>
-                    <span>
-                      {t('game.offerDetail', {
-                        sp: number(outcome.offer.restoreSp),
-                        remaining: number(outcome.offer.grantsRemaining),
-                      })}
-                    </span>
-                    <span>{t('game.offerUnavailable')}</span>
+                    <span>{t('game.bargainBody')}</span>
+                    <span>{t('game.bargainSleeping')}</span>
                   </div>
                 ) : outcome.phase === 'grant-ready' ? (
                   <p role="status">{t('game.grantReady')}</p>
@@ -506,13 +633,12 @@ export function InfinitySceneView({
                     {t('general.endRun')}
                   </button>
                   <button type="button" disabled={busy} onClick={onExit}>
-                    {t('general.saveLeave')}
+                    {t(outcome.forfeitsGrant ? 'general.saveLeave' : 'game.returnMenu')}
                   </button>
                 </div>
               </>
             ) : (
               <>
-                <h2 id="cpi-run-outcome-title">{t('game.paused')}</h2>
                 <p>{t('game.pausedExplanation')}</p>
                 <p>{t('game.pausedRows', { row: clearedRows })}</p>
                 <details className="cpi-run-ledger">
@@ -544,6 +670,7 @@ export function InfinitySceneView({
                       {mysteryText(locale, 'lab')} · {locale === 'bg' ? 'Тест' : 'Test'}
                     </button>
                   )}
+
                   <button type="button" data-cpi-overlay-primary disabled={busy} onClick={onPause}>
                     {t('general.resume')}
                   </button>
@@ -568,7 +695,7 @@ function makeInitialRun(): RunState {
   try {
     discoveredMysteries = readMysteryJournal(window.localStorage);
   } catch {
-    /* Optional local discoveries. */
+    /* Optional discoveries. */
   }
   const seed = new Uint32Array(2);
   crypto.getRandomValues(seed);
@@ -577,12 +704,12 @@ function makeInitialRun(): RunState {
   return createRun(
     {
       runId: 'practice-' + route.toString(16),
+      rulesetVersion: DISCOVERY_RULESET_VERSION,
+      discoveredMysteries,
       routeRng: createPracticeCursor(route),
       mysteryRng: createPracticeCursor(mystery),
       observedAt: Date.now(),
       buffer: { ahead: 8, history: 2 },
-      rulesetVersion: DISCOVERY_RULESET_VERSION,
-      discoveredMysteries,
     },
     PRACTICE_RNG,
   );
@@ -611,7 +738,9 @@ function InfinityRun({
   onSettingsChange,
 }: InfinityRunProps) {
   const { t } = useLanguage();
-  const [initial] = useState(() => initialState ?? makeInitialRun());
+  const [initial] = useState(() =>
+    initialState ? upgradePracticePacing(initialState) : makeInitialRun(),
+  );
   const [initialAudioSettings] = useState(settings);
   const lastCommittedActiveMs = useRef(-500);
   const [state, setState] = useState<RunState>(initial);
@@ -624,7 +753,16 @@ function InfinityRun({
   const [resourceCues, setResourceCues] = useState<RunCues>({});
   const [labOpen, setLabOpen] = useState(false);
   const [journalOpen, setJournalOpen] = useState(false);
+  const [cinematic, setCinematic] = useState<SceneCinematic | null>(null);
+  const [signals, setSignals] = useState<RunSignals>(EMPTY_RUN_SIGNALS);
+  const [hintCaptionRow, setHintCaptionRow] = useState<string | null>(null);
+  const [hintCaptionGate] = useState(() => createHintCaptionGate(() => window.localStorage));
   const [confirmEnd, setConfirmEnd] = useState(false);
+  useSoundtrack(
+    state.status === 'playing' ? 'run' : cinematic?.fatal ? null : 'ended',
+    settings.music && (state.status !== 'playing' || (ready && !paused && !confirmEnd && !error)),
+    settings.music && (!!cinematic?.fatal || confirmEnd),
+  );
   const [personalBest, setPersonalBest] = useState<string | null>(null);
   const [newPersonalBest, setNewPersonalBest] = useState(false);
   const runtimeRef = useRef<PracticeRuntime | null>(null);
@@ -632,6 +770,13 @@ function InfinityRun({
   const pauseRef = useRef<PracticePauseLease | null>(null);
   const commandLock = useRef(false);
   const exitLock = useRef(false);
+  const directorRef = useRef<ReturnType<typeof createSceneDirector> | null>(null);
+  const reducedRef = useRef(settings.reducedMotion);
+
+  useEffect(() => {
+    reducedRef.current = settings.reducedMotion;
+    if (settings.reducedMotion) directorRef.current?.finish();
+  }, [settings.reducedMotion]);
 
   useEffect(() => {
     let alive = true;
@@ -641,9 +786,21 @@ function InfinityRun({
         createMedia: (source) => new Audio(source),
         haptic: optionalHaptic,
       },
-      initialAudioSettings,
+      { ...initialAudioSettings, music: false },
     );
     audioRef.current = audio;
+    const director = createSceneDirector(
+      initial,
+      (beat) => {
+        if (alive) setCinematic(beat);
+      },
+      (callback, delay) => {
+        const timer = window.setTimeout(callback, delay);
+        return () => window.clearTimeout(timer);
+      },
+      () => reducedRef.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    );
+    directorRef.current = director;
     audio.setForeground(document.visibilityState !== 'hidden');
     const runtime = createPracticeRuntime({
       state: initial,
@@ -653,6 +810,10 @@ function InfinityRun({
       playback: audio,
       onTransition: (result: TimedSessionResult) => {
         if (!alive) return;
+        director.receive(result);
+        const hint = result.events.find((event) => event.type === 'hint-used');
+        if (hint && hintCaptionGate.claim()) setHintCaptionRow(hint.row);
+        if (result.events.length) setSignals((previous) => collectRunSignals(previous, result));
         let earnedNewBest = false;
         if (result.events.some((event) => event.type === 'run-ended')) {
           try {
@@ -713,6 +874,8 @@ function InfinityRun({
     const unsubscribeCheckpoint = lifecycle.subscribe((snapshot) => {
       audio.setForeground(snapshot.active);
       if (!snapshot.active && alive) {
+        director.finish();
+        setSignals(EMPTY_RUN_SIGNALS);
         try {
           onCheckpoint(runtime.getState());
         } catch (cause) {
@@ -735,20 +898,22 @@ function InfinityRun({
       alive = false;
       if (runtimeRef.current === runtime) runtimeRef.current = null;
       if (audioRef.current === audio) audioRef.current = null;
+      if (directorRef.current === director) directorRef.current = null;
+      director.dispose();
       unsubscribeCheckpoint();
       runtime.dispose();
     };
-  }, [initial, onCheckpoint, initialAudioSettings]);
+  }, [initial, onCheckpoint, initialAudioSettings, hintCaptionGate]);
 
   useEffect(() => {
-    audioRef.current?.setSettings(settings);
+    audioRef.current?.setSettings({ ...settings, music: false });
   }, [settings]);
 
   useEffect(() => {
     if (paused || confirmEnd || state.status !== 'playing' || error) {
       document.querySelector<HTMLButtonElement>('.cpi-overlay [data-cpi-overlay-primary]')?.focus();
     }
-  }, [paused, confirmEnd, state.status, state.pendingReward, error]);
+  }, [paused, confirmEnd, state.status, state.pendingReward, error, cinematic?.fatal]);
 
   useEffect(() => {
     if (!confirmEnd) return;
@@ -768,7 +933,14 @@ function InfinityRun({
 
   async function issue(command: SessionCommand) {
     const runtime = runtimeRef.current;
-    if (!runtime || !ready || (paused && command.type !== 'end') || commandLock.current) return;
+    if (
+      !runtime ||
+      !ready ||
+      (paused && command.type !== 'end') ||
+      commandLock.current ||
+      (command.type !== 'end' && directorRef.current?.isBusy())
+    )
+      return;
     commandLock.current = true;
     setBusy(true);
     try {
@@ -777,9 +949,13 @@ function InfinityRun({
       if (
         !result.accepted &&
         result.reason &&
-        !['clock-paused', 'stale-command', 'stale-pause', 'command-consumed'].includes(
-          result.reason,
-        )
+        ![
+          'clock-paused',
+          'stale-command',
+          'stale-pause',
+          'command-consumed',
+          'died-before-command',
+        ].includes(result.reason)
       )
         setError(`Action unavailable: ${result.reason}`);
     } catch (reason) {
@@ -797,7 +973,7 @@ function InfinityRun({
     }
     if (paused) unlockAudio();
     const runtime = runtimeRef.current;
-    if (!runtime || commandLock.current) return;
+    if (!runtime || commandLock.current || directorRef.current?.isBusy()) return;
     commandLock.current = true;
     setBusy(true);
     try {
@@ -852,6 +1028,15 @@ function InfinityRun({
       }
       if (runtime) {
         try {
+          const latest = runtime.getState();
+          if (
+            latest.status === 'dead' &&
+            latest.pendingReward === null &&
+            !latest.reviveReceipts.some((receipt) => receipt.status === 'granted')
+          ) {
+            // Leaving a declined death finalizes its result instead of advertising a dead Resume.
+            await runtime.bind({ type: 'end', forfeitGrantedReward: false })();
+          }
           if (!paused) await runtime.hold('recovery');
           onCheckpoint(runtime.getState());
         } catch (cause) {
@@ -886,6 +1071,7 @@ function InfinityRun({
     <InfinitySceneView
       state={state}
       feedback={feedback}
+      cinematic={cinematic}
       mysteryFeedback={mysteryFeedback}
       resourceCues={resourceCues}
       onMysteryLab={import.meta.env.MODE !== 'production' ? () => setLabOpen(true) : undefined}
@@ -894,6 +1080,8 @@ function InfinityRun({
         unlockAudio();
         void issue({ type: 'pact', option });
       }}
+      signals={signals}
+      hintCaptionRow={hintCaptionRow}
       ready={ready}
       busy={busy}
       paused={paused}

@@ -1,11 +1,23 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { MysteryCube } from './mystery-box';
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import type { CSSProperties, SVGProps } from 'react';
 import type { TileSide } from '@crystal-path-infinity/game-core';
 import type { PresentedRow } from './infinity-presentation';
 import { useLanguage } from './language-context';
 import type { SceneFeedback } from './infinity-scene';
 import { bridgePane, projectBridgePoint, advancesOneRow } from './bridge-geometry';
-import { MysteryCube } from './mystery-box';
+import { glassPattern, glassSeed, projectGlassPattern } from './glass-fracture';
+import type { HintScan } from './run-signals';
+import { BridgeFlight } from './bridge-flight';
+import type { SceneCinematic } from './scene-cinematics';
 
 const WIDTH = 900,
   HEIGHT = 700;
@@ -33,6 +45,25 @@ function shine(points: Point[]) {
     blend(points[3], points[2], 0.62),
     blend(points[3], points[2], 0.55),
   ];
+}
+const onFace = (p: Point[], u: number, v: number) =>
+  blend(blend(p[0], p[1], u), blend(p[3], p[2], u), v);
+function reflectedLight(points: Point[], kind: 'rail' | 'strip') {
+  return (
+    kind === 'rail'
+      ? [
+          [0.91, 0.02],
+          [0.955, 0.02],
+          [0.955, 0.98],
+          [0.91, 0.98],
+        ]
+      : [
+          [0.03, 0.16],
+          [0.97, 0.16],
+          [0.97, 0.19],
+          [0.03, 0.19],
+        ]
+  ).map(([u, v]) => onFace(points, u, v));
 }
 function inset(points: Point[]) {
   const center = points.reduce((a, p) => ({ x: a.x + p.x / 4, y: a.y + p.y / 4 }), { x: 0, y: 0 });
@@ -84,7 +115,11 @@ function MovingLamp({
   const scale = 1 / (1 + z * 0.65),
     oldScale = 1 / (1 + (z + 1.15) * 0.65);
   return (
-    <g transform={`translate(${p.x} ${p.y - 4 * scale})`}>
+    <g
+      className="cpi-rail-lamp"
+      style={{ '--lamp-delay': `${-z * 0.37}s` } as CSSProperties}
+      transform={`translate(${p.x} ${p.y - 4 * scale})`}
+    >
       {old && (
         <animateTransform
           key={step + 'position'}
@@ -123,6 +158,64 @@ function MovingLamp({
           <circle key={i} r={layer.r} fill={layer.fill} opacity={layer.opacity} />
         ))}
       </g>
+    </g>
+  );
+}
+function PaneFragments({
+  points,
+  seed,
+  delay = 0,
+  detail = 3,
+  previous,
+  step,
+  collapsed,
+  falling,
+}: {
+  points: Point[];
+  seed: number;
+  delay?: number;
+  detail?: 1 | 3;
+  previous?: Point[];
+  step: string;
+  collapsed: boolean;
+  falling: boolean;
+}) {
+  const pattern = useMemo(() => glassPattern(seed, detail), [seed, detail]);
+  const shards = projectGlassPattern(pattern, points);
+  const old = previous ? projectGlassPattern(pattern, previous) : null;
+  return (
+    <g className="cpi-pane-fragments">
+      {shards.map((shard, i) =>
+        shard.retained && !collapsed ? (
+          <MovingPolygon
+            key={i}
+            className="cpi-glass-anchor"
+            shape={[...shard.points]}
+            previous={(old && [...old[i].points]) || undefined}
+            step={step}
+            fill={shard.glint > 0.5 ? '#c7e5ee4d' : '#9bb4bb29'}
+            stroke="#d6f5ffb3"
+            strokeWidth=".65"
+          />
+        ) : falling ? (
+          <polygon
+            key={i}
+            className="cpi-glass-shard"
+            points={coordinates([...shard.points])}
+            fill={shard.glint > 0.65 ? '#e1f5ff47' : shard.glint > 0.3 ? '#839ea936' : '#cedde622'}
+            stroke={i % 4 === 0 ? '#edfcffbb' : '#bddce67a'}
+            strokeWidth={i % 3 === 0 ? 0.9 : 0.5}
+            style={
+              {
+                '--shard-x': `${shard.drift}px`,
+                '--shard-turn': `${shard.turn}deg`,
+                '--shard-delay': `${delay + shard.delay}ms`,
+                '--shard-fall': `${540 * shard.fall}px`,
+              } as CSSProperties
+            }
+          />
+        ) : null,
+      )}
     </g>
   );
 }
@@ -165,7 +258,16 @@ export function PrismBridge({
   onMystery,
   preview = false,
   reducedMotion = false,
-  omen = null,
+  phase,
+  collapsed = false,
+  eventId = '',
+  fractureSeed = 'bridge',
+  hintScan = null,
+  showHintCaption = false,
+  showStepCaptions = true,
+  allowChoices = true,
+  allowedSide,
+  omen,
 }: {
   rows?: readonly PresentedRow[];
   feedback?: SceneFeedback | null;
@@ -174,6 +276,15 @@ export function PrismBridge({
   onMystery?: () => void;
   preview?: boolean;
   reducedMotion?: boolean;
+  phase?: SceneCinematic['phase'];
+  collapsed?: boolean;
+  eventId?: string | number;
+  fractureSeed?: string;
+  hintScan?: HintScan | null;
+  showHintCaption?: boolean;
+  showStepCaptions?: boolean;
+  allowChoices?: boolean;
+  allowedSide?: TileSide;
   omen?: TileSide | null;
 }) {
   const id = useId().replace(/:/g, ''),
@@ -202,13 +313,24 @@ export function PrismBridge({
     );
     return () => window.clearTimeout(timer);
   }, [camera.row, camera.moving]);
+  if (preview)
+    return (
+      <div className="cpi-prism-bridge is-preview">
+        <BridgeFlight reduced={reduced} />
+      </div>
+    );
   const distances = Array.from({ length: 17 }, (_, i) => 15 - i);
   return (
     <div
       className={
-        'cpi-prism-bridge' + (preview ? ' is-preview' : '') + (moving ? ' is-advancing' : '')
+        'cpi-prism-bridge' +
+        (moving ? ' is-advancing' : '') +
+        (collapsed ? ' is-collapsing' : '') +
+        (phase === 'contact' ? ' is-contacting' : '') +
+        (hintScan ? ' is-scanning' : '')
       }
       data-camera-moving={moving ? 'true' : 'false'}
+      data-step-phase={phase ?? 'idle'}
     >
       <svg
         ref={artwork}
@@ -220,14 +342,15 @@ export function PrismBridge({
       >
         <defs>
           <linearGradient id={id + 'glass'} x1="0" y1="0" x2=".8" y2="1">
-            <stop stopColor="#d9dbe6" stopOpacity=".22" />
-            <stop offset=".42" stopColor="#646570" stopOpacity=".14" />
-            <stop offset="1" stopColor="#141419" stopOpacity=".66" />
+            <stop stopColor="#e2edf0" stopOpacity=".32" />
+            <stop offset=".36" stopColor="#98adb3" stopOpacity=".09" />
+            <stop offset=".58" stopColor="#c7dae0" stopOpacity=".15" />
+            <stop offset="1" stopColor="#101318" stopOpacity=".48" />
           </linearGradient>
           <linearGradient id={id + 'edge'} x2="1" y2=".3">
-            <stop stopColor="#d7d9e6" stopOpacity=".75" />
-            <stop offset=".45" stopColor="#83838e" stopOpacity=".18" />
-            <stop offset="1" stopColor="#c4c5d4" stopOpacity=".6" />
+            <stop stopColor="#ecfbff" stopOpacity=".92" />
+            <stop offset=".45" stopColor="#c3dbe1" stopOpacity=".28" />
+            <stop offset="1" stopColor="#d4f0ee" stopOpacity=".8" />
           </linearGradient>
           <linearGradient id={id + 'rail'} x2="0" y2="1">
             <stop stopColor="#bfb8ce" stopOpacity="0" />
@@ -239,13 +362,25 @@ export function PrismBridge({
             <stop stopColor="#a9469c" stopOpacity=".1" />
             <stop offset="1" stopColor="#c65aa6" stopOpacity="0" />
           </radialGradient>
+          <linearGradient id={id + 'scan'} x2="0" y2="1">
+            <stop stopColor="#bafff0" stopOpacity="0" />
+            <stop offset=".55" stopColor="#73d8db" stopOpacity=".08" />
+            <stop offset=".86" stopColor="#a5fff2" stopOpacity=".36" />
+            <stop offset=".94" stopColor="#e2fff9" stopOpacity=".95" />
+            <stop offset="1" stopColor="#e2fff9" stopOpacity="0" />
+          </linearGradient>
+          <clipPath id={id + 'scan-row'}>
+            {(['left', 'right'] as const).map((side) => (
+              <polygon key={side} points={coordinates(bridgePane(0, side))} />
+            ))}
+          </clipPath>
         </defs>
         <ellipse cx="450" cy="580" rx="440" ry="200" fill={'url(#' + id + 'under)'} />
         {[-458, 458].map((x) => {
           const a = projectBridgePoint(x, 19),
             b = projectBridgePoint(x, -0.25);
           return (
-            <g key={x}>
+            <g key={x} className="cpi-structural-rail">
               <path d={`M${a.x} ${a.y} ${b.x} ${b.y}`} stroke="#0d0d11" strokeWidth="9" />
               <path
                 d={`M${a.x} ${a.y} ${b.x} ${b.y}`}
@@ -266,80 +401,143 @@ export function PrismBridge({
           const absolute = BigInt(currentIndex) + BigInt(distance);
           const tone = row?.tone ?? Number(((absolute % 3n) + 3n) % 3n);
           const color = COLORS[tone],
-            phase = row?.phase ?? 'future';
-          const key = preview ? 'preview-' + distance : absolute.toString();
+            rowPhase = row?.phase ?? 'future';
+          const key = absolute.toString();
           return (
             <g
               key={key}
-              className={'cpi-bridge-row-art is-' + phase}
+              className={'cpi-bridge-row-art is-' + rowPhase}
               data-visual-row={key}
-              style={{ '--pane-color': color } as CSSProperties}
+              style={
+                {
+                  '--pane-color': color,
+                  '--frame-delay': `${Math.max(0, distance) * 42}ms`,
+                } as CSSProperties
+              }
               opacity={
-                distance > 4 ? Math.max(0.12, 0.7 - distance * 0.035) : phase === 'past' ? 0.42 : 1
+                distance > 4
+                  ? Math.max(0.12, 0.7 - distance * 0.035)
+                  : rowPhase === 'past'
+                    ? 0.42
+                    : 1
               }
             >
               {(['left', 'right'] as const).map((side) => {
                 const pts = bridgePane(distance, side),
                   old = moving ? bridgePane(distance + 1, side) : undefined;
-                const status = paneState(row, side, feedback);
+                const status = paneState(row, side, phase === 'contact' ? null : feedback);
+                const broken = collapsed || status.includes('wrong') || status.includes('cracked');
                 return (
-                  <g key={side} className={'cpi-glass-pane' + status}>
+                  <g
+                    key={side}
+                    className={
+                      'cpi-glass-pane' +
+                      status +
+                      (broken ? ' is-shattered' : '') +
+                      (phase === 'contact' &&
+                      feedback?.row === row?.index &&
+                      feedback?.side === side
+                        ? ' is-contact'
+                        : '')
+                    }
+                  >
+                    <g className="cpi-pane-material">
+                      <MovingPolygon
+                        shape={front(pts, distance)}
+                        previous={old && front(old, distance + 1)}
+                        step={camera.row}
+                        fill="#1a191f"
+                        stroke="#8c8799"
+                        strokeOpacity=".35"
+                        strokeWidth=".7"
+                      />
+                      <MovingPolygon
+                        className="cpi-pane-underglow"
+                        shape={front(pts, distance)}
+                        previous={old && front(old, distance + 1)}
+                        step={camera.row}
+                        fill={color}
+                        opacity=".23"
+                      />
+                      <MovingPolygon
+                        className="cpi-pane-face"
+                        shape={pts}
+                        previous={old}
+                        step={camera.row}
+                        fill={'url(#' + id + 'glass)'}
+                        stroke={'url(#' + id + 'edge)'}
+                        strokeWidth={rowPhase === 'current' ? 1.5 : 0.8}
+                      />
+                      <MovingPolygon
+                        className="cpi-pane-tint"
+                        shape={pts}
+                        previous={old}
+                        step={camera.row}
+                        fill={color}
+                        opacity={rowPhase === 'current' ? 0.065 : 0.035}
+                      />
+                      <MovingPolygon
+                        shape={inset(pts)}
+                        previous={old && inset(old)}
+                        step={camera.row}
+                        fill="none"
+                        stroke={color}
+                        strokeWidth=".8"
+                        strokeOpacity={rowPhase === 'current' ? 0.43 : 0.25}
+                      />
+                      <MovingPolygon
+                        shape={shine(pts)}
+                        previous={old && shine(old)}
+                        step={camera.row}
+                        fill="#ececf5"
+                        opacity=".13"
+                      />
+                      {distance <= 6 && (
+                        <>
+                          <MovingPolygon
+                            className="cpi-glass-reflection"
+                            shape={reflectedLight(pts, 'rail')}
+                            previous={old && reflectedLight(old, 'rail')}
+                            step={camera.row}
+                            fill={color}
+                            opacity=".14"
+                          />
+                          <MovingPolygon
+                            className="cpi-glass-reflection"
+                            shape={reflectedLight(pts, 'strip')}
+                            previous={old && reflectedLight(old, 'strip')}
+                            step={camera.row}
+                            fill="#f1fcff"
+                            opacity=".16"
+                          />
+                        </>
+                      )}
+                    </g>
                     <MovingPolygon
-                      shape={front(pts, distance)}
-                      previous={old && front(old, distance + 1)}
-                      step={camera.row}
-                      fill="#1a191f"
-                      stroke="#8c8799"
-                      strokeOpacity=".35"
-                      strokeWidth=".7"
-                    />
-                    <MovingPolygon
-                      className="cpi-pane-underglow"
-                      shape={front(pts, distance)}
-                      previous={old && front(old, distance + 1)}
-                      step={camera.row}
-                      fill={color}
-                      opacity=".23"
-                    />
-                    <MovingPolygon
-                      className="cpi-pane-face"
+                      className="cpi-pane-frame"
                       shape={pts}
                       previous={old}
-                      step={camera.row}
-                      fill={'url(#' + id + 'glass)'}
-                      stroke={'url(#' + id + 'edge)'}
-                      strokeWidth={phase === 'current' ? 1.5 : 0.8}
-                    />
-                    <MovingPolygon
-                      className="cpi-pane-tint"
-                      shape={pts}
-                      previous={old}
-                      step={camera.row}
-                      fill={color}
-                      opacity={phase === 'current' ? 0.065 : 0.035}
-                    />
-                    <MovingPolygon
-                      shape={inset(pts)}
-                      previous={old && inset(old)}
                       step={camera.row}
                       fill="none"
-                      stroke={color}
-                      strokeWidth=".8"
-                      strokeOpacity={phase === 'current' ? 0.43 : 0.25}
+                      stroke="#a7a9ae"
+                      strokeOpacity={broken ? '.45' : '.22'}
+                      strokeWidth={broken ? '1.2' : '.6'}
                     />
-                    <MovingPolygon
-                      shape={shine(pts)}
-                      previous={old && shine(old)}
-                      step={camera.row}
-                      fill="#ececf5"
-                      opacity=".07"
-                    />
-                    {(status.includes('wrong') || status.includes('cracked')) && (
-                      <path
-                        className="cpi-pane-fracture"
-                        d={`M${(pts[0].x + pts[1].x) / 2} ${pts[0].y}l-12 30 29 16-20 38 16 40m-16-40-45-13m36-41 37-15`}
-                        stroke="#f6a8cb"
-                        strokeWidth="1.2"
+                    {broken && (
+                      <PaneFragments
+                        key={eventId}
+                        points={pts}
+                        previous={old}
+                        step={camera.row}
+                        collapsed={collapsed}
+                        falling={
+                          !reduced && (collapsed || phase === 'impact' || phase === 'travel')
+                        }
+                        detail={distance > 3 ? 1 : 3}
+                        seed={glassSeed(`${fractureSeed}:${absolute}:${side}`)}
+                        delay={
+                          collapsed ? Math.max(0, distance) * 42 + (side === 'right' ? 24 : 0) : 0
+                        }
                       />
                     )}
                   </g>
@@ -360,8 +558,81 @@ export function PrismBridge({
             </g>
           );
         })}
+        {hintScan && !reduced && (
+          <g key={hintScan.id} className="cpi-row-scan" data-hint-scan="row" aria-hidden="true">
+            <g clipPath={'url(#' + id + 'scan-row)'}>
+              {(['left', 'right'] as const).map((side) => {
+                const pane = bridgePane(0, side);
+                return (
+                  <g
+                    key={side}
+                    className="cpi-scan-matrix"
+                    stroke="#a7eee0"
+                    strokeWidth=".65"
+                    fill="none"
+                  >
+                    {Array.from({ length: 7 }, (_, i) => (
+                      <g key={i} style={{ '--matrix-delay': `${i * 12}ms` } as CSSProperties}>
+                        <path
+                          d={`M${onFace(pane, (i + 1) / 8, 0).x} ${onFace(pane, (i + 1) / 8, 0).y}L${onFace(pane, (i + 1) / 8, 1).x} ${onFace(pane, (i + 1) / 8, 1).y}`}
+                        />
+                        <path
+                          d={`M${onFace(pane, 0, (i + 1) / 8).x} ${onFace(pane, 0, (i + 1) / 8).y}L${onFace(pane, 1, (i + 1) / 8).x} ${onFace(pane, 1, (i + 1) / 8).y}`}
+                        />
+                      </g>
+                    ))}
+                  </g>
+                );
+              })}
+              <rect
+                className="cpi-scan-band"
+                x="0"
+                y="0"
+                width="900"
+                height="40"
+                fill={'url(#' + id + 'scan)'}
+                style={
+                  {
+                    '--scan-from': `${bridgePane(0, 'left')[0].y - 40}px`,
+                    '--scan-to': `${bridgePane(0, 'left')[3].y}px`,
+                  } as CSSProperties
+                }
+              />
+            </g>
+            <g className="cpi-scan-lock" fill="none" stroke="#d1ffeb" strokeWidth="1.6">
+              {[
+                [0, 0],
+                [1, 0],
+                [1, 1],
+                [0, 1],
+              ].map(([u, v], index) => {
+                const pane = bridgePane(0, hintScan.side);
+                const x = u ? 0.965 : 0.035,
+                  y = v ? 0.965 : 0.035;
+                return (
+                  <g key={index}>
+                    <polyline
+                      points={coordinates([
+                        onFace(pane, u ? 0.83 : 0.17, y),
+                        onFace(pane, x, y),
+                        onFace(pane, x, v ? 0.83 : 0.17),
+                      ])}
+                    />
+                    <circle
+                      cx={onFace(pane, x, y).x}
+                      cy={onFace(pane, x, y).y}
+                      r="1.9"
+                      fill="#d1ffeb"
+                      stroke="none"
+                    />
+                  </g>
+                );
+              })}
+            </g>
+          </g>
+        )}
       </svg>
-      {!preview && feedback && (
+      {feedback && phase !== 'contact' && feedback.kind === 'safe' && (
         <div
           key={feedback.row + feedback.kind}
           className={'cpi-bridge-impact is-' + feedback.kind}
@@ -381,24 +652,41 @@ export function PrismBridge({
           ))}
         </div>
       )}
-      {!preview &&
-        rows?.map((row) => (
-          <div key={row.index} className={'cpi-bridge-row is-' + row.phase} data-row={row.label}>
-            {(['left', 'right'] as const).map((side) => (
-              <button
-                key={side}
-                type="button"
-                className={'cpi-bridge-pane' + paneState(row, side, feedback)}
-                aria-label={t(side === 'left' ? 'game.leftTile' : 'game.rightTile', {
-                  row: number(row.label),
-                })}
-                style={hitRegion(bridgePane(row.distance, side))}
-                onClick={() => onChoose?.(side)}
-                disabled={!interactive || moving || row.phase !== 'current'}
-              >
-                {row.phase === 'current' && (
+      {rows?.map((row) => (
+        <div key={row.index} className={'cpi-bridge-row is-' + row.phase} data-row={row.label}>
+          {(['left', 'right'] as const).map((side) => (
+            <button
+              key={side}
+              type="button"
+              className={
+                'cpi-bridge-pane' +
+                (omen === side && row.phase === 'current' ? ' has-omen' : '') +
+                paneState(row, side, phase === 'contact' ? null : feedback)
+              }
+              aria-label={t(side === 'left' ? 'game.leftTile' : 'game.rightTile', {
+                row: number(row.label),
+              })}
+              aria-description={row.hint === side ? t('game.hintedTile') : undefined}
+              style={hitRegion(bridgePane(row.distance, side))}
+              onClick={() => onChoose?.(side)}
+              disabled={
+                !interactive ||
+                !allowChoices ||
+                (!!allowedSide && allowedSide !== side) ||
+                moving ||
+                (!!phase && phase !== 'reveal') ||
+                collapsed ||
+                row.phase !== 'current'
+              }
+            >
+              {row.phase === 'current' && omen === side && (
+                <span className="cpi-omen-hint">◈ 70%</span>
+              )}
+              {row.phase === 'current' &&
+                !phase &&
+                ((row.hint === side && showHintCaption) ||
+                  (row.hint !== side && row.index === '0' && showStepCaptions)) && (
                   <>
-                    {omen === side && <span className="cpi-omen-hint">◈ 70%</span>}
                     <span className="cpi-pane-direction" aria-hidden="true">
                       {side === 'left' ? '↖' : '↗'}
                     </span>
@@ -409,14 +697,11 @@ export function PrismBridge({
                     </span>
                   </>
                 )}
-                {row.phase === 'past' && row.chosen === side && (
-                  <span className="cpi-pane-caption">
-                    {t(row.wrong ? 'game.wrongTile' : 'game.safeTile')}
-                  </span>
-                )}
-              </button>
-            ))}
-            {row.hasMystery && (
+            </button>
+          ))}
+          {row.hasMystery &&
+            row.phase !== 'past' &&
+            (row.phase !== 'current' || row.mysteryAvailable) && (
               <button
                 type="button"
                 className={'cpi-bridge-mystery' + (row.mysteryTier ? ' is-tiered' : '')}
@@ -424,47 +709,30 @@ export function PrismBridge({
                 style={{
                   top: `${(projectBridgePoint(0, 0.8 + row.distance * 1.15).y / HEIGHT) * 100}%`,
                 }}
-                aria-label={
-                  t('game.mysteryTile', { row: number(row.label) }) +
-                  (row.mysteryTier
-                    ? ` · ${locale === 'bg' ? { standard: 'Искра', choice: 'Сделка', major: 'Голямо решение', anomaly: 'Разлом 50/50' }[row.mysteryTier] : { standard: 'Spark', choice: 'Trade', major: 'Major pact', anomaly: 'Rift 50/50' }[row.mysteryTier]}`
-                    : '')
-                }
+                aria-label={t('game.mysteryTile', { row: number(row.label) })}
                 onClick={onMystery}
-                disabled={!interactive || moving || !row.mysteryAvailable}
+                disabled={
+                  !interactive ||
+                  moving ||
+                  (!!phase && phase !== 'reveal') ||
+                  collapsed ||
+                  !row.mysteryAvailable
+                }
               >
-                {row.mysteryTier ? (
-                  <>
-                    <MysteryCube tier={row.mysteryTier} />
-                    <span className="cpi-box-tier-label">
-                      {locale === 'bg'
-                        ? {
-                            standard: 'ИСКРА',
-                            choice: 'СДЕЛКА',
-                            major: 'РИТУАЛ',
-                            anomaly: '50/50',
-                          }[row.mysteryTier]
-                        : { standard: 'SPARK', choice: 'TRADE', major: 'RITUAL', anomaly: '50/50' }[
-                            row.mysteryTier
-                          ]}
-                    </span>
-                  </>
-                ) : (
-                  <span>?</span>
-                )}
+                <MysteryCube tier={row.mysteryTier ?? 'standard'} />
+                <span className="cpi-box-tier-label">
+                  {locale === 'bg'
+                    ? { standard: 'ИСКРА', choice: 'СДЕЛКА', major: 'РИТУАЛ', anomaly: '50/50' }[
+                        row.mysteryTier ?? 'standard'
+                      ]
+                    : { standard: 'SPARK', choice: 'TRADE', major: 'RITUAL', anomaly: '50/50' }[
+                        row.mysteryTier ?? 'standard'
+                      ]}
+                </span>
               </button>
             )}
-            {row.phase === 'current' && (
-              <span
-                className="cpi-current-row-label"
-                style={{ top: `${(projectBridgePoint(0, 1.3).y / HEIGHT) * 100 - 5}%` }}
-                aria-hidden="true"
-              >
-                {number(row.label).padStart(2, '0')}
-              </span>
-            )}
-          </div>
-        ))}
+        </div>
+      ))}
     </div>
   );
 }

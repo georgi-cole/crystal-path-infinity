@@ -1,4 +1,5 @@
 import type { RunEvent, RunState } from '@crystal-path-infinity/game-core';
+import { presentRowPressure, getDeathClock } from '@crystal-path-infinity/game-core';
 import type { PracticeSettings } from './practice-save';
 
 export const CRYSTAL_AUDIO = Object.freeze({
@@ -8,6 +9,8 @@ export const CRYSTAL_AUDIO = Object.freeze({
   newTurn: import.meta.env.BASE_URL + 'assets/sounds/minigames/minigame_gb_new_turn.mp3',
   // Original offline interim music, NOT the Big Eye glass_bridge.mp3.
   music: import.meta.env.BASE_URL + 'assets/music/crystal-ambient-interim.wav',
+  glass: import.meta.env.BASE_URL + 'assets/sounds/crystal-glass-fall.wav',
+  alarm: import.meta.env.BASE_URL + 'assets/sounds/crystal-emergency.wav',
 });
 
 export type HapticKind = 'step' | 'damage' | 'end';
@@ -54,7 +57,12 @@ export function createStandaloneAudio(
     death: ports.createMedia(CRYSTAL_AUDIO.death),
     record: ports.createMedia(CRYSTAL_AUDIO.record),
     newTurn: ports.createMedia(CRYSTAL_AUDIO.newTurn),
+    glass: ports.createMedia(CRYSTAL_AUDIO.glass),
   };
+  const alarm = ports.createMedia(CRYSTAL_AUDIO.alarm);
+  alarm.loop = true;
+  alarm.volume = 0.24;
+  alarm.preload = 'auto';
   for (const media of Object.values(sfx)) {
     media.loop = false;
     media.volume = 0.68;
@@ -73,6 +81,49 @@ export function createStandaloneAudio(
   let lastStep = '';
   let lastDeath = '';
   let ended = false;
+  let emergency = false;
+  let alarmPlaying = false;
+  let alarmEpoch = 0;
+  let alarmStarting: Promise<void> | null = null;
+
+  function stopAlarm() {
+    alarmEpoch++;
+    alarmPlaying = false;
+    alarm.pause();
+    alarm.currentTime = 0;
+  }
+  function canPlayAlarm() {
+    return !disposed && active && foreground && unlocked && preferences.soundEffects && emergency;
+  }
+  function syncAlarm() {
+    if (!canPlayAlarm()) {
+      if (alarmPlaying || alarmStarting) stopAlarm();
+      return;
+    }
+    if (alarmPlaying && !alarm.paused) return;
+    if (alarmStarting) return;
+    const epoch = alarmEpoch;
+    try {
+      const pending = Promise.resolve(alarm.play())
+        .then(() => {
+          if (!canPlayAlarm() || alarmEpoch !== epoch) {
+            alarm.pause();
+            return;
+          }
+          alarmPlaying = true;
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (alarmStarting === pending) {
+            alarmStarting = null;
+            if (canPlayAlarm() && alarmEpoch !== epoch) syncAlarm();
+          }
+        });
+      alarmStarting = pending;
+    } catch {
+      alarmPlaying = false;
+    }
+  }
 
   function stopEffects(preserveTerminal = false) {
     for (const [name, media] of Object.entries(sfx)) {
@@ -163,6 +214,7 @@ export function createStandaloneAudio(
       if (disposed || active === next) return;
       active = next;
       if (!active) {
+        stopAlarm();
         stopMusic();
         // A fatal/result cue may finish while gameplay stops. OS background
         // and disposal still stop it immediately.
@@ -170,16 +222,19 @@ export function createStandaloneAudio(
       } else {
         terminalTail = null;
         void startMusic();
+        syncAlarm();
       }
     },
     setForeground(next) {
       if (disposed || foreground === next) return;
       foreground = next;
       if (!foreground) {
+        stopAlarm();
         stopMusic();
         stopEffects();
       } else {
         void startMusic();
+        syncAlarm();
       }
     },
     setSettings(next) {
@@ -189,15 +244,24 @@ export function createStandaloneAudio(
       if (!next.music) stopMusic();
       else if (!prior.music) void startMusic();
       if (!next.soundEffects) stopEffects();
+      if (!next.soundEffects) stopAlarm();
+      else syncAlarm();
     },
     async unlock() {
       if (disposed || !active || !foreground) return false;
       unlocked = true;
+      syncAlarm();
       if (!preferences.music) return true;
       return startMusic();
     },
     playEvents(events, state, options) {
       if (disposed || !foreground || !options.foreground) return;
+      emergency =
+        state.status === 'playing' &&
+        ((state.sp > 0 && state.sp < 15) ||
+          presentRowPressure(state)?.urgent === true ||
+          (getDeathClock(state) !== null && state.activeTimeMs >= getDeathClock(state)!.warningAt));
+      syncAlarm();
       const hasTerminal = events.some((event) => event.type === 'run-ended');
       if (!active && !hasTerminal) return;
       const death = events.find((event) => event.type === 'death');
@@ -216,7 +280,7 @@ export function createStandaloneAudio(
           if (lastStep === key) continue;
           lastStep = key;
           if (event.wrong) {
-            cue('safe', 0.72);
+            cue('glass');
             pulse('damage');
           } else {
             cue('safe');
@@ -245,6 +309,7 @@ export function createStandaloneAudio(
       disposed = true;
       active = false;
       stopMusic();
+      stopAlarm();
       stopEffects();
     },
   };
