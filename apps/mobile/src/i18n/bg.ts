@@ -5,6 +5,14 @@ import { crystalGuideBg } from './crystal-guide-messages';
 
 /** Bulgarian preview copy — reviewed by the product owner before public release. */
 export const bg = {
+  'account.signOut': 'Изход',
+  'account.adPrivacy': 'Реклами и поверителност',
+  'commerce.restore': 'Възстанови покупки',
+  'commerce.retry': 'Опитай пак',
+  'commerce.pending': 'Чакаме потвърждение на покупката. Предметите още не са добавени.',
+  'commerce.error': 'Покупката не е потвърдена. Опитай да възстановиш покупките.',
+  'commerce.busy': 'Свързване…',
+  'commerce.buy': 'Купи · {price}',
   ...storeBg,
   ...supportBg,
   ...crystalGuideBg,

@@ -2,6 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { assertBuiltEnvironment, getBuildInfo, requireEnvironment } from './config/environments';
+import { readNativeIntegrations } from './config/native-integrations';
 import {
   assertUnsignedPublicVariables,
   assertUnsignedRelease,
@@ -16,6 +17,9 @@ const mobilePackage = JSON.parse(readFileSync(join(__dirname, 'package.json'), '
   version: string;
 };
 const release = resolveUnsignedRelease(environment, mobilePackage.version, process.env);
+const integrations = readNativeIntegrations(process.env, environment);
+if (release && (integrations.ads || integrations.purchases))
+  throw new Error('The existing unsigned preparation profile does not activate native services.');
 const build = release?.app ?? getBuildInfo(environment, mobilePackage.version);
 const metadataPath = join(__dirname, 'dist', 'build-info.json');
 const copiesAssets = process.argv
@@ -55,6 +59,8 @@ const config: CapacitorConfig = {
   appName: build.appName,
   webDir: 'dist',
   backgroundColor: CPI_BRAND_BACKGROUND,
+  // Installed SDKs stay out of the native app until explicitly configured.
+  includePlugins: integrations.plugins,
   server: { cleartext: false },
   // SystemBars ships with Capacitor core. Keep light icons on this dark shell
   // and use native insets; the CSS already consumes env(safe-area-inset-*).
@@ -64,6 +70,7 @@ const config: CapacitorConfig = {
       insetsHandling: 'native',
       initialViewportFitValueHint: 'cover',
     },
+    ...(integrations.purchases ? { NativePurchases: { autoFinishTransactions: false } } : {}),
   },
   android: {
     backgroundColor: CPI_BRAND_BACKGROUND,

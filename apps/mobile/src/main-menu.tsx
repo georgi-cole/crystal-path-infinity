@@ -5,6 +5,7 @@ import { StageAtmosphere } from './stage-atmosphere';
 import { PrismBridge } from './prism-bridge';
 import { AudioSettingsControls } from './audio-settings-controls';
 import { AccountEntry } from './account/account-entry';
+import type { AccountEntryBinding } from './account/account-entry';
 import { ProfileEditor } from './account/profile-editor';
 import type { ProfileClient } from './account/profile-client';
 import { LeaderboardView } from './leaderboard/leaderboard-view';
@@ -204,6 +205,9 @@ function StatusPill({
 }
 
 export interface MainMenuProps {
+  accountEntry?: AccountEntryBinding;
+  onSignOut?: () => Promise<boolean>;
+  onAdPrivacyOptions?: () => Promise<void>;
   storeEntry?: 'worlds' | 'essentials';
   onTryTheme?: (theme: ThemeId) => void;
   view: MenuView;
@@ -437,6 +441,9 @@ export function ConfirmNewPractice({
 }
 
 export function MainMenu({
+  accountEntry,
+  onSignOut,
+  onAdPrivacyOptions,
   onTryTheme,
   storeEntry = 'worlds',
   view,
@@ -659,10 +666,15 @@ export function MainMenu({
                   <strong>{t('menu.asGuest')}</strong>
                   <span>{t('menu.noAccount')}</span>
                 </div>
-                <AccountEntry online={online} />
+                <AccountEntry online={online} binding={accountEntry} />
               </>
             )}
             <ProfileEditor client={profileClient} online={online} />
+            {accountConnected && onSignOut && (
+              <button type="button" className="cpi-menu-secondary" onClick={() => void onSignOut()}>
+                {t('account.signOut')}
+              </button>
+            )}
             <MenuAction
               label={t('menu.practiceUnsigned')}
               icon="practice"
@@ -679,6 +691,15 @@ export function MainMenu({
             </header>
             <AudioSettingsControls settings={settings} onChange={onSettingsChange} />
             <LanguageSettings />
+            {onAdPrivacyOptions && (
+              <button
+                type="button"
+                className="cpi-menu-secondary"
+                onClick={() => void onAdPrivacyOptions().catch(() => {})}
+              >
+                {t('account.adPrivacy')}
+              </button>
+            )}
             <button type="button" className="cpi-settings-link" onClick={() => onOpen('tutorial')}>
               <Glyph name="practice" />
               <span>

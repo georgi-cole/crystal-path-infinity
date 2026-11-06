@@ -24,6 +24,11 @@ import {
 import { patchAndroidLifecycle } from '../config/native-lifecycle-patch.ts';
 import { BRAND_BACKGROUND, syncNativeBrandAssets } from './brand-assets.mjs';
 import { assertUnsignedRelease, resolveUnsignedRelease } from '../config/release-build.ts';
+import {
+  LIVE_NATIVE_PACKAGES,
+  GOOGLE_ADS_SDK,
+  readNativeIntegrations,
+} from '../config/native-integrations.ts';
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repositoryRoot = resolve(appRoot, '../..');
@@ -31,6 +36,7 @@ const appRequire = createRequire(join(appRoot, 'package.json'));
 const capacitorVersion = '8.5.3';
 let buildNumber = 1;
 let release = null;
+let integrations;
 const background = BRAND_BACKGROUND;
 const nativePackages = [
   '@capacitor/cli',
@@ -108,13 +114,21 @@ function verifyPackages() {
     );
   }
   const appDependencies = Object.keys({ ...manifest.dependencies, ...manifest.devDependencies });
+  for (const [name, version] of Object.entries(LIVE_NATIVE_PACKAGES)) {
+    assert.equal(declarations[name], version, `${name} declared version`);
+    assert.equal(
+      JSON.parse(readFileSync(appRequire.resolve(`${name}/package.json`), 'utf8')).version,
+      version,
+      `${name} installed version`,
+    );
+  }
   assert.ok(
     !appDependencies.some(
       (name) =>
-        name.startsWith('@capacitor-community/') ||
+        (name.startsWith('@capacitor-community/') && !Object.hasOwn(LIVE_NATIVE_PACKAGES, name)) ||
         (name.startsWith('@capacitor/') && !nativePackages.includes(name)),
     ),
-    'No external native plugin packages are expected; native plugins are local source',
+    'Only explicitly pinned and reviewed native integrations are allowed',
   );
   return manifest;
 }
@@ -174,6 +188,26 @@ function configureAndroid(info) {
         .replaceAll('__DEVELOPMENT__', String(info.environment === 'development')),
     );
   }
+  if (integrations.ads) {
+    write(
+      `${javaPath}/CpiRewardedAds.java`,
+      read('native-templates/android/CpiRewardedAds.java').replaceAll('__PACKAGE__', info.appId),
+    );
+    write(
+      `${javaPath}/MainActivity.java`,
+      replaceOnce(
+        read(`${javaPath}/MainActivity.java`),
+        'registerPlugin(CpiSecureSession.class);',
+        'registerPlugin(CpiSecureSession.class);\n        registerPlugin(CpiRewardedAds.class);',
+        'Rewarded ad bridge registration',
+      ),
+    );
+    write(
+      'android/variables.gradle',
+      read('android/variables.gradle') +
+        `\next { playServicesAdsVersion = '${GOOGLE_ADS_SDK.android}' }\n`,
+    );
+  }
   write(
     'android/app/src/main/res/layout/capacitor_bridge_layout_main.xml',
     read(
@@ -184,6 +218,24 @@ function configureAndroid(info) {
   // Template permissions are deliberately limited to network access. Dependency
   // manifest permissions are checked again on the compiled artifact in CI.
   manifest = manifest.replace(/\s*<uses-permission\b[^>]*\/\s*>/g, '');
+  if (integrations.ads) {
+    manifest = manifest.replace(
+      '<manifest ',
+      '<manifest xmlns:tools="http://schemas.android.com/tools" ',
+    );
+    const removed = [
+      'com.google.android.gms.permission.AD_ID',
+      'android.permission.ACCESS_ADSERVICES_AD_ID',
+      'android.permission.ACCESS_ADSERVICES_ATTRIBUTION',
+      'android.permission.ACCESS_ADSERVICES_TOPICS',
+    ];
+    manifest = manifest.replace(
+      '</manifest>',
+      removed
+        .map((name) => `    <uses-permission android:name="${name}" tools:node="remove" />`)
+        .join('\n') + '\n</manifest>',
+    );
+  }
   manifest = replaceOnce(
     manifest,
     '</manifest>',
@@ -208,8 +260,24 @@ function configureAndroid(info) {
     '        <activity\n            android:screenOrientation="portrait"\n',
     'Android orientation',
   );
+  if (integrations.ads) {
+    manifest = replaceOnce(
+      manifest,
+      '</application>',
+      `    <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="${integrations.androidAdMobAppId}" />\n` +
+        '    <meta-data android:name="com.google.android.gms.ads.DELAY_APP_MEASUREMENT_INIT" android:value="true" />\n    </application>',
+      'AdMob application identity',
+    );
+  }
   write('android/app/src/main/AndroidManifest.xml', manifest);
   let gradle = read('android/app/build.gradle');
+  if (integrations.ads)
+    gradle = replaceOnce(
+      gradle,
+      'dependencies {',
+      `dependencies {\n    implementation 'com.google.android.gms:play-services-ads:${GOOGLE_ADS_SDK.android}'`,
+      'Pinned ads SDK',
+    );
   gradle = replaceOnce(
     gradle,
     'versionName "1.0"',
@@ -267,6 +335,25 @@ function configureAndroid(info) {
   syncNativeBrandAssets(appRoot, 'android');
 }
 function configureIOS(info) {
+  if (integrations.ads) {
+    let swift = read('ios/App/CapApp-SPM/Package.swift');
+    swift = replaceOnce(
+      swift,
+      '    dependencies: [\n        .package(',
+      `    dependencies: [
+        .package(url: "https://github.com/googleads/swift-package-manager-google-mobile-ads.git", exact: "${GOOGLE_ADS_SDK.ios}"),
+        .package(url: "https://github.com/googleads/swift-package-manager-google-user-messaging-platform.git", exact: "3.1.0"),
+        .package(`,
+      'Pinned Google iOS packages',
+    );
+    swift = replaceOnce(
+      swift,
+      '                .product(name: "Capacitor", package: "capacitor-swift-pm"),',
+      '                .product(name: "GoogleMobileAds", package: "swift-package-manager-google-mobile-ads"),\n                .product(name: "Capacitor", package: "capacitor-swift-pm"),',
+      'Direct rewarded bridge dependency',
+    );
+    write('ios/App/CapApp-SPM/Package.swift', swift);
+  }
   write(
     'ios/App/App/AppDelegate.swift',
     read('ios/App/App/AppDelegate.swift') +
@@ -301,6 +388,22 @@ function configureIOS(info) {
   config.UISupportedInterfaceOrientations = ['UIInterfaceOrientationPortrait'];
   delete config['UISupportedInterfaceOrientations~ipad'];
   config.UIUserInterfaceStyle = 'Dark';
+  if (integrations.ads) {
+    config.GADApplicationIdentifier = integrations.iosAdMobAppId;
+    config.GADDelayAppMeasurementInit = true;
+    const delegate = read('ios/App/App/AppDelegate.swift');
+    write(
+      'ios/App/App/AppDelegate.swift',
+      replaceOnce(
+        delegate,
+        'bridge?.registerPluginInstance(CpiSecureSession())',
+        'bridge?.registerPluginInstance(CpiSecureSession())\n        bridge?.registerPluginInstance(CpiRewardedAds())',
+        'iOS rewarded bridge',
+      ) +
+        '\n' +
+        read('native-templates/ios/CpiRewardedAds.swift'),
+    );
+  }
   delete config.NSAppTransportSecurity; // ATS defaults; no local/remote cleartext exception.
   assert.ok(
     !Object.keys(config).some((key) => key.endsWith('UsageDescription')),
@@ -370,7 +473,10 @@ function configureIOS(info) {
   );
   syncNativeBrandAssets(appRoot, 'ios');
 
-  const savedLock = join(appRoot, 'native-locks/Package.resolved');
+  const savedLock = join(
+    appRoot,
+    integrations.ads ? 'native-locks/Package.ads.resolved' : 'native-locks/Package.resolved',
+  );
   if (existsSync(savedLock)) {
     mkdirSync(dirname(join(appRoot, iosLockPath)), { recursive: true });
     copyFileSync(savedLock, join(appRoot, iosLockPath));
@@ -397,6 +503,7 @@ function verifyNative(platform, info) {
     config.plugins,
     {
       SystemBars: { style: 'DARK', insetsHandling: 'native', initialViewportFitValueHint: 'cover' },
+      ...(integrations.purchases ? { NativePurchases: { autoFinishTransactions: false } } : {}),
     },
     'Only the bundled SystemBars presentation settings need Capacitor configuration',
   );
@@ -420,10 +527,25 @@ function verifyNative(platform, info) {
     const permissions = [
       ...manifest.matchAll(/<uses-permission\b[^>]*android:name="([^"]+)"/g),
     ].map((match) => match[1]);
-    assert.deepEqual(permissions, ['android.permission.INTERNET']);
+    assert.deepEqual(
+      permissions,
+      integrations.ads
+        ? [
+            'com.google.android.gms.permission.AD_ID',
+            'android.permission.ACCESS_ADSERVICES_AD_ID',
+            'android.permission.ACCESS_ADSERVICES_ATTRIBUTION',
+            'android.permission.ACCESS_ADSERVICES_TOPICS',
+            'android.permission.INTERNET',
+          ]
+        : ['android.permission.INTERNET'],
+    );
     assert.ok(manifest.includes('android:usesCleartextTraffic="false"'));
     assert.ok(manifest.includes('android:screenOrientation="portrait"'));
-    assert.ok(!/com\.google|AD_ID|networkSecurityConfig/.test(manifest));
+    assert.ok(!/networkSecurityConfig/.test(manifest));
+    if (integrations.ads) assert.ok(manifest.includes('tools:node="remove"'));
+    else assert.ok(!/AD_ID/.test(manifest));
+    if (integrations.ads) assert.ok(manifest.includes(integrations.androidAdMobAppId));
+    else assert.ok(!/com\.google/.test(manifest));
     const gradle = read('android/app/build.gradle');
     assert.ok(gradle.includes(`applicationId "${info.appId}"`));
     assert.ok(gradle.includes(`versionName "${info.version}"`));
@@ -434,8 +556,14 @@ function verifyNative(platform, info) {
     );
     assert.deepEqual(
       json('android/app/src/main/assets/capacitor.plugins.json'),
-      [],
-      'No external native plugins; local native plugins are registered directly in source',
+      integrations.plugins.map((pkg) => ({
+        pkg,
+        classpath:
+          pkg === '@capacitor-community/admob'
+            ? 'com.getcapacitor.community.admob.AdMob'
+            : 'ee.forgr.nativepurchases.NativePurchasesPlugin',
+      })),
+      'Only configured native integrations are copied into this app',
     );
     assert.ok(read('android/app/src/main/res/values/cpi_colors.xml').includes(background));
     const launchStyle = read('android/app/src/main/res/values/styles.xml');
@@ -487,11 +615,17 @@ function verifyNative(platform, info) {
       'CpiSecureSession.java',
       'CpiWebView.java',
     ]) {
+      let expected = read(`native-templates/android/${name}`)
+        .replaceAll('__PACKAGE__', info.appId)
+        .replaceAll('__DEVELOPMENT__', String(info.environment === 'development'));
+      if (integrations.ads && name === 'MainActivity.java')
+        expected = expected.replace(
+          'registerPlugin(CpiSecureSession.class);',
+          'registerPlugin(CpiSecureSession.class);\n        registerPlugin(CpiRewardedAds.class);',
+        );
       assert.equal(
         read(`android/app/src/main/java/${info.appId.replaceAll('.', '/')}/${name}`),
-        read(`native-templates/android/${name}`)
-          .replaceAll('__PACKAGE__', info.appId)
-          .replaceAll('__DEVELOPMENT__', String(info.environment === 'development')),
+        expected,
       );
     }
   } else {
@@ -501,7 +635,9 @@ function verifyNative(platform, info) {
     assert.equal(plist.UIUserInterfaceStyle, 'Dark');
     assert.equal(plist.NSAppTransportSecurity, undefined);
     assert.ok(
-      !Object.keys(plist).some((key) => key.endsWith('UsageDescription') || key.startsWith('GAD')),
+      !Object.keys(plist).some(
+        (key) => key.endsWith('UsageDescription') || (!integrations.ads && key.startsWith('GAD')),
+      ),
     );
     const project = read('ios/App/App.xcodeproj/project.pbxproj');
     assert.equal(
@@ -519,10 +655,11 @@ function verifyNative(platform, info) {
     assert.ok(swift.includes(`capacitor-swift-pm.git", exact: "${capacitorVersion}"`));
     assert.equal(
       (swift.match(/\.package\(/g) ?? []).length,
-      1,
-      'Only Capacitor may be an app SPM dependency',
+      1 + integrations.plugins.length + (integrations.ads ? 2 : 0),
+      'Only Capacitor and configured integrations may be app SPM dependencies',
     );
-    assert.ok(!/AdMob|GoogleMobileAds|GoogleUserMessagingPlatform|CapacitorApp/.test(swift));
+    if (!integrations.ads)
+      assert.ok(!/Admob|AdMob|GoogleMobileAds|GoogleUserMessagingPlatform/.test(swift));
     assert.ok(
       read('ios/App/App/AppDelegate.swift').includes('registerPluginInstance(CpiLifecycle())'),
     );
@@ -530,16 +667,22 @@ function verifyNative(platform, info) {
       read('ios/App/App/AppDelegate.swift').includes('registerPluginInstance(CpiSecureSession())'),
     );
     assert.ok(read('ios/App/App/SceneDelegate.swift').includes('CpiBridgeViewController()'));
-    assert.ok(
-      read('ios/App/App/AppDelegate.swift').endsWith(
-        read('native-templates/ios/CpiLifecycle.swift').replaceAll(
-          '__DEVELOPMENT__',
-          String(info.environment === 'development'),
+    let expectedDelegate =
+      read('native-templates/ios/CpiLifecycle.swift').replaceAll(
+        '__DEVELOPMENT__',
+        String(info.environment === 'development'),
+      ) +
+      '\n' +
+      read('native-templates/ios/CpiSecureSession.swift');
+    if (integrations.ads)
+      expectedDelegate =
+        expectedDelegate.replace(
+          'bridge?.registerPluginInstance(CpiSecureSession())',
+          'bridge?.registerPluginInstance(CpiSecureSession())\n        bridge?.registerPluginInstance(CpiRewardedAds())',
         ) +
-          '\n' +
-          read('native-templates/ios/CpiSecureSession.swift'),
-      ),
-    );
+        '\n' +
+        read('native-templates/ios/CpiRewardedAds.swift');
+    assert.ok(read('ios/App/App/AppDelegate.swift').endsWith(expectedDelegate));
     assert.equal(
       read('ios/App/App/PrivacyInfo.xcprivacy'),
       read('native-templates/ios/PrivacyInfo.xcprivacy'),
@@ -570,6 +713,8 @@ function verifyNative(platform, info) {
     nativeFeaturePlugins: [
       'CpiLifecycle (local, no device permissions)',
       'CpiSecureSession (local, device-bound refresh credential only)',
+      ...integrations.plugins.map((pkg) => `${pkg}@${LIVE_NATIVE_PACKAGES[pkg]}`),
+      ...(integrations.ads ? ['CpiRewardedAds (local, server nonce before presentation)'] : []),
     ],
     bundledSystemBars: config.plugins.SystemBars,
     productionSigningConfigured: false,
@@ -583,6 +728,7 @@ function verifyNative(platform, info) {
 
 try {
   const { platform, environment, check } = options();
+  integrations = readNativeIntegrations(process.env, environment);
   const manifest = verifyPackages();
   release = resolveUnsignedRelease(environment, manifest.version, process.env);
   buildNumber = release?.buildNumber ?? 1;
@@ -600,6 +746,11 @@ try {
     'Build the matching web environment first',
   );
   const target = join(appRoot, platform);
+  assert.equal(
+    dirname(target),
+    appRoot,
+    'Native target must remain a direct app workspace directory',
+  );
   assert.ok(
     !existsSync(target) || !lstatSync(target).isSymbolicLink(),
     'Refusing a symlinked native directory',

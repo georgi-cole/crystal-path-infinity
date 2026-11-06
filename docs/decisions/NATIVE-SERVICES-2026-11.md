@@ -1,0 +1,86 @@
+# Native услуги · подготовка и активиране
+
+Актуално към **7 ноември 2026**. Бранч: `codex/mystery-pacts`. Този документ разграничава реализирания код от настройките, внедряването и приемането с истинските платформи. **Не е удостоверение за готов рилийз.**
+
+## Регистрирани публични идентификатори
+
+Собственикът потвърди следните записи на 7 ноември. Това са публични идентификатори, не тайни ключове. Единственият източник за приложението е `apps/mobile/config/publisher.ts`.
+
+| Услуга | Запис |
+| --- | --- |
+| Android package / Apple bundle | `com.georgicole.crystalpath.infinity` |
+| Google Play Console | `4972812942109567422` · чернова |
+| App Store Connect | `6831790531` · Prepare for Submission |
+| Apple Team | `C97T2A5255` |
+| AdMob Android app | `ca-app-pub-9243398419153145~7433632761` |
+| AdMob iOS app | `ca-app-pub-9243398419153145~7303584917` |
+| Rewarded Continue · Android | `ca-app-pub-9243398419153145/5387868010` |
+| Rewarded Continue · iOS | `ca-app-pub-9243398419153145/4563926844` |
+
+По данни на собственика остават статутът на търговец в Google Play и приемането на актуализирания Apple Developer Program License Agreement от Account Holder. AdMob показва Requires review / Limited ad serving. Създаването на запис не активира доставка на реклами, плащане или публикуване.
+
+## Реализирано в този бранч
+
+- Пиннати native пакети: `@capacitor-community/admob` **8.3.0**, `@capgo/native-purchases` **8.9.6**. Пряка връзка с Google Play Billing и Apple StoreKit, без RevenueCat.
+- Google SDK: Android **25.4.0**, iOS **13.11.0**, iOS UMP **3.1.0**. Отделен SPM lock за рекламния вариант. Native проектите се генерират възпроизводимо; инсталиран пакет сам по себе си не го включва в приложението.
+- Адаптерът за реклами изисква пресен сървърен permit и Google UMP, преди да инициализира SDK/зарежда реклама. Няма рекламен request при стартиране. Няма mediation adapters. Премахват се Android AD_ID и трите ACCESS_ADSERVICES разрешения; няма ATT prompt. Това не означава, че рекламният SDK не обработва данни: декларациите за данни и приемането на физически устройства остават задължителни.
+- Локалният `CpiRewardedAds` bridge зарежда веднъж, после поставя само непрозрачния сървърен nonce точно преди показване. Няма имейл/Auth UUID в Google custom data. Използва съществуващия CPI-029 поток и проверената SSV награда. SDK `earned` callback **не** дава SP.
+- При грешка в показването се освобождава екранът; стар callback не може да завърши чужда реклама. Прекъснатото зареждане изхвърля само собствената предварително заредена реклама.
+- Native checkout ползва локализираната цена от магазина. Няма превръщане на `test.*` в реален SKU. Сървърът задава разрешения каталог. Няма клиентски quantity/цена/баланс.
+- Автоматичното finish/consume/acknowledge е изключено **и в native конфигурацията при стартиране, и при checkout**. Едва след сървърна доставка iOS finish-ва, Android consume-ва консумативите или acknowledge-ва света. Изгубен отговор се възстановява със същата разписка. Logout сменя собствеността веднага и не допуска чужда покупка да се добави към новия акаунт.
+- Сървърни източници: Apple `SignedDataVerifier` **3.1.0** с верига, bundle, environment и online проверки; Google Play `purchases.productsv2` чрез ограничен server service account. Проверяват се продукт, количество 1, състояние, среда, транзакция и случаен billing account alias. Sandbox разписка не важи в production.
+- Нова **невнедрена** SQL миграция `20261107000100_native_commerce.sql`: частен портфейл и уникална доставка на покупка. Повторението връща вече записания баланс. След изтриване на Auth потребителя остава неприкачваем alias и replay tombstone, без Auth user ID. Няма raw purchase token/JWS в таблиците. Политиката за запазване, export/delete и възстановяванията на плащания трябва да се свържат преди активиране.
+- OTP клиентът предава проверения еднократен ticket на `AccountSessionOwner`, без да го показва в UI snapshot. Само refresh credential се пази в Keychain/Keystore; браузърът няма незащитен fallback. Входът/възстановяването са изрични, не блокират старта на безплатна локална игра.
+- Потребителският магазин има отделно свързване за жив каталог/портфейл, Restore purchases и Equip/Unequip. QA продължава да използва отделния симулатор. Реалните услуги са **изключени по подразбиране**.
+
+## Какво още не работи като реална услуга
+
+| Част | Оставаща работа преди активиране |
+| --- | --- |
+| Вход и създаване на акаунт | Внедрен собствен trusted eligibility/guardian + OTP/session issuer, реален изпращач на кодовете, надежден limiter и отмяна на сесии; export/delete с пресен вход. Клиентският ticket bridge не създава този сървър. |
+| Рекламна награда | Внедрени reward API/SSV host и privacy issuer, точните ad units/SDK inventory в сървърния allowlist, callback URL в двете AdMob units, приемане на устройство. Старият заключен `cpi-api` не е такъв host. |
+| Покупки | 18 продукта да бъдат създадени/одобрени в двата магазина, потвърдени SKU mappings, service-account права в Google, внедрен verifier/ledger, refunds/voided purchase обработка и lifecycle. Няма създадени продукти само от наличието на app record. |
+| Използване на ресурсите | Сървърно прилагане на v11 Assisted/reserves/15 продължавания и Marketing бюджет; не се свързва живо плащане към локален QA портфейл или стария official v1. `economyReady` остава false, докато това не е внедрено. |
+| Световно пускане | Действителни правила за регион/възраст/родителско разрешение, consent forms, store audience/data declarations и недопустими региони. Няма автоматично предположение „всеки е възрастен“ или измислен глобален минимум. |
+| Поддръжка | `support@kolequant.com` остава адресът по изрично решение на собственика. При DNS проверката на 7 ноември `.com` не се открива; собственикът ще го настрои. Това трябва да се тества с реално получено писмо. |
+
+В чата **Prepare Supabase backend and play-** и `bbmobilenew-source/docs/SUPABASE_BACKEND.md` е описано събиране на контакти и QA достъп; документът изрично не включва SMTP/OTP за играчи. `kolequant.xyz` има Cloudflare MX препращане. Това не е настроен изходящ SMTP за Crystal Path. Не сменяме глобални Auth настройки или чужди приложения като страничен ефект.
+
+## Контролирано включване
+
+`backend/commerce-products.proposed.json` съдържа 18 предложени съвпадащи Apple/Google SKU, количества, типове и одобрени ценови ориентири. **Нито един не е създаден в конзолите от този файл.** След действително създаване/проверка операторът попълва server catalog с потвърдените стойности за всяка платформа; UI не използва ценовите ориентири като платежна оферта.
+
+Default build не включва Google/платежни native plugins. За компилационна проверка с демонстрационни Google app IDs:
+
+```powershell
+$env:CPI_NATIVE_ADS='true'
+$env:CPI_NATIVE_PURCHASES='true'
+npm run build
+npm run native:generate -- --platform android --environment development
+npm run native:generate -- --platform ios --environment development
+```
+
+Това **не активира акаунти/приходи**. Development/staging не приемат живи Google app IDs. За production се вземат регистрираните IDs от `publisher.ts`. Старият unsigned beta профил остава с услугите изключени; той не е платежен или рекламен release candidate.
+
+Публичните `VITE_ACCOUNT_SERVICES_ENABLED`, `VITE_REWARDED_ADS_ENABLED`, `VITE_PURCHASES_ENABLED` са false по подразбиране. `VITE_ACCOUNT_API_BASE_URL` трябва да сочи собствен прегледан HTTPS host, не `/auth/v1` или `/rest/v1`. Реалните Android/iOS SDKs и server approval са допълнителни изисквания. Никакви service-role/Google/Apple/SMTP ключове във VITE променливи, Git или чат.
+
+`createLiveServices` свързва наличните account/profile/ranked/reward/commerce клиенти. Той не внедрява host и не заменя още липсващия account self-service issuer. `createCommerceService({ economyReady: false, ... })` държи каталога и портфейла затворени. Новите routes не са включени в заключения Supabase entry point; CPI-017 deployment workflow остава непроменен и не прилага новата миграция.
+
+## Приемане
+
+Unit/contract тестовете покриват разписка без добавени ресурси преди проверка, повторение след загубен отговор, чужд акаунт/среда/SKU, pending/cancel, UMP отказ, стара реклама и освобождаване след грешка. SQL тестовете изпълняват истинската миграция в embedded PostgreSQL (PGlite); единствената му връзка е сериализирана, което **не доказва** contention на production connection pool.
+
+В **Mobile app checks → Run workflow → native_services=true** се компилира и стартира SDK вариантът с демонстрационни Google IDs. `false` проверява обичайния вариант. Това е отделно от реални реклами, плащания и кодове на физически телефони.
+
+Локална проверка · 7 ноември: typecheck, lint, format, 676 mobile теста (673 в пълната suite и 3 допълнителни gateway теста), 310 core, 167 server, 6 balance; planning validator/13 теста и 15 CI-routing теста. Четирите web build-а development/staging/QA/production са проверени. Native проектите се генерират успешно и с изключени, и с включени SDKs за Android/iOS. Windows генерацията не е native компилация. CI допълнително изпълнява новия commerce тест с 16 конкурентни заявки върху PostgreSQL 17 и отделни service-role връзки; резултатът се отчита отделно след изпълнение.
+
+Преди рилийз трябва да се докажат: получен код, вход/restore/logout/отменена сесия, изтриване от приложението; доброволна реклама → подписан SSV → точно едно продължаване; отказ/no-fill/дублиран callback/прекъсване; sandbox покупка за всеки вид продукт → точно една доставка и consume/finish; restore след kill/reinstall; отказ/чакащо плащане/refund; ресурсите действително се използват по v11; отделни резултати Assisted; успешно получено support писмо. Записваме build, OS, среда и резултат. Simulator launch не замества тези доказателства.
+
+## Първични източници
+
+- [Google rewarded test inventory · Android](https://developers.google.com/admob/android/test-ads), [iOS](https://developers.google.com/admob/ios/test-ads). Демонстрационните units не са end-to-end SSV приемане за нашата unit: за него се използват нашите unit IDs с изрично регистрирани test devices в AdMob и съответстващ изолиран server allowlist.
+- [Google Play purchase lifecycle](https://developer.android.com/google/play/billing/lifecycle/one-time), [ProductPurchaseV2](https://developers.google.com/android-publisher/api-ref/rest/v3/purchases.productsv2).
+- [Apple SignedDataVerifier](https://apple.github.io/app-store-server-library-node/classes/SignedDataVerifier.html), [официален Apple Root CA G3](https://www.apple.com/certificateauthority/AppleRootCA-G3.cer). Публичният сертификат в `packages/server-core/certificates` има SHA-256 `63343abfb89a6a03ebb57e9b3f5fa7be7c4f5c756f3017b3a8c488c3653e9179`.
+- [AdMob SDK](https://github.com/capacitor-community/admob), [Native Purchases SDK](https://github.com/Cap-go/capacitor-native-purchases), [Supabase account settings](https://supabase.com/docs/guides/auth/general-configuration).
+
+Историческите симулации, ценови ориентири и бизнес цели не са променяни. Никакви симулирани рекламни или платежни събития не се отчитат като реални приходи.

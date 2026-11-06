@@ -8,7 +8,7 @@ export interface BuildInfo {
   version: string;
 }
 
-// Provisional application identities until the separate store-registration work.
+// Production identity registered in both stores; development identities stay separate.
 const identities: Record<AppEnvironment, { appId: string; appName: string }> = {
   development: {
     appId: 'com.georgicole.crystalpath.infinity.dev',

@@ -11,6 +11,7 @@ import { LanguageProvider } from './language-provider';
 import { startStartupDiagnostics } from './startup-diagnostics';
 import { getGameplayLifecycle } from './gameplay-lifecycle';
 import './global-accessibility.css';
+import { PlayerApp } from './player-app';
 
 if (__CPI_BUILD_INFO__.environment === 'development' && import.meta.env.MODE === 'development') {
   startStartupDiagnostics();
@@ -32,7 +33,7 @@ createRoot(root).render(
             <App />
           </TestStoreProvider>
         ) : (
-          <App />
+          <PlayerApp />
         )}
       </BrandLaunchGate>
     </LanguageProvider>

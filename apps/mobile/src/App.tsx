@@ -36,9 +36,13 @@ import type { RankedClient } from './ranked/ranked-client';
 import type { AccountControlsClient } from './account/account-controls-model';
 import type { RewardFlow } from './rewards/reward-flow';
 import type { SavedPendingClient } from './ranked/saved-pending-client';
+import type { AccountEntryBinding } from './account/account-entry';
 
 /** Supplied only by an approved account host; shipped builds inject nothing. */
 export interface ApprovedAccountServices {
+  accountEntry?: AccountEntryBinding;
+  signOut?: () => Promise<boolean>;
+  adPrivacyOptions?: () => Promise<void>;
   session?: Pick<AccountSessionOwner, 'accountScope' | 'subscribeAccountScope'>;
   profileClient?: ProfileClient | null;
   leaderboardClient?: LeaderboardClient | null;
@@ -504,6 +508,9 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
     <>
       <div inert={confirmNew}>
         <MainMenu
+          accountEntry={services?.accountEntry}
+          onSignOut={services?.signOut}
+          onAdPrivacyOptions={services?.adPrivacyOptions}
           onTryTheme={(theme) => {
             if (gameRef.current) return;
             const next: GameOwner = {

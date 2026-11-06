@@ -11,6 +11,7 @@ import { StorePackArt } from './store-pack-art';
 import { WorldShowcase } from './world-experience';
 import './store-vault.css';
 import { QA_TOOLS_ENABLED } from './app-profile';
+import { useCommerce } from './commerce/commerce-context';
 
 function StoreDialog({
   title,
@@ -97,7 +98,22 @@ export function StoreVault({
   onReturnToRun?: () => void;
 }) {
   const { t, number, locale } = useLanguage();
-  const { store, snapshot, error } = useTestStore();
+  const { store, snapshot: testSnapshot, error } = useTestStore();
+  const { flow: liveStore, snapshot: live } = useCommerce();
+  const snapshot = QA_TOOLS_ENABLED ? testSnapshot : { ...testSnapshot, ...live.wallet };
+  useEffect(() => {
+    if (!QA_TOOLS_ENABLED && live.phase === 'idle') void liveStore?.load();
+  }, [liveStore, live.phase]);
+  const liveBusy = ['loading', 'purchasing', 'recovering'].includes(live.phase);
+  const canEquip = QA_TOOLS_ENABLED
+    ? !!store && !error && !snapshot.pending
+    : !!live.wallet && !liveBusy;
+  const liveProduct = (product: StoreProduct) =>
+    live.products.find((item) => item.key === product.id.replace(/^test\./, ''));
+  const canBuy = (product: StoreProduct) =>
+    QA_TOOLS_ENABLED
+      ? !!store && !error && !snapshot.pending
+      : !!liveStore && !!live.wallet && !liveBusy && !!liveProduct(product);
   const assistedBest =
     store?.assistedBest(snapshot.checkpoint?.rulesetVersion ?? BUSINESS_STORE_RULESET_VERSION) ??
     null;
@@ -110,7 +126,17 @@ export function StoreVault({
   const [notice, setNotice] = useState('');
   const modal = dialog !== null;
   const price = (product: StoreProduct) =>
-    new Intl.NumberFormat(locale, { style: 'currency', currency: 'EUR' }).format(product.price);
+    QA_TOOLS_ENABLED
+      ? new Intl.NumberFormat(locale, { style: 'currency', currency: 'EUR' }).format(product.price)
+      : (liveProduct(product)?.displayPrice ?? '');
+  const buyLabel = (product: StoreProduct) =>
+    price(product)
+      ? t(QA_TOOLS_ENABLED ? 'vault.testBuyPrice' : 'commerce.buy', { price: price(product) })
+      : t('vault.unavailable');
+  function equip(theme: ThemeId) {
+    if (QA_TOOLS_ENABLED) act(() => store?.equip(theme));
+    else void liveStore?.equip(theme);
+  }
   const amount = (product: StoreProduct) =>
     t(
       product.kind === 'sp'
@@ -129,6 +155,10 @@ export function StoreVault({
     }
   }
   function buy(product: StoreProduct) {
+    if (!QA_TOOLS_ENABLED) {
+      if (canBuy(product)) void liveStore?.buy(product.id.replace(/^test\./, ''));
+      return;
+    }
     if (!QA_TOOLS_ENABLED || !store) return;
     act(() => {
       const id = createTestReceiptId();
@@ -177,7 +207,7 @@ export function StoreVault({
             </span>
           )}
         </header>
-        {QA_TOOLS_ENABLED ? (
+        {QA_TOOLS_ENABLED || live.wallet ? (
           filter !== 'worlds' && (
             <aside className="cpi-vault-wallet" aria-label={t('vault.manage')}>
               <div>
@@ -200,6 +230,20 @@ export function StoreVault({
           <p className="cpi-vault-notice" role="status">
             {t('vault.purchasesUnavailable')}
           </p>
+        )}
+        {!QA_TOOLS_ENABLED && liveStore && (
+          <div className="cpi-vault-notice" role="status">
+            {liveBusy && <p>{t('commerce.busy')}</p>}
+            {live.phase === 'pending' && <p>{t('commerce.pending')}</p>}
+            {live.phase === 'error' && <p>{t('commerce.error')}</p>}
+            <button
+              type="button"
+              disabled={liveBusy}
+              onClick={() => void (live.wallet ? liveStore.recover() : liveStore.load())}
+            >
+              {t(live.wallet ? 'commerce.restore' : 'commerce.retry')}
+            </button>
+          </div>
         )}
         {(error || notice) && (
           <p className="cpi-vault-notice" role={error ? 'alert' : 'status'}>
@@ -279,8 +323,8 @@ export function StoreVault({
                 </div>
                 <button
                   type="button"
-                  disabled={!store || snapshot.equipped === 'obsidian'}
-                  onClick={() => act(() => store?.equip('obsidian'))}
+                  disabled={!canEquip || snapshot.equipped === 'obsidian'}
+                  onClick={() => equip('obsidian')}
                 >
                   {t(snapshot.equipped === 'obsidian' ? 'vault.equipped' : 'vault.equip')}
                 </button>
@@ -306,9 +350,9 @@ export function StoreVault({
                       <button
                         type="button"
                         className="is-primary"
-                        disabled={!store || !!error || !!snapshot.pending}
+                        disabled={owned ? !canEquip : !canBuy(product)}
                         aria-label={
-                          !QA_TOOLS_ENABLED
+                          !QA_TOOLS_ENABLED && !canBuy(product) && !owned
                             ? t('vault.purchasesUnavailable')
                             : owned
                               ? undefined
@@ -316,17 +360,13 @@ export function StoreVault({
                         }
                         onClick={() =>
                           owned
-                            ? act(() =>
-                                store?.equip(snapshot.equipped === theme ? 'obsidian' : theme),
-                              )
+                            ? equip(snapshot.equipped === theme ? 'obsidian' : theme)
                             : buy(product)
                         }
                       >
                         {owned
                           ? t(snapshot.equipped === theme ? 'vault.unequip' : 'vault.equip')
-                          : QA_TOOLS_ENABLED
-                            ? t('vault.testBuyPrice', { price: price(product) })
-                            : t('vault.unavailable')}
+                          : buyLabel(product)}
                       </button>
                       <button type="button" onClick={() => setDialog({ kind: 'theme', theme })}>
                         {t('vault.explore')}
@@ -440,7 +480,7 @@ export function StoreVault({
                         <h3>{t(product.name)}</h3>
                         <button
                           type="button"
-                          disabled={!store || !!error || !!snapshot.pending}
+                          disabled={!canBuy(product)}
                           aria-label={
                             QA_TOOLS_ENABLED
                               ? t('vault.testBuyLabel', {
@@ -448,15 +488,11 @@ export function StoreVault({
                                   amount: amount(product),
                                   price: price(product),
                                 })
-                              : t('vault.purchasesUnavailable')
+                              : buyLabel(product)
                           }
                           onClick={() => buy(product)}
                         >
-                          <span>
-                            {QA_TOOLS_ENABLED
-                              ? t('vault.testBuyPrice', { price: price(product) })
-                              : t('vault.unavailable')}
-                          </span>
+                          <span>{buyLabel(product)}</span>
                           <span aria-hidden="true">+</span>
                         </button>
                       </article>
@@ -538,24 +574,22 @@ export function StoreVault({
           <button
             type="button"
             className="cpi-vault-primary cpi-vault-unlock"
-            disabled={!store || !!error || !!snapshot.pending}
+            disabled={
+              snapshot.owned.includes(dialog.theme)
+                ? !canEquip
+                : !canBuy(STORE_PRODUCTS.find((item) => item.theme === dialog.theme)!)
+            }
             onClick={() => {
               const product = STORE_PRODUCTS.find((item) => item.theme === dialog.theme)!;
               if (snapshot.owned.includes(dialog.theme)) {
-                act(() =>
-                  store?.equip(snapshot.equipped === dialog.theme ? 'obsidian' : dialog.theme),
-                );
+                equip(snapshot.equipped === dialog.theme ? 'obsidian' : dialog.theme);
                 setDialog(null);
               } else buy(product);
             }}
           >
             {snapshot.owned.includes(dialog.theme)
               ? t(snapshot.equipped === dialog.theme ? 'vault.unequip' : 'vault.equip')
-              : QA_TOOLS_ENABLED
-                ? t('vault.unlock') +
-                  ' · ' +
-                  price(STORE_PRODUCTS.find((item) => item.theme === dialog.theme)!)
-                : t('vault.unavailable')}
+              : buyLabel(STORE_PRODUCTS.find((item) => item.theme === dialog.theme)!)}
           </button>
         </StoreDialog>
       )}
