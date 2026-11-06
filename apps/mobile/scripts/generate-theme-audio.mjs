@@ -1,9 +1,13 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-// Original deterministic synth compositions; no sampled recordings or third-party music.
+// Unapproved synth music sketches are archived outside runtime assets. Short effect cues remain local.
 const root = fileURLToPath(new URL('../public/assets/themes/', import.meta.url));
 mkdirSync(root, { recursive: true });
+const prototypes = fileURLToPath(
+  new URL('../../../design/worlds/audio-prototypes/', import.meta.url),
+);
+mkdirSync(prototypes, { recursive: true });
 const rate = 22050;
 function wave(name, duration, notes) {
   const pcm = new Float32Array(Math.ceil(rate * duration));
@@ -52,7 +56,8 @@ function wave(name, duration, notes) {
     const edge = Math.min(1, i / (rate * 0.025), (pcm.length - 1 - i) / (rate * 0.04));
     output.writeInt16LE(Math.round(sample * gain * edge * 32767), 44 + i * 2);
   });
-  writeFileSync(root + name + '.wav', output);
+  const destination = name.endsWith('-loop') || name.endsWith('-ended') ? prototypes : root;
+  writeFileSync(destination + name + '.wav', output);
 }
 const compositions = {
   chaos: {

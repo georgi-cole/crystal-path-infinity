@@ -32,6 +32,8 @@ The generator regenerates these after Capacitor \`add/sync\`, validates their ex
 
 ## Runtime startup contract
 
+**6 November 2026 update:** Georgi explicitly requested a separate 3-second Kolequant signature: the actual DNA logo disperses into codons, then resolves into the metallic **INFINITY home heading** and moves to its menu position. [The player/QA decision](PLAYER-QA-RELEASE-PREVIEW.md) supersedes the earlier rejection of a brand overlay for this specific owner-approved animation. The native OS splash remains static, and local bootstrap still runs immediately with its independent 1.5-second failure bound. The intro is mounted once per cold page start, with no network dependency or replay on navigation/resume. Reduced motion, backgrounding, resize and cleanup have bounded safe exits. This browser change does not establish native launch acceptance.
+
 The native OS renders its own screen and returns to React when ready. React's first \`loading\` view is a separate lightweight in-app state, using the same logo and dark background. Local checkpoint/preferences are read immediately, **without minimum hold time** or network calls. A failed/hanging local bootstrap has a bounded 1.5-second deadline with accessible \`Retry startup\` and \`Play offline\` actions. Offline fallback keeps existing saved data untouched; running a new practice still displays normal explicit overwrite confirmation where applicable. No ad, analytics, profile, leaderboard or consent service can delay offline practice.
 
 Launch colors are set in native config, Android splash values, iOS storyboard, HTML initial background, React CSS and the brand tokens. Keyboard focus, native safe-area padding and reduced-motion CSS remain effective.

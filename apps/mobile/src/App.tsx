@@ -1,6 +1,7 @@
+import { practiceStorage, QA_TOOLS_ENABLED } from './app-profile';
 import { rememberMysteries } from './mystery-journal-model';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { usesStoreTestRules } from '@crystal-path-infinity/game-core';
+import { usesStoreTestRules, parseTileExperiment } from '@crystal-path-infinity/game-core';
 import { useTestStore } from './store-context';
 import { selectTestPractice } from './test-store';
 import type { ThemeId } from './store-catalog';
@@ -56,10 +57,16 @@ const showBuildDetails = build.environment !== 'production';
 function loadLocalPractice(): PracticeLoad {
   if (typeof window === 'undefined') return { status: 'empty' };
   try {
-    const loaded = readPracticeCheckpoint(window.localStorage);
+    const loaded = readPracticeCheckpoint(practiceStorage());
+    if (
+      !QA_TOOLS_ENABLED &&
+      loaded.status === 'ready' &&
+      (loaded.state.storeTest || parseTileExperiment(loaded.state.rulesetVersion))
+    )
+      return { status: 'empty' };
     if (loaded.status === 'ready') {
       try {
-        rememberMysteries(window.localStorage, loaded.state);
+        rememberMysteries(practiceStorage(), loaded.state);
       } catch {
         /* Journal writes never invalidate the saved run. */
       }
@@ -101,7 +108,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
   const [tutorialProgress, setTutorialProgress] = useState<TutorialProgress>(() => {
     if (typeof window === 'undefined') return 'unseen';
     try {
-      return readTutorialProgress(window.localStorage);
+      return readTutorialProgress(practiceStorage());
     } catch {
       return 'unseen';
     }
@@ -177,14 +184,14 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
         : loadLocalPractice();
       let preferences = DEFAULT_PRACTICE_SETTINGS;
       try {
-        preferences = readPracticeSettings(window.localStorage).settings;
+        preferences = readPracticeSettings(practiceStorage()).settings;
       } catch {
         // Offline play does not require a writable settings store.
       }
       let personalBest: string | null = null;
       try {
         personalBest = readPracticePersonalBest(
-          window.localStorage,
+          practiceStorage(),
           checkpoint.status === 'ready'
             ? checkpoint.state.rulesetVersion
             : PRACTICE_RULESET_VERSION,
@@ -309,7 +316,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
   const changeSettings = useCallback((next: PracticeSettings) => {
     setSettings(next);
     try {
-      writePracticeSettings(window.localStorage, next);
+      writePracticeSettings(practiceStorage(), next);
       setStorageWarning(null);
     } catch {
       setStorageWarning('Settings could not be saved on this device.');
@@ -320,7 +327,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
     const next = tutorialProgress === 'completed' ? 'completed' : progress;
     setTutorialProgress(next);
     try {
-      writeTutorialProgress(window.localStorage, next);
+      writeTutorialProgress(practiceStorage(), next);
     } catch {
       setStorageWarning('Tutorial progress could not be saved on this device.');
     }
@@ -329,8 +336,8 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
     (state: RunState) => {
       try {
         if (usesStoreTestRules(state.rulesetVersion) && store) store.saveRun(state);
-        else writePracticeCheckpoint(window.localStorage, state);
-        rememberMysteries(window.localStorage, state);
+        else writePracticeCheckpoint(practiceStorage(), state);
+        rememberMysteries(practiceStorage(), state);
         setStorageWarning(null);
       } catch {
         setStorageWarning(
@@ -364,7 +371,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
     }
     try {
       store?.clearRun();
-      clearPracticeCheckpoint(window.localStorage);
+      clearPracticeCheckpoint(practiceStorage());
       setSaved({ status: 'empty' });
       setStorageWarning(null);
     } catch {
@@ -399,7 +406,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
     try {
       setBest(
         readPracticePersonalBest(
-          window.localStorage,
+          practiceStorage(),
           checkpoint.status === 'ready'
             ? checkpoint.state.rulesetVersion
             : PRACTICE_RULESET_VERSION,

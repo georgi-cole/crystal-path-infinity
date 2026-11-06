@@ -1,5 +1,3 @@
-import { useThemeId } from './store-context';
-import { useThemeMusic } from './theme-music';
 import { useEffect, useRef } from 'react';
 import { getGameplayLifecycle } from './gameplay-lifecycle';
 
@@ -113,8 +111,6 @@ export function useSoundtrack(
   enabled: boolean,
   prepareEnding = false,
 ) {
-  const theme = useThemeId();
-  useThemeMusic(scene, enabled, theme);
   const update = useRef<
     ((scene: SoundtrackScene | null, enabled: boolean, prepareEnding: boolean) => void) | null
   >(null);
@@ -240,10 +236,6 @@ export function useSoundtrack(
     };
   }, []);
   useEffect(() => {
-    update.current?.(
-      theme === 'obsidian' ? scene : null,
-      enabled && theme === 'obsidian',
-      prepareEnding && theme === 'obsidian',
-    );
-  }, [scene, enabled, prepareEnding, theme]);
+    update.current?.(scene, enabled, prepareEnding);
+  }, [scene, enabled, prepareEnding]);
 }

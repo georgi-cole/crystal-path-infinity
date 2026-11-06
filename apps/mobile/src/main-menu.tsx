@@ -28,6 +28,7 @@ import type { TutorialProgress } from './tutorial-progress';
 import type { PracticeLoad, PracticeSettings } from './practice-save';
 import { canResumePractice, rankedServiceState } from './menu-navigation';
 import type { MenuView } from './menu-navigation';
+import { QA_TOOLS_ENABLED } from './app-profile';
 import './main-menu.css';
 import './intro-hub-premium.css';
 import './game-settings.css';
@@ -262,6 +263,7 @@ function MenuHeader({
         utilities
       )}
       <div className="cpi-menu-status" aria-label={t('menu.status')}>
+        {QA_TOOLS_ENABLED && <StatusPill>QA</StatusPill>}
         <StatusPill>
           {t(accountConnected ? 'general.accountConnected' : 'general.guest')}
         </StatusPill>
@@ -507,7 +509,15 @@ export function MainMenu({
           </>
         ) : view === 'practice' ? (
           <MenuPanel title={t('general.practice')} eyebrow={t('menu.practiceEyebrow')}>
-            <p>{t(isPetWorld(themeId) ? 'vault.petPractice' : 'menu.practiceIntro')}</p>
+            <p>
+              {t(
+                QA_TOOLS_ENABLED
+                  ? isPetWorld(themeId)
+                    ? 'vault.petPractice'
+                    : 'menu.practiceIntro'
+                  : 'vault.playerPracticeIntro',
+              )}
+            </p>
             <MenuAction
               label={tutorialProgress === 'completed' ? t('menu.replay') : t('menu.learn')}
               description={t('menu.tutorialExercise')}
@@ -538,7 +548,7 @@ export function MainMenu({
               icon="practice"
               onClick={() => onOpen('journal')}
             />
-            {import.meta.env.MODE !== 'production' && <BalanceTuner />}
+            {QA_TOOLS_ENABLED && import.meta.env.MODE !== 'production' && <BalanceTuner />}
             <p className="cpi-menu-fine-print">{t('menu.practiceLocal')}</p>
           </MenuPanel>
         ) : view === 'journal' ? (

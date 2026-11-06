@@ -1,4 +1,6 @@
 import { nextPracticeRuleset } from './balance-tuning';
+import { QA_TOOLS_ENABLED, practiceStorage } from './app-profile';
+import { shouldFinishPracticeOnExit } from './practice-exit';
 import { DiscoveryIntroduction } from './mystery-introduction';
 import { MysteryJournal } from './mystery-discovery';
 import { readMysteryJournal } from './mystery-journal-model';
@@ -716,7 +718,7 @@ export function InfinitySceneView({
                     row: fatalRow ?? t('general.none'),
                   })}
                 </p>
-                {outcome.offer ? (
+                {outcome.offer && (QA_TOOLS_ENABLED || resourcePanel) ? (
                   <div className="cpi-revive-offer">
                     <strong>
                       {t(petWorld ? 'vault.petContinueTitle' : 'game.bargainTitle', {
@@ -726,6 +728,8 @@ export function InfinitySceneView({
                     <span>{t(petWorld ? 'vault.petContinueBody' : 'game.bargainBody')}</span>
                     {!resourcePanel && <span>{t('game.bargainSleeping')}</span>}
                   </div>
+                ) : outcome.offer ? (
+                  <p>{t('vault.continuationUnavailable')}</p>
                 ) : outcome.phase === 'grant-ready' ? (
                   <p role="status">{t('game.grantReady')}</p>
                 ) : (
@@ -809,7 +813,7 @@ export function InfinitySceneView({
 function makeInitialRun(testEconomy = false): RunState {
   let discoveredMysteries: EffectKind[] = [];
   try {
-    discoveredMysteries = readMysteryJournal(window.localStorage);
+    discoveredMysteries = readMysteryJournal(practiceStorage());
   } catch {
     /* Optional discoveries. */
   }
@@ -879,7 +883,7 @@ function InfinityRun({
   const [cinematic, setCinematic] = useState<SceneCinematic | null>(null);
   const [signals, setSignals] = useState<RunSignals>(EMPTY_RUN_SIGNALS);
   const [hintCaptionRow, setHintCaptionRow] = useState<string | null>(null);
-  const [hintCaptionGate] = useState(() => createHintCaptionGate(() => window.localStorage));
+  const [hintCaptionGate] = useState(() => createHintCaptionGate(() => practiceStorage()));
   const [confirmEnd, setConfirmEnd] = useState(false);
   useSoundtrack(
     state.status === 'playing' ? 'run' : cinematic?.fatal ? null : 'ended',
@@ -945,14 +949,14 @@ function InfinityRun({
               result.state.storeTest?.assisted && store
                 ? store.recordAssistedBest(result.state.lastClearedRow, result.state.rulesetVersion)
                 : recordPracticePersonalBest(
-                    window.localStorage,
+                    practiceStorage(),
                     result.state.lastClearedRow,
                     result.state.rulesetVersion,
                   );
             setPersonalBest(
               result.state.storeTest?.assisted && store
                 ? store.assistedBest(result.state.rulesetVersion)
-                : readPracticePersonalBest(window.localStorage, result.state.rulesetVersion),
+                : readPracticePersonalBest(practiceStorage(), result.state.rulesetVersion),
             );
             setNewPersonalBest(earnedNewBest);
           } catch {
@@ -1169,12 +1173,7 @@ function InfinityRun({
         if (runtime) {
           try {
             const latest = runtime.getState();
-            if (
-              latest.status === 'dead' &&
-              !latest.storeTest &&
-              latest.pendingReward === null &&
-              !latest.reviveReceipts.some((receipt) => receipt.status === 'granted')
-            ) {
+            if (shouldFinishPracticeOnExit(latest, destination)) {
               // Leaving a declined death finalizes its result instead of advertising a dead Resume.
               await runtime.bind({ type: 'end', forfeitGrantedReward: false })();
             }
@@ -1248,7 +1247,7 @@ function InfinityRun({
         onClose={() => setJournalOpen(false)}
       />
     );
-  if (labOpen)
+  if (QA_TOOLS_ENABLED && labOpen)
     return <MysteryLab onClose={() => setLabOpen(false)} reducedMotion={settings.reducedMotion} />;
   return (
     <InfinitySceneView
@@ -1275,7 +1274,11 @@ function InfinityRun({
       cinematic={cinematic}
       mysteryFeedback={mysteryFeedback}
       resourceCues={resourceCues}
-      onMysteryLab={import.meta.env.MODE !== 'production' ? () => setLabOpen(true) : undefined}
+      onMysteryLab={
+        QA_TOOLS_ENABLED && import.meta.env.MODE !== 'production'
+          ? () => setLabOpen(true)
+          : undefined
+      }
       onMysteryJournal={() => setJournalOpen(true)}
       onPact={(option) => {
         unlockAudio();

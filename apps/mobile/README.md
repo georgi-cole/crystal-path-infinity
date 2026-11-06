@@ -52,6 +52,7 @@ The root npm workspace contains `apps/mobile`; its dependencies and lockfile liv
 | Root command | Purpose |
 | --- | --- |
 | `npm run dev` | Development browser server on port 5174 |
+| `npm run dev:qa` | Explicit QA browser server on port 5177 |
 | `npm run typecheck` | Check the app, configuration, and tests |
 | `npm run lint` | Type-aware application lint and native/CI script checks |
 | `npm run format:check` | Check the scoped app/config/script formatting |
@@ -60,9 +61,21 @@ The root npm workspace contains `apps/mobile`; its dependencies and lockfile liv
 | `npm run build` | Build development assets into `apps/mobile/dist` |
 | `npm run build:staging` | Build staging assets into the same directory |
 | `npm run build:production` | Build production assets into the same directory |
+| `npm run build:qa` | Build QA assets separately into `apps/mobile/dist-qa` |
 | `npm run preview` | Serve the latest built assets on port 4174 |
+| `npm run preview:qa` | Serve the separate QA bundle on port 4177 |
 
 The development and preview servers bind to `127.0.0.1` and fail if their port is occupied. Each build includes type checking and replaces the previous environment's web output.
+
+## Player and QA previews
+
+`build:production` and `build:staging` show the player interface. `development` and explicit Vite `qa` mode retain the local test store, simulated rewarded continuation, balance tuner and complete mystery demo room. This is one maintained codebase with build-time gates, not a permanently divergent QA branch. A URL or saved setting cannot enable QA in a player build. QA emits `dist-qa/qa-info.json`; its application identity uses staging, but its output directory remains separate. Capacitor rejects a QA marker copied into `dist`, and an unsigned release envelope cannot be combined with QA mode.
+
+Player checkpoints, bests, discoveries, tutorial and settings use the `cpi.player.v1:` storage namespace; QA keeps its historical keys. Player startup also rejects copied-in experiment/test-wallet checkpoints. Language is shared. Existing QA data is not cleared or migrated into the player profile. A completed death declined with Return to menu is finalized and no longer resumable. Shopping retains the current death/continuation offer; pending or earned unused rewards remain recoverable.
+
+The player preview has no mock checkout, wallet reset, simulated ad button or QA demo. The real billing/ad services are not connected: unavailable actions are explained, while free practice and new crossings remain available. This separation is not an App Store release or proof of physical-device integrations. For a player preview, build production **last** before `npm run preview`; a later development build replaces `dist` with development assets. QA builds do not replace it.
+
+Cold page starts show the owner-approved 3-second Kolequant DNA → codons → actual INFINITY home-title transition. Route changes and resume do not replay it; reduced motion uses a static signature. The original heading is restored on completion, resize, backgrounding or cleanup. See [the full decision and verification](../../docs/decisions/PLAYER-QA-RELEASE-PREVIEW.md).
 
 ## Build identities
 

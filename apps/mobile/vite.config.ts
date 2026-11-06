@@ -13,10 +13,14 @@ const manifest = JSON.parse(readFileSync(new URL('./package.json', import.meta.u
 
 export default defineConfig(({ mode }) => {
   // Vitest uses its own test mode; application builds accept only named environments.
-  const environment = requireEnvironment(mode === 'test' ? 'development' : mode);
+  const environment = requireEnvironment(
+    mode === 'test' ? 'development' : mode === 'qa' ? 'staging' : mode,
+  );
   const release =
     mode === 'test' ? null : resolveUnsignedRelease(environment, manifest.version, process.env);
   if (release) assertUnsignedPublicVariables(loadEnv(mode, appRoot, 'VITE_'));
+  if (mode === 'qa' && release)
+    throw new Error('QA tools cannot be included in an unsigned release candidate.');
   const buildInfo = release?.app ?? getBuildInfo(environment, manifest.version);
   return {
     root: appRoot,
@@ -25,6 +29,12 @@ export default defineConfig(({ mode }) => {
       {
         name: 'crystal-path-build-identity',
         generateBundle() {
+          if (mode === 'qa')
+            this.emitFile({
+              type: 'asset',
+              fileName: 'qa-info.json',
+              source: JSON.stringify({ schemaVersion: 1, audience: 'qa', tools: true }) + '\n',
+            });
           this.emitFile({
             type: 'asset',
             fileName: 'build-info.json',
@@ -43,6 +53,6 @@ export default defineConfig(({ mode }) => {
     server: { host: '127.0.0.1', port: 5174, strictPort: true },
     preview: { host: '127.0.0.1', port: 4174, strictPort: true },
     test: { environment: 'node', include: ['config/**/*.test.ts'] },
-    build: { target: 'es2022' },
+    build: { target: 'es2022', outDir: mode === 'qa' ? 'dist-qa' : 'dist' },
   };
 });

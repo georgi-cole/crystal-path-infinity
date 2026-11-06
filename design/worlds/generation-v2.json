@@ -61,12 +61,28 @@
   },
   "runtimeOnly": "PNG masters remain outside public/native assets. No franchise artwork or samples.",
   "displayNames": {
-    "chaos": "Pip",
-    "jelly": "Lumi",
-    "wilds": "Rocko",
-    "league": "Dash",
-    "puppy": "Ruff",
-    "kitten": "Mimi"
+    "chaos": "Boltmuffin",
+    "jelly": "Squishphony",
+    "wilds": "Rockmallow",
+    "league": "Flipzel",
+    "puppy": "Pawrachute",
+    "kitten": "Purralune"
   },
-  "namingNote": "Character and world share one short child-friendly display name. Exact historical prompts and reference identities are retained for reproduction; internal world IDs and asset paths remain stable."
+  "namingNote": "English canonical asset names and owner-selected Bulgarian display names are maintained separately. Locale messages supply all displayed names. Historical prompts, world IDs, receipts and asset paths remain unchanged.",
+  "nameOrigins": {
+    "chaos": ["bolt", "muffin"],
+    "jelly": ["squish", "symphony"],
+    "wilds": ["rock", "marshmallow"],
+    "league": ["flip", "pretzel"],
+    "puppy": ["paw", "parachute"],
+    "kitten": ["purr", "lune (moon)"]
+  },
+  "bulgarianDisplayNames": {
+    "jelly": "Жилибон",
+    "kitten": "Котерина",
+    "puppy": "Шарокоп",
+    "wilds": "Скалинко",
+    "league": "Баткото",
+    "chaos": "Меденко"
+  }
 }

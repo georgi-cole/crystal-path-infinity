@@ -1,3 +1,4 @@
+import { practiceStorage, QA_TOOLS_ENABLED } from './app-profile';
 import { useEffect, useRef, useState } from 'react';
 import { DISCOVERY_RULESET_VERSION, mysteryTier } from '@crystal-path-infinity/game-core';
 import type { EffectKind, RunState } from '@crystal-path-infinity/game-core';
@@ -25,7 +26,7 @@ export function MysteryJournal({
   const [known] = useState(() => {
     let stored: EffectKind[] = [];
     try {
-      if (typeof window !== 'undefined') stored = readMysteryJournal(window.localStorage);
+      if (typeof window !== 'undefined') stored = readMysteryJournal(practiceStorage());
     } catch {
       /* Saved run discoveries are still available. */
     }
@@ -39,7 +40,7 @@ export function MysteryJournal({
       window.scrollTo({ top: 0, behavior: 'instant' });
     }
   }, [demo]);
-  if (demo)
+  if (QA_TOOLS_ENABLED && demo)
     return (
       <MysteryLab
         initialKind={demo}
@@ -87,13 +88,15 @@ export function MysteryJournal({
                 <summary>{bg ? 'Подробности' : 'Details'}</summary>
                 <p>{copy.detail}</p>
               </details>
-              <button
-                type="button"
-                onClick={() => setDemo(kind)}
-                aria-label={`${bg ? 'Изпробвай' : 'Try'} ${copy.title}`}
-              >
-                {bg ? 'Изпробвай' : 'Try it'} ↗
-              </button>
+              {QA_TOOLS_ENABLED && (
+                <button
+                  type="button"
+                  onClick={() => setDemo(kind)}
+                  aria-label={`${bg ? 'Изпробвай' : 'Try'} ${copy.title}`}
+                >
+                  {bg ? 'Изпробвай' : 'Try it'} ↗
+                </button>
+              )}
             </article>
           );
         })}

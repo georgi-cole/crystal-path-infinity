@@ -4,6 +4,7 @@ import {
   tileExperimentVersion,
 } from '@crystal-path-infinity/game-core';
 import type { PracticeStorage } from './practice-save';
+import { QA_TOOLS_ENABLED } from './app-profile';
 
 export type BalanceTuning =
   | { readonly mode: 'classic' }
@@ -57,7 +58,7 @@ export function tuningRuleset(tuning: BalanceTuning, store: boolean): string {
     : tileExperimentVersion(tuning.high, tuning.low, store, true);
 }
 export function nextPracticeRuleset(store: boolean): string {
-  if (import.meta.env.MODE === 'production' || typeof window === 'undefined')
+  if (!QA_TOOLS_ENABLED || import.meta.env.MODE === 'production' || typeof window === 'undefined')
     return tuningRuleset(DEFAULT_BALANCE_TUNING, store);
   try {
     return tuningRuleset(readBalanceTuning(window.localStorage), store);

@@ -8,6 +8,7 @@ import {
 } from './balance-tuning';
 import type { BalanceTuning } from './balance-tuning';
 import './balance-tuner.css';
+import { QA_TOOLS_ENABLED } from './app-profile';
 
 export function BalanceTuner() {
   const { locale } = useLanguage(),
@@ -19,7 +20,7 @@ export function BalanceTuner() {
   const [high, setHigh] = useState(String(active.mode === 'independent' ? active.high : 60));
   const [low, setLow] = useState(String(active.mode === 'independent' ? active.low : 1));
   const [error, setError] = useState('');
-  if (import.meta.env.MODE === 'production') return null;
+  if (!QA_TOOLS_ENABLED || import.meta.env.MODE === 'production') return null;
   const preset = active.mode === 'classic' ? 'classic' : `${active.high}-${active.low}`;
   const known = BALANCE_PRESETS.some((p) => p.id === preset);
   const label =

@@ -131,8 +131,8 @@ describe('CPI-013 standalone menu and route model', () => {
     expect(html).toContain(en['vault.nextWorlds']);
     expect(html).toContain(en['vault.test']);
     expect(html).toContain(en['vault.testDetail']);
-    expect(html).toContain(en['vault.reserve']);
-    expect(html).toContain(en['vault.credits']);
+    expect(html).not.toContain('class="cpi-vault-wallet"');
+    expect(html).toContain(en['vault.essentials']);
     expect(html).not.toContain(en['store.noAds']);
     expect(html).toContain('aria-pressed="true"');
   });

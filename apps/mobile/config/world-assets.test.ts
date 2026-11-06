@@ -39,26 +39,6 @@ describe('portable world assets', () => {
     );
     expect(total).toBeLessThan(3_000_000);
   });
-  it.each(WORLD_ORDER)(
-    '%s music has a bounded duration, silent loop edges and headroom',
-    (theme) => {
-      const bytes = readFileSync(
-        new URL(`../public/assets/themes/${theme}-loop.wav`, import.meta.url),
-      );
-      expect(bytes.subarray(0, 4).toString()).toBe('RIFF');
-      const samples = (bytes.length - 44) / 2;
-      const duration = samples / bytes.readUInt32LE(24);
-      expect(duration).toBeGreaterThan(30);
-      expect(duration).toBeLessThan(45);
-      expect(bytes.readInt16LE(44)).toBe(0);
-      expect(bytes.readInt16LE(bytes.length - 2)).toBe(0);
-      let peak = 0;
-      for (let i = 44; i < bytes.length; i += 2)
-        peak = Math.max(peak, Math.abs(bytes.readInt16LE(i)));
-      expect(peak).toBeLessThan(32767 * 0.83);
-      expect(peak).toBeGreaterThan(1000);
-    },
-  );
 });
 
 describe('cosmetic feedback boundary', () => {

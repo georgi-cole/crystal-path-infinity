@@ -21,6 +21,10 @@ const metadataPath = join(__dirname, 'dist', 'build-info.json');
 const copiesAssets = process.argv
   .slice(2)
   .some((argument) => ['add', 'copy', 'sync', 'build', 'run'].includes(argument));
+if (copiesAssets && existsSync(join(__dirname, 'dist', 'qa-info.json')))
+  throw new Error(
+    'QA web assets cannot be copied into a player native build. Rebuild player assets first.',
+  );
 
 const releaseMetadataPath = join(__dirname, 'dist', 'release-info.json');
 if (release) {

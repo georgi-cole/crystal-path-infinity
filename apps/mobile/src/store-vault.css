@@ -191,6 +191,8 @@
   line-height: 1.6;
 }
 .cpi-vault-world {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   overflow: hidden;
   border: 1px solid #a797b140;
@@ -199,6 +201,7 @@
   box-shadow: 0 18px 45px #0004;
 }
 .cpi-vault-world-picture {
+  flex-shrink: 0;
   position: relative;
   aspect-ratio: 2.3;
   overflow: hidden;
@@ -216,7 +219,7 @@
   width: 65%;
   max-width: 11rem;
   bottom: 5%;
-  right: 8%;
+  left: 50%;
 }
 .cpi-vault-worlds.has-one-world .cpi-vault-world-copy {
   align-self: center;
@@ -234,6 +237,9 @@
   backdrop-filter: blur(10px);
 }
 .cpi-vault-world-copy {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
   padding: 1rem;
 }
 .cpi-vault-kicker {
@@ -404,6 +410,24 @@
   color: inherit;
   background: transparent;
   font: inherit;
+  cursor: pointer;
+}
+.cpi-vault-default-world {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0.75rem 0;
+  color: #aaa1b7;
+  font-size: 0.75rem;
+}
+.cpi-vault-default-world button {
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #b4e0d760;
+  border-radius: 0.5rem;
+  color: #d0eee5;
+  background: #18342a;
   cursor: pointer;
 }
 .cpi-vault-footer .cpi-vault-return {
@@ -702,7 +726,7 @@ button.cpi-vault-primary {
   }
   .cpi-vault-world-copy h2 {
     font-size: 1.2rem;
-    min-height: 2.25rem;
+    min-height: 1.4rem;
     line-height: 1.15;
   }
   .cpi-vault-world-copy p {
@@ -793,4 +817,48 @@ button.cpi-vault-primary {
   .cpi-vault-pack button {
     transition: none;
   }
+}
+
+.cpi-world-showcase {
+  position: relative;
+  isolation: isolate;
+  height: min(32dvh, 16rem);
+  min-height: 11rem;
+  overflow: hidden;
+  border-radius: 0.7rem;
+}
+.cpi-world-showcase > .cpi-world-art {
+  position: absolute;
+  inset: 0;
+}
+.cpi-showcase-companion {
+  position: absolute;
+  left: 50%;
+  bottom: 12%;
+  transform: translateX(-50%);
+  width: min(65%, 10rem);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  filter: drop-shadow(0 5px 8px #0008);
+}
+.cpi-showcase-companion:focus-visible {
+  outline: 2px solid var(--world-accent);
+  outline-offset: 3px;
+  border-radius: 50%;
+}
+.cpi-showcase-hint {
+  position: absolute;
+  bottom: 4%;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-size: 0.7rem;
+  color: #d6d0dc;
+  pointer-events: none;
+}
+.cpi-vault-unlock {
+  width: 100%;
+  min-height: 44px;
 }

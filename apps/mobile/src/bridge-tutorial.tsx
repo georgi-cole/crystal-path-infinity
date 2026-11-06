@@ -1,3 +1,4 @@
+import { practiceStorage } from './app-profile';
 import { useEffect, useRef, useState } from 'react';
 import { HINT_SCAN_MS } from '@crystal-path-infinity/game-core';
 import type { CSSProperties } from 'react';
@@ -62,7 +63,7 @@ export function BridgeTutorial({
   const current = useRef(session);
   const [cinematic, setCinematic] = useState<SceneCinematic | null>(null);
   const [signals, setSignals] = useState<RunSignals>(EMPTY_RUN_SIGNALS);
-  const [captionGate] = useState(() => createHintCaptionGate(() => window.localStorage));
+  const [captionGate] = useState(() => createHintCaptionGate(() => practiceStorage()));
   const [showHintCaption, setShowHintCaption] = useState(false);
   const director = useRef<ReturnType<typeof createSceneDirector> | null>(null);
   const reduced = useRef(reducedMotion);
