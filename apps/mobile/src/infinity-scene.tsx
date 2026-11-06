@@ -8,7 +8,7 @@ import {
   getRuleset,
   STARTING_SP,
   PRACTICE_RNG,
-  DIRECTOR_RULESET_VERSION,
+  RELIC_RULESET_VERSION,
   getDeathClock,
   isPactKind,
 } from '@crystal-path-infinity/game-core';
@@ -559,7 +559,7 @@ function makeInitialRun(): RunState {
       mysteryRng: createPracticeCursor(mystery),
       observedAt: Date.now(),
       buffer: { ahead: 8, history: 2 },
-      rulesetVersion: DIRECTOR_RULESET_VERSION,
+      rulesetVersion: RELIC_RULESET_VERSION,
     },
     PRACTICE_RNG,
   );

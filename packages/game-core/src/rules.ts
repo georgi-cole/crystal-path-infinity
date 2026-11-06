@@ -7,6 +7,7 @@ export const PACT_RULESET_VERSION = 'infinity-v2-pacts';
 export const BALANCE_RULESET_VERSION = 'infinity-v3-balance';
 export const RISK_RULESET_VERSION = 'infinity-v4-hidden-risk';
 export const DIRECTOR_RULESET_VERSION = 'infinity-v5-mystery';
+export const RELIC_RULESET_VERSION = 'infinity-v6-relics';
 export const CHOICE_GRACE_MS = 60_000;
 export const IDLE_WARNING_MS = 3_000;
 export const DEATH_COUNTDOWN_MS = 10_000;
@@ -121,8 +122,18 @@ export const DIRECTOR_RULESET = Object.freeze({
   mysteryMaxGap: 5,
 });
 
+export const RELIC_RULESET = Object.freeze({
+  ...DIRECTOR_RULESET,
+  version: RELIC_RULESET_VERSION,
+  mysteryMaxGap: 7,
+});
+
+export function usesMysteryDirectorRules(version: string): boolean {
+  return version === DIRECTOR_RULESET_VERSION || version === RELIC_RULESET_VERSION;
+}
+
 export function usesRiskRules(version: string): boolean {
-  return version === RISK_RULESET_VERSION || version === DIRECTOR_RULESET_VERSION;
+  return version === RISK_RULESET_VERSION || usesMysteryDirectorRules(version);
 }
 
 export function usesBalanceRules(version: string): boolean {
@@ -140,7 +151,9 @@ export function getRuleset(
   | typeof PACT_RULESET
   | typeof BALANCE_RULESET
   | typeof RISK_RULESET
-  | typeof DIRECTOR_RULESET {
+  | typeof DIRECTOR_RULESET
+  | typeof RELIC_RULESET {
+  if (version === RELIC_RULESET_VERSION) return RELIC_RULESET;
   if (version === DIRECTOR_RULESET_VERSION) return DIRECTOR_RULESET;
   if (version === RISK_RULESET_VERSION) return RISK_RULESET;
   if (version === BALANCE_RULESET_VERSION) return BALANCE_RULESET;

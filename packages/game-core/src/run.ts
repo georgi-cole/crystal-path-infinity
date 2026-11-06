@@ -20,6 +20,7 @@ import {
 import { assertRandomCursor, drawRandom } from './random.ts';
 import {
   prepareMysteryRow,
+  scheduleNextMystery,
   mysteryEligibleKinds,
   recordMysteryOpen,
   advanceMysteryRow,
@@ -57,7 +58,7 @@ import {
   supportsPacts,
   STARTING_HINTS,
   STARTING_SP,
-  DIRECTOR_RULESET_VERSION,
+  usesMysteryDirectorRules,
   CHOICE_GRACE_MS,
 } from './rules.ts';
 import type {
@@ -120,7 +121,7 @@ export function createRun(options: CreateRunOptions, rng: RandomSource): RunStat
     lastObservedAt: options.observedAt,
     effects: [],
     ...(supportsPacts(rulesetVersion) ? { pact: null } : {}),
-    ...(rulesetVersion === DIRECTOR_RULESET_VERSION
+    ...(usesMysteryDirectorRules(rulesetVersion)
       ? { mysteryDirector: { nextRow: '5', lastStepAt: activeTimeMs, history: [], rhythm: null } }
       : {}),
     buffer,
@@ -139,7 +140,10 @@ export function createRun(options: CreateRunOptions, rng: RandomSource): RunStat
     revivesToReachScore: 0,
     result: null,
   };
-  return prepareMysteryRow(state, rng);
+  return prepareMysteryRow(
+    state.mysteryDirector ? scheduleNextMystery(state, '0', rng) : state,
+    rng,
+  );
 }
 
 /** Validates trusted core checkpoints; network JSON validation/authentication belongs to the adapter. */
@@ -349,13 +353,12 @@ function settleTime(state: RunState, context: TransitionContext, events: RunEven
   // Reading a contract must not burn the five-second effects already owned.
   // This deterministic freeze also survives checkpoint/recovery, with no UI timer authority.
   if (state.pact?.phase === 'offered') {
-    const elapsed =
-      state.rulesetVersion === DIRECTOR_RULESET_VERSION
-        ? Math.min(
-            context.activeTimeMs - state.activeTimeMs,
-            Math.max(0, state.pact.offeredAt! + CHOICE_GRACE_MS - state.activeTimeMs),
-          )
-        : context.activeTimeMs - state.activeTimeMs;
+    const elapsed = usesMysteryDirectorRules(state.rulesetVersion)
+      ? Math.min(
+          context.activeTimeMs - state.activeTimeMs,
+          Math.max(0, state.pact.offeredAt! + CHOICE_GRACE_MS - state.activeTimeMs),
+        )
+      : context.activeTimeMs - state.activeTimeMs;
     state = {
       ...state,
       activeTimeMs: state.activeTimeMs + elapsed,
@@ -397,7 +400,7 @@ function settleTime(state: RunState, context: TransitionContext, events: RunEven
             },
       ),
     };
-    if (state.rulesetVersion !== DIRECTOR_RULESET_VERSION) return state;
+    if (!usesMysteryDirectorRules(state.rulesetVersion)) return state;
   }
   let next = { ...state, lastObservedAt: context.achievedAt };
   while (
@@ -713,7 +716,7 @@ export function transitionRun(
       if (!getCurrentRow(next).hasMystery) return result(next, events, 'no-mystery');
       if (next.current.mysteryOutcome !== null) return result(next, events, 'mystery-consumed');
       const draw = drawRandom(next.mysteryRng, context.rng);
-      const directed = next.rulesetVersion === DIRECTOR_RULESET_VERSION;
+      const directed = usesMysteryDirectorRules(next.rulesetVersion);
       const kind = rollMysteryEffect(
         draw.value,
         next.rulesetVersion,
@@ -751,7 +754,8 @@ export function transitionRun(
           : {}),
         current: { ...next.current, mysteryOutcome: kind },
       };
-      if (directed) next = rebaseDeathPressure(recordMysteryOpen(next, kind), beforeMysterySp);
+      if (directed)
+        next = rebaseDeathPressure(recordMysteryOpen(next, kind, context.rng), beforeMysterySp);
       return result(sp === 0 ? die(next, 'mystery', events) : next, events);
     }
     case 'pact': {
@@ -794,7 +798,7 @@ export function transitionRun(
         pact: change.pact
           ? {
               ...change.pact,
-              ...(next.rulesetVersion === DIRECTOR_RULESET_VERSION
+              ...(usesMysteryDirectorRules(next.rulesetVersion)
                 ? { offeredAt: next.pact!.offeredAt }
                 : {}),
             }
@@ -912,7 +916,7 @@ export function transitionRun(
         },
         context.rng,
       );
-      next = prepareMysteryRow(advanceMysteryRow(next, clearedRow), context.rng);
+      next = prepareMysteryRow(advanceMysteryRow(next, clearedRow, context.rng), context.rng);
       if (next.pact?.kind === 'false_oracle' && next.pact.phase === 'active') {
         const nextRow = getCurrentRow(next);
         const omen = drawOmen(

@@ -5,7 +5,7 @@ import {
   RULESET_VERSION,
   MARKET_SP_PER_HINT,
   HALF_LIFE_HINTS,
-  DIRECTOR_RULESET_VERSION,
+  usesMysteryDirectorRules,
 } from '@crystal-path-infinity/game-core';
 import type {
   ActiveEffect,
@@ -341,7 +341,7 @@ export function PactPanel({
 }) {
   const { locale } = useLanguage();
   if (!pact) return null;
-  if (pact.phase === 'offered' && rulesetVersion === DIRECTOR_RULESET_VERSION)
+  if (pact.phase === 'offered' && usesMysteryDirectorRules(rulesetVersion))
     return (
       <HolographicOffer
         pact={pact}

@@ -9,7 +9,7 @@ import {
   supportsPacts,
   isTimedEffect,
   PACT_OPTIONS,
-  DIRECTOR_RULESET_VERSION,
+  usesMysteryDirectorRules,
   getDeathClock,
   transitionRun,
 } from '@crystal-path-infinity/game-core';
@@ -323,7 +323,7 @@ export function rankedSnapshot(record: StoredRankedRun): RankedSnapshot {
             rowsLeft: effect.rowsLeft,
           },
     ),
-    ...(state.rulesetVersion === DIRECTOR_RULESET_VERSION
+    ...(usesMysteryDirectorRules(state.rulesetVersion)
       ? { mysteryRhythm: state.mysteryDirector!.rhythm, deathClock: getDeathClock(state) }
       : {}),
     ...(supportsPacts(state.rulesetVersion)
@@ -335,7 +335,7 @@ export function rankedSnapshot(record: StoredRankedRun): RankedSnapshot {
                 rowsLeft: state.pact.rowsLeft,
                 bank: state.pact.bank,
                 omen: state.pact.omen,
-                ...(state.rulesetVersion === DIRECTOR_RULESET_VERSION
+                ...(usesMysteryDirectorRules(state.rulesetVersion)
                   ? { offeredAt: state.pact.offeredAt }
                   : {}),
               }

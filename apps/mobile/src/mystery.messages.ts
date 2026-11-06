@@ -1,5 +1,10 @@
 import type { EffectKind } from '@crystal-path-infinity/game-core';
-import { usesBalanceRules, usesRiskRules, RULESET_VERSION } from '@crystal-path-infinity/game-core';
+import {
+  usesBalanceRules,
+  usesRiskRules,
+  RULESET_VERSION,
+  RELIC_RULESET_VERSION,
+} from '@crystal-path-infinity/game-core';
 import type { LocaleCode } from './i18n';
 
 interface EffectCopy {
@@ -471,7 +476,17 @@ export function effectCopy(
   kind: EffectKind,
   version = RULESET_VERSION,
 ): EffectCopy {
-  const copy = (locale === 'bg' ? bgEffects : enEffects)[kind];
+  const original = (locale === 'bg' ? bgEffects : enEffects)[kind];
+  const copy =
+    version === RELIC_RULESET_VERSION &&
+    (kind === 'mystery_silence_30s' || kind === 'mystery_surge_30s')
+      ? {
+          ...original,
+          detail: original.detail
+            .replace('5-row', '5–7-row')
+            .replace('през 5 реда', 'през 5–7 реда'),
+        }
+      : original;
   if (!usesBalanceRules(version)) return copy;
   if (usesRiskRules(version) && kind === 'false_oracle')
     return {

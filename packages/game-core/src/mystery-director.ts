@@ -1,7 +1,8 @@
 import { addDecimal, addSafeInteger, assertNonNegativeInteger, decimal } from './numbers.ts';
 import { drawRandom } from './random.ts';
 import {
-  DIRECTOR_RULESET_VERSION,
+  RELIC_RULESET_VERSION,
+  usesMysteryDirectorRules,
   getRuleset,
   CHOICE_GRACE_MS,
   IDLE_WARNING_MS,
@@ -17,6 +18,29 @@ export const MYSTERY_TIER_WEIGHTS = Object.freeze({
   anomaly: 4,
 });
 export const MYSTERY_TIERS = Object.freeze(['standard', 'choice', 'major', 'anomaly'] as const);
+
+/** Schedule once, on a game transition. Reading, saving and buffering never reroll the gap. */
+export function scheduleNextMystery(
+  state: RunState,
+  afterRow: string,
+  rng: RandomSource,
+): RunState {
+  const rules = getRuleset(state.rulesetVersion);
+  const surge = state.mysteryDirector!.rhythm?.kind === 'mystery_surge_30s';
+  const draw =
+    !surge && state.rulesetVersion === RELIC_RULESET_VERSION
+      ? drawRandom(state.mysteryRng, rng)
+      : null;
+  const gap = surge
+    ? 3
+    : rules.mysteryMinGap +
+      (draw ? Math.floor(draw.value * (rules.mysteryMaxGap - rules.mysteryMinGap + 1)) : 0);
+  return {
+    ...state,
+    mysteryRng: draw?.cursor ?? state.mysteryRng,
+    mysteryDirector: { ...state.mysteryDirector!, nextRow: addDecimal(afterRow, BigInt(gap)) },
+  };
+}
 const cooldowns: Partial<Record<EffectKind, readonly [number, number]>> = {
   marketing: [20, 30_000],
   hungry_vault: [20, 30_000],
@@ -65,16 +89,17 @@ export function mysteryEligibleKinds(state: RunState, tier: MysteryTier): Effect
 
 /** A box gets its public tier once on arrival, never from a render or a repeated click. */
 export function prepareMysteryRow(state: RunState, rng: RandomSource): RunState {
-  if (state.rulesetVersion !== DIRECTOR_RULESET_VERSION || state.status !== 'playing') return state;
+  if (!usesMysteryDirectorRules(state.rulesetVersion) || state.status !== 'playing') return state;
   let next = state;
   let director = next.mysteryDirector!;
   if (director.rhythm && director.rhythm.expiresAt <= next.activeTimeMs) {
     director = {
       ...director,
       rhythm: null,
-      nextRow: next.current.mysteryTier ? director.nextRow : addDecimal(next.currentRow, 5n),
     };
     next = { ...next, mysteryDirector: director };
+    if (!next.current.mysteryTier) next = scheduleNextMystery(next, next.currentRow, rng);
+    director = next.mysteryDirector!;
   }
   const available =
     BigInt(next.currentRow) >= BigInt(director.nextRow) &&
@@ -104,14 +129,14 @@ export function prepareMysteryRow(state: RunState, rng: RandomSource): RunState 
   };
 }
 
-export function recordMysteryOpen(state: RunState, kind: EffectKind): RunState {
+export function recordMysteryOpen(state: RunState, kind: EffectKind, rng: RandomSource): RunState {
   const director = state.mysteryDirector!;
   const history = [
     ...director.history.filter((old) => old.kind !== kind),
     { kind, row: state.currentRow, at: state.activeTimeMs },
   ];
   const special = mysteryTier(kind) === 'anomaly';
-  return {
+  const next: RunState = {
     ...state,
     mysteryDirector: {
       ...director,
@@ -119,7 +144,6 @@ export function recordMysteryOpen(state: RunState, kind: EffectKind): RunState {
       ...(isPactKind(kind) ? { pressure: undefined } : {}),
       ...(special
         ? {
-            nextRow: addDecimal(state.currentRow, kind === 'mystery_surge_30s' ? 3n : 5n),
             rhythm: {
               kind: kind as 'mystery_silence_30s' | 'mystery_surge_30s',
               startedAt: state.activeTimeMs,
@@ -129,26 +153,26 @@ export function recordMysteryOpen(state: RunState, kind: EffectKind): RunState {
         : {}),
     },
   };
+  return special ? scheduleNextMystery(next, state.currentRow, rng) : next;
 }
 
-export function advanceMysteryRow(state: RunState, clearedRow: string): RunState {
+export function advanceMysteryRow(
+  state: RunState,
+  clearedRow: string,
+  rng: RandomSource,
+): RunState {
   if (!state.mysteryDirector) return state;
-  return {
+  const next: RunState = {
     ...state,
     mysteryDirector: {
       ...state.mysteryDirector,
       lastStepAt: state.activeTimeMs,
       pressure: undefined,
-      ...(BigInt(clearedRow) >= BigInt(state.mysteryDirector.nextRow)
-        ? {
-            nextRow: addDecimal(
-              clearedRow,
-              state.mysteryDirector.rhythm?.kind === 'mystery_surge_30s' ? 3n : 5n,
-            ),
-          }
-        : {}),
     },
   };
+  return BigInt(clearedRow) >= BigInt(state.mysteryDirector.nextRow)
+    ? scheduleNextMystery(next, clearedRow, rng)
+    : next;
 }
 
 /** Redistribute healing/damage over the time still left; resource changes never extend the clock. */
@@ -164,7 +188,7 @@ export function rebaseDeathPressure(state: RunState, previousSp: number): RunSta
 }
 
 export function getDeathClock(state: RunState): { warningAt: number; expiresAt: number } | null {
-  if (state.rulesetVersion !== DIRECTOR_RULESET_VERSION || state.status !== 'playing') return null;
+  if (!usesMysteryDirectorRules(state.rulesetVersion) || state.status !== 'playing') return null;
   const warningAt =
     state.pact?.phase === 'offered'
       ? addSafeInteger(state.pact.offeredAt!, CHOICE_GRACE_MS, 'Decision grace')
@@ -197,13 +221,13 @@ export function deathClockPaid(
 
 export function assertMysteryDirector(state: RunState): void {
   const d = state.mysteryDirector;
-  if (state.rulesetVersion !== DIRECTOR_RULESET_VERSION) {
+  if (!usesMysteryDirectorRules(state.rulesetVersion)) {
     if (
       d !== undefined ||
       state.current.mysteryTier !== undefined ||
       state.pact?.offeredAt !== undefined
     )
-      throw new RangeError('Director outside v5.');
+      throw new RangeError('Director outside a supported ruleset.');
     return;
   }
   if (!d || !Array.isArray(d.history) || d.history.length > 24)

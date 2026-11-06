@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { CHOICE_GRACE_MS, DEATH_COUNTDOWN_MS, mysteryTier } from '@crystal-path-infinity/game-core';
 import type {
   MysteryPact,
@@ -25,34 +25,28 @@ export function MysteryCube({
   opened?: boolean;
 }) {
   return (
-    <svg
+    <span
       className={'cpi-mystery-cube' + (opened ? ' is-open' : '')}
       data-tier={tier}
-      viewBox="0 0 100 100"
-      fill="none"
       aria-hidden="true"
     >
-      <ellipse className="cpi-cube-orbit" cx="50" cy="78" rx="37" ry="10" />
-      <path className="cpi-cube-left" d="m20 43 30 17v31L20 74Z" />
-      <path className="cpi-cube-right" d="m50 60 30-17v31L50 91Z" />
-      <g className="cpi-cube-lid">
-        <path d="m20 39 30-17 30 17-30 17Z" />
-        <path d="m20 39 30 17 30-17m-30 17v7" />
-      </g>
-      <path
-        className="cpi-cube-runes"
-        d={
-          tier === 'major'
-            ? 'm57 67 5 2 6-9 4 3-3 12-12 7Z'
-            : tier === 'choice'
-              ? 'm62 63 8 3-8 13-7-3Z'
-              : tier === 'anomaly'
-                ? 'm56 73c0-10 9-4 9-9s-9 2-9 9c0 7 17-11 17-5s-8 8-8 2'
-                : 'm63 62 2 5 6-1-6 6-2 6-2-4-6 1 6-6Z'
-        }
+      <img
+        className="cpi-relic-closed"
+        src={`${import.meta.env.BASE_URL}mystery/relic-closed-v6.webp`}
+        alt=""
+        width="512"
+        height="512"
+        draggable={false}
       />
-      <path className="cpi-cube-signal" d="M50 16V5m-13 9-4-7m30 7 4-7" />
-    </svg>
+      <img
+        className="cpi-relic-open"
+        src={`${import.meta.env.BASE_URL}mystery/relic-open-v6.webp`}
+        alt=""
+        width="512"
+        height="512"
+        draggable={false}
+      />
+    </span>
   );
 }
 
@@ -69,6 +63,16 @@ export function MysteryTierLegend() {
     </div>
   );
 }
+
+const glyphPaths = {
+  life: 'M12 21 3.7 12.7a5.3 5.3 0 0 1 7.5-7.5l.8.8.8-.8a5.3 5.3 0 0 1 7.5 7.5Z',
+  hint: 'm12 2 8 10-8 10-8-10Zm0 0v20M4 12h16',
+  keep: 'M4 12h15m-6-6 6 6-6 6',
+  oath: 'm12 2 8 4v6c0 5-8 10-8 10S4 17 4 12V6Zm-3 10 2 2 5-5',
+  omen: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Zm10-3a3 3 0 1 0 0 6 3 3 0 0 0 0-6',
+  vault: 'M4 5h16v15H4Zm0 4h16m-11 6h6m-3-3v6M7 5V2h10v3',
+  loan: 'M12 3a9 9 0 1 1-8 5M3 3v6h6m3-2v5l3 2',
+};
 
 export function HolographicOffer({
   pact,
@@ -94,8 +98,12 @@ export function HolographicOffer({
     tier = mysteryTier(pact.kind),
     copy = effectCopy(locale, pact.kind, rulesetVersion);
   const cards = mysteryChoiceCards(pact, sp, hints, revealed, bg);
+  const primary = cards.slice(0, 2),
+    extra = cards.slice(2);
+  const [showDetails, setShowDetails] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null),
-    id = useId();
+    id = useId(),
+    detailsId = useId();
   useEffect(() => {
     heading.current?.focus({ preventScroll: true });
     return () => {
@@ -118,94 +126,135 @@ export function HolographicOffer({
   );
   return (
     <section
-      className="cpi-hologram"
+      className="cpi-relic-choice"
       data-tier={tier}
       data-pact={pact.kind}
       role="dialog"
       aria-labelledby={id}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape' && showDetails) {
+          setShowDetails(false);
+          event.currentTarget.querySelector<HTMLButtonElement>('.cpi-relic-info')?.focus();
+        }
+      }}
     >
-      <div className="cpi-holo-beam" aria-hidden="true" />
-      <div className="cpi-holo-projection">
-        <header>
-          <span className="cpi-holo-tier">{names[tier][bg ? 0 : 1]}</span>
-          <span className={'cpi-choice-clock' + (remaining === 0 ? ' is-active' : '')} role="timer">
-            {remaining > 0
-              ? `${bg ? 'Време за избор' : 'Decision time'} · ${Math.ceil(remaining / 1000)}s`
-              : `Death clock · ${countdown}s`}
-          </span>
-        </header>
+      <header className="cpi-relic-heading">
+        <span className="cpi-relic-tier">{names[tier][bg ? 0 : 1]}</span>
         <h2 ref={heading} tabIndex={-1} id={id}>
           {copy.title}
         </h2>
-        <p className="cpi-holo-intro">
-          {bg ? 'Избери какво ще вземеш със себе си.' : 'Choose what you carry forward.'}
-        </p>
-        <div className="cpi-holo-resources">
-          <span>
-            {sp} <small>SP</small>
-          </span>
-          <span>
-            {hints} <small>{bg ? 'подсказки' : 'hints'}</small>
-          </span>
-        </div>
-        <div className="cpi-holo-options">
-          {cards.map((card, index) => (
-            <button
-              type="button"
-              key={card.option}
-              data-pact-option={card.option}
-              className={'cpi-holo-option' + (card.quiet ? ' is-quiet' : '')}
-              disabled={disabled || card.disabled}
-              onClick={() => onChoose(card.option)}
-            >
-              <span className="cpi-holo-option-number" aria-hidden="true">
-                0{index + 1}
-              </span>
-              <strong>{card.title}</strong>
-              <b>{card.price}</b>
-              {card.lines.map((line) => (
-                <span className="cpi-holo-result" key={line}>
-                  {line}
-                </span>
-              ))}
-              <span className="cpi-holo-select" aria-hidden="true">
-                {bg ? 'ИЗБЕРИ' : 'CHOOSE'} ↗
-              </span>
-            </button>
-          ))}
-        </div>
-        <details className="cpi-holo-terms">
-          <summary>{bg ? 'Точните условия' : 'Read the terms'}</summary>
+      </header>
+      <div className="cpi-relic-options">
+        {primary.map((card, index) => (
+          <button
+            type="button"
+            key={card.option}
+            data-pact-option={card.option}
+            className={'cpi-relic-option' + (card.quiet ? ' is-quiet' : '')}
+            disabled={disabled || card.disabled}
+            onClick={() => onChoose(card.option)}
+          >
+            <span className="cpi-relic-symbol" aria-hidden="true">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.25"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              >
+                <path d={glyphPaths[card.glyph]} />
+              </svg>
+            </span>
+            <span className="cpi-relic-option-title">{card.title}</span>
+            <strong>{card.reward}</strong>
+            <span className="cpi-relic-price">{card.price}</span>
+            {card.risk && <span className="cpi-relic-risk">{card.risk}</span>}
+            <span className="cpi-relic-key" aria-hidden="true">
+              0{index + 1}
+            </span>
+          </button>
+        ))}
+      </div>
+      <div className="cpi-relic-tools">
+        {extra.map((card) => (
+          <button
+            type="button"
+            key={card.option}
+            data-pact-option={card.option}
+            className="cpi-relic-leave"
+            disabled={disabled || card.disabled}
+            onClick={() => onChoose(card.option)}
+          >
+            {card.title} · {card.price}
+          </button>
+        ))}
+        <button
+          type="button"
+          className="cpi-relic-info"
+          aria-expanded={showDetails}
+          aria-controls={detailsId}
+          onClick={() => setShowDetails(!showDetails)}
+        >
+          {showDetails ? (bg ? 'Затвори' : 'Close') : bg ? 'Условия' : 'Details'}{' '}
+          <span aria-hidden="true">{showDetails ? '−' : '+'}</span>
+        </button>
+      </div>
+      {showDetails && (
+        <div className="cpi-relic-details" id={detailsId}>
           <p>{copy.detail}</p>
-        </details>
-        {pact.kind === 'soul_exchange' && (
-          <p className="cpi-holo-caution">
+          {cards
+            .filter((card) => !card.quiet)
+            .map((card) => (
+              <div key={card.option}>
+                <b>{card.title}</b>
+                {card.lines.map((line) => (
+                  <span key={line}>{line}</span>
+                ))}
+              </div>
+            ))}
+          <p>
             {bg
-              ? 'След отваряне няма безплатен отказ. Жертвата може да е фатална.'
-              : 'Once opened, there is no free refusal. A sacrifice can be fatal.'}
+              ? 'Ефектите са спрени за първата минута. След нея започва death clock.'
+              : 'Effects pause for the first minute. The death clock starts after that.'}
           </p>
-        )}
-        {pact.kind === 'false_oracle' && revealed && (
-          <p className="cpi-holo-caution">
-            {bg
-              ? 'Този ред вече е разкрит. Приемането е недостъпно.'
-              : 'This row is already revealed. Acceptance is unavailable.'}
-          </p>
-        )}
-        <p className={'cpi-holo-clock-note' + (!remaining ? ' is-active' : '')} role="status">
-          {remaining > 0
-            ? bg
-              ? 'Ефектите и death clock са спрени за първата минута.'
-              : 'Effects and the death clock pause for the first minute.'
-            : bg
-              ? 'SP изтичат все по-бързо: 20% за първите 5 секунди, 80% за следващите 5. Избери сега.'
-              : 'SP drain accelerates: 20% in the first 5 seconds, 80% in the next 5. Choose now.'}
+        </div>
+      )}
+      {pact.kind === 'soul_exchange' && (
+        <p className="cpi-relic-caution">
+          {bg
+            ? 'Жертвата е задължителна · може да е фатална'
+            : 'A sacrifice is required · can be fatal'}
         </p>
-      </div>
-      <div className="cpi-holo-projector">
+      )}
+      {pact.kind === 'false_oracle' && revealed && (
+        <p className="cpi-relic-caution">
+          {bg ? 'Редът е разкрит · видението е недостъпно' : 'Row revealed · vision unavailable'}
+        </p>
+      )}
+      <div className="cpi-relic-source" aria-hidden="true">
         <MysteryCube tier={tier} opened />
-        <span aria-hidden="true" />
       </div>
+      <span
+        className={'cpi-choice-clock' + (remaining === 0 ? ' is-active' : '')}
+        role="timer"
+        aria-label={
+          remaining > 0
+            ? bg
+              ? 'Оставащо време без death clock'
+              : 'Time before the death clock'
+            : 'Death clock'
+        }
+      >
+        {remaining > 0
+          ? `${bg ? 'Спокойно' : 'Take your time'} · ${Math.ceil(remaining / 1000)}s`
+          : `Death clock · ${countdown}s`}
+      </span>
+      {remaining === 0 && (
+        <span className="cpi-relic-urgent" role="status">
+          {bg ? 'SP изтичат · избери сега' : 'SP draining · choose now'}
+        </span>
+      )}
     </section>
   );
 }

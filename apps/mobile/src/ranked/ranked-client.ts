@@ -3,7 +3,7 @@ import {
   BALANCE_PACT_KINDS,
   usesBalanceRules,
   usesRiskRules,
-  DIRECTOR_RULESET_VERSION,
+  usesMysteryDirectorRules,
   MYSTERY_TIERS,
   getRuleset,
   supportsPacts,
@@ -260,7 +260,7 @@ export function parseRankedReply(value: unknown): RankedReply | null {
   const directorRules =
     raw !== null &&
     typeof raw === 'object' &&
-    (raw as Record<string, unknown>).rulesetVersion === DIRECTOR_RULESET_VERSION;
+    usesMysteryDirectorRules(String((raw as Record<string, unknown>).rulesetVersion));
   const usesPacts =
     raw !== null &&
     typeof raw === 'object' &&

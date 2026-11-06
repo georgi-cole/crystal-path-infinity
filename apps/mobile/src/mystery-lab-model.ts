@@ -7,7 +7,7 @@ import {
   PRACTICE_RNG,
   rollMysteryEffect,
   transitionRun,
-  DIRECTOR_RULESET_VERSION,
+  usesMysteryDirectorRules,
   mysteryTier,
   getRuleset,
 } from '@crystal-path-infinity/game-core';
@@ -61,7 +61,7 @@ export function createMysteryLabRun(
         draw.value,
         rulesetVersion,
         true,
-        rulesetVersion === DIRECTOR_RULESET_VERSION
+        usesMysteryDirectorRules(rulesetVersion)
           ? getRuleset(rulesetVersion)
               .mysteryTable.filter((entry) => mysteryTier(entry.kind) === mysteryTier(kind))
               .map((entry) => entry.kind)
@@ -93,7 +93,7 @@ export function createMysteryLabRun(
   state = {
     ...state,
     sp,
-    ...(rulesetVersion === DIRECTOR_RULESET_VERSION
+    ...(usesMysteryDirectorRules(rulesetVersion)
       ? {
           mysteryDirector: { ...state.mysteryDirector!, nextRow: state.currentRow, history: [] },
           mysteryRng: createPracticeCursor(rewardSeed),

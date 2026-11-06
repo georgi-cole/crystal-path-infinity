@@ -65,7 +65,7 @@ export interface MysteryPact {
   readonly bank: number;
   /** A deliberately fallible prediction, never a confirmed hint. */
   readonly omen: TileSide | null;
-  /** v5 decision grace begins once, survives saves and is not reset by rendering. */
+  /** v5+ decision grace begins once, survives saves and is not reset by rendering. */
   readonly offeredAt?: number;
 }
 

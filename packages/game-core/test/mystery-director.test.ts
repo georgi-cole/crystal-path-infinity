@@ -7,6 +7,7 @@ import {
   createTimedRunSession,
   deathClockPaid,
   DIRECTOR_RULESET_VERSION,
+  RELIC_RULESET_VERSION,
   getCurrentRow,
   getDeathClock,
   getRuleset,
@@ -21,13 +22,14 @@ import {
 import type { EffectKind, MysteryTier, RunCommand, RunState } from '../src/index.ts';
 
 const version = DIRECTOR_RULESET_VERSION;
-function fresh(): RunState {
+function fresh(rulesetVersion = version, seed = 91, ahead = 8): RunState {
   return createRun(
     {
       runId: 'practice-director',
-      rulesetVersion: version,
+      rulesetVersion,
+      buffer: { ahead, history: 2 },
       routeRng: createPracticeCursor(53),
-      mysteryRng: createPracticeCursor(91),
+      mysteryRng: createPracticeCursor(seed),
       observedAt: 0,
     },
     PRACTICE_RNG,
@@ -335,4 +337,70 @@ describe('three-second idle grace and progressive ten-second death clock', () =>
     expect(duplicate.state.pact!.offeredAt).toBe(8000);
     expect(act(offered, { type: 'tick' }, 73000).state.sp).toBe(64);
   });
+});
+
+describe('v6 relic cadence', () => {
+  it('draws every normal gap in the inclusive 5–7 range, including the first box', () => {
+    const firstRows = new Set<number>();
+    const gaps = new Set<number>();
+    for (let seed = 1; seed <= 12; seed += 1) {
+      let state = fresh(RELIC_RULESET_VERSION, seed);
+      const first = Number(state.mysteryDirector!.nextRow);
+      firstRows.add(first);
+      let previous = 0;
+      for (let i = 1; i <= 80; i += 1) {
+        if (getCurrentRow(state).hasMystery) {
+          const gap = Number(state.currentRow) - previous;
+          expect(gap).toBeGreaterThanOrEqual(5);
+          expect(gap).toBeLessThanOrEqual(7);
+          gaps.add(gap);
+          previous = Number(state.currentRow);
+        } else if (!previous) expect(i).toBeLessThan(first);
+        state = safeStep(state, i * 100);
+      }
+    }
+    expect([...firstRows].sort()).toEqual([5, 6, 7]);
+    expect([...gaps].sort()).toEqual([5, 6, 7]);
+  });
+
+  it('preserves the same upcoming boxes across buffering, hints, ticks and checkpoint restoration', () => {
+    let small = fresh(RELIC_RULESET_VERSION, 317, 4);
+    let large = fresh(RELIC_RULESET_VERSION, 317, 40);
+    for (let i = 1; i <= 100; i += 1) {
+      expect(small.mysteryDirector).toEqual(large.mysteryDirector);
+      expect(small.current.mysteryTier).toEqual(large.current.mysteryTier);
+      expect(small.mysteryRng).toEqual(large.mysteryRng);
+      const cursor = small.mysteryRng;
+      small = act(small, { type: 'tick' }).state;
+      small = act(small, { type: 'hint', row: small.currentRow, life: 0 }).state;
+      small = JSON.parse(JSON.stringify(small)) as RunState;
+      assertRunState(small, PRACTICE_RNG);
+      expect(small.mysteryRng).toEqual(cursor);
+      small = safeStep(small, i * 100);
+      large = safeStep(large, i * 100);
+    }
+  });
+
+  it.each(['mystery_silence_30s', 'mystery_surge_30s'] as const)(
+    'resumes 5–7 rows after %s expires, without a catch-up box or reroll',
+    (kind) => {
+      let state = open(kind, fresh(RELIC_RULESET_VERSION));
+      const arrivals: number[] = [];
+      while (state.activeTimeMs < 29500) {
+        state = safeStep(state, state.activeTimeMs + 500);
+        if (getCurrentRow(state).hasMystery && state.activeTimeMs < 30000)
+          arrivals.push(Number(state.currentRow));
+      }
+      if (kind === 'mystery_silence_30s') expect(arrivals).toEqual([]);
+      else expect(arrivals.slice(0, 4)).toEqual([4, 7, 10, 13]);
+      state = act(state, { type: 'tick' }, 30000).state;
+      expect(state.mysteryDirector!.rhythm).toBeNull();
+      expect(getCurrentRow(state).hasMystery).toBe(false);
+      const gap = BigInt(state.mysteryDirector!.nextRow) - BigInt(state.currentRow);
+      expect(gap >= 5n && gap <= 7n).toBe(true);
+      const repeated = act(state, { type: 'tick' }).state;
+      expect(repeated.mysteryDirector).toEqual(state.mysteryDirector);
+      expect(repeated.mysteryRng).toEqual(state.mysteryRng);
+    },
+  );
 });

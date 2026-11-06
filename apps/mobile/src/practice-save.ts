@@ -8,6 +8,7 @@ import {
   BALANCE_RULESET_VERSION,
   RISK_RULESET_VERSION,
   DIRECTOR_RULESET_VERSION,
+  RELIC_RULESET_VERSION,
 } from '@crystal-path-infinity/game-core';
 import type { RunState } from '@crystal-path-infinity/game-core';
 
@@ -101,6 +102,7 @@ function validatePracticeState(state: RunState): void {
       BALANCE_RULESET_VERSION,
       RISK_RULESET_VERSION,
       DIRECTOR_RULESET_VERSION,
+      RELIC_RULESET_VERSION,
     ].includes(state.rulesetVersion) ||
     state.rows.length > MAX_BUFFER_ROWS ||
     state.resolutions.length > state.buffer.history ||
@@ -253,15 +255,17 @@ export function recordPracticePersonalBest(
     throw new TypeError('Invalid local practice score.');
   }
   const key =
-    rulesetVersion === DIRECTOR_RULESET_VERSION
-      ? 'cpi.practice.v5-mystery.best'
-      : rulesetVersion === RISK_RULESET_VERSION
-        ? 'cpi.practice.v4-hidden-risk.best'
-        : rulesetVersion === BALANCE_RULESET_VERSION
-          ? 'cpi.practice.v3-balance.best'
-          : rulesetVersion === PACT_RULESET_VERSION
-            ? 'cpi.practice.v2-pacts.best'
-            : PRACTICE_SAVE_KEYS.personalBest;
+    rulesetVersion === RELIC_RULESET_VERSION
+      ? 'cpi.practice.v6-relics.best'
+      : rulesetVersion === DIRECTOR_RULESET_VERSION
+        ? 'cpi.practice.v5-mystery.best'
+        : rulesetVersion === RISK_RULESET_VERSION
+          ? 'cpi.practice.v4-hidden-risk.best'
+          : rulesetVersion === BALANCE_RULESET_VERSION
+            ? 'cpi.practice.v3-balance.best'
+            : rulesetVersion === PACT_RULESET_VERSION
+              ? 'cpi.practice.v2-pacts.best'
+              : PRACTICE_SAVE_KEYS.personalBest;
   const stored = storage.getItem(key) ?? '0';
   if (!/^(0|[1-9][0-9]*)$/.test(stored) || stored.length > 1000) {
     throw new Error('The local personal-best record is damaged.');
@@ -278,15 +282,17 @@ export function readPracticePersonalBest(
 ): string | null {
   try {
     const key =
-      rulesetVersion === DIRECTOR_RULESET_VERSION
-        ? 'cpi.practice.v5-mystery.best'
-        : rulesetVersion === RISK_RULESET_VERSION
-          ? 'cpi.practice.v4-hidden-risk.best'
-          : rulesetVersion === BALANCE_RULESET_VERSION
-            ? 'cpi.practice.v3-balance.best'
-            : rulesetVersion === PACT_RULESET_VERSION
-              ? 'cpi.practice.v2-pacts.best'
-              : PRACTICE_SAVE_KEYS.personalBest;
+      rulesetVersion === RELIC_RULESET_VERSION
+        ? 'cpi.practice.v6-relics.best'
+        : rulesetVersion === DIRECTOR_RULESET_VERSION
+          ? 'cpi.practice.v5-mystery.best'
+          : rulesetVersion === RISK_RULESET_VERSION
+            ? 'cpi.practice.v4-hidden-risk.best'
+            : rulesetVersion === BALANCE_RULESET_VERSION
+              ? 'cpi.practice.v3-balance.best'
+              : rulesetVersion === PACT_RULESET_VERSION
+                ? 'cpi.practice.v2-pacts.best'
+                : PRACTICE_SAVE_KEYS.personalBest;
     const value = storage.getItem(key);
     if (value === null || value.length > 1000 || !/^(0|[1-9][0-9]*)$/.test(value)) {
       return null;

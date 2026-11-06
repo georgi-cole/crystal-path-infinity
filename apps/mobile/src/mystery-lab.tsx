@@ -1,7 +1,7 @@
 import { mysteryFeedbackFromEvents, runCuesFromEvents } from './mystery-feedback';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  DIRECTOR_RULESET_VERSION,
+  RELIC_RULESET_VERSION,
   getDeathClock,
   mysteryTier,
   MYSTERY_TIERS,
@@ -34,7 +34,7 @@ export function MysteryLab({
   reducedMotion: boolean;
 }) {
   const { locale } = useLanguage();
-  const version = DIRECTOR_RULESET_VERSION;
+  const version = RELIC_RULESET_VERSION;
   const [kind, setKind] = useState<EffectKind>('half_life');
   const [startingSp, setStartingSp] = useState(100);
   const [spDraft, setSpDraft] = useState('100');
