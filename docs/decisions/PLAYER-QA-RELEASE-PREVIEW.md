@@ -116,6 +116,12 @@ The owner expects children to understand the discoveries. English and Bulgarian 
 
 The journal uses a provided run's ruleset, or the current v11 rules for a standalone menu visit. This preserves the distinction between a classic oracle's safe-side arrow and an independent-risk experiment's lower-risk arrow; neither is a guaranteed hint. Marketing's purchased-hint conversion shares the existing 200-SP reserve budget only in business rules. These qualifications are explained in the expanded text, not added as extra steps. Only discoveries already found are listed; the first-introduction pause remains bounded to four seconds and Try it remains QA-only.
 
+### Compact pause audio controls — owner follow-up
+
+Sound and feedback in the pause overlay is now a native disclosure, initially closed, sharing the exact `cpi-run-ledger` styling and plus/minus indicator with Run details. Expanding it exposes the existing four persisted toggles. Its fieldset legend remains available to assistive technology without duplicating the visible summary. Closing and reopening pause starts collapsed again; the main Settings page remains expanded. This changes layout only, not audio preferences, playback, clocks or gameplay.
+
+Verified after this small follow-up: 38 existing scene/audio/player-profile tests pass, changed files pass lint/format checks, and development/staging/production/QA builds pass. Browser inspection confirmed the default plus, expanded minus and four visible controls, a working preference change restored to its original value, collapse on reopening pause, and the unchanged expanded Settings page. No additional tests or game-rule changes were introduced for this reversible presentation edit.
+
 ### Final follow-up verification — 6 November 2026
 
 The final follow-up adds 16 mobile cases to the initial revision: current mobile 658, game-core 310, server-core 157 and balance simulations 6, totaling **1,131 passing tests across the suites**. The mobile command is `npm run test --workspace @crystal-path-infinity/mobile -- --maxWorkers=4`. Unrestricted `npm test` hit the existing five-second native icon export timeout on this Windows machine; its game-core/server suites passed. Limiting mobile concurrency passes the full suite without changing the test timeout or export assertions. The earlier 1,115/1,116 results above remain historical results, not updated totals.

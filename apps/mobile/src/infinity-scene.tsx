@@ -778,7 +778,14 @@ export function InfinitySceneView({
                   </div>
                 </details>
                 {resourcePanel}
-                <AudioSettingsControls settings={settings} onChange={onSettingsChange} />
+                <details className="cpi-run-ledger">
+                  <summary>{t('settings.audioLegend')}</summary>
+                  <AudioSettingsControls
+                    settings={settings}
+                    onChange={onSettingsChange}
+                    hideLegend
+                  />
+                </details>
                 <div className="cpi-overlay-actions">
                   {onMysteryJournal && (
                     <button type="button" disabled={busy} onClick={onMysteryJournal}>
