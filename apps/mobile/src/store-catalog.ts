@@ -41,7 +41,7 @@ export const THEMES = {
     tempo: 96,
   },
   league: {
-    title: 'Neon League',
+    title: 'Foldrush Circuit',
     colors: ['#ffb15f', '#7dccff', '#a7f4c1'],
     glass: '#c6e4f3',
     surface: { highlight: '#f1f9ff', shadow: '#152b42', edge: '#a4e1ff', frame: '#9bafc3' },

@@ -15,7 +15,7 @@ export const storeEn = {
   'vault.wildsDetail':
     'Cross a lost seed-vault sculpted from hollow basalt and living jade. Mica is its stubborn little keeper: one giant geode ear, amber seeds and a crystal heart that refuses to sit still.',
   'vault.wildsJournal': 'Notes from the seed-vault',
-  'vault.league': 'Neon League',
+  'vault.league': 'Foldrush Circuit',
   'vault.leagueMood': 'Sharp turns. Bold moves. Your own rhythm.',
   'vault.leagueDetail':
     'An aerial arena built from folded racing pennants, graphite fins and cyan lap lights. Rally is a living ribbon of momentum, ready for the next crossing.',
@@ -208,7 +208,7 @@ export const storeBg: Record<keyof typeof storeEn, string> = {
   'vault.wildsDetail':
     'Прекоси изгубено хранилище за семена, изваяно от кух базалт и жив нефрит. Мика е неговият инатлив пазител: огромно геодно ухо, кехлибарени семена и неспокойно кристално сърце.',
   'vault.wildsJournal': 'Записки от хранилището',
-  'vault.league': 'Неонова арена',
+  'vault.league': 'Писта „Фолдраш“',
   'vault.leagueMood': 'Остри завои. Смели ходове. Твоят ритъм.',
   'vault.leagueDetail':
     'Небесна арена от сгънати състезателни знамена, графитени перки и сини светлини. Рали е жива лента от устрем, готова за следващото преминаване.',
@@ -239,7 +239,7 @@ export const storeBg: Record<keyof typeof storeEn, string> = {
   'vault.activeWorld': 'Твоят свят',
   'vault.completeWorld': 'Начало · Път · Музика · Спътник',
   'vault.allWorlds': 'Всички светове',
-  'vault.adventureWorlds': 'Приключения',
+  'vault.adventureWorlds': 'Открития',
   'vault.sportWorlds': 'Спорт',
   'vault.petWorlds': 'Любимци',
   'vault.previousWorlds': 'Предишни светове',
