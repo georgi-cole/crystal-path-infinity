@@ -576,6 +576,7 @@
   outline: none;
 }
 .cpi-sound-options {
+  min-width: 0;
   margin: 0.6rem 0;
   padding: 0;
   max-width: none;
@@ -588,16 +589,18 @@
   border-radius: 0;
   background: none;
 }
-.cpi-sound-options legend {
+.cpi-sound-heading {
   padding: 0.6rem 0;
   font-size: 0.65rem;
-  color: #b6a6bc;
+  color: var(--world-accent, #d9b4cf);
 }
 .cpi-sound-toggle {
   display: flex;
   flex-direction: row-reverse;
   align-items: center;
   justify-content: space-between;
+  gap: 0.8rem;
+  min-width: 0;
   min-height: 3.1rem;
   padding: 0.75rem 0;
   border-radius: 0;
@@ -610,33 +613,43 @@
 .cpi-sound-toggle input {
   appearance: none;
   position: relative;
-  width: 2.2rem;
-  height: 1.25rem;
+  width: 2.4rem;
+  height: 1.4rem;
   margin: 0;
-  border: 1px solid #a9a3b64d;
-  border-radius: 2rem;
-  background: #060608;
+  border: 1px solid color-mix(in srgb, var(--world-accent, #d9b4cf) 28%, transparent);
+  border-radius: var(--world-radius, 6px);
+  background: color-mix(in srgb, var(--world-panel, #151317) 45%, #030304);
   flex-shrink: 0;
   cursor: pointer;
 }
 .cpi-sound-toggle input::after {
   content: '';
   position: absolute;
-  width: 0.7rem;
-  height: 0.7rem;
-  top: 3px;
-  left: 3px;
-  border-radius: 50%;
-  background: #66616f;
-  transition: transform 0.2s;
+  width: 0.8rem;
+  height: 0.8rem;
+  top: 50%;
+  inset-inline-start: 0.2rem;
+  transform: translateY(-50%);
+  border-radius: min(var(--world-radius, 6px), 0.25rem);
+  background: #8b8493;
+  transition:
+    inset-inline-start 0.2s,
+    background-color 0.2s;
 }
 .cpi-sound-toggle input:checked {
-  border-color: #eb6ead8c;
-  background: #bb3d7d4d;
+  border-color: color-mix(in srgb, var(--world-accent, #d9b4cf) 70%, transparent);
+  background: color-mix(in srgb, var(--world-accent, #d9b4cf) 20%, var(--world-panel, #151317));
 }
 .cpi-sound-toggle input:checked::after {
-  transform: translateX(0.95rem);
-  background: #f1b3d7;
+  inset-inline-start: calc(100% - 1rem);
+  background: var(--world-accent, #d9b4cf);
+}
+.cpi-sound-toggle:focus-within {
+  outline: none;
+}
+.cpi-sound-toggle input:focus-visible {
+  outline: 2px solid var(--world-soft, #a4d5cc);
+  outline-offset: 3px;
 }
 .cpi-menu-panel :is(input:not([type='checkbox']), select, textarea) {
   min-height: 3rem;
