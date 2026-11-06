@@ -671,9 +671,12 @@ export function MainMenu({
             )}
             <ProfileEditor client={profileClient} online={online} />
             {accountConnected && onSignOut && (
-              <button type="button" className="cpi-menu-secondary" onClick={() => void onSignOut()}>
-                {t('account.signOut')}
-              </button>
+              <MenuAction
+                label={t('account.signOut')}
+                icon="profile"
+                variant="quiet"
+                onClick={() => void onSignOut()}
+              />
             )}
             <MenuAction
               label={t('menu.practiceUnsigned')}
@@ -691,15 +694,6 @@ export function MainMenu({
             </header>
             <AudioSettingsControls settings={settings} onChange={onSettingsChange} />
             <LanguageSettings />
-            {onAdPrivacyOptions && (
-              <button
-                type="button"
-                className="cpi-menu-secondary"
-                onClick={() => void onAdPrivacyOptions().catch(() => {})}
-              >
-                {t('account.adPrivacy')}
-              </button>
-            )}
             <button type="button" className="cpi-settings-link" onClick={() => onOpen('tutorial')}>
               <Glyph name="practice" />
               <span>
@@ -708,6 +702,16 @@ export function MainMenu({
               <span aria-hidden="true">›</span>
             </button>
             <PrivacyAccountSupport
+              accountConnected={accountConnected}
+              privacyActions={
+                onAdPrivacyOptions ? (
+                  <MenuAction
+                    label={t('account.adPrivacy')}
+                    variant="quiet"
+                    onClick={() => void onAdPrivacyOptions().catch(() => {})}
+                  />
+                ) : undefined
+              }
               accountAvailable={accountConnected && accountControlsClient !== null}
               accountActions={
                 accountConnected && accountControlsClient ? (

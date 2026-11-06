@@ -231,20 +231,15 @@ export function StoreVault({
             {t('vault.purchasesUnavailable')}
           </p>
         )}
-        {!QA_TOOLS_ENABLED && liveStore && (
-          <div className="cpi-vault-notice" role="status">
-            {liveBusy && <p>{t('commerce.busy')}</p>}
-            {live.phase === 'pending' && <p>{t('commerce.pending')}</p>}
-            {live.phase === 'error' && <p>{t('commerce.error')}</p>}
-            <button
-              type="button"
-              disabled={liveBusy}
-              onClick={() => void (live.wallet ? liveStore.recover() : liveStore.load())}
-            >
-              {t(live.wallet ? 'commerce.restore' : 'commerce.retry')}
-            </button>
-          </div>
-        )}
+        {!QA_TOOLS_ENABLED &&
+          liveStore &&
+          (liveBusy || live.phase === 'pending' || live.phase === 'error') && (
+            <div className="cpi-vault-notice" role="status">
+              {liveBusy && <p>{t('commerce.busy')}</p>}
+              {live.phase === 'pending' && <p>{t('commerce.pending')}</p>}
+              {live.phase === 'error' && <p>{t('commerce.error')}</p>}
+            </div>
+          )}
         {(error || notice) && (
           <p className="cpi-vault-notice" role={error ? 'alert' : 'status'}>
             {error ?? notice}
@@ -526,6 +521,20 @@ export function StoreVault({
           </>
         )}
         <footer className="cpi-vault-footer">
+          {!QA_TOOLS_ENABLED && liveStore && live.phase !== 'unavailable' && (
+            <button
+              type="button"
+              disabled={liveBusy}
+              onClick={() => void (live.wallet ? liveStore.recover() : liveStore.load())}
+            >
+              {t(live.wallet ? 'commerce.restore' : 'commerce.retry')}
+            </button>
+          )}
+          {!QA_TOOLS_ENABLED && liveStore && live.wallet && live.phase === 'error' && (
+            <button type="button" onClick={() => void liveStore.load()}>
+              {t('commerce.retry')}
+            </button>
+          )}
           {onReturnToRun && (
             <button className="cpi-vault-return" type="button" onClick={onReturnToRun}>
               {t('vault.returnToRun')}

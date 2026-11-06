@@ -103,13 +103,14 @@ export class CommerceFlow {
   }
   load = async (): Promise<void> =>
     this.operation('loading', async (current, signal) => {
+      this.update({ ...this.state, products: [] });
       const catalog = await this.gateway.catalog(signal);
       if (!current()) return;
       const wallet = await this.gateway.wallet(signal);
       if (!current()) return;
+      this.accept(wallet);
       const products = await this.native.prices(catalog);
       if (!current()) return;
-      this.accept(wallet);
       this.update({ ...this.state, phase: 'ready', products });
     });
   private async deliver(
@@ -117,9 +118,7 @@ export class CommerceFlow {
     current: () => boolean,
     signal: AbortSignal,
   ): Promise<boolean> {
-    const product = this.state.products.find((item) => item.sku === receipt.sku);
     if (
-      !product ||
       receipt.accountToken !== this.state.wallet?.accountToken ||
       receipt.platform !== this.native.platform
     )
@@ -131,7 +130,7 @@ export class CommerceFlow {
     if (verified.transactionId !== receipt.transactionId) throw new CommerceUnavailable();
     this.accept(verified.wallet, receipt.accountToken);
     // Delivery has already committed on the server. A finish failure is recoverable without re-crediting.
-    await this.native.finish(receipt, product.consumable);
+    await this.native.finish(receipt, verified.consumable);
     return current();
   }
   buy = async (key: string): Promise<void> =>
@@ -140,7 +139,8 @@ export class CommerceFlow {
       if (!product || !this.state.wallet) throw new CommerceUnavailable();
       const permit = await this.gateway.begin(key, this.native.platform, signal);
       if (!current()) return;
-      if (permit.accountToken !== this.state.wallet.accountToken) throw new CommerceUnavailable();
+      if (permit.accountToken !== this.state.wallet.accountToken || permit.sku !== product.sku)
+        throw new CommerceUnavailable();
       const outcome = await this.native.purchase(product, permit.accountToken);
       if (!current()) return;
       if (outcome.status === 'cancelled') {

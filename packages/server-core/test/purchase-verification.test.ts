@@ -2,6 +2,12 @@ import { readFileSync } from 'node:fs';
 import { generateKeyPairSync, createVerify } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
 import {
+  SignedDataVerifier,
+  Environment,
+  InAppOwnershipType,
+  Type,
+} from '@apple/app-store-server-library';
+import {
   createApplePurchaseVerifier,
   createGooglePurchaseVerifier,
   createGooglePlayAccessToken,
@@ -88,11 +94,15 @@ describe('provider-authoritative purchase proofs', () => {
     ).toMatchObject({ status: 'verified' });
   });
   it('does not accept a decoded Apple payload as a signed transaction', async () => {
+    const getTransactionInfo = vi.fn(() =>
+      Promise.reject(new Error('must not call the API for a forged proof')),
+    );
     const verifier = createApplePurchaseVerifier({
       roots: [readFileSync(new URL('../certificates/AppleRootCA-G3.cer', import.meta.url))],
       bundleId: 'com.georgicole.crystalpath.infinity',
       appleAppId: 6831790531,
       environment: 'production',
+      api: { getTransactionInfo },
     });
     const forged = Buffer.from(
       JSON.stringify({
@@ -113,7 +123,50 @@ describe('provider-authoritative purchase proofs', () => {
         signedTransaction: 'eyJhbGciOiJub25lIn0.' + forged + '.',
       }),
     ).toEqual({ status: 'rejected' });
+    expect(getTransactionInfo).not.toHaveBeenCalled();
     expect(parsePurchaseProof({ ...proof, signedTransaction: 'both-platforms' })).toBeNull();
+  });
+  it('rechecks the current Apple record instead of granting from an older pre-refund device proof', async () => {
+    const payload = {
+      transactionId: 'apple-order',
+      productId: proof.sku,
+      bundleId: 'com.georgicole.crystalpath.infinity',
+      environment: Environment.PRODUCTION,
+      appAccountToken: proof.accountToken,
+      quantity: 1,
+      inAppOwnershipType: InAppOwnershipType.PURCHASED,
+      type: Type.CONSUMABLE,
+    };
+    // Cryptographic verification is independently checked by the forgery test above.
+    const decode = vi
+      .spyOn(SignedDataVerifier.prototype, 'verifyAndDecodeTransaction')
+      .mockResolvedValueOnce(payload)
+      .mockResolvedValueOnce({ ...payload, revocationDate: 1800000000000 });
+    const getTransactionInfo = vi.fn(() =>
+      Promise.resolve({ signedTransactionInfo: 'current-server-jws' }),
+    );
+    try {
+      const verify = createApplePurchaseVerifier({
+        roots: [readFileSync(new URL('../certificates/AppleRootCA-G3.cer', import.meta.url))],
+        bundleId: payload.bundleId,
+        appleAppId: 6831790531,
+        environment: 'production',
+        api: { getTransactionInfo },
+      });
+      expect(
+        await verify({
+          platform: 'ios',
+          sku: proof.sku,
+          transactionId: payload.transactionId,
+          accountToken: proof.accountToken,
+          signedTransaction: 'older-device-jws',
+        }),
+      ).toEqual({ status: 'rejected' });
+      expect(getTransactionInfo).toHaveBeenCalledWith(payload.transactionId);
+      expect(decode).toHaveBeenLastCalledWith('current-server-jws');
+    } finally {
+      decode.mockRestore();
+    }
   });
   it('issues scoped Google assertions only to the OAuth endpoint and caches short-lived access', async () => {
     const pair = generateKeyPairSync('rsa', { modulusLength: 2048 });

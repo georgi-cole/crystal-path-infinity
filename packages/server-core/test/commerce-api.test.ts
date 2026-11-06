@@ -6,7 +6,7 @@ function fixture(allowed = true) {
   const service = {
     catalog: vi.fn(() => []),
     wallet: vi.fn(() => Promise.reject(new Error('private-db-credential'))),
-    begin: vi.fn(() => Promise.resolve({ accountToken: user })),
+    begin: vi.fn(() => Promise.resolve({ accountToken: user, sku: 'com.example.credits3' })),
     verify: vi.fn(() => Promise.resolve({ status: 'pending' as const })),
     equip: vi.fn(() => Promise.reject(new Error('private-provider-receipt'))),
   };

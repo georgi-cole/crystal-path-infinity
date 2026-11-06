@@ -187,10 +187,12 @@ export function createCommerceGateway(options: {
         !record(reply) ||
         reply.schemaVersion !== 1 ||
         typeof reply.accountToken !== 'string' ||
-        !tokenPattern.test(reply.accountToken)
+        !tokenPattern.test(reply.accountToken) ||
+        typeof reply.sku !== 'string' ||
+        !/^[A-Za-z0-9][A-Za-z0-9._-]{0,199}$/.test(reply.sku)
       )
         throw new CommerceUnavailable();
-      return { accountToken: reply.accountToken };
+      return { accountToken: reply.accountToken.toLowerCase(), sku: reply.sku };
     },
     async verify(proof: PurchaseProof, signal) {
       if (proof.platform !== options.platform) throw new CommerceUnavailable();
@@ -198,9 +200,18 @@ export function createCommerceGateway(options: {
       if (!record(reply) || reply.schemaVersion !== 1) throw new CommerceUnavailable();
       if (reply.status === 'pending' || reply.status === 'rejected')
         return { status: reply.status };
-      if (reply.status !== 'granted' || reply.transactionId !== proof.transactionId)
+      if (
+        reply.status !== 'granted' ||
+        reply.transactionId !== proof.transactionId ||
+        typeof reply.consumable !== 'boolean'
+      )
         throw new CommerceUnavailable();
-      return { status: 'granted', transactionId: proof.transactionId, wallet: wallet(reply) };
+      return {
+        status: 'granted',
+        transactionId: proof.transactionId,
+        consumable: reply.consumable,
+        wallet: wallet(reply),
+      };
     },
     async equip(theme, signal) {
       if (!THEME_IDS.includes(theme)) throw new CommerceUnavailable();

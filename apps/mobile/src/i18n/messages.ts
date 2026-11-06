@@ -247,6 +247,9 @@ export const en = {
   'account.cancel': 'Cancel account setup',
   'account.signOut': 'Sign out',
   'account.adPrivacy': 'Ad privacy',
+  'settings.privacyConnected':
+    'Your profile, purchases and verified runs use online services. Local practice stays on this device.',
+  'settings.accountToolsUnavailable': 'You are signed in. Account tools are unavailable right now.',
   'commerce.restore': 'Restore purchases',
   'commerce.retry': 'Try again',
   'commerce.pending': 'Waiting for purchase confirmation. You have not received the items yet.',

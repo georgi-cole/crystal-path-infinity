@@ -48,11 +48,12 @@ function fixture() {
     },
     catalog: vi.fn(() => Promise.resolve([product])),
     wallet: vi.fn(() => Promise.resolve(initial)),
-    begin: vi.fn(() => Promise.resolve({ accountToken: token })),
+    begin: vi.fn(() => Promise.resolve({ accountToken: token, sku: product.sku })),
     verify: vi.fn(() =>
       Promise.resolve({
         status: 'granted' as const,
         transactionId: proof.transactionId,
+        consumable: true,
         wallet: { ...initial, revision: 1, credits: 3 },
       }),
     ),
@@ -70,6 +71,27 @@ function fixture() {
   };
 }
 describe('real purchase delivery and recovery ownership', () => {
+  it('restores a verified purchase even when a platform price is unavailable', async () => {
+    const f = fixture();
+    vi.mocked(f.native.prices).mockRejectedValueOnce(new Error('product temporarily unavailable'));
+    await f.flow.load();
+    expect(f.flow.snapshot()).toMatchObject({
+      phase: 'error',
+      products: [],
+      wallet: { credits: 0 },
+    });
+    await f.flow.recover();
+    expect(f.flow.snapshot()).toMatchObject({ phase: 'ready', wallet: { credits: 3 } });
+    expect(f.native.finish).toHaveBeenCalledWith(proof, true);
+  });
+  it('refuses a stale product mapping before opening checkout', async () => {
+    const f = fixture();
+    await f.flow.load();
+    vi.mocked(f.gateway.begin).mockResolvedValueOnce({ accountToken: token, sku: 'new.product' });
+    await f.flow.buy(product.key);
+    expect(f.native.purchase).not.toHaveBeenCalled();
+    expect(f.flow.snapshot().phase).toBe('error');
+  });
   it('grants nothing from a native success and finishes only after durable server delivery', async () => {
     const f = fixture();
     await f.flow.load();
@@ -87,6 +109,7 @@ describe('real purchase delivery and recovery ownership', () => {
     resolve({
       status: 'granted',
       transactionId: proof.transactionId,
+      consumable: true,
       wallet: { ...initial, revision: 1, credits: 3 },
     });
     await buying;
@@ -139,6 +162,7 @@ describe('real purchase delivery and recovery ownership', () => {
     vi.mocked(f.gateway.verify).mockResolvedValueOnce({
       status: 'granted',
       transactionId: 'another-order',
+      consumable: true,
       wallet: { ...initial, credits: 3 },
     });
     await f.flow.recover();

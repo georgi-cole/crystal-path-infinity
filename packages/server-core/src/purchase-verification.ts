@@ -1,5 +1,9 @@
 import { createHash, createSign } from 'node:crypto';
 import { SignedDataVerifier, Environment } from '@apple/app-store-server-library';
+import type {
+  AppStoreServerAPIClient,
+  JWSTransactionDecodedPayload,
+} from '@apple/app-store-server-library';
 
 export interface PurchaseProof {
   readonly platform: 'android' | 'ios';
@@ -16,6 +20,7 @@ export interface VerifiedPurchase {
   readonly sku: string;
   readonly transactionId: string;
   readonly accountToken: string;
+  readonly nativeConsumable?: boolean;
 }
 export type PurchaseVerification =
   { status: 'pending' | 'rejected' } | { status: 'verified'; purchase: VerifiedPurchase };
@@ -65,6 +70,7 @@ function bounded(value: unknown, limit: number): value is string {
 function verified(
   proof: PurchaseProof,
   environment: VerifiedPurchase['environment'],
+  nativeConsumable?: boolean,
 ): PurchaseVerification {
   return {
     status: 'verified',
@@ -74,6 +80,7 @@ function verified(
       sku: proof.sku,
       transactionId: proof.transactionId,
       accountToken: proof.accountToken.toLowerCase(),
+      ...(nativeConsumable === undefined ? {} : { nativeConsumable }),
       fingerprint: createHash('sha256')
         .update(
           proof.platform + ':' + environment + ':' + (proof.purchaseToken ?? proof.transactionId),
@@ -88,6 +95,7 @@ export function createApplePurchaseVerifier(options: {
   bundleId: string;
   appleAppId: number;
   environment: 'production' | 'sandbox';
+  api: Pick<AppStoreServerAPIClient, 'getTransactionInfo'>;
 }): PurchaseVerifier {
   if (
     !options.roots.length ||
@@ -105,23 +113,31 @@ export function createApplePurchaseVerifier(options: {
     options.bundleId,
     options.appleAppId,
   );
+  function acceptable(transaction: JWSTransactionDecodedPayload, proof: PurchaseProof) {
+    return (
+      transaction.transactionId === proof.transactionId &&
+      transaction.productId === proof.sku &&
+      transaction.bundleId === options.bundleId &&
+      transaction.environment === environment &&
+      transaction.appAccountToken?.toLowerCase() === proof.accountToken.toLowerCase() &&
+      transaction.quantity === 1 &&
+      transaction.revocationDate === undefined &&
+      transaction.inAppOwnershipType === 'PURCHASED' &&
+      (transaction.type === 'Consumable' || transaction.type === 'Non-Consumable')
+    );
+  }
   return async (proof) => {
     if (proof.platform !== 'ios' || !parsePurchaseProof(proof)) return { status: 'rejected' };
     try {
-      const transaction = await verifier.verifyAndDecodeTransaction(proof.signedTransaction!);
-      if (
-        transaction.transactionId !== proof.transactionId ||
-        transaction.productId !== proof.sku ||
-        transaction.bundleId !== options.bundleId ||
-        transaction.environment !== environment ||
-        transaction.appAccountToken?.toLowerCase() !== proof.accountToken.toLowerCase() ||
-        transaction.quantity !== 1 ||
-        transaction.revocationDate !== undefined ||
-        transaction.inAppOwnershipType !== 'PURCHASED' ||
-        (transaction.type !== 'Consumable' && transaction.type !== 'Non-Consumable')
-      )
-        return { status: 'rejected' };
-      return verified(proof, options.environment);
+      const device = await verifier.verifyAndDecodeTransaction(proof.signedTransaction!);
+      if (!acceptable(device, proof)) return { status: 'rejected' };
+      // OCSP checks certificate revocation, not a later refund of the purchase.
+      // Re-read the canonical transaction from Apple's authenticated server API.
+      const latest = await options.api.getTransactionInfo(proof.transactionId);
+      if (!bounded(latest.signedTransactionInfo, 65536)) return { status: 'rejected' };
+      const transaction = await verifier.verifyAndDecodeTransaction(latest.signedTransactionInfo);
+      if (!acceptable(transaction, proof)) return { status: 'rejected' };
+      return verified(proof, options.environment, transaction.type === 'Consumable');
     } catch {
       return { status: 'rejected' };
     }

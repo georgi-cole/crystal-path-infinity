@@ -8,6 +8,8 @@ export interface CommerceProduct {
   readonly kind: 'sp' | 'hints' | 'credit' | 'theme';
   readonly quantity: number;
   readonly theme?: string;
+  /** Keep retired SKU mappings immutable for restore; exclude them from new checkouts. */
+  readonly available?: boolean;
 }
 export interface CommerceWallet {
   revision: number;
@@ -69,7 +71,7 @@ export function createCommerceService(options: {
     const pk = product.platform + ':' + product.key,
       ps = product.platform + ':' + product.sku;
     if (
-      keys.has(pk) ||
+      (product.available !== false && keys.has(pk)) ||
       skus.has(ps) ||
       !/^[A-Za-z0-9._-]{1,100}$/.test(product.key) ||
       !/^[A-Za-z0-9][A-Za-z0-9._-]{0,199}$/.test(product.sku) ||
@@ -78,12 +80,13 @@ export function createCommerceService(options: {
       product.quantity < 1 ||
       product.quantity > 100000 ||
       !['sp', 'hints', 'credit', 'theme'].includes(product.kind) ||
+      (product.available !== undefined && typeof product.available !== 'boolean') ||
       (product.platform !== 'android' && product.platform !== 'ios') ||
       (product.kind === 'theme' &&
         (product.quantity !== 1 || !product.theme || !themes.slice(1).includes(product.theme)))
     )
       throw new CommerceError();
-    keys.add(pk);
+    if (product.available !== false) keys.add(pk);
     skus.add(ps);
   }
   function ready(subject: string) {
@@ -152,17 +155,20 @@ export function createCommerceService(options: {
     catalog(subject: string, platform: PurchaseProof['platform']) {
       ready(subject);
       return products
-        .filter((p) => p.platform === platform)
+        .filter((p) => p.platform === platform && p.available !== false)
         .map((p) => ({ key: p.key, sku: p.sku, consumable: p.kind !== 'theme' }));
     },
     wallet: (subject: string) =>
       transaction(subject, (_connection, current) => Promise.resolve(current)),
     begin(subject: string, platform: PurchaseProof['platform'], key: string) {
-      if (!products.some((p) => p.platform === platform && p.key === key))
-        throw new CommerceError();
+      const product = products.find(
+        (p) => p.platform === platform && p.key === key && p.available !== false,
+      );
+      if (!product) throw new CommerceError();
       return transaction(subject, (_connection, current) =>
         Promise.resolve({
           accountToken: current.accountToken,
+          sku: product.sku,
         }),
       );
     },
@@ -174,6 +180,11 @@ export function createCommerceService(options: {
       const verified = await options.verifyPurchase(proof);
       if (verified.status !== 'verified') return verified;
       if (!matches(verified.purchase, proof)) throw new CommerceError();
+      if (
+        proof.platform === 'ios' &&
+        verified.purchase.nativeConsumable !== (product.kind !== 'theme')
+      )
+        return { status: 'rejected' as const };
       return transaction(subject, async (connection, current) => {
         if (current.accountToken !== proof.accountToken) throw new CommerceError();
         const result = await connection.query(
@@ -221,6 +232,7 @@ export function createCommerceService(options: {
         return {
           status: 'granted' as const,
           transactionId: proof.transactionId,
+          consumable: product.kind !== 'theme',
           wallet: await read(connection, current.accountToken),
         };
       });

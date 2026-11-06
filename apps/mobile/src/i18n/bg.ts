@@ -7,6 +7,10 @@ import { crystalGuideBg } from './crystal-guide-messages';
 export const bg = {
   'account.signOut': 'Изход',
   'account.adPrivacy': 'Реклами и поверителност',
+  'settings.privacyConnected':
+    'Профилът, покупките и проверените опити използват онлайн услуги. Локалните опити остават на това устройство.',
+  'settings.accountToolsUnavailable':
+    'Влезли сте в профила си. Инструментите за акаунта в момента са недостъпни.',
   'commerce.restore': 'Възстанови покупки',
   'commerce.retry': 'Опитай пак',
   'commerce.pending': 'Чакаме потвърждение на покупката. Предметите още не са добавени.',

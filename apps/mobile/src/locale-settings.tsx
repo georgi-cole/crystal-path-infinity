@@ -50,8 +50,15 @@ export function LanguageSettings() {
 
 export function PrivacyAccountSupport({
   accountAvailable = false,
+  accountConnected = false,
   accountActions,
-}: { accountAvailable?: boolean; accountActions?: ReactNode } = {}) {
+  privacyActions,
+}: {
+  accountAvailable?: boolean;
+  accountConnected?: boolean;
+  accountActions?: ReactNode;
+  privacyActions?: ReactNode;
+} = {}) {
   const { t } = useLanguage();
   return (
     <div className="cpi-settings-destinations">
@@ -64,8 +71,9 @@ export function PrivacyAccountSupport({
           <span id="cpi-privacy-heading">{t('settings.privacyTitle')}</span>
         </summary>
         <div className="cpi-settings-expanded">
-          <p>{t('settings.privacyInfo')}</p>
+          <p>{t(accountConnected ? 'settings.privacyConnected' : 'settings.privacyInfo')}</p>
           <p className="cpi-menu-fine-print">{t('settings.privacyUnavailable')}</p>
+          {privacyActions}
         </div>
       </details>
       <details className="cpi-settings-section cpi-settings-disclosure">
@@ -77,7 +85,15 @@ export function PrivacyAccountSupport({
           <span id="cpi-account-heading">{t('settings.accountTitle')}</span>
         </summary>
         <div className="cpi-settings-expanded">
-          <p>{t(accountAvailable ? 'settings.accountAvailable' : 'settings.accountUnavailable')}</p>
+          <p>
+            {t(
+              accountAvailable
+                ? 'settings.accountAvailable'
+                : accountConnected
+                  ? 'settings.accountToolsUnavailable'
+                  : 'settings.accountUnavailable',
+            )}
+          </p>
           {accountActions}
         </div>
       </details>

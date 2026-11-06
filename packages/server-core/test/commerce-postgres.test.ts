@@ -156,4 +156,37 @@ describe('commerce delivery against embedded PostgreSQL', () => {
       }),
     ).toThrow();
   });
+  it('keeps retired SKUs restorable without offering them for another checkout', async () => {
+    const catalog = createCommerceService({
+      database: pool,
+      economyReady: true,
+      products: [{ ...product, sku: 'com.example.retired', available: false }, product],
+      verifyPurchase: (proof) =>
+        Promise.resolve({
+          status: 'verified',
+          purchase: {
+            platform: proof.platform,
+            environment: 'sandbox',
+            sku: proof.sku,
+            transactionId: proof.transactionId,
+            accountToken: proof.accountToken,
+            fingerprint: 'b'.repeat(64),
+          },
+        }),
+    });
+    expect(catalog.catalog(other, 'android')).toEqual([
+      { key: product.key, sku: product.sku, consumable: true },
+    ]);
+    expect(await catalog.begin(other, 'android', product.key)).toMatchObject({ sku: product.sku });
+    const wallet = await catalog.wallet(other);
+    expect(
+      await catalog.verify(other, {
+        platform: 'android',
+        sku: 'com.example.retired',
+        transactionId: 'legacy-order',
+        accountToken: wallet.accountToken,
+        purchaseToken: 'legacy-token',
+      }),
+    ).toMatchObject({ status: 'granted', consumable: true, wallet: { credits: 3 } });
+  });
 });

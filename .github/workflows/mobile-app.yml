@@ -154,7 +154,10 @@ jobs:
           permissions = set(re.findall(r"uses-permission(?:-sdk-\d+)?: name='([^']+)'", badging))
           allowed = {system, internal}
           if os.environ.get('CPI_NATIVE_ADS') == 'true':
-              allowed.add('android.permission.ACCESS_NETWORK_STATE')
+              # GMA 25.4.0's ads-api -> WorkManager 2.7.0 adds these two
+              # normal permissions. Confirmed in the merged-manifest blame
+              # report; the baseline still accepts INTERNET only.
+              allowed.update({'android.permission.ACCESS_NETWORK_STATE', 'android.permission.WAKE_LOCK', 'android.permission.FOREGROUND_SERVICE'})
           if os.environ.get('CPI_NATIVE_PURCHASES') == 'true':
               allowed.add('com.android.vending.BILLING')
           assert system in permissions and permissions <= allowed, permissions

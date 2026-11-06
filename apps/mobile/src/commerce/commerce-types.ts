@@ -49,14 +49,14 @@ export interface CommerceGateway {
     key: string,
     platform: BillingPlatform,
     signal: AbortSignal,
-  ): Promise<{ accountToken: string }>;
+  ): Promise<{ accountToken: string; sku: string }>;
   verify(
     this: void,
     proof: PurchaseProof,
     signal: AbortSignal,
   ): Promise<
     | { status: 'pending' | 'rejected' }
-    | { status: 'granted'; transactionId: string; wallet: CommerceWallet }
+    | { status: 'granted'; transactionId: string; consumable: boolean; wallet: CommerceWallet }
   >;
   equip(this: void, theme: ThemeId, signal: AbortSignal): Promise<CommerceWallet>;
 }
