@@ -102,7 +102,7 @@ export const STORE_PRODUCTS: readonly StoreProduct[] = [
     quantity: 1,
     theme: 'chaos',
     name: 'vault.chaos',
-    price: 4.99,
+    price: 2.99,
   },
   {
     id: 'test.theme.jelly',
@@ -110,7 +110,7 @@ export const STORE_PRODUCTS: readonly StoreProduct[] = [
     quantity: 1,
     theme: 'jelly',
     name: 'vault.jelly',
-    price: 4.99,
+    price: 2.99,
   },
   ...(['wilds', 'league', 'puppy', 'kitten'] as const).map((theme) => ({
     id: 'test.theme.' + theme,
@@ -118,7 +118,7 @@ export const STORE_PRODUCTS: readonly StoreProduct[] = [
     quantity: 1,
     theme,
     name: ('vault.' + theme) as MessageKey,
-    price: 4.99,
+    price: 2.99,
   })),
 ];
 export const STORE_PAYMENT_MODE = 'test' as const;
