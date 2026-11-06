@@ -22,13 +22,17 @@ export function rollMysteryEffect(
   sample: number,
   rulesetVersion = RULESET_VERSION,
   allowPacts = true,
+  allowedKinds?: readonly EffectKind[],
 ): EffectKind {
   if (!Number.isFinite(sample) || sample < 0 || sample >= 1) {
     throw new RangeError('Mystery sample must be finite and in [0, 1).');
   }
   const table = getRuleset(rulesetVersion).mysteryTable.filter(
-    (entry) => allowPacts || !isPactKind(entry.kind),
+    (entry) =>
+      (allowPacts || !isPactKind(entry.kind)) &&
+      (!allowedKinds || allowedKinds.includes(entry.kind)),
   );
+  if (!table.length) throw new RangeError('No eligible mystery result.');
   const total = table.reduce((sum, entry) => sum + entry.weight, 0);
   const roll = sample * total;
   let cumulative = 0;
@@ -49,6 +53,8 @@ export function applyMysteryEffect(kind: EffectKind, now: number): MysteryApplie
     case 'soul_exchange':
     case 'half_life':
     case 'marketing':
+    case 'mystery_silence_30s':
+    case 'mystery_surge_30s':
       return { spDelta: 0, hintDelta: 0, addedEffect: null, label: kind };
     case 'regen_3rows':
     case 'bleed_3rows':

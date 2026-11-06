@@ -32,6 +32,7 @@ export const deathLabels: Record<DeathCause, string> = {
   wrong_tile: 'A wrong glass pane depleted your SP.',
   mystery: 'A mystery effect depleted your SP.',
   drain: 'An active drain depleted your SP.',
+  death_clock: 'The death clock depleted your SP before the next choice.',
 };
 
 export function formatActiveDuration(activeTimeMs: number): string {

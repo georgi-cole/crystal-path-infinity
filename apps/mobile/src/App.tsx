@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { RunState } from '@crystal-path-infinity/game-core';
-import { RISK_RULESET_VERSION } from '@crystal-path-infinity/game-core';
+import { DIRECTOR_RULESET_VERSION } from '@crystal-path-infinity/game-core';
 import { Capacitor } from '@capacitor/core';
 import {
   clearPracticeCheckpoint,
@@ -158,7 +158,9 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
       try {
         personalBest = readPracticePersonalBest(
           window.localStorage,
-          checkpoint.status === 'ready' ? checkpoint.state.rulesetVersion : RISK_RULESET_VERSION,
+          checkpoint.status === 'ready'
+            ? checkpoint.state.rulesetVersion
+            : DIRECTOR_RULESET_VERSION,
         );
       } catch {
         // Personal best is optional local metadata, not ranked authority.
@@ -358,7 +360,9 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
       setBest(
         readPracticePersonalBest(
           window.localStorage,
-          checkpoint.status === 'ready' ? checkpoint.state.rulesetVersion : RISK_RULESET_VERSION,
+          checkpoint.status === 'ready'
+            ? checkpoint.state.rulesetVersion
+            : DIRECTOR_RULESET_VERSION,
         ),
       );
     } catch {

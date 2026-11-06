@@ -1,9 +1,5 @@
 import type { EffectKind } from '@crystal-path-infinity/game-core';
-import {
-  usesBalanceRules,
-  RISK_RULESET_VERSION,
-  RULESET_VERSION,
-} from '@crystal-path-infinity/game-core';
+import { usesBalanceRules, usesRiskRules, RULESET_VERSION } from '@crystal-path-infinity/game-core';
 import type { LocaleCode } from './i18n';
 
 interface EffectCopy {
@@ -13,6 +9,18 @@ interface EffectCopy {
 }
 
 const enEffects: Record<EffectKind, EffectCopy> = {
+  mystery_silence_30s: {
+    title: 'The rift · Silence',
+    detail:
+      'The violet box flips a fair 50/50 coin: 30 seconds without new mystery boxes, or 30 seconds with a box every 3 rows. This time: Silence. The usual 5-row spacing resumes afterwards. Existing choices remain available.',
+    positive: false,
+  },
+  mystery_surge_30s: {
+    title: 'The rift · Surge',
+    detail:
+      'The violet box flips a fair 50/50 coin: 30 seconds without new mystery boxes, or 30 seconds with a box every 3 rows. This time: Surge. Cooldowns still protect rare choices. The usual 5-row spacing resumes afterwards.',
+    positive: true,
+  },
   coyote_10s: {
     title: 'Run Coyote · 10s',
     detail:
@@ -154,6 +162,18 @@ const enEffects: Record<EffectKind, EffectCopy> = {
 };
 
 const bgEffects: Record<EffectKind, EffectCopy> = {
+  mystery_silence_30s: {
+    title: 'Разломът · Тишина',
+    detail:
+      'Виолетовата кутия тегли 50/50: 30 секунди без нови мистерии или 30 секунди с кутия през 3 реда. Този път: Тишина. После се връща обичайният ритъм през 5 реда. Вече появил се избор остава.',
+    positive: false,
+  },
+  mystery_surge_30s: {
+    title: 'Разломът · Поток',
+    detail:
+      'Виолетовата кутия тегли 50/50: 30 секунди без нови мистерии или 30 секунди с кутия през 3 реда. Този път: Поток. Периодите без повторение за редките сделки остават. После ритъмът отново е през 5 реда.',
+    positive: true,
+  },
   coyote_10s: {
     title: 'Run Coyote · 10 сек.',
     detail:
@@ -453,7 +473,7 @@ export function effectCopy(
 ): EffectCopy {
   const copy = (locale === 'bg' ? bgEffects : enEffects)[kind];
   if (!usesBalanceRules(version)) return copy;
-  if (version === RISK_RULESET_VERSION && kind === 'false_oracle')
+  if (usesRiskRules(version) && kind === 'false_oracle')
     return {
       ...copy,
       detail:

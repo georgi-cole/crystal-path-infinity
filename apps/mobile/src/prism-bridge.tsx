@@ -5,6 +5,7 @@ import type { PresentedRow } from './infinity-presentation';
 import { useLanguage } from './language-context';
 import type { SceneFeedback } from './infinity-scene';
 import { bridgePane, projectBridgePoint, advancesOneRow } from './bridge-geometry';
+import { MysteryCube } from './mystery-box';
 
 const WIDTH = 900,
   HEIGHT = 700;
@@ -176,7 +177,7 @@ export function PrismBridge({
   omen?: TileSide | null;
 }) {
   const id = useId().replace(/:/g, ''),
-    { t, number } = useLanguage();
+    { t, number, locale } = useLanguage();
   const osReduced = useSyncExternalStore(subscribeMotion, motionSnapshot, serverMotionSnapshot);
   const reduced = reducedMotion || osReduced;
   const currentIndex = rows?.find((r) => r.phase === 'current')?.index ?? '0';
@@ -418,15 +419,39 @@ export function PrismBridge({
             {row.hasMystery && (
               <button
                 type="button"
-                className="cpi-bridge-mystery"
+                className={'cpi-bridge-mystery' + (row.mysteryTier ? ' is-tiered' : '')}
+                data-tier={row.mysteryTier}
                 style={{
                   top: `${(projectBridgePoint(0, 0.8 + row.distance * 1.15).y / HEIGHT) * 100}%`,
                 }}
-                aria-label={t('game.mysteryTile', { row: number(row.label) })}
+                aria-label={
+                  t('game.mysteryTile', { row: number(row.label) }) +
+                  (row.mysteryTier
+                    ? ` · ${locale === 'bg' ? { standard: 'Искра', choice: 'Сделка', major: 'Голямо решение', anomaly: 'Разлом 50/50' }[row.mysteryTier] : { standard: 'Spark', choice: 'Trade', major: 'Major pact', anomaly: 'Rift 50/50' }[row.mysteryTier]}`
+                    : '')
+                }
                 onClick={onMystery}
                 disabled={!interactive || moving || !row.mysteryAvailable}
               >
-                <span>?</span>
+                {row.mysteryTier ? (
+                  <>
+                    <MysteryCube tier={row.mysteryTier} />
+                    <span className="cpi-box-tier-label">
+                      {locale === 'bg'
+                        ? {
+                            standard: 'ИСКРА',
+                            choice: 'СДЕЛКА',
+                            major: 'РИТУАЛ',
+                            anomaly: '50/50',
+                          }[row.mysteryTier]
+                        : { standard: 'SPARK', choice: 'TRADE', major: 'RITUAL', anomaly: '50/50' }[
+                            row.mysteryTier
+                          ]}
+                    </span>
+                  </>
+                ) : (
+                  <span>?</span>
+                )}
               </button>
             )}
             {row.phase === 'current' && (

@@ -5,6 +5,7 @@ export * from './random.ts';
 export * from './rows.ts';
 export * from './effects.ts';
 export * from './effect-rules.ts';
+export * from './mystery-director.ts';
 export * from './pacts.ts';
 export * from './run.ts';
 export * from './session.ts';

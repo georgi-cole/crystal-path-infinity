@@ -7,6 +7,9 @@ import {
   PRACTICE_RNG,
   rollMysteryEffect,
   transitionRun,
+  DIRECTOR_RULESET_VERSION,
+  mysteryTier,
+  getRuleset,
 } from '@crystal-path-infinity/game-core';
 import type { EffectKind, TransitionResult, RunState } from '@crystal-path-infinity/game-core';
 
@@ -53,7 +56,19 @@ export function createMysteryLabRun(
   let rewardSeed = firstRewardSeed;
   while (rewardSeed < firstRewardSeed + 100_000) {
     const draw = PRACTICE_RNG.next(createPracticeCursor(rewardSeed));
-    if (rollMysteryEffect(draw.value, rulesetVersion) === kind) break;
+    if (
+      rollMysteryEffect(
+        draw.value,
+        rulesetVersion,
+        true,
+        rulesetVersion === DIRECTOR_RULESET_VERSION
+          ? getRuleset(rulesetVersion)
+              .mysteryTable.filter((entry) => mysteryTier(entry.kind) === mysteryTier(kind))
+              .map((entry) => entry.kind)
+          : undefined,
+      ) === kind
+    )
+      break;
     rewardSeed += 1;
   }
   if (rewardSeed === firstRewardSeed + 100_000) throw new Error('Mystery room unavailable.');
@@ -78,6 +93,13 @@ export function createMysteryLabRun(
   state = {
     ...state,
     sp,
+    ...(rulesetVersion === DIRECTOR_RULESET_VERSION
+      ? {
+          mysteryDirector: { ...state.mysteryDirector!, nextRow: state.currentRow, history: [] },
+          mysteryRng: createPracticeCursor(rewardSeed),
+          current: { ...state.current, mysteryTier: mysteryTier(kind) },
+        }
+      : {}),
     rows: state.rows.map((row) =>
       row.index === currentIndex ? { ...row, hasMystery: true } : row,
     ),

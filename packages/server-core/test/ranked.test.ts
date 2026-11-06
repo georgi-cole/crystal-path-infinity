@@ -5,6 +5,7 @@ import {
   PACT_RULESET_VERSION,
   BALANCE_RULESET_VERSION,
   RISK_RULESET_VERSION,
+  DIRECTOR_RULESET_VERSION,
   applyMysteryEffect,
 } from '@crystal-path-infinity/game-core';
 import type { RunState } from '@crystal-path-infinity/game-core';
@@ -155,6 +156,29 @@ function setup(options: { heartbeatWindowMs?: number; rulesetVersion?: string } 
 }
 
 describe('ranked authority trust boundary', () => {
+  it('owns the progressive death clock in v5 and exposes no private director ledger', async () => {
+    const f = setup({ rulesetVersion: DIRECTOR_RULESET_VERSION });
+    let reply = await f.start();
+    reply = await f.execute(reply, { type: 'resume' });
+    expect(reply.snapshot.deathClock).toEqual({ warningAt: 3000, expiresAt: 13000 });
+    f.advance(4000);
+    reply = await f.execute(reply, { type: 'heartbeat' });
+    f.advance(4000);
+    reply = await f.execute(reply, { type: 'heartbeat' });
+    expect(reply.snapshot.sp).toBe(240);
+    expect(JSON.stringify(reply)).not.toMatch(
+      /mysteryDirector|lastStepAt|anchorSp|"pressure"|mysteryRng|lowRiskSide/,
+    );
+    f.advance(4000);
+    reply = await f.execute(reply, { type: 'heartbeat' });
+    f.advance(1000);
+    reply = await f.execute(reply, { type: 'heartbeat' });
+    expect(reply.snapshot.status).toBe('dead');
+    expect(reply.snapshot.sp).toBe(0);
+    expect(reply.snapshot.death?.cause).toBe('death_clock');
+    expect(reply.snapshot.deathClock).toBeNull();
+    expect(reply.snapshot.lastClearedRow).toBe('0');
+  });
   it('keeps v4 risks private, persists a free no-safe hint and applies Coyote on the server', async () => {
     const f = setup({ rulesetVersion: RISK_RULESET_VERSION });
     let reply = await f.start();

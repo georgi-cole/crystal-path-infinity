@@ -11,6 +11,8 @@ import {
   PACT_RULESET_VERSION,
   BALANCE_RULESET_VERSION,
   RISK_RULESET_VERSION,
+  DIRECTOR_RULESET_VERSION,
+  getDeathClock,
   applyMysteryEffect,
   PRACTICE_RNG,
   transitionRun,
@@ -25,6 +27,7 @@ import {
   PactPanel,
 } from '../src/mystery-effects';
 import { parseRankedReply } from '../src/ranked/ranked-client';
+import { mysteryChoiceCards } from '../src/mystery-choice-model';
 import {
   readPracticeCheckpoint,
   readPracticePersonalBest,
@@ -61,7 +64,12 @@ function wire(state: RunState) {
       history: [],
       effects: state.effects,
       pact: state.pact,
-      death: null,
+      ...(state.rulesetVersion === DIRECTOR_RULESET_VERSION
+        ? { mysteryRhythm: state.mysteryDirector!.rhythm, deathClock: getDeathClock(state) }
+        : {}),
+      death: state.death
+        ? { id: state.death.id, fatalRow: state.death.fatalRow, cause: state.death.cause }
+        : null,
       revivesGranted: 0,
       revivesApplied: 0,
       revivesToReachScore: 0,
@@ -71,6 +79,116 @@ function wire(state: RunState) {
 }
 
 describe('mystery feedback, practice chamber and public contracts', () => {
+  it.each(getRuleset(DIRECTOR_RULESET_VERSION).mysteryTable.map((entry) => entry.kind))(
+    'opens and decodes the tiered %s demonstration with its actual clock and public tier',
+    (kind) => {
+      const result = createMysteryLabRun(kind, 100, 91025, DIRECTOR_RULESET_VERSION);
+      expect(result.state.current.mysteryOutcome).toBe(kind);
+      expect(parseRankedReply(wire(result.state))).not.toBeNull();
+    },
+  );
+
+  it('projects real choices holographically and refreshes the price as the death clock drains SP', () => {
+    const opened = createMysteryLabRun('half_life', 100, 91025, DIRECTOR_RULESET_VERSION).state;
+    const waiting = transitionRun(
+      opened,
+      { type: 'tick' },
+      { activeTimeMs: 65000, achievedAt: 65000, rng: PRACTICE_RNG },
+    ).state;
+    const html = renderToStaticMarkup(
+      createElement(PactPanel, {
+        pact: waiting.pact,
+        hints: waiting.hints,
+        sp: waiting.sp,
+        revealed: false,
+        disabled: false,
+        onChoose: () => {},
+        rulesetVersion: DIRECTOR_RULESET_VERSION,
+        activeTimeMs: 65000,
+      }),
+    );
+    expect(waiting.sp).toBe(80);
+    expect(html).toContain('cpi-holo-projection');
+    expect(html).toContain('data-tier="major"');
+    expect(html).toContain('Death clock · 5s');
+    expect(html).toContain('40 SP');
+    const accept = mysteryChoiceCards(waiting.pact!, waiting.sp, waiting.hints, false, false)[0];
+    const traded = pactAction(waiting, accept.option);
+    expect(traded.state.sp).toBe(40);
+    expect(traded.state.hints).toBe(7);
+  });
+
+  it('shows exact soul probabilities and avoids duplicate Marketing actions for a single hint', () => {
+    const soul = createMysteryLabRun('soul_exchange', 100, 91025, DIRECTOR_RULESET_VERSION).state;
+    const offers = mysteryChoiceCards(soul.pact!, 100, 2, false, false);
+    expect(offers[0].lines).toEqual(['65% · 75 SP · 4 hints', '35% · 60 SP · 3 hints']);
+    expect(offers[1].lines).toEqual(['65% · 140 SP · 1 hint', '35% · 70 SP · 1 hint']);
+    const market = createMysteryLabRun('marketing', 100, 91025, DIRECTOR_RULESET_VERSION).state;
+    expect(
+      mysteryChoiceCards(market.pact!, 100, 1, false, false).map((item) => item.option),
+    ).toEqual(['sell_one', 'decline']);
+    expect(mysteryChoiceCards(market.pact!, 100, 0, false, false)[0].disabled).toBe(true);
+  });
+
+  it('decodes rhythm and death clock without leaking cooldowns, and rejects forged grace, tiers and durations', () => {
+    const state = createMysteryLabRun('half_life', 100, 91025, DIRECTOR_RULESET_VERSION).state;
+    const reply = wire(state);
+    expect(parseRankedReply(reply)?.snapshot.deathClock).toEqual({
+      warningAt: 60000,
+      expiresAt: 70000,
+    });
+    for (const extra of [
+      { mysteryDirector: state.mysteryDirector },
+      { deathClock: { warningAt: 60000, expiresAt: 65000 } },
+      { deathClock: { warningAt: 61000, expiresAt: 71000 } },
+      { current: { ...reply.snapshot.current, mysteryTier: 'treasure' } },
+      { pact: { ...state.pact, offeredAt: -1 } },
+    ]) {
+      expect(parseRankedReply({ ...reply, snapshot: { ...reply.snapshot, ...extra } })).toBeNull();
+    }
+    const dead = transitionRun(
+      state,
+      { type: 'tick' },
+      { activeTimeMs: 70000, achievedAt: 70000, rng: PRACTICE_RNG },
+    ).state;
+    expect(parseRankedReply(wire(dead))?.snapshot.death?.cause).toBe('death_clock');
+    expect(
+      parseRankedReply({
+        ...reply,
+        snapshot: { ...reply.snapshot, rulesetVersion: RISK_RULESET_VERSION },
+      }),
+    ).toBeNull();
+  });
+
+  it('persists a partially drained v5 decision and its cooldown ledger without resetting grace', () => {
+    const opened = createMysteryLabRun('half_life', 100, 91025, DIRECTOR_RULESET_VERSION).state;
+    const state = transitionRun(
+      opened,
+      { type: 'tick' },
+      { activeTimeMs: 65000, achievedAt: 65000, rng: PRACTICE_RNG },
+    ).state;
+    const records = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => records.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        records.set(key, value);
+      },
+      removeItem: (key: string) => {
+        records.delete(key);
+      },
+    };
+    writePracticeCheckpoint(storage, state);
+    const loaded = readPracticeCheckpoint(storage);
+    expect(loaded.status).toBe('ready');
+    if (loaded.status !== 'ready') return;
+    expect(loaded.state.mysteryDirector).toEqual(state.mysteryDirector);
+    expect(loaded.state.pact?.offeredAt).toBe(0);
+    expect(getDeathClock(loaded.state)).toEqual({ warningAt: 60000, expiresAt: 70000 });
+    recordPracticePersonalBest(storage, '77', DIRECTOR_RULESET_VERSION);
+    expect(readPracticePersonalBest(storage, DIRECTOR_RULESET_VERSION)).toBe('77');
+    expect(readPracticePersonalBest(storage, RISK_RULESET_VERSION)).toBeNull();
+  });
+
   it.each(getRuleset(RISK_RULESET_VERSION).mysteryTable.map((entry) => entry.kind))(
     'opens and decodes the hidden-risk %s demonstration',
     (kind) => {

@@ -8,7 +8,8 @@ import {
   getRuleset,
   STARTING_SP,
   PRACTICE_RNG,
-  RISK_RULESET_VERSION,
+  DIRECTOR_RULESET_VERSION,
+  getDeathClock,
   isPactKind,
 } from '@crystal-path-infinity/game-core';
 import type {
@@ -34,6 +35,7 @@ import { presentInfinityScene } from './infinity-presentation';
 import { MysteryEffects, MysteryFeedbackView, PactPanel } from './mystery-effects';
 import type { MysteryFeedback, RunCues } from './mystery-feedback';
 import { EffectConsumption, HintCounter } from './resource-feedback';
+import { MysteryRhythmBadge, DeathClockBadge } from './mystery-box';
 import { MysteryLab } from './mystery-lab';
 import { mysteryText } from './mystery.messages';
 import './infinity-scene.css';
@@ -119,17 +121,26 @@ export function InfinitySceneView({
   const rawFatalRow = state.result?.fatalRow ?? state.death?.fatalRow ?? null;
   const fatalRow = rawFatalRow === null ? null : number(rawFatalRow);
   const deathCause = state.result?.deathCause ?? state.death?.cause ?? null;
-  const localizedDeathReason = deathCause
-    ? t(
-        deathCause === 'wrong_tile'
-          ? 'game.deathWrong'
-          : deathCause === 'mystery'
-            ? 'game.deathMystery'
-            : 'game.deathDrain',
-      )
-    : null;
+  const localizedDeathReason =
+    deathCause === 'death_clock'
+      ? locale === 'bg'
+        ? 'Death clock изтече преди следващия избор.'
+        : 'The death clock expired before the next choice.'
+      : deathCause
+        ? t(
+            deathCause === 'wrong_tile'
+              ? 'game.deathWrong'
+              : deathCause === 'mystery'
+                ? 'game.deathMystery'
+                : 'game.deathDrain',
+          )
+        : null;
   const overlayVisible = paused || confirmEnd || outcome.phase !== 'playing' || !!error;
-  const catastrophic = state.death?.cause === 'wrong_tile' && state.status !== 'playing';
+  const catastrophic =
+    (state.death?.cause === 'wrong_tile' || state.death?.cause === 'death_clock') &&
+    state.status !== 'playing';
+  const deathClock = getDeathClock(state);
+  const clockActive = deathClock !== null && state.activeTimeMs >= deathClock.warningAt;
   const current = presented.rows.find((row) => row.phase === 'current');
   const interactive =
     ready && !busy && !paused && !confirmEnd && !error && outcome.phase === 'playing';
@@ -166,7 +177,7 @@ export function InfinitySceneView({
 
   return (
     <main
-      className={`cps-shell ${INFINITY_SCENE_SKIN.shell} cpi-infinity-scene${catastrophic ? ' is-catastrophe' : ''}${settings.reducedMotion ? ' cpi-reduced-motion' : ''}`}
+      className={`cps-shell ${INFINITY_SCENE_SKIN.shell} cpi-infinity-scene${catastrophic ? ' is-catastrophe' : ''}${clockActive ? ' is-death-clock' : ''}${settings.reducedMotion ? ' cpi-reduced-motion' : ''}`}
       data-testid="infinity-scene"
       aria-label={INFINITY_SCENE_SKIN.title}
     >
@@ -265,6 +276,15 @@ export function InfinitySceneView({
           activeTimeMs={state.activeTimeMs}
           rulesetVersion={state.rulesetVersion}
         />
+        <MysteryRhythmBadge
+          rhythm={state.mysteryDirector?.rhythm}
+          activeTimeMs={state.activeTimeMs}
+        />
+        <DeathClockBadge
+          clock={getDeathClock(state)}
+          activeTimeMs={state.activeTimeMs}
+          offered={pactOffered}
+        />
         {state.current.noSafeTile && (
           <p className="cpi-sp-danger-copy is-low" role="status">
             {locale === 'bg'
@@ -276,6 +296,7 @@ export function InfinitySceneView({
           <PactPanel
             sp={state.sp}
             rulesetVersion={state.rulesetVersion}
+            activeTimeMs={state.activeTimeMs}
             pact={state.pact}
             hints={state.hints}
             revealed={state.current.revealedSafeSide !== null || !!state.current.noSafeTile}
@@ -538,7 +559,7 @@ function makeInitialRun(): RunState {
       mysteryRng: createPracticeCursor(mystery),
       observedAt: Date.now(),
       buffer: { ahead: 8, history: 2 },
-      rulesetVersion: RISK_RULESET_VERSION,
+      rulesetVersion: DIRECTOR_RULESET_VERSION,
     },
     PRACTICE_RNG,
   );

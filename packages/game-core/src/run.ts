@@ -19,6 +19,16 @@ import {
 } from './numbers.ts';
 import { assertRandomCursor, drawRandom } from './random.ts';
 import {
+  prepareMysteryRow,
+  mysteryEligibleKinds,
+  recordMysteryOpen,
+  advanceMysteryRow,
+  assertMysteryDirector,
+  getDeathClock,
+  rebaseDeathPressure,
+  deathClockPaid,
+} from './mystery-director.ts';
+import {
   assertRowStream,
   assertRowRisk,
   createRowStream,
@@ -47,6 +57,8 @@ import {
   supportsPacts,
   STARTING_HINTS,
   STARTING_SP,
+  DIRECTOR_RULESET_VERSION,
+  CHOICE_GRACE_MS,
 } from './rules.ts';
 import type {
   BufferPolicy,
@@ -94,7 +106,7 @@ export function createRun(options: CreateRunOptions, rng: RandomSource): RunStat
     buffer.ahead,
     rng,
   );
-  return {
+  const state: RunState = {
     schemaVersion: 1,
     rulesetVersion,
     runId: options.runId,
@@ -108,6 +120,9 @@ export function createRun(options: CreateRunOptions, rng: RandomSource): RunStat
     lastObservedAt: options.observedAt,
     effects: [],
     ...(supportsPacts(rulesetVersion) ? { pact: null } : {}),
+    ...(rulesetVersion === DIRECTOR_RULESET_VERSION
+      ? { mysteryDirector: { nextRow: '5', lastStepAt: activeTimeMs, history: [], rhythm: null } }
+      : {}),
     buffer,
     bufferOffset: '0',
     rows: generated.rows,
@@ -124,6 +139,7 @@ export function createRun(options: CreateRunOptions, rng: RandomSource): RunStat
     revivesToReachScore: 0,
     result: null,
   };
+  return prepareMysteryRow(state, rng);
 }
 
 /** Validates trusted core checkpoints; network JSON validation/authentication belongs to the adapter. */
@@ -131,6 +147,7 @@ export function assertRunState(state: RunState, rng?: RandomSource): void {
   if (state.schemaVersion !== 1) throw new RangeError('Unsupported run schema.');
   getRuleset(state.rulesetVersion);
   assertPact(state);
+  assertMysteryDirector(state);
   assertNonEmpty(state.runId, 'Run ID');
   assertBuffer(state.buffer);
   decimal(state.lastClearedRow);
@@ -326,14 +343,43 @@ function die(state: RunState, cause: DeathCause, events: RunEvent[]): RunState {
 
 /** At most nine pulses per remaining effect, independent of an arbitrarily large clock jump. */
 function settleTime(state: RunState, context: TransitionContext, events: RunEvent[]): RunState {
+  const clock = getDeathClock(state);
+  const clockExpired = clock !== null && clock.expiresAt <= context.activeTimeMs;
+  if (clockExpired) context = { ...context, activeTimeMs: clock.expiresAt };
   // Reading a contract must not burn the five-second effects already owned.
   // This deterministic freeze also survives checkpoint/recovery, with no UI timer authority.
   if (state.pact?.phase === 'offered') {
-    const elapsed = context.activeTimeMs - state.activeTimeMs;
-    return {
+    const elapsed =
+      state.rulesetVersion === DIRECTOR_RULESET_VERSION
+        ? Math.min(
+            context.activeTimeMs - state.activeTimeMs,
+            Math.max(0, state.pact.offeredAt! + CHOICE_GRACE_MS - state.activeTimeMs),
+          )
+        : context.activeTimeMs - state.activeTimeMs;
+    state = {
       ...state,
-      activeTimeMs: context.activeTimeMs,
+      activeTimeMs: state.activeTimeMs + elapsed,
       lastObservedAt: context.achievedAt,
+      ...(state.mysteryDirector?.rhythm
+        ? {
+            mysteryDirector: {
+              ...state.mysteryDirector,
+              rhythm: {
+                ...state.mysteryDirector.rhythm,
+                startedAt: addSafeInteger(
+                  state.mysteryDirector.rhythm.startedAt,
+                  elapsed,
+                  'Frozen rhythm start',
+                ),
+                expiresAt: addSafeInteger(
+                  state.mysteryDirector.rhythm.expiresAt,
+                  elapsed,
+                  'Frozen rhythm expiry',
+                ),
+              },
+            },
+          }
+        : {}),
       effects: state.effects.map((effect) =>
         !isTimedEffect(effect)
           ? {
@@ -351,10 +397,21 @@ function settleTime(state: RunState, context: TransitionContext, events: RunEven
             },
       ),
     };
+    if (state.rulesetVersion !== DIRECTOR_RULESET_VERSION) return state;
   }
   let next = { ...state, lastObservedAt: context.achievedAt };
-  while (next.effects.some(isTimedEffect)) {
+  while (
+    next.effects.some(isTimedEffect) ||
+    (clock !== null &&
+      clock.warningAt <= context.activeTimeMs &&
+      next.activeTimeMs < clock.expiresAt)
+  ) {
     let due = Number.MAX_SAFE_INTEGER;
+    const pressure = next.mysteryDirector?.pressure;
+    if (clock && clock.warningAt <= context.activeTimeMs)
+      due = pressure
+        ? clock.warningAt + (Math.floor((next.activeTimeMs - clock.warningAt) / 100) + 1) * 100
+        : clock.warningAt;
     for (const effect of next.effects) {
       if (!isTimedEffect(effect)) continue;
       due = Math.min(due, effect.expiresAt);
@@ -379,11 +436,33 @@ function settleTime(state: RunState, context: TransitionContext, events: RunEven
         return { ...effect, nextTickAt: addSafeInteger(due, EFFECT_TICK_MS, 'Next effect tick') };
       });
     const previousSp = next.sp;
+    let pressureLoss = 0;
+    let paid = pressure?.paid ?? 0;
+    if (pressure && clock && due > pressure.anchorAt) {
+      paid = deathClockPaid(pressure.anchorSp, pressure.anchorAt, clock.warningAt, due);
+      pressureLoss = paid - pressure.paid;
+      if (due === clock.expiresAt) pressureLoss = Math.max(0, next.sp + delta);
+    }
     next = {
       ...next,
       effects,
       activeTimeMs: due,
-      sp: clampSp(next.sp + delta, next.rulesetVersion),
+      sp: clampSp(next.sp + delta - pressureLoss, next.rulesetVersion),
+      ...(next.mysteryDirector && clock && due >= clock.warningAt
+        ? {
+            mysteryDirector: {
+              ...next.mysteryDirector,
+              pressure:
+                !pressure || delta !== 0
+                  ? {
+                      anchorAt: due,
+                      anchorSp: Math.max(0, next.sp + delta - pressureLoss),
+                      paid: 0,
+                    }
+                  : { ...pressure, paid },
+            },
+          }
+        : {}),
     };
     if (expired.length)
       events.push({
@@ -399,9 +478,17 @@ function settleTime(state: RunState, context: TransitionContext, events: RunEven
         appliedDelta: next.sp - previousSp,
         sp: next.sp,
       });
-    if (next.sp === 0) return die(next, 'drain', events);
+    if (pressureLoss > 0)
+      events.push({
+        ...eventTime(next),
+        type: 'death-clock-ticked',
+        delta: -pressureLoss,
+        sp: next.sp,
+      });
+    if (next.sp === 0) return die(next, pressureLoss > 0 ? 'death_clock' : 'drain', events);
   }
-  return { ...next, activeTimeMs: context.activeTimeMs };
+  next = { ...next, activeTimeMs: context.activeTimeMs };
+  return clockExpired ? die(next, 'death_clock', events) : next;
 }
 
 export function getRunResult(state: RunState): RunResult | null {
@@ -521,6 +608,15 @@ function rewardTransition(
           status: 'playing',
           death: null,
           sp: receipt.sp,
+          ...(state.mysteryDirector
+            ? {
+                mysteryDirector: {
+                  ...state.mysteryDirector,
+                  lastStepAt: state.activeTimeMs,
+                  pressure: undefined,
+                },
+              }
+            : {}),
           effects: [],
           ...(state.pact ? { pact: null } : {}),
           revivesApplied: state.revivesApplied + 1,
@@ -572,6 +668,7 @@ export function transitionRun(
   if (state.status === 'playing' && next.status !== 'playing') {
     return result(next, events, command.type === 'tick' ? null : 'died-before-command');
   }
+  next = prepareMysteryRow(next, context.rng);
   if (next.pact?.phase === 'offered' && ['choose', 'hint', 'mystery'].includes(command.type)) {
     return result(next, events, 'pact-decision-required');
   }
@@ -616,8 +713,15 @@ export function transitionRun(
       if (!getCurrentRow(next).hasMystery) return result(next, events, 'no-mystery');
       if (next.current.mysteryOutcome !== null) return result(next, events, 'mystery-consumed');
       const draw = drawRandom(next.mysteryRng, context.rng);
-      const kind = rollMysteryEffect(draw.value, next.rulesetVersion, !next.pact);
+      const directed = next.rulesetVersion === DIRECTOR_RULESET_VERSION;
+      const kind = rollMysteryEffect(
+        draw.value,
+        next.rulesetVersion,
+        !next.pact,
+        directed ? mysteryEligibleKinds(next, next.current.mysteryTier!) : undefined,
+      );
       const applied = applyMysteryEffect(kind, next.activeTimeMs);
+      const beforeMysterySp = next.sp;
       const hints =
         applied.hintDelta < 0
           ? Math.max(0, next.hints + applied.hintDelta)
@@ -642,13 +746,17 @@ export function transitionRun(
           next.activeTimeMs,
           next.rulesetVersion,
         ),
-        ...(isPactKind(kind) ? { pact: offerPact(kind) } : {}),
+        ...(isPactKind(kind)
+          ? { pact: { ...offerPact(kind), ...(directed ? { offeredAt: next.activeTimeMs } : {}) } }
+          : {}),
         current: { ...next.current, mysteryOutcome: kind },
       };
+      if (directed) next = rebaseDeathPressure(recordMysteryOpen(next, kind), beforeMysterySp);
       return result(sp === 0 ? die(next, 'mystery', events) : next, events);
     }
     case 'pact': {
       const pact = next.pact;
+      const beforePactSp = next.sp;
       const pactRow = getCurrentRow(next);
       const change = choosePact(
         next,
@@ -679,7 +787,30 @@ export function transitionRun(
         hintDelta: hints - next.hints,
         bank: change.pact?.bank ?? 0,
       });
-      next = { ...next, sp, hints, pact: change.pact, mysteryRng: change.cursor };
+      next = {
+        ...next,
+        sp,
+        hints,
+        pact: change.pact
+          ? {
+              ...change.pact,
+              ...(next.rulesetVersion === DIRECTOR_RULESET_VERSION
+                ? { offeredAt: next.pact!.offeredAt }
+                : {}),
+            }
+          : null,
+        mysteryRng: change.cursor,
+        ...(next.mysteryDirector && pact.phase === 'offered'
+          ? {
+              mysteryDirector: {
+                ...next.mysteryDirector,
+                lastStepAt: next.activeTimeMs,
+                pressure: undefined,
+              },
+            }
+          : {}),
+      };
+      next = rebaseDeathPressure(next, beforePactSp);
       return result(sp === 0 ? die(next, 'mystery', events) : next, events);
     }
     case 'choose': {
@@ -781,6 +912,7 @@ export function transitionRun(
         },
         context.rng,
       );
+      next = prepareMysteryRow(advanceMysteryRow(next, clearedRow), context.rng);
       if (next.pact?.kind === 'false_oracle' && next.pact.phase === 'active') {
         const nextRow = getCurrentRow(next);
         const omen = drawOmen(

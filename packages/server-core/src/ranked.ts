@@ -9,6 +9,8 @@ import {
   supportsPacts,
   isTimedEffect,
   PACT_OPTIONS,
+  DIRECTOR_RULESET_VERSION,
+  getDeathClock,
   transitionRun,
 } from '@crystal-path-infinity/game-core';
 import type {
@@ -88,6 +90,8 @@ export interface RankedSnapshot {
   readonly history: RunState['resolutions'];
   readonly effects: RunState['effects'];
   readonly pact?: RunState['pact'];
+  readonly mysteryRhythm?: NonNullable<RunState['mysteryDirector']>['rhythm'];
+  readonly deathClock?: ReturnType<typeof getDeathClock>;
   readonly death: Pick<NonNullable<RunState['death']>, 'id' | 'fatalRow' | 'cause'> | null;
   readonly revivesGranted: number;
   readonly revivesApplied: number;
@@ -275,6 +279,7 @@ export function rankedSnapshot(record: StoredRankedRun): RankedSnapshot {
   const visible = (current: RunState['current']) => ({
     revealedSafeSide: current.revealedSafeSide,
     ...(current.noSafeTile ? { noSafeTile: true as const } : {}),
+    ...(current.mysteryTier ? { mysteryTier: current.mysteryTier } : {}),
     mysteryOutcome: current.mysteryOutcome,
     lastChoice: current.lastChoice
       ? { side: current.lastChoice.side, wrong: current.lastChoice.wrong }
@@ -318,6 +323,9 @@ export function rankedSnapshot(record: StoredRankedRun): RankedSnapshot {
             rowsLeft: effect.rowsLeft,
           },
     ),
+    ...(state.rulesetVersion === DIRECTOR_RULESET_VERSION
+      ? { mysteryRhythm: state.mysteryDirector!.rhythm, deathClock: getDeathClock(state) }
+      : {}),
     ...(supportsPacts(state.rulesetVersion)
       ? {
           pact: state.pact
@@ -327,6 +335,9 @@ export function rankedSnapshot(record: StoredRankedRun): RankedSnapshot {
                 rowsLeft: state.pact.rowsLeft,
                 bank: state.pact.bank,
                 omen: state.pact.omen,
+                ...(state.rulesetVersion === DIRECTOR_RULESET_VERSION
+                  ? { offeredAt: state.pact.offeredAt }
+                  : {}),
               }
             : null,
         }

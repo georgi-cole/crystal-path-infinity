@@ -18,6 +18,8 @@ export type EffectKind =
   | 'double_gain_21s'
   | 'double_loss_21s'
   | 'coyote_10s'
+  | 'mystery_silence_30s'
+  | 'mystery_surge_30s'
   | RowEffectKind
   | PactKind;
 
@@ -32,6 +34,29 @@ export type PactKind =
 export type PactOption =
   'accept' | 'decline' | 'cashout' | 'settle' | 'sp' | 'hint' | 'sell_one' | 'sell_all';
 
+export type MysteryTier = 'standard' | 'choice' | 'major' | 'anomaly';
+export interface MysteryRhythm {
+  readonly kind: 'mystery_silence_30s' | 'mystery_surge_30s';
+  readonly startedAt: number;
+  readonly expiresAt: number;
+}
+export interface MysteryDirector {
+  readonly nextRow: Decimal;
+  readonly lastStepAt: number;
+  readonly pressure?: {
+    readonly anchorAt: number;
+    readonly anchorSp: number;
+    readonly paid: number;
+  };
+  /** PRIVATE cooldown ledger; one most recent entry per result. */
+  readonly history: readonly {
+    readonly kind: EffectKind;
+    readonly row: Decimal;
+    readonly at: number;
+  }[];
+  readonly rhythm: MysteryRhythm | null;
+}
+
 /** A bounded, row-based contract. No hidden roll or future safe side is stored here. */
 export interface MysteryPact {
   readonly kind: PactKind;
@@ -40,6 +65,8 @@ export interface MysteryPact {
   readonly bank: number;
   /** A deliberately fallible prediction, never a confirmed hint. */
   readonly omen: TileSide | null;
+  /** v5 decision grace begins once, survives saves and is not reset by rendering. */
+  readonly offeredAt?: number;
 }
 
 export type TimedEffectKind = Extract<
@@ -112,13 +139,14 @@ export interface CurrentRowState {
   readonly lastChoice: { readonly side: TileSide; readonly wrong: boolean } | null;
   /** A hint inspected this row and found no surviving tile. No hint charge was taken. */
   readonly noSafeTile?: true;
+  readonly mysteryTier?: MysteryTier;
 }
 
 export interface RowResolution extends CurrentRowState {
   readonly index: Decimal;
 }
 
-export type DeathCause = 'wrong_tile' | 'mystery' | 'drain';
+export type DeathCause = 'wrong_tile' | 'mystery' | 'drain' | 'death_clock';
 export interface DeathSnapshot {
   readonly id: string;
   readonly sequence: number;
@@ -177,6 +205,7 @@ export interface RunState {
   readonly effects: readonly ActiveEffect[];
   /** Absent in legacy v1 checkpoints. Only the versioned pact ruleset can use this. */
   readonly pact?: MysteryPact | null;
+  readonly mysteryDirector?: MysteryDirector;
   readonly buffer: BufferPolicy;
   /** Zero-based index of rows[0], independent of bounded array positions. */
   readonly bufferOffset: Decimal;
@@ -296,6 +325,7 @@ export type RunEvent = EventTime &
       }
     | { readonly type: 'hint-used'; readonly row: Decimal; readonly safeSide: TileSide }
     | { readonly type: 'hint-unavailable'; readonly row: Decimal }
+    | { readonly type: 'death-clock-ticked'; readonly delta: number; readonly sp: number }
     | {
         readonly type: 'pact-resolved';
         readonly kind: PactKind;

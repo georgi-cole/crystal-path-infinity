@@ -7,7 +7,7 @@ import {
   MYSTERY_MIN_GAP,
   RULESET_VERSION,
   RISK_RULESET,
-  RISK_RULESET_VERSION,
+  usesRiskRules,
 } from './rules.ts';
 import type { BridgeRow, RandomCursor, RandomSource, RowStreamState, TileSide } from './types.ts';
 
@@ -25,7 +25,7 @@ export function hintSafeSide(row: BridgeRow): TileSide | null {
 }
 
 export function assertRowRisk(row: BridgeRow, version: string): void {
-  if (version !== RISK_RULESET_VERSION) {
+  if (!usesRiskRules(version)) {
     if (row.risk !== undefined) throw new RangeError('Risk draws outside v4.');
     return;
   }
@@ -84,7 +84,7 @@ export function takeRows(stream: RowStreamState, count: number, rng: RandomSourc
     cursor = side.cursor;
     const lowRiskSide = side.value < 0.5 ? 'left' : 'right';
     let risk: BridgeRow['risk'];
-    if (stream.rulesetVersion === RISK_RULESET_VERSION) {
+    if (usesRiskRules(stream.rulesetVersion)) {
       const left = drawRandom(cursor, rng);
       const right = drawRandom(left.cursor, rng);
       cursor = right.cursor;

@@ -11,6 +11,7 @@ import type { EffectKind } from '@crystal-path-infinity/game-core';
 import { MysteryEffects, PactPanel, EffectGlyph } from '../mystery-effects';
 import { effectCopy } from '../mystery.messages';
 import { HintCounter } from '../resource-feedback';
+import { DeathClockBadge, MysteryRhythmBadge, MysteryCube } from '../mystery-box';
 
 const EMPTY: RankedClientState = {
   phase: 'unavailable',
@@ -303,9 +304,16 @@ export function RankedScene({
           {run.status === 'playing' && (
             <>
               <h3 className="cpi-ranked-row">{t('ranked.row', { row: number(run.currentRow) })}</h3>
+              <MysteryRhythmBadge rhythm={run.mysteryRhythm} activeTimeMs={run.activeTimeMs} />
+              <DeathClockBadge
+                clock={run.deathClock}
+                activeTimeMs={run.activeTimeMs}
+                offered={run.pact?.phase === 'offered'}
+              />
               <PactPanel
                 sp={run.sp}
                 rulesetVersion={run.rulesetVersion}
+                activeTimeMs={run.activeTimeMs}
                 pact={run.pact}
                 hints={run.hints}
                 revealed={run.current.revealedSafeSide !== null || !!run.current.noSafeTile}
@@ -390,6 +398,11 @@ export function RankedScene({
                     onClick={() => action('mystery')}
                   >
                     {t('ranked.mystery')}
+                    {run.current.mysteryTier && (
+                      <span style={{ display: 'inline-block', width: '2rem', height: '2rem' }}>
+                        <MysteryCube tier={run.current.mysteryTier} />
+                      </span>
+                    )}
                   </button>
                 )}
               </div>

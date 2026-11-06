@@ -1,4 +1,9 @@
-import type { ActiveEffect, RunState, TileSide } from '@crystal-path-infinity/game-core';
+import type {
+  ActiveEffect,
+  RunState,
+  TileSide,
+  MysteryTier,
+} from '@crystal-path-infinity/game-core';
 
 /** Renderer-safe shape. In particular, future tiles never contain safeSide. */
 export interface PresentedRow {
@@ -13,6 +18,7 @@ export interface PresentedRow {
   readonly chosen: TileSide | null;
   readonly wrong: boolean;
   readonly noSafeTile?: true;
+  readonly mysteryTier?: MysteryTier;
 }
 export interface PresentedEffect {
   readonly kind: ActiveEffect['kind'];
@@ -92,6 +98,9 @@ export function presentInfinityScene(state: RunState): PresentedScene {
       chosen: decision?.side ?? null,
       wrong: decision?.wrong ?? false,
       ...(phase === 'current' && state.current.noSafeTile ? { noSafeTile: true as const } : {}),
+      ...(phase === 'current' && state.current.mysteryTier
+        ? { mysteryTier: state.current.mysteryTier }
+        : {}),
     });
   }
   if (rows.length > MAX_PRESENTED_ROWS) throw new RangeError('Unbounded visual row window.');

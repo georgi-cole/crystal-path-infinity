@@ -2,7 +2,9 @@ import type { AccountSessionOwner } from '../account/session-owner';
 import {
   BALANCE_PACT_KINDS,
   usesBalanceRules,
-  RISK_RULESET_VERSION,
+  usesRiskRules,
+  DIRECTOR_RULESET_VERSION,
+  MYSTERY_TIERS,
   getRuleset,
   supportsPacts,
   assertActiveEffects,
@@ -15,6 +17,8 @@ import type {
   PactKind,
   PactOption,
   TimedEffectKind,
+  MysteryTier,
+  MysteryRhythm,
 } from '@crystal-path-infinity/game-core';
 import { canRecheckOperation, parseOperationFailure } from '../operations/operation-failure.ts';
 import type { OperationFailure } from '../operations/operation-failure';
@@ -40,6 +44,7 @@ export interface RankedCurrent {
   readonly mysteryOutcome: string | null;
   readonly lastChoice: { readonly side: RankedSide; readonly wrong: boolean } | null;
   readonly noSafeTile?: true;
+  readonly mysteryTier?: MysteryTier;
 }
 export interface RankedRun {
   readonly runId: string;
@@ -62,10 +67,12 @@ export interface RankedRun {
   readonly history: readonly (RankedCurrent & { readonly index: string })[];
   readonly effects: readonly ActiveEffect[];
   readonly pact?: MysteryPact | null;
+  readonly mysteryRhythm?: MysteryRhythm | null;
+  readonly deathClock?: { readonly warningAt: number; readonly expiresAt: number } | null;
   readonly death: {
     readonly id: string;
     readonly fatalRow: string;
-    readonly cause: 'wrong_tile' | 'mystery' | 'drain';
+    readonly cause: 'wrong_tile' | 'mystery' | 'drain' | 'death_clock';
   } | null;
   readonly revivesGranted: number;
   readonly revivesApplied: number;
@@ -142,6 +149,8 @@ const EFFECTS = [
   'regen_3rows',
   'bleed_3rows',
   'coyote_10s',
+  'mystery_silence_30s',
+  'mystery_surge_30s',
 ];
 const REASONS = new Set([
   'finished',
@@ -194,9 +203,12 @@ function visibleCurrent(
   value: unknown,
   extraKeys: readonly string[] = [],
   riskRules = false,
+  directorRules = false,
 ): RankedCurrent | null {
   const hasNoSafeTile =
     riskRules && value !== null && typeof value === 'object' && 'noSafeTile' in value;
+  const hasTier =
+    directorRules && value !== null && typeof value === 'object' && 'mysteryTier' in value;
   if (
     !object(value, [
       'revealedSafeSide',
@@ -204,8 +216,11 @@ function visibleCurrent(
       'lastChoice',
       ...extraKeys,
       ...(hasNoSafeTile ? ['noSafeTile'] : []),
+      ...(hasTier ? ['mysteryTier'] : []),
     ]) ||
     ('noSafeTile' in value && (value.noSafeTile !== true || value.revealedSafeSide !== null)) ||
+    ('mysteryTier' in value &&
+      !(MYSTERY_TIERS as readonly unknown[]).includes(value.mysteryTier)) ||
     (value.revealedSafeSide !== null && !side(value.revealedSafeSide)) ||
     (value.mysteryOutcome !== null &&
       (typeof value.mysteryOutcome !== 'string' || !EFFECTS.includes(value.mysteryOutcome)))
@@ -220,6 +235,7 @@ function visibleCurrent(
   return {
     revealedSafeSide: value.revealedSafeSide,
     ...('noSafeTile' in value ? { noSafeTile: true as const } : {}),
+    ...('mysteryTier' in value ? { mysteryTier: value.mysteryTier as MysteryTier } : {}),
     mysteryOutcome: value.mysteryOutcome,
     lastChoice:
       choice === null
@@ -241,6 +257,10 @@ export function parseRankedReply(value: unknown): RankedReply | null {
   )
     return null;
   const raw = value.snapshot;
+  const directorRules =
+    raw !== null &&
+    typeof raw === 'object' &&
+    (raw as Record<string, unknown>).rulesetVersion === DIRECTOR_RULESET_VERSION;
   const usesPacts =
     raw !== null &&
     typeof raw === 'object' &&
@@ -269,6 +289,7 @@ export function parseRankedReply(value: unknown): RankedReply | null {
       'revivesToReachScore',
       'rewardPending',
       ...(usesPacts ? ['pact'] : []),
+      ...(directorRules ? ['mysteryRhythm', 'deathClock'] : []),
     ]) ||
     !object(lease, ['token', 'generation', 'expiresAt']) ||
     typeof lease.token !== 'string' ||
@@ -313,13 +334,13 @@ export function parseRankedReply(value: unknown): RankedReply | null {
     )
   )
     return null;
-  const riskRules = raw.rulesetVersion === RISK_RULESET_VERSION;
-  const current = visibleCurrent(raw.current, ['hasMystery'], riskRules);
+  const riskRules = usesRiskRules(raw.rulesetVersion);
+  const current = visibleCurrent(raw.current, ['hasMystery'], riskRules, directorRules);
   if (!current || typeof (raw.current as Record<string, unknown>).hasMystery !== 'boolean')
     return null;
   const history: (RankedCurrent & { index: string })[] = [];
   for (const entry of raw.history) {
-    const visible = visibleCurrent(entry, ['index'], riskRules);
+    const visible = visibleCurrent(entry, ['index'], riskRules, directorRules);
     if (!visible || !decimal((entry as Record<string, unknown>).index)) return null;
     const index = (entry as { index: string }).index;
     if (
@@ -333,7 +354,16 @@ export function parseRankedReply(value: unknown): RankedReply | null {
   if (usesPacts && raw.pact !== null) {
     const candidate = raw.pact;
     if (
-      !object(candidate, ['kind', 'phase', 'rowsLeft', 'bank', 'omen']) ||
+      !object(candidate, [
+        'kind',
+        'phase',
+        'rowsLeft',
+        'bank',
+        'omen',
+        ...(directorRules ? ['offeredAt'] : []),
+      ]) ||
+      (directorRules &&
+        (!integer(candidate.offeredAt) || candidate.offeredAt > raw.activeTimeMs)) ||
       typeof candidate.kind !== 'string' ||
       !(BALANCE_PACT_KINDS as readonly string[]).includes(candidate.kind) ||
       !['offered', 'active'].includes(String(candidate.phase)) ||
@@ -368,6 +398,7 @@ export function parseRankedReply(value: unknown): RankedReply | null {
       rowsLeft: candidate.rowsLeft,
       bank: candidate.bank,
       omen: candidate.omen,
+      ...(directorRules ? { offeredAt: candidate.offeredAt as number } : {}),
     };
   }
   if (
@@ -444,6 +475,40 @@ export function parseRankedReply(value: unknown): RankedReply | null {
   } catch {
     return null;
   }
+  let rhythm: MysteryRhythm | null = null;
+  let deathClock: RankedRun['deathClock'] = null;
+  if (directorRules) {
+    if (raw.mysteryRhythm !== null) {
+      const item = raw.mysteryRhythm;
+      if (
+        !object(item, ['kind', 'startedAt', 'expiresAt']) ||
+        !['mystery_silence_30s', 'mystery_surge_30s'].includes(String(item.kind)) ||
+        !integer(item.startedAt) ||
+        !integer(item.expiresAt) ||
+        item.expiresAt - item.startedAt !== 30000 ||
+        item.startedAt > raw.activeTimeMs
+      )
+        return null;
+      rhythm = {
+        kind: item.kind as MysteryRhythm['kind'],
+        startedAt: item.startedAt,
+        expiresAt: item.expiresAt,
+      };
+    }
+    if (raw.status === 'playing') {
+      const item = raw.deathClock;
+      if (
+        !object(item, ['warningAt', 'expiresAt']) ||
+        !integer(item.warningAt) ||
+        !integer(item.expiresAt) ||
+        item.expiresAt - item.warningAt !== 10000 ||
+        item.expiresAt <= raw.activeTimeMs ||
+        (pact?.phase === 'offered' && item.warningAt !== pact.offeredAt! + 60000)
+      )
+        return null;
+      deathClock = { warningAt: item.warningAt, expiresAt: item.expiresAt };
+    } else if (raw.deathClock !== null) return null;
+  }
   const death = raw.death;
   if (
     death !== null &&
@@ -453,7 +518,9 @@ export function parseRankedReply(value: unknown): RankedReply | null {
       death.id.length > 120 ||
       !/^[A-Za-z0-9:_-]+$/.test(death.id) ||
       !decimal(death.fatalRow, true) ||
-      !['wrong_tile', 'mystery', 'drain'].includes(String(death.cause)))
+      !['wrong_tile', 'mystery', 'drain', ...(directorRules ? ['death_clock'] : [])].includes(
+        String(death.cause),
+      ))
   )
     return null;
   if (
@@ -486,6 +553,7 @@ export function parseRankedReply(value: unknown): RankedReply | null {
       achievedAt: raw.achievedAt,
       paused: raw.paused,
       current: { ...current, hasMystery: (raw.current as { hasMystery: boolean }).hasMystery },
+      ...(directorRules ? { mysteryRhythm: rhythm, deathClock } : {}),
       history,
       effects,
       ...(usesPacts ? { pact } : {}),

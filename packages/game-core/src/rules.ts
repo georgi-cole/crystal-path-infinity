@@ -6,6 +6,10 @@ export const RULESET_VERSION = 'infinity-v1';
 export const PACT_RULESET_VERSION = 'infinity-v2-pacts';
 export const BALANCE_RULESET_VERSION = 'infinity-v3-balance';
 export const RISK_RULESET_VERSION = 'infinity-v4-hidden-risk';
+export const DIRECTOR_RULESET_VERSION = 'infinity-v5-mystery';
+export const CHOICE_GRACE_MS = 60_000;
+export const IDLE_WARNING_MS = 3_000;
+export const DEATH_COUNTDOWN_MS = 10_000;
 export const STARTING_SP = 300;
 export const MAX_SP = 400;
 export const STARTING_HINTS = 2;
@@ -104,8 +108,25 @@ export const RISK_RULESET = Object.freeze({
   highBreakRisk: 0.4,
 });
 
+export const DIRECTOR_MYSTERY_TABLE: typeof MYSTERY_TABLE = Object.freeze([
+  ...RISK_MYSTERY_TABLE.map((entry) => Object.freeze({ ...entry, weight: entry.weight * 0.96 })),
+  Object.freeze({ kind: 'mystery_silence_30s' as const, weight: 2 }),
+  Object.freeze({ kind: 'mystery_surge_30s' as const, weight: 2 }),
+]);
+export const DIRECTOR_RULESET = Object.freeze({
+  ...RISK_RULESET,
+  version: DIRECTOR_RULESET_VERSION,
+  mysteryTable: DIRECTOR_MYSTERY_TABLE,
+  mysteryMinGap: 5,
+  mysteryMaxGap: 5,
+});
+
+export function usesRiskRules(version: string): boolean {
+  return version === RISK_RULESET_VERSION || version === DIRECTOR_RULESET_VERSION;
+}
+
 export function usesBalanceRules(version: string): boolean {
-  return version === BALANCE_RULESET_VERSION || version === RISK_RULESET_VERSION;
+  return version === BALANCE_RULESET_VERSION || usesRiskRules(version);
 }
 
 export function supportsPacts(version: string): boolean {
@@ -114,7 +135,13 @@ export function supportsPacts(version: string): boolean {
 
 export function getRuleset(
   version: string = RULESET_VERSION,
-): typeof RULESET | typeof PACT_RULESET | typeof BALANCE_RULESET | typeof RISK_RULESET {
+):
+  | typeof RULESET
+  | typeof PACT_RULESET
+  | typeof BALANCE_RULESET
+  | typeof RISK_RULESET
+  | typeof DIRECTOR_RULESET {
+  if (version === DIRECTOR_RULESET_VERSION) return DIRECTOR_RULESET;
   if (version === RISK_RULESET_VERSION) return RISK_RULESET;
   if (version === BALANCE_RULESET_VERSION) return BALANCE_RULESET;
   if (version === PACT_RULESET_VERSION) return PACT_RULESET;

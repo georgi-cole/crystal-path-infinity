@@ -5,6 +5,7 @@ import {
   RULESET_VERSION,
   MARKET_SP_PER_HINT,
   HALF_LIFE_HINTS,
+  DIRECTOR_RULESET_VERSION,
 } from '@crystal-path-infinity/game-core';
 import type {
   ActiveEffect,
@@ -15,6 +16,7 @@ import type {
 import { useLanguage } from './language-context';
 import { effectCopy, mysteryText } from './mystery.messages';
 import './mystery-effects.css';
+import { HolographicOffer } from './mystery-box';
 
 export function EffectGlyph({ kind, burst = false }: { kind: EffectKind; burst?: boolean }) {
   let glyph;
@@ -27,6 +29,19 @@ export function EffectGlyph({ kind, burst = false }: { kind: EffectKind; burst?:
             d="m15 12 8 5 10-4 7 9-11 3-6 11-7-3 6-13-7-8Zm14 13 9 10m-23-2-6 5"
           />
           <path className="cpi-glyph-rise cpi-glyph-echo" d="M3 17h9M1 24h12M5 31h7" />
+        </>
+      );
+      break;
+    case 'mystery_silence_30s':
+    case 'mystery_surge_30s':
+      glyph = (
+        <>
+          <path className="cpi-glyph-shell" d="m24 4 18 10v20L24 44 6 34V14Z" />
+          <path
+            className="cpi-glyph-turn"
+            d="M12 25c0-14 12-9 12 0s12 9 12 0-12-9-12 0-12 14-12 0Z"
+          />
+          {kind === 'mystery_silence_30s' && <path d="m10 39 28-30" />}
         </>
       );
       break;
@@ -313,6 +328,7 @@ export function PactPanel({
   onChoose,
   sp = 100,
   rulesetVersion = RULESET_VERSION,
+  activeTimeMs = 0,
 }: {
   pact: MysteryPact | null | undefined;
   hints: number;
@@ -321,9 +337,23 @@ export function PactPanel({
   onChoose: (option: PactOption) => void;
   sp?: number;
   rulesetVersion?: string;
+  activeTimeMs?: number;
 }) {
   const { locale } = useLanguage();
   if (!pact) return null;
+  if (pact.phase === 'offered' && rulesetVersion === DIRECTOR_RULESET_VERSION)
+    return (
+      <HolographicOffer
+        pact={pact}
+        sp={sp}
+        hints={hints}
+        revealed={revealed}
+        disabled={disabled}
+        onChoose={onChoose}
+        activeTimeMs={activeTimeMs}
+        rulesetVersion={rulesetVersion}
+      />
+    );
   const copy = effectCopy(locale, pact.kind, rulesetVersion);
   const offered = pact.phase === 'offered';
   const action = (option: PactOption, label: string, unavailable = false) => (

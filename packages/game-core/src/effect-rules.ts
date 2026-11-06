@@ -1,5 +1,5 @@
 import {
-  RISK_RULESET_VERSION,
+  usesRiskRules,
   usesBalanceRules,
   EFFECT_DURATION_MS,
   EFFECT_TICK_MS,
@@ -43,7 +43,7 @@ export function assertActiveEffects(
     const newKind = effect.kind === 'double_gain_21s' || effect.kind === 'double_loss_21s';
     if (
       (newKind && !usesBalanceRules(version)) ||
-      (effect.kind === 'coyote_10s' && version !== RISK_RULESET_VERSION)
+      (effect.kind === 'coyote_10s' && !usesRiskRules(version))
     )
       throw new RangeError('Unsupported effect.');
     assertNonNegativeInteger(effect.expiresAt, 'Effect expiry');
