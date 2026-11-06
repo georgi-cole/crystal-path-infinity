@@ -1,4 +1,4 @@
-import { PRACTICE_RULESET_VERSION } from './practice-rules';
+import { nextPracticeRuleset } from './balance-tuning';
 import { DiscoveryIntroduction } from './mystery-introduction';
 import { MysteryJournal } from './mystery-discovery';
 import { readMysteryJournal } from './mystery-journal-model';
@@ -27,8 +27,8 @@ import {
   createPracticeCursor,
   createRun,
   getRuleset,
+  parseTileExperiment,
   STARTING_SP,
-  CLASSIC_STORE_RULESET_VERSION,
   getDeathClock,
   isPactKind,
   getMaxRevives,
@@ -239,6 +239,17 @@ export function InfinitySceneView({
     0,
     Math.min(100, (state.sp / (maxSp ?? Math.max(STARTING_SP, state.sp))) * 100),
   );
+  const experiment =
+    import.meta.env.MODE !== 'production' ? parseTileExperiment(state.rulesetVersion) : null;
+  const modeLabel = trial
+    ? t('vault.trial')
+    : state.storeTest?.assisted
+      ? t('vault.assisted')
+      : experiment
+        ? locale === 'bg'
+          ? 'Тест'
+          : 'Playtest'
+        : t('vault.classic');
   const notice =
     cinematic?.phase === 'impact'
       ? t(cinematic.feedback?.kind === 'wrong' ? 'game.impactWrong' : 'game.impactSafe')
@@ -267,7 +278,8 @@ export function InfinitySceneView({
       aria-label={INFINITY_SCENE_SKIN.title}
     >
       <p className="cpi-run-mode">
-        {t(trial ? 'vault.trial' : state.storeTest?.assisted ? 'vault.assisted' : 'vault.classic')}
+        {modeLabel}
+        {experiment && ` · ${experiment.highBreakPercent}% / ${experiment.lowBreakPercent}%`}
       </p>
       <StageAtmosphere emergency={emergency || catastrophic} />
       <div className="cps-content" inert={overlayVisible}>
@@ -805,7 +817,7 @@ function makeInitialRun(testEconomy = false): RunState {
   return createRun(
     {
       runId: 'practice-' + route.toString(16),
-      rulesetVersion: testEconomy ? CLASSIC_STORE_RULESET_VERSION : PRACTICE_RULESET_VERSION,
+      rulesetVersion: nextPracticeRuleset(testEconomy),
       discoveredMysteries,
       routeRng: createPracticeCursor(route),
       mysteryRng: createPracticeCursor(mystery),

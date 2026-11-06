@@ -12,3 +12,4 @@ export * from './run.ts';
 export * from './session.ts';
 export * from './timed-session.ts';
 export * from './pacing.ts';
+export * from './tile-experiments.ts';

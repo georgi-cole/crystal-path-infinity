@@ -1,5 +1,6 @@
 import {
   assertRunState,
+  parseTileExperiment,
   MAX_BUFFER_ROWS,
   getMaxRevives,
   STORE_TEST_RULESET_VERSION,
@@ -103,20 +104,21 @@ function validatePracticeState(state: RunState): void {
   assertRunState(state, PRACTICE_RNG);
   if (
     !state.runId.startsWith('practice-') ||
-    ![
-      RULESET_VERSION,
-      PACED_RULESET_VERSION,
-      SCAN_RULESET_VERSION,
-      PACT_RULESET_VERSION,
-      BALANCE_RULESET_VERSION,
-      RISK_RULESET_VERSION,
-      DIRECTOR_RULESET_VERSION,
-      RELIC_RULESET_VERSION,
-      DISCOVERY_RULESET_VERSION,
-      CLASSIC_MYSTERY_RULESET_VERSION,
-      CLASSIC_STORE_RULESET_VERSION,
-      STORE_TEST_RULESET_VERSION,
-    ].includes(state.rulesetVersion) ||
+    (!parseTileExperiment(state.rulesetVersion) &&
+      ![
+        RULESET_VERSION,
+        PACED_RULESET_VERSION,
+        SCAN_RULESET_VERSION,
+        PACT_RULESET_VERSION,
+        BALANCE_RULESET_VERSION,
+        RISK_RULESET_VERSION,
+        DIRECTOR_RULESET_VERSION,
+        RELIC_RULESET_VERSION,
+        DISCOVERY_RULESET_VERSION,
+        CLASSIC_MYSTERY_RULESET_VERSION,
+        CLASSIC_STORE_RULESET_VERSION,
+        STORE_TEST_RULESET_VERSION,
+      ].includes(state.rulesetVersion)) ||
     state.rows.length > MAX_BUFFER_ROWS ||
     state.resolutions.length > state.buffer.history ||
     state.reviveReceipts.length > getMaxRevives(state.rulesetVersion)
@@ -286,8 +288,9 @@ export function recordPracticePersonalBest(
   if (!/^(0|[1-9][0-9]*)$/.test(score) || score.length > 1000) {
     throw new TypeError('Invalid local practice score.');
   }
-  const key =
-    rulesetVersion === CLASSIC_MYSTERY_RULESET_VERSION
+  const key = parseTileExperiment(rulesetVersion)
+    ? `cpi.practice.${rulesetVersion}.best`
+    : rulesetVersion === CLASSIC_MYSTERY_RULESET_VERSION
       ? 'cpi.practice.v8-classic.best'
       : rulesetVersion === CLASSIC_STORE_RULESET_VERSION
         ? 'cpi.practice.v9-classic-store.best'
@@ -319,8 +322,9 @@ export function readPracticePersonalBest(
   rulesetVersion = RULESET_VERSION,
 ): string | null {
   try {
-    const key =
-      rulesetVersion === CLASSIC_MYSTERY_RULESET_VERSION
+    const key = parseTileExperiment(rulesetVersion)
+      ? `cpi.practice.${rulesetVersion}.best`
+      : rulesetVersion === CLASSIC_MYSTERY_RULESET_VERSION
         ? 'cpi.practice.v8-classic.best'
         : rulesetVersion === CLASSIC_STORE_RULESET_VERSION
           ? 'cpi.practice.v9-classic-store.best'

@@ -7,6 +7,7 @@ import {
   SURVIVAL_BONUS_INTERVAL_MS,
   SURVIVAL_BONUS_SP,
 } from './pacing.ts';
+import { parseTileExperiment } from './tile-experiments.ts';
 import {
   assertDiscovery,
   discoverMystery,
@@ -123,7 +124,10 @@ export function createRun(options: CreateRunOptions, rng: RandomSource): RunStat
     );
   }
   assertNonEmpty(options.runId, 'Run ID');
-  if (usesStoreTestRules(rulesetVersion) && !options.runId.startsWith('practice-'))
+  if (
+    (usesStoreTestRules(rulesetVersion) || parseTileExperiment(rulesetVersion)) &&
+    !options.runId.startsWith('practice-')
+  )
     throw new RangeError('Test economy requires a local practice run.');
   assertNonNegativeInteger(options.observedAt, 'Observation timestamp');
   const activeTimeMs = options.activeTimeMs ?? 0;

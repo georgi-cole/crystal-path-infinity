@@ -1,6 +1,7 @@
 import { decimal } from './numbers.ts';
 import type { EffectKind } from './types.ts';
 import { PACED_RULESET_VERSION, SCAN_RULESET_VERSION } from './pacing.ts';
+import { parseTileExperiment } from './tile-experiments.ts';
 
 export const RULESET_VERSION = 'infinity-v1';
 /** Experimental, separately identified balance; existing ranked runs remain v1. */
@@ -152,10 +153,18 @@ export function usesClassicTiles(version: string): boolean {
   return version === CLASSIC_MYSTERY_RULESET_VERSION || version === CLASSIC_STORE_RULESET_VERSION;
 }
 export function usesDiscoveryRules(version: string): boolean {
-  return version === DISCOVERY_RULESET_VERSION || usesClassicTiles(version);
+  return (
+    version === DISCOVERY_RULESET_VERSION ||
+    usesClassicTiles(version) ||
+    parseTileExperiment(version) !== null
+  );
 }
 export function usesStoreTestRules(version: string): boolean {
-  return version === STORE_TEST_RULESET_VERSION || version === CLASSIC_STORE_RULESET_VERSION;
+  return (
+    version === STORE_TEST_RULESET_VERSION ||
+    version === CLASSIC_STORE_RULESET_VERSION ||
+    parseTileExperiment(version)?.store === true
+  );
 }
 export function usesRelicRules(version: string): boolean {
   return version === RELIC_RULESET_VERSION || usesDiscoveryRules(version);
@@ -190,6 +199,24 @@ const CLASSIC_STORE_RULESET = Object.freeze({
   version: CLASSIC_STORE_RULESET_VERSION,
   reviveSp: STORE_TEST_RULESET.reviveSp,
 });
+type ExperimentRules = Omit<
+  typeof CLASSIC_STORE_RULESET,
+  'version' | 'lowBreakRisk' | 'highBreakRisk'
+> & {
+  readonly version: string;
+  readonly lowBreakRisk: number;
+  readonly highBreakRisk: number;
+};
+
+export function tileBreakProbabilities(version: string): { low: number; high: number } {
+  const experiment = parseTileExperiment(version);
+  if (experiment)
+    return { low: experiment.lowBreakPercent / 100, high: experiment.highBreakPercent / 100 };
+  if (usesClassicTiles(version)) return { low: 0, high: 1 };
+  if (usesRiskRules(version))
+    return { low: RISK_RULESET.lowBreakRisk, high: RISK_RULESET.highBreakRisk };
+  throw new RangeError('This ruleset has no independent tile risks.');
+}
 export function getRuleset(
   version: string = RULESET_VERSION,
 ):
@@ -204,7 +231,16 @@ export function getRuleset(
   | typeof SCAN_RULESET
   | typeof STORE_TEST_RULESET
   | typeof CLASSIC_MYSTERY_RULESET
-  | typeof CLASSIC_STORE_RULESET {
+  | typeof CLASSIC_STORE_RULESET
+  | ExperimentRules {
+  const experiment = parseTileExperiment(version);
+  if (experiment)
+    return Object.freeze({
+      ...(experiment.store ? CLASSIC_STORE_RULESET : CLASSIC_MYSTERY_RULESET),
+      version,
+      lowBreakRisk: experiment.lowBreakPercent / 100,
+      highBreakRisk: experiment.highBreakPercent / 100,
+    });
   if (version === STORE_TEST_RULESET_VERSION) return STORE_TEST_RULESET;
   if (version === CLASSIC_MYSTERY_RULESET_VERSION) return CLASSIC_MYSTERY_RULESET;
   if (version === CLASSIC_STORE_RULESET_VERSION) return CLASSIC_STORE_RULESET;

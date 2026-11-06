@@ -14,7 +14,8 @@
   "scripts": {
     "dev": "npm run dev --workspace @crystal-path-infinity/mobile",
     "typecheck": "npm run typecheck --workspaces",
-    "test": "npm run test --workspaces",
+    "test": "npm run test --workspaces && npm run test:balance",
+    "test:balance": "node --experimental-strip-types --test scripts/simulate-tile-balance.test.mjs",
     "build": "npm run build --workspace @crystal-path-infinity/mobile",
     "build:staging": "npm run build:staging --workspace @crystal-path-infinity/mobile",
     "build:production": "npm run build:production --workspace @crystal-path-infinity/mobile",

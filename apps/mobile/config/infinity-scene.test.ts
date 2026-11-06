@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createPracticeCursor,
   createRun,
+  tileExperimentVersion,
   getCurrentRow,
   PRACTICE_RNG,
   SCAN_RULESET_VERSION,
@@ -311,4 +312,25 @@ describe('complete world presentation', () => {
       expect(html).not.toContain(en['game.bestNew']);
     },
   );
+});
+
+it('keeps trial and assisted labels visible when test odds are active', () => {
+  const state = createRun(
+    {
+      runId: 'practice-mode-labels',
+      rulesetVersion: tileExperimentVersion(60, 1, true),
+      observedAt: 0,
+      routeRng: createPracticeCursor(10),
+      mysteryRng: createPracticeCursor(11),
+    },
+    PRACTICE_RNG,
+  );
+  const assisted = transitionRun(
+    state,
+    { type: 'test-resource', resource: 'hints', amount: 1, sequence: 1 },
+    { activeTimeMs: 0, achievedAt: 0, rng: PRACTICE_RNG },
+  ).state;
+  expect(markup({ state: assisted })).toContain(en['vault.assisted']);
+  expect(markup({ state: assisted })).toContain('60% / 1%');
+  expect(markup({ state, trial: true })).toContain(en['vault.trial']);
 });

@@ -6,8 +6,7 @@ import {
   MYSTERY_MAX_GAP,
   MYSTERY_MIN_GAP,
   RULESET_VERSION,
-  RISK_RULESET,
-  usesClassicTiles,
+  tileBreakProbabilities,
   usesRiskRules,
 } from './rules.ts';
 import type { BridgeRow, RandomCursor, RandomSource, RowStreamState, TileSide } from './types.ts';
@@ -80,36 +79,23 @@ export function takeRows(stream: RowStreamState, count: number, rng: RandomSourc
   let nextMysteryIndex = stream.nextMysteryIndex;
   let cursor = stream.rng;
   const rows: BridgeRow[] = [];
+  const odds = usesRiskRules(stream.rulesetVersion)
+    ? tileBreakProbabilities(stream.rulesetVersion)
+    : null;
   for (let i = 0; i < count; i += 1) {
     const side = drawRandom(cursor, rng);
     cursor = side.cursor;
     const lowRiskSide = side.value < 0.5 ? 'left' : 'right';
     let risk: BridgeRow['risk'];
-    if (usesRiskRules(stream.rulesetVersion)) {
+    if (odds) {
       const left = drawRandom(cursor, rng);
       const right = drawRandom(left.cursor, rng);
       cursor = right.cursor;
       risk = {
         lowRiskSide,
         broken: {
-          left:
-            left.value <
-            (lowRiskSide === 'left'
-              ? usesClassicTiles(stream.rulesetVersion)
-                ? 0
-                : RISK_RULESET.lowBreakRisk
-              : usesClassicTiles(stream.rulesetVersion)
-                ? 1
-                : RISK_RULESET.highBreakRisk),
-          right:
-            right.value <
-            (lowRiskSide === 'right'
-              ? usesClassicTiles(stream.rulesetVersion)
-                ? 0
-                : RISK_RULESET.lowBreakRisk
-              : usesClassicTiles(stream.rulesetVersion)
-                ? 1
-                : RISK_RULESET.highBreakRisk),
+          left: left.value < (lowRiskSide === 'left' ? odds.low : odds.high),
+          right: right.value < (lowRiskSide === 'right' ? odds.low : odds.high),
         },
       };
     }

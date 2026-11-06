@@ -1,3 +1,4 @@
+import { BalanceTuner } from './balance-tuner';
 import { MysteryJournal } from './mystery-discovery';
 import type { ReactNode } from 'react';
 import { StageAtmosphere } from './stage-atmosphere';
@@ -535,6 +536,7 @@ export function MainMenu({
               icon="practice"
               onClick={() => onOpen('journal')}
             />
+            {import.meta.env.MODE !== 'production' && <BalanceTuner />}
             <p className="cpi-menu-fine-print">{t('menu.practiceLocal')}</p>
           </MenuPanel>
         ) : view === 'journal' ? (

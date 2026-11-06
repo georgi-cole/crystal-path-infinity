@@ -79,7 +79,7 @@ function validate(value: TestStoreSnapshot): void {
     (value.assistedBestByRules === null ||
       typeof value.assistedBestByRules !== 'object' ||
       Array.isArray(value.assistedBestByRules) ||
-      Object.keys(value.assistedBestByRules).length > 20 ||
+      Object.keys(value.assistedBestByRules).length > 256 ||
       Object.entries(value.assistedBestByRules).some(
         ([version, row]) =>
           !usesStoreTestRules(version) ||
