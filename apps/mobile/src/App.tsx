@@ -360,7 +360,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
     window.history.pushState({ cpiModal: true }, '', '#new-practice');
   };
 
-  const closePractice = (destination: MenuView = view) => {
+  const closePractice = (destination: MenuView = 'home') => {
     gameRef.current = null;
     setGame(null);
     backExitInFlight.current = false;
