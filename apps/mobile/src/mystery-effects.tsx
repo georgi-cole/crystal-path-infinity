@@ -1,5 +1,11 @@
 import type { MysteryFeedback } from './mystery-feedback';
 import { useEffect, useState } from 'react';
+import {
+  effectDuration,
+  RULESET_VERSION,
+  MARKET_SP_PER_HINT,
+  HALF_LIFE_HINTS,
+} from '@crystal-path-infinity/game-core';
 import type {
   ActiveEffect,
   EffectKind,
@@ -22,6 +28,7 @@ export function EffectGlyph({ kind, burst = false }: { kind: EffectKind; burst?:
       );
       break;
     case 'regen_5s':
+    case 'regen_3rows':
     case 'heal_10':
     case 'heal_20':
       glyph = (
@@ -62,6 +69,7 @@ export function EffectGlyph({ kind, burst = false }: { kind: EffectKind; burst?:
       );
       break;
     case 'drain_5s':
+    case 'bleed_3rows':
     case 'blood_oath':
       glyph = (
         <>
@@ -105,10 +113,40 @@ export function EffectGlyph({ kind, burst = false }: { kind: EffectKind; burst?:
       );
       break;
     case 'soul_exchange':
+    case 'marketing':
       glyph = (
         <>
           <path className="cpi-glyph-turn" d="M9 17h28l-7-7m7 21H9l7 7" />
           <path className="cpi-glyph-shell" d="m12 22 4 5-4 5-4-5Zm24-6 4 5-4 5-4-5Z" />
+        </>
+      );
+      break;
+    case 'half_life':
+      glyph = (
+        <>
+          <path
+            className="cpi-glyph-shell"
+            d="M24 40S5 28 5 16C5 4 20 3 24 14c4-11 19-10 19 2 0 12-19 24-19 24Z"
+          />
+          <path d="M24 8v32" />
+          <path className="cpi-glyph-eye" d="m31 19 3 4 5 1-5 2-3 5-1-5-5-2 5-1Z" />
+        </>
+      );
+      break;
+    case 'double_gain_21s':
+    case 'double_loss_21s':
+      glyph = (
+        <>
+          <circle className="cpi-glyph-shell" cx="24" cy="24" r="19" />
+          <path
+            className={kind === 'double_gain_21s' ? 'cpi-glyph-rise' : 'cpi-glyph-fall'}
+            d={
+              kind === 'double_gain_21s'
+                ? 'm12 27 12-12 12 12m-24 8 12-12 12 12'
+                : 'm12 13 12 12 12-12m-24 8 12 12 12-12'
+            }
+          />
+          <path d="M8 38h8m-4-4v8m20-4h8" />
         </>
       );
       break;
@@ -143,7 +181,13 @@ export function EffectGlyph({ kind, burst = false }: { kind: EffectKind; burst?:
   );
 }
 
-export function MysteryFeedbackView({ feedback }: { feedback: MysteryFeedback | null }) {
+export function MysteryFeedbackView({
+  feedback,
+  rulesetVersion = RULESET_VERSION,
+}: {
+  feedback: MysteryFeedback | null;
+  rulesetVersion?: string;
+}) {
   const { locale } = useLanguage();
   const [dismissed, setDismissed] = useState<string | null>(null);
   useEffect(() => {
@@ -152,7 +196,7 @@ export function MysteryFeedbackView({ feedback }: { feedback: MysteryFeedback | 
     return () => window.clearTimeout(timer);
   }, [feedback]);
   if (!feedback || feedback.id === dismissed) return null;
-  const copy = effectCopy(locale, feedback.kind);
+  const copy = effectCopy(locale, feedback.kind, rulesetVersion);
   const positive =
     feedback.spDelta !== 0
       ? feedback.spDelta > 0
@@ -194,17 +238,23 @@ export function MysteryFeedbackView({ feedback }: { feedback: MysteryFeedback | 
 export function MysteryEffects({
   effects,
   activeTimeMs,
+  rulesetVersion = RULESET_VERSION,
 }: {
   effects: readonly ActiveEffect[];
   activeTimeMs: number;
+  rulesetVersion?: string;
 }) {
   const { locale } = useLanguage();
   if (!effects.length) return null;
   return (
     <div className="cpi-mystery-effects" aria-label={mysteryText(locale, 'effects')}>
       {effects.map((effect, index) => {
-        const copy = effectCopy(locale, effect.kind);
-        const remaining = Math.max(0, effect.expiresAt - activeTimeMs);
+        const copy = effectCopy(locale, effect.kind, rulesetVersion);
+        const remaining =
+          effect.expiresAt === null
+            ? effect.rowsLeft
+            : Math.max(0, effect.expiresAt - activeTimeMs);
+        const total = effectDuration(effect.kind) ?? 3;
         return (
           <details
             key={`${effect.kind}:${index}`}
@@ -217,8 +267,15 @@ export function MysteryEffects({
                 <strong>{copy.title}</strong>
                 <small>{mysteryText(locale, copy.positive ? 'beneficial' : 'dangerous')}</small>
               </span>
-              <b>{(remaining / 1000).toFixed(1)}s</b>
-              <span className="cpi-force-track" style={{ width: `${remaining / 50}%` }} />
+              <b>
+                {effect.expiresAt === null
+                  ? `${remaining} ${mysteryText(locale, 'rows')}`
+                  : `${(remaining / 1000).toFixed(1)}s`}
+              </b>
+              <span
+                className="cpi-force-track"
+                style={{ width: `${(remaining / total) * 100}%` }}
+              />
             </summary>
             <p>{copy.detail}</p>
             <small className="cpi-force-priority">{mysteryText(locale, 'priority')}</small>
@@ -235,16 +292,20 @@ export function PactPanel({
   revealed,
   disabled,
   onChoose,
+  sp = 100,
+  rulesetVersion = RULESET_VERSION,
 }: {
   pact: MysteryPact | null | undefined;
   hints: number;
   revealed: boolean;
   disabled: boolean;
   onChoose: (option: PactOption) => void;
+  sp?: number;
+  rulesetVersion?: string;
 }) {
   const { locale } = useLanguage();
   if (!pact) return null;
-  const copy = effectCopy(locale, pact.kind);
+  const copy = effectCopy(locale, pact.kind, rulesetVersion);
   const offered = pact.phase === 'offered';
   const action = (option: PactOption, label: string, unavailable = false) => (
     <button
@@ -329,7 +390,7 @@ export function PactPanel({
         <p className="cpi-pact-warning">{mysteryText(locale, 'oracleKnown')}</p>
       )}
       <div className="cpi-pact-actions">
-        {offered && pact.kind !== 'soul_exchange' && (
+        {offered && !['soul_exchange', 'half_life', 'marketing'].includes(pact.kind) && (
           <>
             {action(
               'accept',
@@ -357,6 +418,29 @@ export function PactPanel({
             {action('hint', mysteryText(locale, 'hintOffer'), hints < 1)}
           </>
         )}
+        {offered && pact.kind === 'half_life' && (
+          <>
+            {action(
+              'accept',
+              mysteryText(locale, 'halfAccept').replace('{sp}', String(Math.floor(sp / 2))),
+              sp < 2,
+            )}
+            {action('decline', mysteryText(locale, 'walkAway'))}
+          </>
+        )}
+        {offered && pact.kind === 'marketing' && (
+          <>
+            {action('sell_one', mysteryText(locale, 'sellOne'), hints < 1)}
+            {action(
+              'sell_all',
+              mysteryText(locale, 'sellAll')
+                .replace('{hints}', String(hints))
+                .replace('{sp}', String(hints * MARKET_SP_PER_HINT)),
+              hints < 1,
+            )}
+            {action('decline', mysteryText(locale, 'walkAway'))}
+          </>
+        )}
         {!offered &&
           pact.kind === 'hungry_vault' &&
           pact.bank > 0 &&
@@ -366,9 +450,42 @@ export function PactPanel({
           pact.rowsLeft < 3 &&
           action('settle', mysteryText(locale, 'settle'))}
       </div>
+      {offered && pact.kind === 'half_life' && (
+        <p className="cpi-trade-preview">
+          <small>{mysteryText(locale, 'beforeAfter')}</small>
+          <b>
+            {sp} → {Math.floor(sp / 2)} SP
+          </b>
+          <b>
+            ◈ {hints} → {hints + HALF_LIFE_HINTS}
+          </b>
+        </p>
+      )}
+      {offered && pact.kind === 'marketing' && hints > 0 && (
+        <p className="cpi-trade-preview">
+          <small>{mysteryText(locale, 'beforeAfter')}</small>
+          <b>
+            {sp} → {sp + MARKET_SP_PER_HINT} SP
+          </b>
+          <b>
+            ◈ {hints} → {Math.max(0, hints - 1)}
+          </b>
+        </p>
+      )}
+      {offered && pact.kind === 'borrowed_time' && (
+        <p className="cpi-pact-example">{mysteryText(locale, 'borrowExample')}</p>
+      )}
+      {offered && pact.kind === 'soul_exchange' && (
+        <div className="cpi-soul-examples">
+          <p>{mysteryText(locale, 'soulSpExample')}</p>
+          <p>{mysteryText(locale, 'soulHintExample')}</p>
+        </div>
+      )}
       {offered && (
         <>
-          <p className="cpi-pact-warning">{mysteryText(locale, 'lethal')}</p>
+          {!['half_life', 'marketing'].includes(pact.kind) && (
+            <p className="cpi-pact-warning">{mysteryText(locale, 'lethal')}</p>
+          )}
           <small className="cpi-pact-frozen">{mysteryText(locale, 'frozen')}</small>
         </>
       )}

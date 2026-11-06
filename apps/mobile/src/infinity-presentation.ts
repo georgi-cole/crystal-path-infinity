@@ -19,6 +19,7 @@ export interface PresentedEffect {
   readonly positive: boolean;
   readonly remainingMs: number;
   readonly percent: number;
+  readonly remainingRows?: number;
 }
 export interface PresentedScene {
   readonly rows: readonly PresentedRow[];
@@ -37,8 +38,19 @@ const effectLabels: Record<ActiveEffect['kind'], string> = {
   fragility_5s: 'Fragility',
   drain_5s: 'SP drain',
   inversion_5s: 'Inversion',
+  double_gain_21s: 'Double SP',
+  double_loss_21s: 'Double damage',
+  regen_3rows: 'Second breath',
+  bleed_3rows: 'The bleed',
 };
-const good = new Set<ActiveEffect['kind']>(['shield_5s', 'regen_5s', 'lucky_5s', 'inversion_5s']);
+const good = new Set<ActiveEffect['kind']>([
+  'shield_5s',
+  'regen_5s',
+  'lucky_5s',
+  'inversion_5s',
+  'double_gain_21s',
+  'regen_3rows',
+]);
 export const MAX_PRESENTED_ROWS = 5;
 
 /**
@@ -82,13 +94,21 @@ export function presentInfinityScene(state: RunState): PresentedScene {
   return {
     rows,
     effects: state.effects.map((effect) => {
-      const remainingMs = Math.max(0, effect.expiresAt - state.activeTimeMs);
+      const remainingMs =
+        effect.expiresAt === null ? 0 : Math.max(0, effect.expiresAt - state.activeTimeMs);
       return {
         kind: effect.kind,
         name: effectLabels[effect.kind],
         positive: good.has(effect.kind),
         remainingMs,
-        percent: Math.min(100, Math.round((remainingMs / 5000) * 100)),
+        percent:
+          effect.expiresAt === null
+            ? (effect.rowsLeft / 3) * 100
+            : Math.min(
+                100,
+                Math.round((remainingMs / (effect.expiresAt - effect.startedAt)) * 100),
+              ),
+        ...(effect.expiresAt === null ? { remainingRows: effect.rowsLeft } : {}),
       };
     }),
     currentRow: state.currentRow,

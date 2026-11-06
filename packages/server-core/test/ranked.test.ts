@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { getCurrentRow, offerPact, PACT_RULESET_VERSION } from '@crystal-path-infinity/game-core';
+import {
+  getCurrentRow,
+  offerPact,
+  PACT_RULESET_VERSION,
+  BALANCE_RULESET_VERSION,
+  applyMysteryEffect,
+} from '@crystal-path-infinity/game-core';
 import type { RunState } from '@crystal-path-infinity/game-core';
 import { RankedAuthority, RankedError, rankedSnapshot, RANKED_RNG } from '../src/ranked.ts';
 import type {
@@ -148,6 +154,36 @@ function setup(options: { heartbeatWindowMs?: number; rulesetVersion?: string } 
 }
 
 describe('ranked authority trust boundary', () => {
+  it('projects uncapped v3 resources and row effects without losing their remaining charges', async () => {
+    const f = setup({ rulesetVersion: BALANCE_RULESET_VERSION });
+    let reply = await f.start();
+    reply = await f.execute(reply, { type: 'resume' });
+    const stored = f.record(reply);
+    f.repository.account().runs.set(stored.state.runId, {
+      ...stored,
+      state: {
+        ...stored.state,
+        sp: 5000,
+        effects: [
+          applyMysteryEffect('regen_3rows', 0).addedEffect!,
+          applyMysteryEffect('double_gain_21s', 0).addedEffect!,
+        ],
+      },
+    });
+    const advanced = await f.choose(reply);
+    expect(advanced.snapshot.rulesetVersion).toBe(BALANCE_RULESET_VERSION);
+    expect(advanced.snapshot.sp).toBe(5012);
+    expect(advanced.snapshot.effects[0]).toMatchObject({
+      kind: 'regen_3rows',
+      expiresAt: null,
+      rowsLeft: 2,
+    });
+    expect(advanced.snapshot.effects[1]).toMatchObject({
+      kind: 'double_gain_21s',
+      expiresAt: 21_000,
+    });
+    expect(JSON.stringify(advanced)).not.toMatch(/mysteryRng|routeRng|"safeSide"|"stream"/);
+  });
   it('projects and executes a versioned pact server-side with idempotent payment', async () => {
     const f = setup({ rulesetVersion: PACT_RULESET_VERSION });
     let current = await f.start();

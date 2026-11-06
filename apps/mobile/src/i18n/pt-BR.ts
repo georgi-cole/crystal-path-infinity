@@ -120,7 +120,7 @@ export const ptBR = {
     'Experimente o mistério do centro ou ignore. Os efeitos podem ajudar ou atrapalhar.',
   'tutorial.endTitle': 'Como a tentativa termina',
   'tutorial.endInstruction':
-    'Não existe última linha. Você escolhe quando parar. O exemplo fatal começa com 10 SP.',
+    'Não existe última linha. Você escolhe quando parar. O exemplo fatal começa com 5 SP.',
   'tutorial.fatalTitle': 'Linha fatal não conta',
   'tutorial.fatalInstruction':
     'O exemplo zerou os SP na linha 4. A última linha vencida continua sendo a 3.',

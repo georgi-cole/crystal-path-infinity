@@ -105,7 +105,7 @@ export const zhHans = {
   'tutorial.mysteryTitle': '谜题由你选择',
   'tutorial.mysteryInstruction': '可以尝试中间的神秘格或跳过。效果可能有利，也可能有害。',
   'tutorial.endTitle': '如何结束一局',
-  'tutorial.endInstruction': '没有最后一行。你可以主动结束。本例从10 SP演示致命错误。',
+  'tutorial.endInstruction': '没有最后一行。你可以主动结束。本例从5 SP演示致命错误。',
   'tutorial.fatalTitle': '致命行不计分',
   'tutorial.fatalInstruction': '示例在第4行把SP降至零，最后通过的仍是第3行。',
   'tutorial.completeTitle': '你已掌握桥的规则',

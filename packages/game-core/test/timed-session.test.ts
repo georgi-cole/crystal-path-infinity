@@ -119,7 +119,7 @@ describe('one active gameplay clock', () => {
     session.releaseRecovery();
     at(3_500);
     const pause = session.hold('background');
-    expect(pause.result.state.effects[0].expiresAt - pause.result.state.activeTimeMs).toBe(1_500);
+    expect(pause.result.state.effects[0].expiresAt! - pause.result.state.activeTimeMs).toBe(1_500);
     at(63_500);
     pause.release();
     at(64_999);

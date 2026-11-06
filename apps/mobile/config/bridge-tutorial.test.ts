@@ -38,7 +38,7 @@ describe('CPI-014 scripted, isolated tutorial', () => {
 
     const wrong = applyTutorialAction(safe, 'choose-wrong');
     expect(wrong.step).toBe('hint');
-    expect(wrong.run.sp).toBe(290);
+    expect(wrong.run.sp).toBe(295);
     // A nonfatal wrong choice is still a completed row.
     expect(wrong.run.lastClearedRow).toBe('2');
     expect(wrong.run.currentRow).toBe('3');
@@ -54,7 +54,7 @@ describe('CPI-014 scripted, isolated tutorial', () => {
     const revealed = applyTutorialAction(second, 'use-hint');
     expect(revealed.step).toBe('hint-revealed');
     expect(revealed.run.hints).toBe(1);
-    expect(revealed.run.sp).toBe(290);
+    expect(revealed.run.sp).toBe(295);
     expect(revealed.run.current.revealedSafeSide).toBe('left');
     expect(revealed.run.lastClearedRow).toBe('2');
     const crossed = applyTutorialAction(revealed, 'choose-hinted');

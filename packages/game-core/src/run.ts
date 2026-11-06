@@ -1,4 +1,10 @@
 import {
+  assertActiveEffects,
+  isTimedEffect,
+  scaleSpDelta,
+  tickRowEffects,
+} from './effect-rules.ts';
+import {
   applyMysteryEffect,
   mergeEffect,
   resolveWrongTileDelta,
@@ -23,18 +29,15 @@ import {
 } from './pacts.ts';
 import {
   clampSp,
-  EFFECT_DURATION_MS,
   EFFECT_TICK_MS,
   EFFECT_TICK_SP,
   getReviveSp,
   getRowBandDamage,
   getRuleset,
-  MAX_ACTIVE_EFFECTS,
   MAX_BUFFER_ROWS,
   MAX_REVIVES,
-  MAX_SP,
   RULESET_VERSION,
-  PACT_RULESET_VERSION,
+  supportsPacts,
   STARTING_HINTS,
   STARTING_SP,
 } from './rules.ts';
@@ -97,7 +100,7 @@ export function createRun(options: CreateRunOptions, rng: RandomSource): RunStat
     activeTimeMs,
     lastObservedAt: options.observedAt,
     effects: [],
-    ...(rulesetVersion === PACT_RULESET_VERSION ? { pact: null } : {}),
+    ...(supportsPacts(rulesetVersion) ? { pact: null } : {}),
     buffer,
     bufferOffset: '0',
     rows: generated.rows,
@@ -145,7 +148,8 @@ export function assertRunState(state: RunState, rng?: RandomSource): void {
       throw new RangeError('Score timestamp is in the future.');
   }
   if (
-    state.sp > MAX_SP ||
+    (getRuleset(state.rulesetVersion).maxSp !== null &&
+      state.sp > getRuleset(state.rulesetVersion).maxSp!) ||
     state.revivesGranted > MAX_REVIVES ||
     state.revivesApplied > state.revivesGranted ||
     state.revivesToReachScore > state.revivesApplied ||
@@ -191,36 +195,7 @@ export function assertRunState(state: RunState, rng?: RandomSource): void {
     throw new RangeError('Stream and buffer do not meet.');
   }
   getCurrentRow(state);
-  if (state.effects.length > MAX_ACTIVE_EFFECTS) throw new RangeError('Too many active effects.');
-  state.effects.forEach((effect) => {
-    assertNonNegativeInteger(effect.startedAt, 'Effect start');
-    assertNonNegativeInteger(effect.expiresAt, 'Effect expiry');
-    if (
-      effect.expiresAt - effect.startedAt !== EFFECT_DURATION_MS ||
-      effect.startedAt > state.activeTimeMs ||
-      effect.expiresAt <= state.activeTimeMs
-    ) {
-      throw new RangeError('Invalid effect interval.');
-    }
-    const periodic = effect.kind === 'regen_5s' || effect.kind === 'drain_5s';
-    if (periodic) {
-      if (effect.nextTickAt === null) throw new RangeError('Missing periodic schedule.');
-      assertNonNegativeInteger(effect.nextTickAt, 'Effect tick');
-      if (
-        effect.nextTickAt <= state.activeTimeMs ||
-        effect.nextTickAt <= effect.startedAt ||
-        effect.nextTickAt > effect.expiresAt ||
-        (effect.nextTickAt - effect.startedAt) % EFFECT_TICK_MS !== 0
-      ) {
-        throw new RangeError('Invalid periodic schedule.');
-      }
-    } else if (
-      effect.nextTickAt !== null ||
-      !['shield_5s', 'lucky_5s', 'fragility_5s', 'inversion_5s'].includes(effect.kind)
-    ) {
-      throw new RangeError('Invalid one-shot effect.');
-    }
-  });
+  assertActiveEffects(state.effects, state.activeTimeMs, state.rulesetVersion);
   if (
     state.reviveReceipts.length !== state.revivesGranted ||
     state.reviveReceipts.filter((receipt) => receipt.status === 'applied').length !==
@@ -344,39 +319,57 @@ function settleTime(state: RunState, context: TransitionContext, events: RunEven
       ...state,
       activeTimeMs: context.activeTimeMs,
       lastObservedAt: context.achievedAt,
-      effects: state.effects.map((effect) => ({
-        ...effect,
-        startedAt: addSafeInteger(effect.startedAt, elapsed, 'Frozen effect start'),
-        expiresAt: addSafeInteger(effect.expiresAt, elapsed, 'Frozen effect expiry'),
-        nextTickAt:
-          effect.nextTickAt === null
-            ? null
-            : addSafeInteger(effect.nextTickAt, elapsed, 'Frozen effect tick'),
-      })),
+      effects: state.effects.map((effect) =>
+        !isTimedEffect(effect)
+          ? {
+              ...effect,
+              startedAt: addSafeInteger(effect.startedAt, elapsed, 'Frozen effect start'),
+            }
+          : {
+              ...effect,
+              startedAt: addSafeInteger(effect.startedAt, elapsed, 'Frozen effect start'),
+              expiresAt: addSafeInteger(effect.expiresAt, elapsed, 'Frozen effect expiry'),
+              nextTickAt:
+                effect.nextTickAt === null
+                  ? null
+                  : addSafeInteger(effect.nextTickAt, elapsed, 'Frozen effect tick'),
+            },
+      ),
     };
   }
   let next = { ...state, lastObservedAt: context.achievedAt };
-  while (next.effects.length > 0) {
+  while (next.effects.some(isTimedEffect)) {
     let due = Number.MAX_SAFE_INTEGER;
     for (const effect of next.effects) {
+      if (!isTimedEffect(effect)) continue;
       due = Math.min(due, effect.expiresAt);
       if (effect.nextTickAt !== null && effect.nextTickAt < effect.expiresAt)
         due = Math.min(due, effect.nextTickAt);
     }
     if (due > context.activeTimeMs) break;
-    const expired = next.effects.filter((effect) => effect.expiresAt <= due);
+    const expired = next.effects.filter(
+      (effect) => isTimedEffect(effect) && effect.expiresAt <= due,
+    );
     let delta = 0;
     let pulses = 0;
     const effects = next.effects
-      .filter((effect) => effect.expiresAt > due)
+      .filter((effect) => !isTimedEffect(effect) || effect.expiresAt > due)
       .map((effect) => {
-        if (effect.nextTickAt !== due) return effect;
-        delta += effect.kind === 'regen_5s' ? EFFECT_TICK_SP : -EFFECT_TICK_SP;
+        if (!isTimedEffect(effect) || effect.nextTickAt !== due) return effect;
+        delta += scaleSpDelta(
+          { effects: next.effects, activeTimeMs: due },
+          effect.kind === 'regen_5s' ? EFFECT_TICK_SP : -EFFECT_TICK_SP,
+        );
         pulses += 1;
         return { ...effect, nextTickAt: addSafeInteger(due, EFFECT_TICK_MS, 'Next effect tick') };
       });
     const previousSp = next.sp;
-    next = { ...next, effects, activeTimeMs: due, sp: clampSp(next.sp + delta) };
+    next = {
+      ...next,
+      effects,
+      activeTimeMs: due,
+      sp: clampSp(next.sp + delta, next.rulesetVersion),
+    };
     if (expired.length)
       events.push({
         ...eventTime(next),
@@ -608,7 +601,7 @@ export function transitionRun(
         applied.hintDelta < 0
           ? Math.max(0, next.hints + applied.hintDelta)
           : addSafeInteger(next.hints, applied.hintDelta, 'Hints');
-      const sp = clampSp(next.sp + applied.spDelta);
+      const sp = clampSp(next.sp + scaleSpDelta(next, applied.spDelta), next.rulesetVersion);
       events.push({
         ...eventTime(next),
         type: 'mystery-resolved',
@@ -622,7 +615,12 @@ export function transitionRun(
         sp,
         hints,
         mysteryRng: draw.cursor,
-        effects: mergeEffect(next.effects, applied.addedEffect, next.activeTimeMs),
+        effects: mergeEffect(
+          next.effects,
+          applied.addedEffect,
+          next.activeTimeMs,
+          next.rulesetVersion,
+        ),
         ...(isPactKind(kind) ? { pact: offerPact(kind) } : {}),
         current: { ...next.current, mysteryOutcome: kind },
       };
@@ -632,7 +630,14 @@ export function transitionRun(
       const pact = next.pact;
       const change = choosePact(next, command.option, getCurrentRow(next).safeSide, context.rng);
       if (!pact || !change) return result(next, events, 'invalid-pact-choice');
-      const sp = clampSp(next.sp + change.spDelta);
+      const reward =
+        (pact.kind === 'blood_oath' ||
+          (pact.kind === 'hungry_vault' && command.option === 'cashout')) &&
+        change.spDelta > 0;
+      const sp = clampSp(
+        next.sp + (reward ? scaleSpDelta(next, change.spDelta) : change.spDelta),
+        next.rulesetVersion,
+      );
       const hints =
         change.hintDelta < 0
           ? Math.max(0, next.hints + change.hintDelta)
@@ -654,11 +659,30 @@ export function transitionRun(
       const row = getCurrentRow(next);
       const wrong = command.side !== row.safeSide;
       const resolution = wrong
-        ? resolveWrongTileDelta(getRowBandDamage(next.currentRow), next.effects, next.activeTimeMs)
+        ? resolveWrongTileDelta(
+            getRowBandDamage(next.currentRow, next.rulesetVersion),
+            next.effects,
+            next.activeTimeMs,
+            next.rulesetVersion,
+          )
         : { delta: 0, newEffects: [...next.effects] };
       const pactChange = resolvePactStep(next, wrong, resolution.delta);
-      const tileSp = clampSp(next.sp + resolution.delta);
-      const sp = clampSp(next.sp + resolution.delta + (pactChange?.spDelta ?? 0));
+      const tileDelta = scaleSpDelta(next, resolution.delta);
+      const pactDelta = pactChange
+        ? next.pact?.kind === 'blood_oath' ||
+          next.pact?.kind === 'false_oracle' ||
+          (next.pact?.kind === 'hungry_vault' && pactChange.spDelta > 0)
+          ? scaleSpDelta(next, pactChange.spDelta)
+          : pactChange.spDelta
+        : 0;
+      const tileSp = clampSp(next.sp + tileDelta, next.rulesetVersion);
+      const beforeRows = clampSp(next.sp + tileDelta + pactDelta, next.rulesetVersion);
+      const rowTick =
+        beforeRows > 0
+          ? tickRowEffects(resolution.newEffects)
+          : { effects: resolution.newEffects, gain: 0, loss: 0, rowsLeft: 0 };
+      const rowDelta = scaleSpDelta(next, rowTick.gain) + scaleSpDelta(next, rowTick.loss);
+      const sp = clampSp(beforeRows + rowDelta, next.rulesetVersion);
       events.push({
         ...eventTime(next),
         type: 'choice-resolved',
@@ -675,14 +699,23 @@ export function transitionRun(
           kind: next.pact.kind,
           option: 'step',
           outcome: pactChange.outcome,
-          spDelta: sp - clampSp(next.sp + resolution.delta),
+          spDelta: beforeRows - tileSp,
           hintDelta: 0,
           bank: pactChange.pact?.bank ?? 0,
+        });
+      if (rowTick.gain !== 0 || rowTick.loss !== 0)
+        events.push({
+          ...eventTime(next),
+          type: 'row-effect-ticked',
+          kind: rowDelta >= 0 ? 'regen_3rows' : 'bleed_3rows',
+          delta: sp - beforeRows,
+          sp,
+          rowsLeft: rowTick.rowsLeft,
         });
       next = {
         ...next,
         sp,
-        effects: resolution.newEffects,
+        effects: rowTick.effects,
         ...(pactChange ? { pact: pactChange.pact } : {}),
         current: {
           ...next.current,
@@ -694,7 +727,11 @@ export function transitionRun(
         return result(
           die(
             next,
-            pactChange && pactChange.spDelta < 0 && tileSp > 0 ? 'mystery' : 'wrong_tile',
+            beforeRows > 0 && rowDelta < 0
+              ? 'drain'
+              : pactChange && pactDelta < 0 && tileSp > 0
+                ? 'mystery'
+                : 'wrong_tile',
             events,
           ),
           events,

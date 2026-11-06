@@ -286,7 +286,7 @@ export const en = {
     'Try the centre mystery or skip it. Effects can help, hurt, change hints or last for a few seconds.',
   'tutorial.endTitle': 'How an attempt ends',
   'tutorial.endInstruction':
-    'There is no final row. End run is your choice. The optional fatal example starts at 10 SP to demonstrate death.',
+    'There is no final row. End run is your choice. The optional fatal example starts at 5 SP to demonstrate death.',
   'tutorial.fatalTitle': 'A fatal row does not count',
   'tutorial.fatalInstruction':
     'The example dropped SP to zero on Row 4. Its final cleared row is still Row 3.',

@@ -1,4 +1,5 @@
 import type { EffectKind } from '@crystal-path-infinity/game-core';
+import { BALANCE_RULESET_VERSION, RULESET_VERSION } from '@crystal-path-infinity/game-core';
 import type { LocaleCode } from './i18n';
 
 interface EffectCopy {
@@ -8,6 +9,42 @@ interface EffectCopy {
 }
 
 const enEffects: Record<EffectKind, EffectCopy> = {
+  double_gain_21s: {
+    title: 'Double SP · 21s',
+    detail:
+      'For 21 seconds, SP healing and rewards are doubled. Trade prices and agreed debts stay exact. Duplicate drops refresh the timer; they do not multiply again.',
+    positive: true,
+  },
+  double_loss_21s: {
+    title: 'Double damage · 21s',
+    detail:
+      'For 21 seconds, wrong-tile damage, harmful mysteries and bleeding take twice as much SP. Trade prices and agreed debts stay exact. Duplicate drops refresh the timer.',
+    positive: false,
+  },
+  regen_3rows: {
+    title: 'Second breath',
+    detail:
+      'After each of the next 3 survived rows, recover 6 SP: 18 in total. You must survive the tile first. Waiting does not use charges.',
+    positive: true,
+  },
+  bleed_3rows: {
+    title: 'The bleed',
+    detail:
+      'After each of the next 3 survived tile choices, lose another 3 SP: 9 in total. Even a correct tile can now kill you. Waiting does not remove the curse; Aegis does not stop it.',
+    positive: false,
+  },
+  half_life: {
+    title: 'Half Life',
+    detail:
+      'Sell half your current SP for 5 hints. Example: 100 SP and 2 hints become 50 SP and 7 hints. With an odd SP total, keep the rounded-down half. You may walk away for free.',
+    positive: false,
+  },
+  marketing: {
+    title: 'Marketing',
+    detail:
+      'Sell 1 hint for exactly 20 SP, or sell all your hints at that rate. Example: 100 SP and 3 hints become 120 SP and 2 hints. The price is fixed, even during Double SP. You may walk away for free.',
+    positive: false,
+  },
   heal_10: {
     title: 'Crystal spark',
     detail: 'Restore 10 SP immediately. Maximum stability: 400.',
@@ -107,6 +144,42 @@ const enEffects: Record<EffectKind, EffectCopy> = {
 };
 
 const bgEffects: Record<EffectKind, EffectCopy> = {
+  double_gain_21s: {
+    title: 'Двойни SP · 21 сек.',
+    detail:
+      'За 21 секунди получаваш двойно SP от лечение и награди. Цените на сделките и договорените дългове остават точни. Повторно изтегляне подновява времето, без ново умножение.',
+    positive: true,
+  },
+  double_loss_21s: {
+    title: 'Двойни щети · 21 сек.',
+    detail:
+      'За 21 секунди грешните плочки, вредните мистерии и кървенето отнемат двойно SP. Цените на сделките и договорените дългове остават точни. Повторно изтегляне подновява времето.',
+    positive: false,
+  },
+  regen_3rows: {
+    title: 'Втори дъх',
+    detail:
+      'След всеки от следващите 3 преживени реда възстановяваш 6 SP: общо 18. Първо трябва да оцелееш при стъпката. Изчакването не харчи зарядите.',
+    positive: true,
+  },
+  bleed_3rows: {
+    title: 'Кървенето',
+    detail:
+      'След всеки от следващите 3 преживени избора губиш още 3 SP: общо 9. Дори правилна плочка вече може да те убие. Изчакването не премахва проклятието; щитът не го спира.',
+    positive: false,
+  },
+  half_life: {
+    title: 'Half Life',
+    detail:
+      'Продаваш половината от текущите си SP срещу 5 подсказки. Пример: 100 SP и 2 подсказки стават 50 SP и 7 подсказки. При нечетен брой запазваш закръглената надолу половина. Можеш да откажеш без цена.',
+    positive: false,
+  },
+  marketing: {
+    title: 'Marketing',
+    detail:
+      'Продаваш 1 подсказка за точно 20 SP или всичките по същия курс. Пример: 100 SP и 3 подсказки стават 120 SP и 2 подсказки. Курсът остава фиксиран дори при Двойни SP. Можеш да откажеш без цена.',
+    positive: false,
+  },
   heal_10: {
     title: 'Кристална искра',
     detail: 'Възстановява 10 SP веднага. Максимална стабилност: 400.',
@@ -238,12 +311,14 @@ const en = {
   lost: 'The price is taken',
   banked: 'The vault pays out',
   paid: 'The debt is collected',
+  traded: 'The trade is complete',
+  walked_away: 'No trade was made',
   expired: 'The pact releases you',
   triggered: 'The effect intervenes',
   pulse: 'A real SP pulse',
   lab: 'Mystery chamber',
   labIntro:
-    'Try all 17 mysteries. Each room uses the real game rules; omens can lie and choices can kill.',
+    'Try all {count} mysteries. The clock starts frozen so you can inspect each effect. Run it or advance one second at a time.',
   labNote: 'A separate practice room. Your paused run is kept intact.',
   back: 'Back to my run',
   reset: 'Reset this mystery',
@@ -255,8 +330,28 @@ const en = {
   died: 'The chamber claimed you.',
   choose: 'Choose a mystery to enter its chamber.',
   classic: 'Original mysteries',
-  pacts: 'Five forbidden pacts',
+  pacts: 'Forbidden pacts and trades',
   close: 'Close',
+  walkAway: 'Walk away · no cost',
+  halfAccept: 'Keep {sp} SP · receive 5 hints',
+  sellOne: 'Sell 1 hint · +20 SP',
+  sellAll: 'Sell {hints} hints · +{sp} SP',
+  beforeAfter: 'Your resources after the trade',
+  noLimit: 'No SP limit',
+  demoWrong: 'Demo: step on a broken tile',
+  demoSafe: 'Demo: take the safe tile',
+  demoOnly: 'Demonstration controls reveal the chosen outcome only inside this test room.',
+  pauseDemo: 'Freeze demo time',
+  resumeDemo: 'Run demo time',
+  advanceTime: '+1 second',
+  comparison: 'This step: {before} → {after} SP. Without an effect: {normal} SP.',
+  stepGain: '+6 SP after survival',
+  stepBleed: '−3 SP after the tile',
+  borrowExample:
+    'Emergency example: at 5 SP, taking 50 gives you 55 and lets you survive a 5-SP wrong step. You still owe 65; without new resources you will die when collection arrives.',
+  soulSpExample:
+    'Need hints? Pay 25 SP. 65%: gain 2 hints. 35%: gain 1 hint and pay another 15 SP.',
+  soulHintExample: 'Need SP? Spend 1 hint. 65%: gain 40 SP. 35%: lose 30 SP.',
 };
 type CopyKey = keyof typeof en;
 const bg: Record<CopyKey, string> = {
@@ -292,12 +387,14 @@ const bg: Record<CopyKey, string> = {
   lost: 'Цената е взета',
   banked: 'Трезорът изплаща наградата',
   paid: 'Дългът е събран',
+  traded: 'Сделката е завършена',
+  walked_away: 'Отказа сделката без цена',
   expired: 'Пактът те освобождава',
   triggered: 'Ефектът се намесва',
   pulse: 'Реален пулс на SP',
   lab: 'Стая на мистериите',
   labIntro:
-    'Изпробвай всичките 17 мистерии. Всяка стая използва истинските правила; знаменията могат да лъжат, а изборите да убият.',
+    'Изпробвай всичките {count} мистерии. Времето първо е спряно, за да огледаш ефекта. Пусни го или напредвай секунда по секунда.',
   labNote: 'Отделна тренировъчна стая. Паузираният ти опит се запазва.',
   back: 'Назад към моя опит',
   reset: 'Повтори тази мистерия',
@@ -309,12 +406,60 @@ const bg: Record<CopyKey, string> = {
   died: 'Стаята те погълна.',
   choose: 'Избери мистерия, за да влезеш в нейната стая.',
   classic: 'Познатите мистерии',
-  pacts: 'Пет забранени пакта',
+  pacts: 'Забранени пактове и сделки',
   close: 'Затвори',
+  walkAway: 'Откажи · без цена',
+  halfAccept: 'Запази {sp} SP · получи 5 подсказки',
+  sellOne: 'Продай 1 подсказка · +20 SP',
+  sellAll: 'Продай {hints} подсказки · +{sp} SP',
+  beforeAfter: 'Ресурсите ти след сделката',
+  noLimit: 'Без таван на SP',
+  demoWrong: 'Демо: стъпи върху счупена плочка',
+  demoSafe: 'Демо: стъпи върху здрава плочка',
+  demoOnly: 'Демонстрационните бутони разкриват резултата само в тази тестова стая.',
+  pauseDemo: 'Спри времето в демото',
+  resumeDemo: 'Пусни времето в демото',
+  advanceTime: '+1 секунда',
+  comparison: 'Тази стъпка: {before} → {after} SP. Без ефект: {normal} SP.',
+  stepGain: '+6 SP след оцеляване',
+  stepBleed: '−3 SP след плочката',
+  borrowExample:
+    'Авариен пример: при 5 SP вземаш 50, ставаш с 55 и можеш да преживееш грешна стъпка за 5 SP. Все още дължиш 65; без нови ресурси ще умреш при събирането на дълга.',
+  soulSpExample:
+    'Трябват ти подсказки? Плащаш 25 SP. 65%: получаваш 2 подсказки. 35%: получаваш 1 и плащаш още 15 SP.',
+  soulHintExample: 'Трябват ти SP? Харчиш 1 подсказка. 65%: получаваш 40 SP. 35%: губиш 30 SP.',
 };
 
-export function effectCopy(locale: LocaleCode, kind: EffectKind): EffectCopy {
-  return (locale === 'bg' ? bgEffects : enEffects)[kind];
+export function effectCopy(
+  locale: LocaleCode,
+  kind: EffectKind,
+  version = RULESET_VERSION,
+): EffectCopy {
+  const copy = (locale === 'bg' ? bgEffects : enEffects)[kind];
+  if (version !== BALANCE_RULESET_VERSION) return copy;
+  const detail =
+    locale === 'bg'
+      ? {
+          heal_10: 'Възстановява 10 SP веднага. Няма горен лимит на SP.',
+          heal_20: 'Възстановява 20 SP веднага. Няма горен лимит на SP.',
+          lucky_5s:
+            'За 5 секунди: следващата грешна плочка дава +5 SP вместо −5 SP. След това талисманът се пръсва и изчезва. Един заряд.',
+          inversion_5s:
+            'За 5 секунди: ВСЯКА грешна плочка дава +5 SP вместо −5 SP. Пример: 100 → 105 SP, вместо 100 → 95. Не се изразходва след първата грешка.',
+          borrowed_time:
+            'Вземи +50 SP сега. След 3 избора връщаш 65 SP. След първия можеш да погасиш за 55 SP. Отказът струва 8 SP. Това е кратък авариен запас; без нови ресурси дългът може да те убие.',
+        }
+      : {
+          heal_10: 'Restore 10 SP immediately. SP has no upper limit.',
+          heal_20: 'Restore 20 SP immediately. SP has no upper limit.',
+          lucky_5s:
+            'For 5 seconds: the NEXT wrong tile gives +5 SP instead of −5 SP. The charm then bursts and disappears. One charge.',
+          inversion_5s:
+            'For 5 seconds: EVERY wrong tile gives +5 SP instead of −5 SP. Example: 100 → 105 SP rather than 100 → 95. The first wrong step does not consume it.',
+          borrowed_time:
+            'Take +50 SP now. After 3 choices repay 65 SP. After the first choice you may settle for 55 SP. Refusal costs 8 SP. This is a short emergency reserve; without new resources the debt can kill you.',
+        };
+  return { ...copy, detail: detail[kind as keyof typeof detail] ?? copy.detail };
 }
 export function mysteryText(locale: LocaleCode, key: CopyKey): string {
   return (locale === 'bg' ? bg : en)[key];

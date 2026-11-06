@@ -15,11 +15,21 @@ export type EffectKind =
   | 'fragility_5s'
   | 'drain_5s'
   | 'inversion_5s'
+  | 'double_gain_21s'
+  | 'double_loss_21s'
+  | RowEffectKind
   | PactKind;
 
 export type PactKind =
-  'blood_oath' | 'false_oracle' | 'hungry_vault' | 'borrowed_time' | 'soul_exchange';
-export type PactOption = 'accept' | 'decline' | 'cashout' | 'settle' | 'sp' | 'hint';
+  | 'blood_oath'
+  | 'false_oracle'
+  | 'hungry_vault'
+  | 'borrowed_time'
+  | 'soul_exchange'
+  | 'half_life'
+  | 'marketing';
+export type PactOption =
+  'accept' | 'decline' | 'cashout' | 'settle' | 'sp' | 'hint' | 'sell_one' | 'sell_all';
 
 /** A bounded, row-based contract. No hidden roll or future safe side is stored here. */
 export interface MysteryPact {
@@ -31,15 +41,26 @@ export interface MysteryPact {
   readonly omen: TileSide | null;
 }
 
-export type TimedEffectKind = Extract<EffectKind, `${string}_5s`>;
+export type TimedEffectKind = Extract<EffectKind, `${string}_5s` | `${string}_21s`>;
+export type RowEffectKind = 'regen_3rows' | 'bleed_3rows';
 
-export interface ActiveEffect {
+export interface TimedActiveEffect {
   readonly kind: TimedEffectKind;
   readonly startedAt: number;
   readonly expiresAt: number;
   /** Per-instance active-time schedule; null for effects without periodic SP changes. */
   readonly nextTickAt: number | null;
 }
+
+export interface RowActiveEffect {
+  readonly kind: RowEffectKind;
+  readonly startedAt: number;
+  readonly expiresAt: null;
+  readonly nextTickAt: null;
+  readonly rowsLeft: number;
+}
+
+export type ActiveEffect = TimedActiveEffect | RowActiveEffect;
 
 export interface RandomCursor {
   readonly algorithm: string;
@@ -252,13 +273,21 @@ export type RunEvent = EventTime &
         readonly appliedDelta?: number;
         readonly sp: number;
       }
-    | { readonly type: 'effects-expired'; readonly kinds: readonly TimedEffectKind[] }
+    | { readonly type: 'effects-expired'; readonly kinds: readonly ActiveEffect['kind'][] }
+    | {
+        readonly type: 'row-effect-ticked';
+        readonly kind: RowEffectKind;
+        readonly delta: number;
+        readonly sp: number;
+        readonly rowsLeft: number;
+      }
     | { readonly type: 'hint-used'; readonly row: Decimal; readonly safeSide: TileSide }
     | {
         readonly type: 'pact-resolved';
         readonly kind: PactKind;
         readonly option: PactOption | 'step';
-        readonly outcome: 'accepted' | 'declined' | 'won' | 'lost' | 'banked' | 'paid' | 'expired';
+        readonly outcome:
+          'accepted' | 'declined' | 'won' | 'lost' | 'banked' | 'paid' | 'traded' | 'expired';
         readonly spDelta: number;
         readonly hintDelta: number;
         readonly bank: number;

@@ -121,7 +121,7 @@ export const fr = {
     'Essayez la dalle mystère centrale ou ignorez-la. Ses effets peuvent aider ou nuire.',
   'tutorial.endTitle': 'Comment finir une partie',
   'tutorial.endInstruction':
-    'Il n’y a pas de dernière rangée. Vous décidez de finir. L’exemple fatal commence à 10 SP.',
+    'Il n’y a pas de dernière rangée. Vous décidez de finir. L’exemple fatal commence à 5 SP.',
   'tutorial.fatalTitle': 'Une rangée fatale ne compte pas',
   'tutorial.fatalInstruction':
     'Les SP sont tombés à zéro à la rangée 4. La dernière rangée franchie reste la 3.',

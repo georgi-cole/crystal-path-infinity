@@ -1,8 +1,11 @@
 import type { AccountSessionOwner } from '../account/session-owner';
 import {
-  PACT_KINDS,
+  BALANCE_PACT_KINDS,
+  BALANCE_RULESET_VERSION,
+  getRuleset,
+  supportsPacts,
+  assertActiveEffects,
   PACT_OPTIONS,
-  PACT_RULESET_VERSION,
   VAULT_PAYOUTS,
 } from '@crystal-path-infinity/game-core';
 import type {
@@ -10,6 +13,7 @@ import type {
   MysteryPact,
   PactKind,
   PactOption,
+  TimedEffectKind,
 } from '@crystal-path-infinity/game-core';
 import { canRecheckOperation, parseOperationFailure } from '../operations/operation-failure.ts';
 import type { OperationFailure } from '../operations/operation-failure';
@@ -130,9 +134,12 @@ const EFFECTS = [
   'fragility_5s',
   'drain_5s',
   'inversion_5s',
-  ...PACT_KINDS,
+  ...BALANCE_PACT_KINDS,
+  'double_gain_21s',
+  'double_loss_21s',
+  'regen_3rows',
+  'bleed_3rows',
 ];
-const TIMED_EFFECTS = EFFECTS.filter((value) => value.endsWith('_5s'));
 const REASONS = new Set([
   'finished',
   'not-playing',
@@ -220,7 +227,7 @@ export function parseRankedReply(value: unknown): RankedReply | null {
   const usesPacts =
     raw !== null &&
     typeof raw === 'object' &&
-    (raw as Record<string, unknown>).rulesetVersion === PACT_RULESET_VERSION;
+    supportsPacts(String((raw as Record<string, unknown>).rulesetVersion));
   const lease = value.lease;
   if (
     !object(raw, [
@@ -260,7 +267,7 @@ export function parseRankedReply(value: unknown): RankedReply | null {
     !decimal(raw.lastClearedRow) ||
     !decimal(raw.currentRow, true) ||
     BigInt(raw.currentRow) !== BigInt(raw.lastClearedRow) + 1n ||
-    !integer(raw.sp, 400) ||
+    !integer(raw.sp) ||
     !integer(raw.hints) ||
     !integer(raw.activeTimeMs) ||
     (raw.achievedAt !== null && !integer(raw.achievedAt)) ||
@@ -310,7 +317,7 @@ export function parseRankedReply(value: unknown): RankedReply | null {
     if (
       !object(candidate, ['kind', 'phase', 'rowsLeft', 'bank', 'omen']) ||
       typeof candidate.kind !== 'string' ||
-      !(PACT_KINDS as readonly string[]).includes(candidate.kind) ||
+      !(BALANCE_PACT_KINDS as readonly string[]).includes(candidate.kind) ||
       !['offered', 'active'].includes(String(candidate.phase)) ||
       !integer(candidate.rowsLeft, 3) ||
       !integer(candidate.bank, 85) ||
@@ -329,7 +336,7 @@ export function parseRankedReply(value: unknown): RankedReply | null {
     } else {
       if (
         candidate.rowsLeft < 1 ||
-        candidate.kind === 'soul_exchange' ||
+        ['soul_exchange', 'half_life', 'marketing'].includes(candidate.kind) ||
         (candidate.kind === 'hungry_vault'
           ? candidate.bank !== VAULT_PAYOUTS[3 - candidate.rowsLeft]
           : candidate.bank !== 0) ||
@@ -350,33 +357,74 @@ export function parseRankedReply(value: unknown): RankedReply | null {
     [current, ...history].some(
       (row) =>
         row.mysteryOutcome !== null &&
-        (PACT_KINDS as readonly string[]).includes(row.mysteryOutcome),
+        (BALANCE_PACT_KINDS as readonly string[]).includes(row.mysteryOutcome),
     )
   )
     return null;
   const effects: ActiveEffect[] = [];
   for (const effect of raw.effects) {
+    const rowEffect =
+      effect !== null &&
+      typeof effect === 'object' &&
+      ['regen_3rows', 'bleed_3rows'].includes(String((effect as Record<string, unknown>).kind));
     if (
-      !object(effect, ['kind', 'startedAt', 'expiresAt', 'nextTickAt']) ||
+      !object(effect, [
+        'kind',
+        'startedAt',
+        'expiresAt',
+        'nextTickAt',
+        ...(rowEffect ? ['rowsLeft'] : []),
+      ]) ||
       typeof effect.kind !== 'string' ||
-      !TIMED_EFFECTS.includes(effect.kind) ||
-      !integer(effect.startedAt) ||
-      !integer(effect.expiresAt) ||
-      effect.expiresAt - effect.startedAt !== 5000 ||
-      effect.startedAt > raw.activeTimeMs ||
-      effect.expiresAt <= raw.activeTimeMs ||
-      (effect.nextTickAt !== null &&
-        (!integer(effect.nextTickAt) ||
-          effect.nextTickAt <= raw.activeTimeMs ||
-          effect.nextTickAt > effect.expiresAt))
+      !EFFECTS.includes(effect.kind) ||
+      !integer(effect.startedAt)
     )
       return null;
-    effects.push({
-      kind: effect.kind as ActiveEffect['kind'],
-      startedAt: effect.startedAt,
-      expiresAt: effect.expiresAt,
-      nextTickAt: effect.nextTickAt,
-    });
+    if (rowEffect) {
+      if (
+        effect.expiresAt !== null ||
+        effect.nextTickAt !== null ||
+        !integer(effect.rowsLeft, 3) ||
+        effect.rowsLeft === 0
+      )
+        return null;
+      effects.push({
+        kind: effect.kind as 'regen_3rows' | 'bleed_3rows',
+        startedAt: effect.startedAt,
+        expiresAt: null,
+        nextTickAt: null,
+        rowsLeft: effect.rowsLeft,
+      });
+    } else {
+      if (!integer(effect.expiresAt) || (effect.nextTickAt !== null && !integer(effect.nextTickAt)))
+        return null;
+      effects.push({
+        kind: effect.kind as TimedEffectKind,
+        startedAt: effect.startedAt,
+        expiresAt: effect.expiresAt,
+        nextTickAt: effect.nextTickAt,
+      });
+    }
+  }
+  try {
+    const rules = getRuleset(raw.rulesetVersion);
+    if (rules.maxSp !== null && raw.sp > rules.maxSp) return null;
+    const outcomes = new Set(rules.mysteryTable.map((entry) => entry.kind as string));
+    if (
+      [current, ...history].some(
+        (row) => row.mysteryOutcome !== null && !outcomes.has(row.mysteryOutcome),
+      )
+    )
+      return null;
+    if (
+      pact &&
+      ['half_life', 'marketing'].includes(pact.kind) &&
+      raw.rulesetVersion !== BALANCE_RULESET_VERSION
+    )
+      return null;
+    assertActiveEffects(effects, raw.activeTimeMs, raw.rulesetVersion);
+  } catch {
+    return null;
   }
   const death = raw.death;
   if (

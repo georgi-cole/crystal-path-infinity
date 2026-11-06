@@ -6,7 +6,8 @@ import {
   createRun,
   getCurrentRow,
   RULESET_VERSION,
-  PACT_RULESET_VERSION,
+  supportsPacts,
+  isTimedEffect,
   PACT_OPTIONS,
   transitionRun,
 } from '@crystal-path-infinity/game-core';
@@ -300,13 +301,23 @@ export function rankedSnapshot(record: StoredRankedRun): RankedSnapshot {
       index: resolution.index,
       ...visible(resolution),
     })),
-    effects: state.effects.map((effect) => ({
-      kind: effect.kind,
-      startedAt: effect.startedAt,
-      expiresAt: effect.expiresAt,
-      nextTickAt: effect.nextTickAt,
-    })),
-    ...(state.rulesetVersion === PACT_RULESET_VERSION
+    effects: state.effects.map((effect) =>
+      isTimedEffect(effect)
+        ? {
+            kind: effect.kind,
+            startedAt: effect.startedAt,
+            expiresAt: effect.expiresAt,
+            nextTickAt: effect.nextTickAt,
+          }
+        : {
+            kind: effect.kind,
+            startedAt: effect.startedAt,
+            expiresAt: null,
+            nextTickAt: null,
+            rowsLeft: effect.rowsLeft,
+          },
+    ),
+    ...(supportsPacts(state.rulesetVersion)
       ? {
           pact: state.pact
             ? {

@@ -1,13 +1,14 @@
-import { mysteryFeedbackFromEvents } from './mystery-feedback';
+import { mysteryFeedbackFromEvents, runCuesFromEvents } from './mystery-feedback';
 import { StageAtmosphere } from './stage-atmosphere';
 import { PrismBridge } from './prism-bridge';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   createPracticeCursor,
   createRun,
-  MAX_SP,
+  getRuleset,
+  STARTING_SP,
   PRACTICE_RNG,
-  PACT_RULESET_VERSION,
+  BALANCE_RULESET_VERSION,
   isPactKind,
 } from '@crystal-path-infinity/game-core';
 import type {
@@ -31,7 +32,8 @@ import { createPracticeRuntime, schedulePracticeTick } from './practice-runtime'
 import type { PracticePauseLease, PracticeRuntime } from './practice-runtime';
 import { presentInfinityScene } from './infinity-presentation';
 import { MysteryEffects, MysteryFeedbackView, PactPanel } from './mystery-effects';
-import type { MysteryFeedback } from './mystery-feedback';
+import type { MysteryFeedback, RunCues } from './mystery-feedback';
+import { EffectConsumption, HintCounter } from './resource-feedback';
 import { MysteryLab } from './mystery-lab';
 import { mysteryText } from './mystery.messages';
 import './infinity-scene.css';
@@ -64,6 +66,7 @@ export interface InfinitySceneViewProps {
   readonly onMystery: () => void;
   readonly onPact?: (option: PactOption) => void;
   readonly mysteryFeedback?: MysteryFeedback | null;
+  readonly resourceCues?: RunCues;
   readonly onMysteryLab?: () => void;
   readonly onPause: () => void;
   readonly onEnd: () => void;
@@ -93,6 +96,7 @@ export function InfinitySceneView({
   onMystery,
   onPact,
   mysteryFeedback = null,
+  resourceCues = {},
   onMysteryLab,
   onPause,
   onEnd,
@@ -131,8 +135,15 @@ export function InfinitySceneView({
     ready && !busy && !paused && !confirmEnd && !error && outcome.phase === 'playing';
   const pactOffered = state.pact?.phase === 'offered';
   const oracleActive = state.pact?.kind === 'false_oracle' && state.pact.phase === 'active';
-  const spClass = state.sp <= 60 ? 'is-danger' : state.sp <= 140 ? 'is-warn' : 'is-safe';
-  const spPct = Math.max(0, Math.min(100, (state.sp / MAX_SP) * 100));
+  const maxSp = getRuleset(state.rulesetVersion).maxSp;
+  const criticalSp = maxSp === null ? 10 : 60;
+  const warningSp = maxSp === null ? 30 : 140;
+  const spClass =
+    state.sp <= criticalSp ? 'is-danger' : state.sp <= warningSp ? 'is-warn' : 'is-safe';
+  const spPct =
+    maxSp === null
+      ? (state.sp / (state.sp + STARTING_SP)) * 100
+      : Math.max(0, Math.min(100, (state.sp / maxSp) * 100));
   const notice =
     error ??
     (outcome.phase === 'verification-pending'
@@ -176,16 +187,20 @@ export function InfinitySceneView({
               <span className="cps-sp-label">{t('game.stabilityShort')}</span>
               <span className={`cps-sp-value ${spClass}`}>
                 {state.sp}
-                <small> / {MAX_SP}</small>
+                {maxSp !== null && <small> / {maxSp}</small>}
               </span>
             </div>
             <div
-              className={`cps-sp-bar-main cpi-energy-meter ${state.sp <= 60 ? 'is-low' : ''}`}
-              role="meter"
-              aria-label={t('game.spAccessible')}
-              aria-valuemin={0}
-              aria-valuemax={MAX_SP}
-              aria-valuenow={state.sp}
+              className={`cps-sp-bar-main cpi-energy-meter ${state.sp <= criticalSp ? 'is-low' : ''}`}
+              role={maxSp === null ? 'img' : 'meter'}
+              aria-label={
+                maxSp === null
+                  ? `${t('game.spAccessible')}: ${state.sp} SP · ${mysteryText(locale, 'noLimit')}`
+                  : t('game.spAccessible')
+              }
+              aria-valuemin={maxSp === null ? undefined : 0}
+              aria-valuemax={maxSp ?? undefined}
+              aria-valuenow={maxSp === null ? undefined : state.sp}
             >
               <div className={`cps-sp-bar-fill ${spClass}`} style={{ width: `${spPct}%` }} />
               <div className="cpi-energy-segments" aria-hidden="true">
@@ -208,11 +223,7 @@ export function InfinitySceneView({
               disabled={!interactive || pactOffered || oracleActive || state.hints === 0}
               aria-label={t('game.hintButton', { count: number(state.hints) })}
             >
-              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M12 2.8 14.5 9.5 21.2 12 14.5 14.5 12 21.2 9.5 14.5 2.8 12 9.5 9.5Z" />
-                <path d="M12 8v8M8 12h8" />
-              </svg>
-              <span className="cps-hint-count">{state.hints}</span>
+              <HintCounter count={state.hints} cue={resourceCues.hints} />
             </button>
             <button
               type="button"
@@ -234,17 +245,23 @@ export function InfinitySceneView({
             </button>
           </div>
         </header>
-        {state.sp <= 140 && state.status === 'playing' && (
+        {state.sp <= warningSp && state.status === 'playing' && (
           <p
-            className={'cpi-sp-danger-copy ' + (state.sp <= 60 ? 'is-critical' : 'is-low')}
+            className={'cpi-sp-danger-copy ' + (state.sp <= criticalSp ? 'is-critical' : 'is-low')}
             role="status"
           >
-            {t(state.sp <= 60 ? 'game.spCritical' : 'game.spLow', { sp: number(state.sp) })}
+            {t(state.sp <= criticalSp ? 'game.spCritical' : 'game.spLow', { sp: number(state.sp) })}
           </p>
         )}
-        <MysteryEffects effects={state.effects} activeTimeMs={state.activeTimeMs} />
+        <MysteryEffects
+          effects={state.effects}
+          activeTimeMs={state.activeTimeMs}
+          rulesetVersion={state.rulesetVersion}
+        />
         <section className="cps-board" aria-label={t('game.bridge')} dir="ltr">
           <PactPanel
+            sp={state.sp}
+            rulesetVersion={state.rulesetVersion}
             pact={state.pact}
             hints={state.hints}
             revealed={state.current.revealedSafeSide !== null}
@@ -276,8 +293,10 @@ export function InfinitySceneView({
           <span className="visually-hidden">{t('game.footer')}</span>
         </p>
       </div>
+      <EffectConsumption cue={resourceCues.consumption} hidden={overlayVisible} />
       {!overlayVisible && (
         <MysteryFeedbackView
+          rulesetVersion={state.rulesetVersion}
           feedback={
             mysteryFeedback &&
             !(isPactKind(mysteryFeedback.kind) && mysteryFeedback.action === null)
@@ -505,7 +524,7 @@ function makeInitialRun(): RunState {
       mysteryRng: createPracticeCursor(mystery),
       observedAt: Date.now(),
       buffer: { ahead: 8, history: 2 },
-      rulesetVersion: PACT_RULESET_VERSION,
+      rulesetVersion: BALANCE_RULESET_VERSION,
     },
     PRACTICE_RNG,
   );
@@ -544,6 +563,7 @@ function InfinityRun({
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<SceneFeedback | null>(null);
   const [mysteryFeedback, setMysteryFeedback] = useState<MysteryFeedback | null>(null);
+  const [resourceCues, setResourceCues] = useState<RunCues>({});
   const [labOpen, setLabOpen] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [personalBest, setPersonalBest] = useState<string | null>(null);
@@ -607,6 +627,9 @@ function InfinityRun({
         setState(result.state);
         const mysteryNotice = mysteryFeedbackFromEvents(result.events, result.state);
         if (mysteryNotice) setMysteryFeedback(mysteryNotice);
+        const cues = runCuesFromEvents(result.events, result.state);
+        if (cues.consumption || cues.hints)
+          setResourceCues((previous) => ({ ...previous, ...cues }));
         const choice = result.events.find(
           (event): event is Extract<RunEvent, { type: 'choice-resolved' }> =>
             event.type === 'choice-resolved',
@@ -792,6 +815,7 @@ function InfinityRun({
       state={state}
       feedback={feedback}
       mysteryFeedback={mysteryFeedback}
+      resourceCues={resourceCues}
       onMysteryLab={() => setLabOpen(true)}
       onPact={(option) => {
         unlockAudio();

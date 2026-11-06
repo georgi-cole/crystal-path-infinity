@@ -4,6 +4,7 @@ import {
   getRowBandDamage,
   PRACTICE_RNG,
   STARTING_SP,
+  BALANCE_RULESET_VERSION,
   transitionRun,
 } from '@crystal-path-infinity/game-core';
 import type {
@@ -43,7 +44,8 @@ export function createTutorialSession(): TutorialSession {
     {
       runId: 'tutorial-only-not-a-score',
       routeRng: createPracticeCursor(14014),
-      mysteryRng: createPracticeCursor(14141),
+      mysteryRng: createPracticeCursor(3),
+      rulesetVersion: BALANCE_RULESET_VERSION,
       observedAt: 0,
       buffer: { ahead: 8, history: 2 },
     },
@@ -110,7 +112,7 @@ export function applyTutorialAction(
         run: choice(run, 'left'),
         notice:
           'Wrong glass cost ' +
-          getRowBandDamage(run.currentRow) +
+          getRowBandDamage(run.currentRow, run.rulesetVersion) +
           ' SP, but you survived. Row 2 still counts.',
       };
     case 'use-hint':
@@ -174,8 +176,9 @@ export function applyTutorialAction(
       // mystery buff or damage mitigation. The actual reducer still resolves it.
       const fatalExample: RunState = {
         ...run,
-        sp: getRowBandDamage(run.currentRow),
+        sp: getRowBandDamage(run.currentRow, run.rulesetVersion),
         effects: [],
+        pact: null,
       };
       const fatal = choice(fatalExample, 'left');
       if (fatal.status !== 'dead' || fatal.lastClearedRow !== run.lastClearedRow) {

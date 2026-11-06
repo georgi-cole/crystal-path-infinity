@@ -4,6 +4,7 @@ import type { EffectKind } from './types.ts';
 export const RULESET_VERSION = 'infinity-v1';
 /** Experimental, separately identified balance; existing ranked runs remain v1. */
 export const PACT_RULESET_VERSION = 'infinity-v2-pacts';
+export const BALANCE_RULESET_VERSION = 'infinity-v3-balance';
 export const STARTING_SP = 300;
 export const MAX_SP = 400;
 export const STARTING_HINTS = 2;
@@ -65,17 +66,51 @@ export const PACT_RULESET = Object.freeze({
   mysteryTable: PACT_MYSTERY_TABLE,
 });
 
+export const BALANCE_MYSTERY_TABLE: typeof MYSTERY_TABLE = Object.freeze([
+  ...PACT_MYSTERY_TABLE.map((entry) =>
+    Object.freeze({
+      kind:
+        entry.kind === 'regen_5s'
+          ? 'regen_3rows'
+          : entry.kind === 'drain_5s'
+            ? 'bleed_3rows'
+            : entry.kind,
+      weight: entry.weight * 0.84,
+    }),
+  ),
+  ...(['double_gain_21s', 'double_loss_21s', 'half_life', 'marketing'] as const).map((kind) =>
+    Object.freeze({ kind, weight: 4 }),
+  ),
+]);
+
+export const BALANCE_RULESET = Object.freeze({
+  ...PACT_RULESET,
+  version: BALANCE_RULESET_VERSION,
+  maxSp: null,
+  mysteryTable: BALANCE_MYSTERY_TABLE,
+  fixedDamage: 5,
+});
+
+export function supportsPacts(version: string): boolean {
+  return version === PACT_RULESET_VERSION || version === BALANCE_RULESET_VERSION;
+}
+
 export function getRuleset(
   version: string = RULESET_VERSION,
-): typeof RULESET | typeof PACT_RULESET {
+): typeof RULESET | typeof PACT_RULESET | typeof BALANCE_RULESET {
+  if (version === BALANCE_RULESET_VERSION) return BALANCE_RULESET;
   if (version === PACT_RULESET_VERSION) return PACT_RULESET;
   if (version !== RULESET_VERSION) throw new RangeError(`Unsupported ruleset: ${version}`);
   return RULESET;
 }
 
-export function getRowBandDamage(oneBasedRow: string | bigint | number): number {
+export function getRowBandDamage(
+  oneBasedRow: string | bigint | number,
+  rulesetVersion = RULESET_VERSION,
+): number {
   const row = BigInt(decimal(oneBasedRow));
   if (row < 1n) throw new RangeError('Damage requires a one-based row.');
+  if (rulesetVersion === BALANCE_RULESET_VERSION) return BALANCE_RULESET.fixedDamage;
   if (row <= 10n) return 10;
   if (row <= 25n) return 15;
   return 20;
@@ -88,7 +123,8 @@ export function getReviveSp(ordinal: number): number {
   return RULESET.reviveSp[ordinal - 1];
 }
 
-export function clampSp(sp: number): number {
+export function clampSp(sp: number, rulesetVersion = RULESET_VERSION): number {
   if (!Number.isSafeInteger(sp)) throw new RangeError('SP must be an integer.');
-  return Math.max(0, Math.min(MAX_SP, sp));
+  const max = getRuleset(rulesetVersion).maxSp;
+  return Math.max(0, max === null ? sp : Math.min(max, sp));
 }

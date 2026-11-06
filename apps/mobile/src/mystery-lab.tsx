@@ -1,23 +1,26 @@
-import { mysteryFeedbackFromEvents } from './mystery-feedback';
+import { mysteryFeedbackFromEvents, runCuesFromEvents } from './mystery-feedback';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  BALANCE_RULESET_VERSION,
+  getCurrentRow,
+  getRowBandDamage,
   getRuleset,
   isPactKind,
-  PACT_KINDS,
   PRACTICE_RNG,
   transitionRun,
 } from '@crystal-path-infinity/game-core';
-import { createMysteryLabRun } from './mystery-lab-model';
 import type {
   EffectKind,
   RunCommand,
   RunState,
   TransitionResult,
 } from '@crystal-path-infinity/game-core';
+import { createMysteryLabRun } from './mystery-lab-model';
 import { useLanguage } from './language-context';
 import { effectCopy, mysteryText } from './mystery.messages';
 import { EffectGlyph, MysteryEffects, MysteryFeedbackView, PactPanel } from './mystery-effects';
-import type { MysteryFeedback } from './mystery-feedback';
+import type { MysteryFeedback, RunCues } from './mystery-feedback';
+import { EffectConsumption, HintCounter } from './resource-feedback';
 
 export function MysteryLab({
   onClose,
@@ -27,12 +30,21 @@ export function MysteryLab({
   reducedMotion: boolean;
 }) {
   const { locale } = useLanguage();
-  const [kind, setKind] = useState<EffectKind>('blood_oath');
+  const version = BALANCE_RULESET_VERSION;
+  const [kind, setKind] = useState<EffectKind>('inversion_5s');
   const [startingSp, setStartingSp] = useState(100);
-  const [initial] = useState(() => createMysteryLabRun('blood_oath'));
+  const [spDraft, setSpDraft] = useState('100');
+  const [initial] = useState(() => createMysteryLabRun('inversion_5s', 100, 91025, version));
   const [state, setState] = useState<RunState>(initial.state);
   const [feedback, setFeedback] = useState<MysteryFeedback | null>(null);
+  const [cues, setCues] = useState<RunCues>({});
   const [notice, setNotice] = useState('');
+  const [clockPaused, setClockPaused] = useState(true);
+  const [comparison, setComparison] = useState<{
+    before: number;
+    after: number;
+    normal: number;
+  } | null>(null);
   const current = useRef(state);
   const room = useRef<HTMLElement>(null);
   const chamberSeed = useRef(91025);
@@ -41,9 +53,14 @@ export function MysteryLab({
     setState(result.state);
     const nextFeedback = mysteryFeedbackFromEvents(result.events, result.state);
     if (nextFeedback) setFeedback(nextFeedback);
+    const nextCues = runCuesFromEvents(result.events, result.state);
+    if (nextCues.hints || nextCues.consumption)
+      setCues((previous) => ({ ...previous, ...nextCues }));
     if (!result.accepted) setNotice(result.reason ?? '');
+    return result;
   }, []);
   useEffect(() => {
+    if (clockPaused) return;
     const timer = window.setInterval(() => {
       const latest = current.current;
       if (latest.status !== 'playing') return;
@@ -60,14 +77,19 @@ export function MysteryLab({
       );
     }, 250);
     return () => window.clearInterval(timer);
-  }, [commit]);
+  }, [clockPaused, commit]);
   const reset = (nextKind = kind, sp = startingSp) => {
+    if (!Number.isSafeInteger(sp) || sp < 1) return;
     chamberSeed.current += 1;
     setKind(nextKind);
     setStartingSp(sp);
+    setSpDraft(String(sp));
     setNotice('');
     setFeedback(null);
-    commit(createMysteryLabRun(nextKind, sp, chamberSeed.current));
+    setCues({});
+    setComparison(null);
+    setClockPaused(true);
+    commit(createMysteryLabRun(nextKind, sp, chamberSeed.current, version));
     if (window.matchMedia('(max-width: 600px)').matches)
       room.current?.scrollIntoView({
         block: 'start',
@@ -77,32 +99,56 @@ export function MysteryLab({
             : 'smooth',
       });
   };
-  const issue = (command: RunCommand) => {
+  const issue = (command: RunCommand, elapsed = 0) => {
     const latest = current.current;
-    if (latest.status !== 'playing') return;
+    if (latest.status !== 'playing') return null;
     setNotice('');
-    commit(
+    return commit(
       transitionRun(latest, command, {
-        activeTimeMs: latest.activeTimeMs,
-        achievedAt: latest.lastObservedAt,
+        activeTimeMs: latest.activeTimeMs + elapsed,
+        achievedAt: latest.lastObservedAt + elapsed,
         rng: PRACTICE_RNG,
       }),
     );
   };
+  const demonstrate = (wrong: boolean) => {
+    const latest = current.current;
+    const safe = getCurrentRow(latest).safeSide;
+    const before = latest.sp;
+    const result = issue({
+      type: 'choose',
+      side: wrong ? (safe === 'left' ? 'right' : 'left') : safe,
+      row: latest.currentRow,
+      life: 0,
+    });
+    if (result?.accepted)
+      setComparison({
+        before,
+        after: result.state.sp,
+        normal: Math.max(0, before - (wrong ? getRowBandDamage(latest.currentRow, version) : 0)),
+      });
+  };
   const frozen = state.pact?.phase === 'offered';
   const oracle = state.pact?.kind === 'false_oracle' && state.pact.phase === 'active';
-  const copy = effectCopy(locale, kind);
-  const classic = getRuleset().mysteryTable.map((entry) => entry.kind);
+  const copy = effectCopy(locale, kind, version);
+  const all = getRuleset(version).mysteryTable.map((entry) => entry.kind);
   const catalog = (kinds: readonly EffectKind[]) => (
     <div>
       {kinds.map((item) => (
         <button type="button" key={item} aria-pressed={kind === item} onClick={() => reset(item)}>
           <EffectGlyph kind={item} />
-          <span>{effectCopy(locale, item).title}</span>
+          <span>{effectCopy(locale, item, version).title}</span>
         </button>
       ))}
     </div>
   );
+  const disabled = frozen || state.status !== 'playing';
+  const comparisonText = comparison
+    ? mysteryText(locale, 'comparison')
+        .replace('{before}', String(comparison.before))
+        .replace('{after}', String(comparison.after))
+        .replace('{normal}', String(comparison.normal))
+    : '';
   return (
     <main className={'cpi-mystery-lab' + (reducedMotion ? ' cpi-reduced-motion' : '')}>
       <header>
@@ -112,41 +158,54 @@ export function MysteryLab({
         </button>
       </header>
       <p className="cpi-lab-intro">
-        {mysteryText(locale, 'labIntro')}
+        {mysteryText(locale, 'labIntro').replace('{count}', String(all.length))}
         <br />
         {mysteryText(locale, 'labNote')}
       </p>
       <div className="cpi-lab-layout">
         <nav className="cpi-lab-catalog" aria-label={mysteryText(locale, 'lab')}>
           <h2>{mysteryText(locale, 'pacts')}</h2>
-          {catalog(PACT_KINDS)}
+          {catalog(all.filter(isPactKind))}
           <h2>{mysteryText(locale, 'classic')}</h2>
-          {catalog(classic)}
+          {catalog(all.filter((item) => !isPactKind(item)))}
         </nav>
         <section ref={room} className="cpi-lab-room" aria-label={copy.title}>
           <div className="cpi-lab-instrument">
             <label>
               {mysteryText(locale, 'starting')}
               <input
-                type="range"
-                min="20"
-                max="400"
-                step="5"
-                value={startingSp}
-                onChange={(event) => reset(kind, Number(event.target.value))}
+                type="number"
+                min="1"
+                value={spDraft}
+                onChange={(event) => setSpDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') reset(kind, Number(spDraft));
+                }}
               />
-              <span>{startingSp}</span>
             </label>
-            <button type="button" onClick={() => reset()}>
+            <button type="button" onClick={() => reset(kind, Number(spDraft))}>
               {mysteryText(locale, 'reset')}
             </button>
           </div>
           <div className="cpi-lab-instrument">
-            <strong className="cpi-lab-sp">{state.sp} / 400 SP</strong>
+            <strong className="cpi-lab-sp">{state.sp} SP</strong>
             <span>
-              {mysteryText(locale, 'hints')}: {state.hints} ◈
+              {mysteryText(locale, 'hints')}: <HintCounter count={state.hints} cue={cues.hints} />
             </span>
             <span>↟ {state.currentRow}</span>
+          </div>
+          <div className="cpi-lab-time">
+            <button type="button" onClick={() => setClockPaused((paused) => !paused)}>
+              {mysteryText(locale, clockPaused ? 'resumeDemo' : 'pauseDemo')}
+            </button>
+            <button
+              type="button"
+              disabled={state.status !== 'playing'}
+              onClick={() => issue({ type: 'tick' }, 1000)}
+            >
+              {mysteryText(locale, 'advanceTime')}
+            </button>
+            <span>{mysteryText(locale, 'noLimit')}</span>
           </div>
           {!isPactKind(kind) && (
             <>
@@ -154,21 +213,46 @@ export function MysteryLab({
               <p>{copy.detail}</p>
             </>
           )}
-          <MysteryEffects effects={state.effects} activeTimeMs={state.activeTimeMs} />
+          <MysteryEffects
+            effects={state.effects}
+            activeTimeMs={state.activeTimeMs}
+            rulesetVersion={version}
+          />
           <PactPanel
             pact={state.pact}
+            sp={state.sp}
             hints={state.hints}
             revealed={state.current.revealedSafeSide !== null}
             disabled={state.status !== 'playing'}
+            rulesetVersion={version}
             onChoose={(option) => issue({ type: 'pact', option, row: state.currentRow, life: 0 })}
           />
           {isPactKind(kind) && !state.pact && <p>{copy.detail}</p>}
+          {kind === 'borrowed_time' && (
+            <button type="button" onClick={() => reset(kind, 5)}>
+              {locale === 'bg' ? 'Демо: започни само с 5 SP' : 'Demo: start with only 5 SP'}
+            </button>
+          )}
+          <div className="cpi-lab-demo">
+            <p>{mysteryText(locale, 'demoOnly')}</p>
+            <button type="button" disabled={disabled} onClick={() => demonstrate(true)}>
+              {mysteryText(locale, 'demoWrong')}
+            </button>
+            <button type="button" disabled={disabled} onClick={() => demonstrate(false)}>
+              {mysteryText(locale, 'demoSafe')}
+            </button>
+            {comparison && (
+              <strong className="cpi-lab-comparison" role="status">
+                {comparisonText}
+              </strong>
+            )}
+          </div>
           <div className="cpi-lab-controls">
             {(['left', 'right'] as const).map((side) => (
               <button
                 type="button"
                 key={side}
-                disabled={frozen || state.status !== 'playing'}
+                disabled={disabled}
                 onClick={() => issue({ type: 'choose', side, row: state.currentRow, life: 0 })}
               >
                 {mysteryText(locale, side === 'left' ? 'stepLeft' : 'stepRight')}
@@ -180,11 +264,7 @@ export function MysteryLab({
               className="cpi-lab-hint"
               type="button"
               disabled={
-                frozen ||
-                oracle ||
-                state.hints === 0 ||
-                state.current.revealedSafeSide !== null ||
-                state.status !== 'playing'
+                disabled || oracle || state.hints === 0 || state.current.revealedSafeSide !== null
               }
               onClick={() => issue({ type: 'hint', row: state.currentRow, life: 0 })}
             >
@@ -196,7 +276,9 @@ export function MysteryLab({
           </p>
         </section>
       </div>
+      <EffectConsumption cue={cues.consumption} />
       <MysteryFeedbackView
+        rulesetVersion={version}
         feedback={
           feedback && !(isPactKind(feedback.kind) && feedback.action === null) ? feedback : null
         }

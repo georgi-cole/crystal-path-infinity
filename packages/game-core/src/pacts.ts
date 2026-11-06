@@ -1,5 +1,5 @@
 import { drawRandom } from './random.ts';
-import { PACT_RULESET_VERSION } from './rules.ts';
+import { BALANCE_RULESET_VERSION, supportsPacts } from './rules.ts';
 import type {
   EffectKind,
   MysteryPact,
@@ -19,6 +19,13 @@ export const PACT_KINDS: readonly PactKind[] = Object.freeze([
   'soul_exchange',
 ]);
 export const VAULT_PAYOUTS = Object.freeze([0, 15, 40, 85]);
+export const MARKET_SP_PER_HINT = 20;
+export const HALF_LIFE_HINTS = 5;
+export const BALANCE_PACT_KINDS: readonly PactKind[] = Object.freeze([
+  ...PACT_KINDS,
+  'half_life',
+  'marketing',
+]);
 export const PACT_OPTIONS: readonly PactOption[] = Object.freeze([
   'accept',
   'decline',
@@ -26,10 +33,12 @@ export const PACT_OPTIONS: readonly PactOption[] = Object.freeze([
   'settle',
   'sp',
   'hint',
+  'sell_one',
+  'sell_all',
 ]);
 
 export function isPactKind(kind: EffectKind): kind is PactKind {
-  return (PACT_KINDS as readonly string[]).includes(kind);
+  return (BALANCE_PACT_KINDS as readonly string[]).includes(kind);
 }
 
 export function offerPact(kind: PactKind): MysteryPact {
@@ -40,12 +49,17 @@ export function assertPact(state: RunState): void {
   const pact = state.pact;
   if (!pact) return;
   if (
-    state.rulesetVersion !== PACT_RULESET_VERSION ||
+    !supportsPacts(state.rulesetVersion) ||
     state.status !== 'playing' ||
     !isPactKind(pact.kind)
   ) {
     throw new RangeError('Pact outside a supported, playing run.');
   }
+  if (
+    ['half_life', 'marketing'].includes(pact.kind) &&
+    state.rulesetVersion !== BALANCE_RULESET_VERSION
+  )
+    throw new RangeError('Unsupported trade.');
   if (pact.phase === 'offered') {
     if (
       pact.rowsLeft !== 0 ||
@@ -59,7 +73,7 @@ export function assertPact(state: RunState): void {
   }
   if (
     pact.phase !== 'active' ||
-    pact.kind === 'soul_exchange' ||
+    ['soul_exchange', 'half_life', 'marketing'].includes(pact.kind) ||
     !Number.isInteger(pact.rowsLeft) ||
     pact.rowsLeft < 1 ||
     pact.rowsLeft > 3
@@ -83,7 +97,8 @@ export interface PactResolution {
   readonly spDelta: number;
   readonly hintDelta: number;
   readonly cursor: RandomCursor;
-  readonly outcome: 'accepted' | 'declined' | 'won' | 'lost' | 'banked' | 'paid' | 'expired';
+  readonly outcome:
+    'accepted' | 'declined' | 'won' | 'lost' | 'banked' | 'paid' | 'traded' | 'expired';
 }
 
 /** The omen is freshly sampled once per row; it is never a confirmed hint. */
@@ -120,6 +135,17 @@ export function choosePact(
       return result(-55, 0, null, 'paid');
     }
     return null;
+  }
+  if (pact.kind === 'half_life') {
+    if (option === 'decline') return result(0, 0, null, 'declined');
+    if (option !== 'accept' || state.sp < 2) return null;
+    return result(-Math.ceil(state.sp / 2), HALF_LIFE_HINTS, null, 'traded');
+  }
+  if (pact.kind === 'marketing') {
+    if (option === 'decline') return result(0, 0, null, 'declined');
+    if (!['sell_one', 'sell_all'].includes(option) || state.hints < 1) return null;
+    const count = option === 'sell_one' ? 1 : state.hints;
+    return result(count * MARKET_SP_PER_HINT, -count, null, 'traded');
   }
   if (pact.kind === 'soul_exchange') {
     if (option !== 'sp' && option !== 'hint') return null;

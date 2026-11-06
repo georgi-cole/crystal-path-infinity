@@ -1,4 +1,6 @@
 import { mysteryFeedbackFromEvents } from '../src/mystery-feedback';
+import { runCuesFromEvents } from '../src/mystery-feedback';
+import { EffectConsumption, HintCounter } from '../src/resource-feedback';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
@@ -7,10 +9,12 @@ import {
   getRuleset,
   PACT_KINDS,
   PACT_RULESET_VERSION,
+  BALANCE_RULESET_VERSION,
+  applyMysteryEffect,
   PRACTICE_RNG,
   transitionRun,
 } from '@crystal-path-infinity/game-core';
-import type { PactKind, RunState } from '@crystal-path-infinity/game-core';
+import type { PactKind, PactOption, RunState } from '@crystal-path-infinity/game-core';
 import { createMysteryLabRun } from '../src/mystery-lab-model';
 import { effectCopy } from '../src/mystery.messages';
 import {
@@ -27,7 +31,7 @@ import {
   writePracticeCheckpoint,
 } from '../src/practice-save';
 
-function pactAction(state: RunState, option: 'accept' | 'decline') {
+function pactAction(state: RunState, option: PactOption) {
   return transitionRun(
     state,
     { type: 'pact', option, row: state.currentRow, life: 0 },
@@ -66,6 +70,109 @@ function wire(state: RunState) {
 }
 
 describe('mystery feedback, practice chamber and public contracts', () => {
+  it.each(getRuleset(BALANCE_RULESET_VERSION).mysteryTable.map((entry) => entry.kind))(
+    'opens the current-balance %s demonstration',
+    (kind) => {
+      const result = createMysteryLabRun(kind, 100, 91025, BALANCE_RULESET_VERSION);
+      expect(result.state.current.mysteryOutcome).toBe(kind);
+      expect(result.state.rulesetVersion).toBe(BALANCE_RULESET_VERSION);
+      expect(effectCopy('bg', kind, BALANCE_RULESET_VERSION).detail.length).toBeGreaterThan(30);
+      expect(renderToStaticMarkup(createElement(EffectGlyph, { kind }))).toContain('<path');
+      expect(parseRankedReply(wire(result.state))).not.toBeNull();
+    },
+  );
+
+  it('keeps shield consumption independent of simultaneous bleeding and shows the right cause', () => {
+    const state = createMysteryLabRun('bleed_3rows', 100, 91025, BALANCE_RULESET_VERSION).state;
+    const shield = applyMysteryEffect('shield_5s', 0).addedEffect!;
+    const safe = getCurrentRow(state).safeSide;
+    const result = transitionRun(
+      { ...state, effects: [...state.effects, shield] },
+      { type: 'choose', row: state.currentRow, life: 0, side: safe === 'left' ? 'right' : 'left' },
+      { activeTimeMs: 0, achievedAt: 0, rng: PRACTICE_RNG },
+    );
+    expect(result.state.sp).toBe(97);
+    const cues = runCuesFromEvents(result.events, result.state);
+    expect(cues.consumption?.kind).toBe('shield_5s');
+    expect(mysteryFeedbackFromEvents(result.events, result.state)?.kind).toBe('bleed_3rows');
+    const html = renderToStaticMarkup(createElement(EffectConsumption, { cue: cues.consumption }));
+    expect(html).toContain('SHIELD USED');
+    expect(html).toContain('0 SP');
+  });
+
+  it('never mislabels Second breath healing as Twisted fate', () => {
+    const state = createMysteryLabRun('regen_3rows', 100, 91025, BALANCE_RULESET_VERSION).state;
+    const safe = getCurrentRow(state).safeSide;
+    const result = transitionRun(
+      state,
+      { type: 'choose', row: state.currentRow, life: 0, side: safe === 'left' ? 'right' : 'left' },
+      { activeTimeMs: 0, achievedAt: 0, rng: PRACTICE_RNG },
+    );
+    expect(result.state.sp).toBe(101);
+    expect(mysteryFeedbackFromEvents(result.events, result.state)).toMatchObject({
+      kind: 'regen_3rows',
+      spDelta: 6,
+    });
+    expect(runCuesFromEvents(result.events, result.state).consumption).toBeUndefined();
+  });
+
+  it('flashes actual hint changes for Half Life, Marketing and hint use', () => {
+    const half = pactAction(
+      createMysteryLabRun('half_life', 100, 91025, BALANCE_RULESET_VERSION).state,
+      'accept',
+    );
+    const gained = runCuesFromEvents(half.events, half.state);
+    expect(gained.hints?.delta).toBe(5);
+    const html = renderToStaticMarkup(
+      createElement(HintCounter, { count: half.state.hints, cue: gained.hints }),
+    );
+    expect(html).toContain('is-hint-gain');
+    expect(html).toContain('+5');
+    const market = pactAction(
+      createMysteryLabRun('marketing', 100, 91025, BALANCE_RULESET_VERSION).state,
+      'sell_one',
+    );
+    expect(runCuesFromEvents(market.events, market.state).hints?.delta).toBe(-1);
+    const hint = transitionRun(
+      market.state,
+      { type: 'hint', row: market.state.currentRow, life: 0 },
+      { activeTimeMs: 0, achievedAt: 0, rng: PRACTICE_RNG },
+    );
+    expect(runCuesFromEvents(hint.events, hint.state).hints?.delta).toBe(-1);
+  });
+
+  it('decodes uncapped SP and row charges but rejects forged durations and extra fields', () => {
+    const state = createMysteryLabRun('regen_3rows', 5000, 91025, BALANCE_RULESET_VERSION).state;
+    const reply = wire(state);
+    expect(parseRankedReply(reply)?.snapshot.sp).toBe(5000);
+    const forged = {
+      ...reply,
+      snapshot: { ...reply.snapshot, effects: [{ ...state.effects[0], rowsLeft: 4 }] },
+    };
+    expect(parseRankedReply(forged)).toBeNull();
+    const timed = createMysteryLabRun(
+      'double_gain_21s',
+      5000,
+      91025,
+      BALANCE_RULESET_VERSION,
+    ).state;
+    expect(parseRankedReply(wire(timed))).not.toBeNull();
+    expect(
+      parseRankedReply({
+        ...wire(timed),
+        snapshot: {
+          ...wire(timed).snapshot,
+          effects: [{ ...timed.effects[0], expiresAt: 22_000 }],
+        },
+      }),
+    ).toBeNull();
+    expect(
+      parseRankedReply({
+        ...reply,
+        snapshot: { ...reply.snapshot, rulesetVersion: 'infinity-v1' },
+      }),
+    ).toBeNull();
+  });
   it.each(getRuleset(PACT_RULESET_VERSION).mysteryTable.map((entry) => entry.kind))(
     'the %s chamber opens that real result',
     (kind) => {

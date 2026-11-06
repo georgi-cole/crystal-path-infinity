@@ -5,7 +5,9 @@ import {
   MAX_ACTIVE_EFFECTS,
   getRuleset,
   RULESET_VERSION,
+  BALANCE_RULESET_VERSION,
 } from './rules.ts';
+import { effectDuration } from './effect-rules.ts';
 import { isPactKind } from './pacts.ts';
 import type { ActiveEffect, EffectKind, TimedEffectKind } from './types.ts';
 
@@ -45,7 +47,17 @@ export function applyMysteryEffect(kind: EffectKind, now: number): MysteryApplie
     case 'hungry_vault':
     case 'borrowed_time':
     case 'soul_exchange':
+    case 'half_life':
+    case 'marketing':
       return { spDelta: 0, hintDelta: 0, addedEffect: null, label: kind };
+    case 'regen_3rows':
+    case 'bleed_3rows':
+      return {
+        spDelta: 0,
+        hintDelta: 0,
+        addedEffect: { kind, startedAt: now, expiresAt: null, nextTickAt: null, rowsLeft: 3 },
+        label: kind,
+      };
     case 'heal_10':
       return { spDelta: 10, hintDelta: 0, addedEffect: null, label: '+10 SP' };
     case 'heal_20':
@@ -64,13 +76,19 @@ export function applyMysteryEffect(kind: EffectKind, now: number): MysteryApplie
     case 'fragility_5s':
     case 'drain_5s':
     case 'inversion_5s':
+    case 'double_gain_21s':
+    case 'double_loss_21s':
       return {
         spDelta: 0,
         hintDelta: 0,
         addedEffect: {
           kind,
           startedAt: now,
-          expiresAt: addSafeInteger(now, EFFECT_DURATION_MS, 'Effect expiry'),
+          expiresAt: addSafeInteger(
+            now,
+            effectDuration(kind) ?? EFFECT_DURATION_MS,
+            'Effect expiry',
+          ),
           nextTickAt:
             kind === 'regen_5s' || kind === 'drain_5s'
               ? addSafeInteger(now, EFFECT_TICK_MS, 'First effect tick')
@@ -82,19 +100,22 @@ export function applyMysteryEffect(kind: EffectKind, now: number): MysteryApplie
 }
 
 export function pruneEffects(effects: readonly ActiveEffect[], now: number): ActiveEffect[] {
-  return effects.filter((effect) => effect.expiresAt > now);
+  return effects.filter((effect) => effect.expiresAt === null || effect.expiresAt > now);
 }
 
 export function mergeEffect(
   effects: readonly ActiveEffect[],
   added: ActiveEffect | null,
   now: number,
+  rulesetVersion = RULESET_VERSION,
 ): ActiveEffect[] {
-  const alive = pruneEffects(effects, now);
+  let alive = pruneEffects(effects, now);
   if (!added) return alive;
+  if (rulesetVersion === BALANCE_RULESET_VERSION)
+    alive = alive.filter((effect) => effect.kind !== added.kind);
   if (alive.length >= MAX_ACTIVE_EFFECTS) {
     // Stable sort preserves source insertion order when expiries tie.
-    alive.sort((left, right) => left.expiresAt - right.expiresAt);
+    alive.sort((left, right) => (left.expiresAt ?? Infinity) - (right.expiresAt ?? Infinity));
     alive.splice(0, alive.length - MAX_ACTIVE_EFFECTS + 1);
   }
   return [...alive, added];
@@ -104,13 +125,18 @@ export function resolveWrongTileDelta(
   baseDamage: number,
   effects: readonly ActiveEffect[],
   now: number,
+  rulesetVersion = RULESET_VERSION,
 ): { delta: number; newEffects: ActiveEffect[]; consumedKind?: TimedEffectKind } {
   assertNonNegativeInteger(baseDamage, 'Base damage');
   const alive = pruneEffects(effects, now);
   for (const kind of ['shield_5s', 'lucky_5s', 'inversion_5s', 'fragility_5s'] as const) {
     const index = alive.findIndex((effect) => effect.kind === kind);
     if (index < 0) continue;
-    if (kind === 'inversion_5s') return { delta: Math.floor(baseDamage / 2), newEffects: alive };
+    if (kind === 'inversion_5s')
+      return {
+        delta: rulesetVersion === BALANCE_RULESET_VERSION ? baseDamage : Math.floor(baseDamage / 2),
+        newEffects: alive,
+      };
     return {
       delta: kind === 'shield_5s' ? 0 : kind === 'lucky_5s' ? baseDamage : -(baseDamage * 2),
       newEffects: alive.filter((_, position) => position !== index),

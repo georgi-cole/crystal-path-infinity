@@ -114,7 +114,7 @@ export const ja = {
   'tutorial.mysteryInstruction': '中央の謎の板を試すか飛ばします。効果は助けにも危険にもなります。',
   'tutorial.endTitle': '挑戦の終わり方',
   'tutorial.endInstruction':
-    '最後の列はありません。自分で挑戦を終了できます。死亡例は10 SPから始まります。',
+    '最後の列はありません。自分で挑戦を終了できます。死亡例は5 SPから始まります。',
   'tutorial.fatalTitle': '死亡した列は記録されない',
   'tutorial.fatalInstruction': '4列目でSPがゼロになりました。最後に越えた列は3列目です。',
   'tutorial.completeTitle': '橋の基本を覚えた！',

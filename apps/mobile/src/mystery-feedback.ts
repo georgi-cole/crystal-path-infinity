@@ -14,6 +14,8 @@ export interface MysteryFeedback {
     | 'lost'
     | 'banked'
     | 'paid'
+    | 'traded'
+    | 'walked_away'
     | 'expired'
     | null;
 }
@@ -37,7 +39,8 @@ export function mysteryFeedbackFromEvents(
   const pulse = latest.find(
     (event) => event.type === 'effects-ticked' && (event.appliedDelta ?? event.delta) !== 0,
   );
-  const event = pact ?? mystery ?? choice ?? pulse;
+  const rowPulse = latest.find((event) => event.type === 'row-effect-ticked' && event.delta !== 0);
+  const event = pact ?? mystery ?? rowPulse ?? choice ?? pulse;
   if (!event) return null;
   const id = `${event.type}:${event.activeTimeMs}:${event.observedAt}:${state.currentRow}`;
   if (event.type === 'pact-resolved') {
@@ -48,7 +51,10 @@ export function mysteryFeedbackFromEvents(
       spDelta:
         event.option === 'step' && step?.type === 'choice-resolved' ? step.spDelta : event.spDelta,
       hintDelta: event.hintDelta,
-      action: event.outcome,
+      action:
+        event.outcome === 'declined' && ['half_life', 'marketing'].includes(event.kind)
+          ? 'walked_away'
+          : event.outcome,
     };
   }
   if (event.type === 'mystery-resolved')
@@ -75,5 +81,45 @@ export function mysteryFeedbackFromEvents(
       hintDelta: 0,
       action: 'pulse',
     };
+  if (event.type === 'row-effect-ticked')
+    return { id, kind: event.kind, spDelta: event.delta, hintDelta: 0, action: 'triggered' };
   return null;
+}
+
+export interface ConsumptionCue {
+  readonly id: string;
+  readonly kind: 'shield_5s' | 'lucky_5s';
+  readonly spDelta: number;
+}
+export interface HintCue {
+  readonly id: string;
+  readonly delta: number;
+}
+export interface RunCues {
+  readonly consumption?: ConsumptionCue;
+  readonly hints?: HintCue;
+}
+
+/** Independent signals keep a shield break visible even when another effect also fires. */
+export function runCuesFromEvents(events: readonly RunEvent[], state: RunState): RunCues {
+  const result: { consumption?: ConsumptionCue; hints?: HintCue } = {};
+  let hintDelta = 0;
+  for (const event of events) {
+    const id = `${event.type}:${event.activeTimeMs}:${event.observedAt}:${state.currentRow}:${state.hints}`;
+    if (event.type === 'hint-used') hintDelta -= 1;
+    else if (event.type === 'mystery-resolved' || event.type === 'pact-resolved')
+      hintDelta += event.hintDelta;
+    if (
+      event.type === 'choice-resolved' &&
+      (event.consumedKind === 'shield_5s' || event.consumedKind === 'lucky_5s')
+    ) {
+      result.consumption = { id, kind: event.consumedKind, spDelta: event.spDelta };
+    }
+  }
+  if (hintDelta !== 0)
+    result.hints = {
+      id: `hints:${state.activeTimeMs}:${state.lastObservedAt}:${state.hints}`,
+      delta: hintDelta,
+    };
+  return result;
 }

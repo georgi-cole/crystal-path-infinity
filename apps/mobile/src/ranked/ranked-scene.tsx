@@ -10,6 +10,7 @@ import { operationMessageKeys } from '../operations/operation-failure';
 import type { EffectKind } from '@crystal-path-infinity/game-core';
 import { MysteryEffects, PactPanel, EffectGlyph } from '../mystery-effects';
 import { effectCopy } from '../mystery.messages';
+import { HintCounter } from '../resource-feedback';
 
 const EMPTY: RankedClientState = {
   phase: 'unavailable',
@@ -294,12 +295,17 @@ export function RankedScene({
           <div className="cpi-ranked-resources">
             <p>{t('ranked.confirmed', { row: number(run.lastClearedRow) })}</p>
             <p>{t('ranked.sp', { sp: number(run.sp) })}</p>
-            <p>{t('ranked.hints', { count: number(run.hints) })}</p>
+            <p>
+              {t('ranked.hints', { count: number(run.hints) })}{' '}
+              <HintCounter count={run.hints} cue={{ id: `ranked:${run.hints}`, delta: 0 }} />
+            </p>
           </div>
           {run.status === 'playing' && (
             <>
               <h3 className="cpi-ranked-row">{t('ranked.row', { row: number(run.currentRow) })}</h3>
               <PactPanel
+                sp={run.sp}
+                rulesetVersion={run.rulesetVersion}
                 pact={run.pact}
                 hints={run.hints}
                 revealed={run.current.revealedSafeSide !== null}
@@ -395,7 +401,11 @@ export function RankedScene({
               )}
             </>
           )}
-          <MysteryEffects effects={run.effects} activeTimeMs={run.activeTimeMs} />
+          <MysteryEffects
+            effects={run.effects}
+            activeTimeMs={run.activeTimeMs}
+            rulesetVersion={run.rulesetVersion}
+          />
           {run.current.mysteryOutcome && !run.pact && (
             <details className="cpi-force">
               <summary>
