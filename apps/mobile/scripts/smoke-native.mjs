@@ -928,11 +928,9 @@ async function ios() {
         return '';
       }
       if (step === 'shutdown') {
-        save(
-          'ios-post-migration-processes.txt',
-          text('ps', ['-A', '-o', 'pid,ppid,%cpu,%mem,comm']),
-        );
-        save('ios-post-migration-memory.txt', text('vm_stat', []));
+        // The continuous host-pressure capture already records processes/memory.
+        // Reset promptly: synchronous diagnostics can hang on migration's busy
+        // services and prevent this required cleanup from running at all.
         return text('xcrun', ['simctl', 'shutdown', udid], { timeout });
       }
       if (step === 'system-launch') {
