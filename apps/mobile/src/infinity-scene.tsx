@@ -8,7 +8,7 @@ import {
   getRuleset,
   STARTING_SP,
   PRACTICE_RNG,
-  BALANCE_RULESET_VERSION,
+  RISK_RULESET_VERSION,
   isPactKind,
 } from '@crystal-path-infinity/game-core';
 import type {
@@ -220,7 +220,14 @@ export function InfinitySceneView({
               type="button"
               className="cps-hint-btn cpi-hud-control cpi-hint-control"
               onClick={onHint}
-              disabled={!interactive || pactOffered || oracleActive || state.hints === 0}
+              disabled={
+                !interactive ||
+                pactOffered ||
+                oracleActive ||
+                state.hints === 0 ||
+                state.current.revealedSafeSide !== null ||
+                state.current.noSafeTile
+              }
               aria-label={t('game.hintButton', { count: number(state.hints) })}
             >
               <HintCounter count={state.hints} cue={resourceCues.hints} />
@@ -258,13 +265,20 @@ export function InfinitySceneView({
           activeTimeMs={state.activeTimeMs}
           rulesetVersion={state.rulesetVersion}
         />
+        {state.current.noSafeTile && (
+          <p className="cpi-sp-danger-copy is-low" role="status">
+            {locale === 'bg'
+              ? 'И двете плочки са счупени. Подсказката е запазена; защитата може да помогне.'
+              : 'Both tiles are broken. Your hint was kept; protection can help.'}
+          </p>
+        )}
         <section className="cps-board" aria-label={t('game.bridge')} dir="ltr">
           <PactPanel
             sp={state.sp}
             rulesetVersion={state.rulesetVersion}
             pact={state.pact}
             hints={state.hints}
-            revealed={state.current.revealedSafeSide !== null}
+            revealed={state.current.revealedSafeSide !== null || !!state.current.noSafeTile}
             disabled={!interactive || !onPact}
             onChoose={(option) => onPact?.(option)}
           />
@@ -524,7 +538,7 @@ function makeInitialRun(): RunState {
       mysteryRng: createPracticeCursor(mystery),
       observedAt: Date.now(),
       buffer: { ahead: 8, history: 2 },
-      rulesetVersion: BALANCE_RULESET_VERSION,
+      rulesetVersion: RISK_RULESET_VERSION,
     },
     PRACTICE_RNG,
   );

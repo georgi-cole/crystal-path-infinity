@@ -10,12 +10,13 @@ import {
   PACT_KINDS,
   PACT_RULESET_VERSION,
   BALANCE_RULESET_VERSION,
+  RISK_RULESET_VERSION,
   applyMysteryEffect,
   PRACTICE_RNG,
   transitionRun,
 } from '@crystal-path-infinity/game-core';
 import type { PactKind, PactOption, RunState } from '@crystal-path-infinity/game-core';
-import { createMysteryLabRun } from '../src/mystery-lab-model';
+import { createMysteryLabRun, prepareMysteryLabStep } from '../src/mystery-lab-model';
 import { effectCopy } from '../src/mystery.messages';
 import {
   EffectGlyph,
@@ -70,6 +71,99 @@ function wire(state: RunState) {
 }
 
 describe('mystery feedback, practice chamber and public contracts', () => {
+  it.each(getRuleset(RISK_RULESET_VERSION).mysteryTable.map((entry) => entry.kind))(
+    'opens and decodes the hidden-risk %s demonstration',
+    (kind) => {
+      const result = createMysteryLabRun(kind, 100, 91025, RISK_RULESET_VERSION);
+      expect(result.state.current.mysteryOutcome).toBe(kind);
+      expect(effectCopy('bg', kind, RISK_RULESET_VERSION).detail.length).toBeGreaterThan(30);
+      expect(parseRankedReply(wire(result.state))).not.toBeNull();
+    },
+  );
+
+  it('shows ten seconds of Coyote and distinguishes a blocked tile from healing', () => {
+    const state = prepareMysteryLabStep(
+      createMysteryLabRun('coyote_10s', 100, 91025, RISK_RULESET_VERSION).state,
+    );
+    const result = transitionRun(
+      state,
+      { type: 'choose', side: 'right', row: state.currentRow, life: 0 },
+      { activeTimeMs: 0, achievedAt: 0, rng: PRACTICE_RNG },
+    );
+    const feedback = mysteryFeedbackFromEvents(result.events, result.state);
+    expect(result.state.sp).toBe(100);
+    expect(feedback).toMatchObject({ kind: 'coyote_10s', spDelta: 0, action: 'triggered' });
+    const html = renderToStaticMarkup(
+      createElement(MysteryFeedbackView, { feedback, rulesetVersion: RISK_RULESET_VERSION }),
+    );
+    expect(html).toContain('Run Coyote');
+    expect(html).toContain('0 SP');
+    const badge = renderToStaticMarkup(
+      createElement(MysteryEffects, {
+        effects: state.effects,
+        activeTimeMs: 0,
+        rulesetVersion: RISK_RULESET_VERSION,
+      }),
+    );
+    expect(badge).toContain('10.0s');
+  });
+
+  it('keeps free no-safe hints public but rejects hidden risk assignments and forged hint flags', () => {
+    const state = prepareMysteryLabStep(
+      createMysteryLabRun('coyote_10s', 100, 91025, RISK_RULESET_VERSION).state,
+      'both-broken',
+    );
+    const result = transitionRun(
+      state,
+      { type: 'hint', row: state.currentRow, life: 0 },
+      { activeTimeMs: 0, achievedAt: 0, rng: PRACTICE_RNG },
+    );
+    const reply = wire(result.state);
+    expect(parseRankedReply(reply)?.snapshot.current.noSafeTile).toBe(true);
+    expect(result.state.hints).toBe(2);
+    for (const extra of [
+      { risk: { lowRiskSide: 'left' } },
+      { lowRiskSide: 'left' },
+      { broken: { left: true, right: true } },
+      { noSafeTile: false },
+      { noSafeTile: true, revealedSafeSide: 'left' },
+    ]) {
+      expect(
+        parseRankedReply({
+          ...reply,
+          snapshot: { ...reply.snapshot, current: { ...reply.snapshot.current, ...extra } },
+        }),
+      ).toBeNull();
+    }
+    expect(
+      parseRankedReply({
+        ...reply,
+        snapshot: { ...reply.snapshot, rulesetVersion: BALANCE_RULESET_VERSION },
+      }),
+    ).toBeNull();
+  });
+
+  it('restores v4 route draws and Coyote exactly, keeping v3 personal bests separate', () => {
+    const state = createMysteryLabRun('coyote_10s', 5000, 91025, RISK_RULESET_VERSION).state;
+    const records = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => records.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        records.set(key, value);
+      },
+      removeItem: (key: string) => {
+        records.delete(key);
+      },
+    };
+    writePracticeCheckpoint(storage, state);
+    const restored = readPracticeCheckpoint(storage);
+    expect(restored.status === 'ready' ? restored.state : null).toEqual(state);
+    recordPracticePersonalBest(storage, '20', BALANCE_RULESET_VERSION);
+    recordPracticePersonalBest(storage, '30', RISK_RULESET_VERSION);
+    expect(readPracticePersonalBest(storage, BALANCE_RULESET_VERSION)).toBe('20');
+    expect(readPracticePersonalBest(storage, RISK_RULESET_VERSION)).toBe('30');
+  });
+
   it.each(getRuleset(BALANCE_RULESET_VERSION).mysteryTable.map((entry) => entry.kind))(
     'opens the current-balance %s demonstration',
     (kind) => {

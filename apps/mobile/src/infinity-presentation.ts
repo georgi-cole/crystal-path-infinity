@@ -12,6 +12,7 @@ export interface PresentedRow {
   readonly hint: TileSide | null;
   readonly chosen: TileSide | null;
   readonly wrong: boolean;
+  readonly noSafeTile?: true;
 }
 export interface PresentedEffect {
   readonly kind: ActiveEffect['kind'];
@@ -32,6 +33,7 @@ export interface PresentedScene {
 }
 
 const effectLabels: Record<ActiveEffect['kind'], string> = {
+  coyote_10s: 'Run Coyote',
   shield_5s: 'Shield',
   regen_5s: 'Regeneration',
   lucky_5s: 'Lucky step',
@@ -44,6 +46,7 @@ const effectLabels: Record<ActiveEffect['kind'], string> = {
   bleed_3rows: 'The bleed',
 };
 const good = new Set<ActiveEffect['kind']>([
+  'coyote_10s',
   'shield_5s',
   'regen_5s',
   'lucky_5s',
@@ -88,6 +91,7 @@ export function presentInfinityScene(state: RunState): PresentedScene {
       hint: phase === 'current' ? state.current.revealedSafeSide : null,
       chosen: decision?.side ?? null,
       wrong: decision?.wrong ?? false,
+      ...(phase === 'current' && state.current.noSafeTile ? { noSafeTile: true as const } : {}),
     });
   }
   if (rows.length > MAX_PRESENTED_ROWS) throw new RangeError('Unbounded visual row window.');

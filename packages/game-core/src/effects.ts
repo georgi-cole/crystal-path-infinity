@@ -5,7 +5,7 @@ import {
   MAX_ACTIVE_EFFECTS,
   getRuleset,
   RULESET_VERSION,
-  BALANCE_RULESET_VERSION,
+  usesBalanceRules,
 } from './rules.ts';
 import { effectDuration } from './effect-rules.ts';
 import { isPactKind } from './pacts.ts';
@@ -78,6 +78,7 @@ export function applyMysteryEffect(kind: EffectKind, now: number): MysteryApplie
     case 'inversion_5s':
     case 'double_gain_21s':
     case 'double_loss_21s':
+    case 'coyote_10s':
       return {
         spDelta: 0,
         hintDelta: 0,
@@ -111,7 +112,7 @@ export function mergeEffect(
 ): ActiveEffect[] {
   let alive = pruneEffects(effects, now);
   if (!added) return alive;
-  if (rulesetVersion === BALANCE_RULESET_VERSION)
+  if (usesBalanceRules(rulesetVersion))
     alive = alive.filter((effect) => effect.kind !== added.kind);
   if (alive.length >= MAX_ACTIVE_EFFECTS) {
     // Stable sort preserves source insertion order when expiries tie.
@@ -129,12 +130,27 @@ export function resolveWrongTileDelta(
 ): { delta: number; newEffects: ActiveEffect[]; consumedKind?: TimedEffectKind } {
   assertNonNegativeInteger(baseDamage, 'Base damage');
   const alive = pruneEffects(effects, now);
+  if (alive.some((effect) => effect.kind === 'coyote_10s')) {
+    // Coyote prevents tile damage without wasting Aegis or Brittle oath.
+    // Healing wrong steps still work and Borrowed luck still spends its charge.
+    const lucky = alive.findIndex((effect) => effect.kind === 'lucky_5s');
+    if (lucky >= 0)
+      return {
+        delta: baseDamage,
+        newEffects: alive.filter((_, index) => index !== lucky),
+        consumedKind: 'lucky_5s',
+      };
+    return {
+      delta: alive.some((effect) => effect.kind === 'inversion_5s') ? baseDamage : 0,
+      newEffects: alive,
+    };
+  }
   for (const kind of ['shield_5s', 'lucky_5s', 'inversion_5s', 'fragility_5s'] as const) {
     const index = alive.findIndex((effect) => effect.kind === kind);
     if (index < 0) continue;
     if (kind === 'inversion_5s')
       return {
-        delta: rulesetVersion === BALANCE_RULESET_VERSION ? baseDamage : Math.floor(baseDamage / 2),
+        delta: usesBalanceRules(rulesetVersion) ? baseDamage : Math.floor(baseDamage / 2),
         newEffects: alive,
       };
     return {

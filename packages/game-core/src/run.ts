@@ -18,7 +18,14 @@ import {
   decimal,
 } from './numbers.ts';
 import { assertRandomCursor, drawRandom } from './random.ts';
-import { assertRowStream, createRowStream, takeRows } from './rows.ts';
+import {
+  assertRowStream,
+  assertRowRisk,
+  createRowStream,
+  takeRows,
+  hintSafeSide,
+  isBrokenTile,
+} from './rows.ts';
 import {
   assertPact,
   choosePact,
@@ -183,6 +190,7 @@ export function assertRunState(state: RunState, rng?: RandomSource): void {
   )
     throw new RangeError('Unbounded row state.');
   state.rows.forEach((row, position) => {
+    assertRowRisk(row, state.rulesetVersion);
     if (
       row.index !== addDecimal(state.bufferOffset, BigInt(position)) ||
       (row.safeSide !== 'left' && row.safeSide !== 'right') ||
@@ -195,6 +203,13 @@ export function assertRunState(state: RunState, rng?: RandomSource): void {
     throw new RangeError('Stream and buffer do not meet.');
   }
   getCurrentRow(state);
+  if (
+    state.current.noSafeTile !== undefined &&
+    (state.current.noSafeTile !== true ||
+      hintSafeSide(getCurrentRow(state)) !== null ||
+      state.current.revealedSafeSide !== null)
+  )
+    throw new RangeError('Invalid no-safe-tile hint.');
   assertActiveEffects(state.effects, state.activeTimeMs, state.rulesetVersion);
   if (
     state.reviveReceipts.length !== state.revivesGranted ||
@@ -580,9 +595,15 @@ export function transitionRun(
     case 'hint': {
       if (next.pact?.kind === 'false_oracle' && next.pact.phase === 'active')
         return result(next, events, 'oracle-blocks-hints');
-      if (next.current.revealedSafeSide !== null) return result(next, events, 'already-revealed');
+      if (next.current.revealedSafeSide !== null || next.current.noSafeTile)
+        return result(next, events, 'already-revealed');
       if (next.hints === 0) return result(next, events, 'no-hints');
-      const safeSide = getCurrentRow(next).safeSide;
+      const safeSide = hintSafeSide(getCurrentRow(next));
+      if (safeSide === null) {
+        next = { ...next, current: { ...next.current, noSafeTile: true } };
+        events.push({ ...eventTime(next), type: 'hint-unavailable', row: next.currentRow });
+        return result(next, events);
+      }
       next = {
         ...next,
         hints: next.hints - 1,
@@ -628,7 +649,13 @@ export function transitionRun(
     }
     case 'pact': {
       const pact = next.pact;
-      const change = choosePact(next, command.option, getCurrentRow(next).safeSide, context.rng);
+      const pactRow = getCurrentRow(next);
+      const change = choosePact(
+        next,
+        command.option,
+        pactRow.risk?.lowRiskSide ?? pactRow.safeSide,
+        context.rng,
+      );
       if (!pact || !change) return result(next, events, 'invalid-pact-choice');
       const reward =
         (pact.kind === 'blood_oath' ||
@@ -657,7 +684,7 @@ export function transitionRun(
     }
     case 'choose': {
       const row = getCurrentRow(next);
-      const wrong = command.side !== row.safeSide;
+      const wrong = isBrokenTile(row, command.side);
       const resolution = wrong
         ? resolveWrongTileDelta(
             getRowBandDamage(next.currentRow, next.rulesetVersion),
@@ -691,6 +718,11 @@ export function transitionRun(
         wrong,
         spDelta: sp - next.sp,
         consumedKind: resolution.consumedKind ?? null,
+        ...(wrong &&
+        resolution.delta === 0 &&
+        next.effects.some((effect) => effect.kind === 'coyote_10s')
+          ? { protectedBy: 'coyote_10s' as const }
+          : {}),
       });
       if (pactChange && next.pact)
         events.push({
@@ -719,7 +751,7 @@ export function transitionRun(
         ...(pactChange ? { pact: pactChange.pact } : {}),
         current: {
           ...next.current,
-          revealedSafeSide: row.safeSide,
+          revealedSafeSide: hintSafeSide(row),
           lastChoice: { side: command.side, wrong },
         },
       };
@@ -750,7 +782,12 @@ export function transitionRun(
         context.rng,
       );
       if (next.pact?.kind === 'false_oracle' && next.pact.phase === 'active') {
-        const omen = drawOmen(getCurrentRow(next).safeSide, next.mysteryRng, context.rng);
+        const nextRow = getCurrentRow(next);
+        const omen = drawOmen(
+          nextRow.risk?.lowRiskSide ?? nextRow.safeSide,
+          next.mysteryRng,
+          context.rng,
+        );
         next = { ...next, mysteryRng: omen.cursor, pact: { ...next.pact, omen: omen.omen } };
       }
       events.push({

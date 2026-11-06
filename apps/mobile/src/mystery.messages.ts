@@ -1,5 +1,9 @@
 import type { EffectKind } from '@crystal-path-infinity/game-core';
-import { BALANCE_RULESET_VERSION, RULESET_VERSION } from '@crystal-path-infinity/game-core';
+import {
+  usesBalanceRules,
+  RISK_RULESET_VERSION,
+  RULESET_VERSION,
+} from '@crystal-path-infinity/game-core';
 import type { LocaleCode } from './i18n';
 
 interface EffectCopy {
@@ -9,6 +13,12 @@ interface EffectCopy {
 }
 
 const enEffects: Record<EffectKind, EffectCopy> = {
+  coyote_10s: {
+    title: 'Run Coyote · 10s',
+    detail:
+      'For 10 seconds, broken tiles take no SP. Bleeding, mystery losses, pact penalties and debts still apply. Healing wrong steps still work. Aegis and Brittle oath are kept while Coyote protects you.',
+    positive: true,
+  },
   double_gain_21s: {
     title: 'Double SP · 21s',
     detail:
@@ -144,6 +154,12 @@ const enEffects: Record<EffectKind, EffectCopy> = {
 };
 
 const bgEffects: Record<EffectKind, EffectCopy> = {
+  coyote_10s: {
+    title: 'Run Coyote · 10 сек.',
+    detail:
+      'За 10 секунди счупените плочки не отнемат SP. Кървене, вредни мистерии, цени на пактове и дългове продължават. Лечебните грешки още работят. Щитът и Крехката клетва се запазват, докато Койотът те пази.',
+    positive: true,
+  },
   double_gain_21s: {
     title: 'Двойни SP · 21 сек.',
     detail:
@@ -436,7 +452,15 @@ export function effectCopy(
   version = RULESET_VERSION,
 ): EffectCopy {
   const copy = (locale === 'bg' ? bgEffects : enEffects)[kind];
-  if (version !== BALANCE_RULESET_VERSION) return copy;
+  if (!usesBalanceRules(version)) return copy;
+  if (version === RISK_RULESET_VERSION && kind === 'false_oracle')
+    return {
+      ...copy,
+      detail:
+        locale === 'bg'
+          ? 'За 3 реда оракулът посочва по-нискорисковата страна в 70% от случаите, а другата в 30%. Това не гарантира здрава плочка. Подсказките са запечатани. Здрава стъпка дава +5 SP; счупена удвоява действителната щета. Отказът струва 1 подсказка или 15 SP.'
+          : 'For 3 rows, the oracle points to the lower-risk side 70% of the time and the other side 30%. It cannot guarantee surviving glass. Hints are sealed. A safe step gives +5 SP; a broken tile doubles actual damage. Refusal costs 1 hint or 15 SP.',
+    };
   const detail =
     locale === 'bg'
       ? {

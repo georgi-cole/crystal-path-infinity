@@ -274,6 +274,7 @@ export function rankedSnapshot(record: StoredRankedRun): RankedSnapshot {
   const row = getCurrentRow(state);
   const visible = (current: RunState['current']) => ({
     revealedSafeSide: current.revealedSafeSide,
+    ...(current.noSafeTile ? { noSafeTile: true as const } : {}),
     mysteryOutcome: current.mysteryOutcome,
     lastChoice: current.lastChoice
       ? { side: current.lastChoice.side, wrong: current.lastChoice.wrong }

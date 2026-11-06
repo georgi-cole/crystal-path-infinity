@@ -1,5 +1,5 @@
 import { drawRandom } from './random.ts';
-import { BALANCE_RULESET_VERSION, supportsPacts } from './rules.ts';
+import { usesBalanceRules, supportsPacts } from './rules.ts';
 import type {
   EffectKind,
   MysteryPact,
@@ -55,10 +55,7 @@ export function assertPact(state: RunState): void {
   ) {
     throw new RangeError('Pact outside a supported, playing run.');
   }
-  if (
-    ['half_life', 'marketing'].includes(pact.kind) &&
-    state.rulesetVersion !== BALANCE_RULESET_VERSION
-  )
+  if (['half_life', 'marketing'].includes(pact.kind) && !usesBalanceRules(state.rulesetVersion))
     throw new RangeError('Unsupported trade.');
   if (pact.phase === 'offered') {
     if (
@@ -170,7 +167,7 @@ export function choosePact(
       return result(35, 0, active);
     case 'false_oracle': {
       // A previously revealed row cannot be turned into a certain oracle reward.
-      if (state.current.revealedSafeSide !== null) return null;
+      if (state.current.revealedSafeSide !== null || state.current.noSafeTile) return null;
       const draw = drawOmen(safeSide, state.mysteryRng, rng);
       return result(0, 0, { ...active, omen: draw.omen }, 'accepted', draw.cursor);
     }

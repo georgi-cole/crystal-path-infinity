@@ -17,6 +17,7 @@ export type EffectKind =
   | 'inversion_5s'
   | 'double_gain_21s'
   | 'double_loss_21s'
+  | 'coyote_10s'
   | RowEffectKind
   | PactKind;
 
@@ -41,7 +42,10 @@ export interface MysteryPact {
   readonly omen: TileSide | null;
 }
 
-export type TimedEffectKind = Extract<EffectKind, `${string}_5s` | `${string}_21s`>;
+export type TimedEffectKind = Extract<
+  EffectKind,
+  `${string}_5s` | `${string}_10s` | `${string}_21s`
+>;
 export type RowEffectKind = 'regen_3rows' | 'bleed_3rows';
 
 export interface TimedActiveEffect {
@@ -78,8 +82,15 @@ export interface RandomSource {
 export interface BridgeRow {
   /** Zero-based absolute index, matching the inspected source's convention. */
   readonly index: Decimal;
+  /** Legacy safe side; v4 prefers a surviving tile, falling back to low risk if neither survives.
+   * Use hintSafeSide/isBrokenTile for outcome decisions. */
   readonly safeSide: TileSide;
   readonly hasMystery: boolean;
+  /** PRIVATE v4 draws. Neither assignment nor unchosen outcomes belong in rendered/network rows. */
+  readonly risk?: {
+    readonly lowRiskSide: TileSide;
+    readonly broken: Readonly<Record<TileSide, boolean>>;
+  };
 }
 
 export interface RowStreamState {
@@ -99,6 +110,8 @@ export interface CurrentRowState {
   readonly revealedSafeSide: TileSide | null;
   readonly mysteryOutcome: EffectKind | null;
   readonly lastChoice: { readonly side: TileSide; readonly wrong: boolean } | null;
+  /** A hint inspected this row and found no surviving tile. No hint charge was taken. */
+  readonly noSafeTile?: true;
 }
 
 export interface RowResolution extends CurrentRowState {
@@ -282,6 +295,7 @@ export type RunEvent = EventTime &
         readonly rowsLeft: number;
       }
     | { readonly type: 'hint-used'; readonly row: Decimal; readonly safeSide: TileSide }
+    | { readonly type: 'hint-unavailable'; readonly row: Decimal }
     | {
         readonly type: 'pact-resolved';
         readonly kind: PactKind;
@@ -306,6 +320,7 @@ export type RunEvent = EventTime &
         readonly wrong: boolean;
         readonly spDelta: number;
         readonly consumedKind: TimedEffectKind | null;
+        readonly protectedBy?: 'coyote_10s';
       }
     | { readonly type: 'row-cleared'; readonly row: Decimal; readonly revivesToReachScore: number }
     | { readonly type: 'death'; readonly death: DeathSnapshot }

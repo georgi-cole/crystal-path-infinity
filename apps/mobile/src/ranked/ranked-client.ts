@@ -1,7 +1,8 @@
 import type { AccountSessionOwner } from '../account/session-owner';
 import {
   BALANCE_PACT_KINDS,
-  BALANCE_RULESET_VERSION,
+  usesBalanceRules,
+  RISK_RULESET_VERSION,
   getRuleset,
   supportsPacts,
   assertActiveEffects,
@@ -38,6 +39,7 @@ export interface RankedCurrent {
   readonly revealedSafeSide: RankedSide | null;
   readonly mysteryOutcome: string | null;
   readonly lastChoice: { readonly side: RankedSide; readonly wrong: boolean } | null;
+  readonly noSafeTile?: true;
 }
 export interface RankedRun {
   readonly runId: string;
@@ -139,6 +141,7 @@ const EFFECTS = [
   'double_loss_21s',
   'regen_3rows',
   'bleed_3rows',
+  'coyote_10s',
 ];
 const REASONS = new Set([
   'finished',
@@ -187,9 +190,22 @@ function integer(value: unknown, max = Number.MAX_SAFE_INTEGER): value is number
 function side(value: unknown): value is RankedSide {
   return value === 'left' || value === 'right';
 }
-function visibleCurrent(value: unknown, extraKeys: readonly string[] = []): RankedCurrent | null {
+function visibleCurrent(
+  value: unknown,
+  extraKeys: readonly string[] = [],
+  riskRules = false,
+): RankedCurrent | null {
+  const hasNoSafeTile =
+    riskRules && value !== null && typeof value === 'object' && 'noSafeTile' in value;
   if (
-    !object(value, ['revealedSafeSide', 'mysteryOutcome', 'lastChoice', ...extraKeys]) ||
+    !object(value, [
+      'revealedSafeSide',
+      'mysteryOutcome',
+      'lastChoice',
+      ...extraKeys,
+      ...(hasNoSafeTile ? ['noSafeTile'] : []),
+    ]) ||
+    ('noSafeTile' in value && (value.noSafeTile !== true || value.revealedSafeSide !== null)) ||
     (value.revealedSafeSide !== null && !side(value.revealedSafeSide)) ||
     (value.mysteryOutcome !== null &&
       (typeof value.mysteryOutcome !== 'string' || !EFFECTS.includes(value.mysteryOutcome)))
@@ -203,6 +219,7 @@ function visibleCurrent(value: unknown, extraKeys: readonly string[] = []): Rank
     return null;
   return {
     revealedSafeSide: value.revealedSafeSide,
+    ...('noSafeTile' in value ? { noSafeTile: true as const } : {}),
     mysteryOutcome: value.mysteryOutcome,
     lastChoice:
       choice === null
@@ -296,12 +313,13 @@ export function parseRankedReply(value: unknown): RankedReply | null {
     )
   )
     return null;
-  const current = visibleCurrent(raw.current, ['hasMystery']);
+  const riskRules = raw.rulesetVersion === RISK_RULESET_VERSION;
+  const current = visibleCurrent(raw.current, ['hasMystery'], riskRules);
   if (!current || typeof (raw.current as Record<string, unknown>).hasMystery !== 'boolean')
     return null;
   const history: (RankedCurrent & { index: string })[] = [];
   for (const entry of raw.history) {
-    const visible = visibleCurrent(entry, ['index']);
+    const visible = visibleCurrent(entry, ['index'], riskRules);
     if (!visible || !decimal((entry as Record<string, unknown>).index)) return null;
     const index = (entry as { index: string }).index;
     if (
@@ -419,7 +437,7 @@ export function parseRankedReply(value: unknown): RankedReply | null {
     if (
       pact &&
       ['half_life', 'marketing'].includes(pact.kind) &&
-      raw.rulesetVersion !== BALANCE_RULESET_VERSION
+      !usesBalanceRules(raw.rulesetVersion)
     )
       return null;
     assertActiveEffects(effects, raw.activeTimeMs, raw.rulesetVersion);

@@ -1,7 +1,7 @@
 import { mysteryFeedbackFromEvents, runCuesFromEvents } from './mystery-feedback';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  BALANCE_RULESET_VERSION,
+  RISK_RULESET_VERSION,
   getCurrentRow,
   getRowBandDamage,
   getRuleset,
@@ -15,7 +15,7 @@ import type {
   RunState,
   TransitionResult,
 } from '@crystal-path-infinity/game-core';
-import { createMysteryLabRun } from './mystery-lab-model';
+import { createMysteryLabRun, prepareMysteryLabStep } from './mystery-lab-model';
 import { useLanguage } from './language-context';
 import { effectCopy, mysteryText } from './mystery.messages';
 import { EffectGlyph, MysteryEffects, MysteryFeedbackView, PactPanel } from './mystery-effects';
@@ -30,11 +30,11 @@ export function MysteryLab({
   reducedMotion: boolean;
 }) {
   const { locale } = useLanguage();
-  const version = BALANCE_RULESET_VERSION;
-  const [kind, setKind] = useState<EffectKind>('inversion_5s');
+  const version = RISK_RULESET_VERSION;
+  const [kind, setKind] = useState<EffectKind>('coyote_10s');
   const [startingSp, setStartingSp] = useState(100);
   const [spDraft, setSpDraft] = useState('100');
-  const [initial] = useState(() => createMysteryLabRun('inversion_5s', 100, 91025, version));
+  const [initial] = useState(() => createMysteryLabRun('coyote_10s', 100, 91025, version));
   const [state, setState] = useState<RunState>(initial.state);
   const [feedback, setFeedback] = useState<MysteryFeedback | null>(null);
   const [cues, setCues] = useState<RunCues>({});
@@ -112,7 +112,8 @@ export function MysteryLab({
     );
   };
   const demonstrate = (wrong: boolean) => {
-    const latest = current.current;
+    const latest = prepareMysteryLabStep(current.current);
+    current.current = latest;
     const safe = getCurrentRow(latest).safeSide;
     const before = latest.sp;
     const result = issue({
@@ -129,6 +130,14 @@ export function MysteryLab({
       });
   };
   const frozen = state.pact?.phase === 'offered';
+  const arrangeDemo = (layout: 'both-broken' | 'both-safe') => {
+    const prepared = prepareMysteryLabStep(current.current, layout);
+    current.current = prepared;
+    setState(prepared);
+    setComparison(null);
+    setFeedback(null);
+    setCues({});
+  };
   const oracle = state.pact?.kind === 'false_oracle' && state.pact.phase === 'active';
   const copy = effectCopy(locale, kind, version);
   const all = getRuleset(version).mysteryTable.map((entry) => entry.kind);
@@ -222,12 +231,19 @@ export function MysteryLab({
             pact={state.pact}
             sp={state.sp}
             hints={state.hints}
-            revealed={state.current.revealedSafeSide !== null}
+            revealed={state.current.revealedSafeSide !== null || !!state.current.noSafeTile}
             disabled={state.status !== 'playing'}
             rulesetVersion={version}
             onChoose={(option) => issue({ type: 'pact', option, row: state.currentRow, life: 0 })}
           />
           {isPactKind(kind) && !state.pact && <p>{copy.detail}</p>}
+          {state.current.noSafeTile && (
+            <p role="status">
+              {locale === 'bg'
+                ? 'Няма здрава плочка. Подсказката е запазена.'
+                : 'No surviving tile. Your hint was kept.'}
+            </p>
+          )}
           {kind === 'borrowed_time' && (
             <button type="button" onClick={() => reset(kind, 5)}>
               {locale === 'bg' ? 'Демо: започни само с 5 SP' : 'Demo: start with only 5 SP'}
@@ -240,6 +256,12 @@ export function MysteryLab({
             </button>
             <button type="button" disabled={disabled} onClick={() => demonstrate(false)}>
               {mysteryText(locale, 'demoSafe')}
+            </button>
+            <button type="button" disabled={disabled} onClick={() => arrangeDemo('both-broken')}>
+              {locale === 'bg' ? 'Демо: две счупени плочки' : 'Demo: two broken tiles'}
+            </button>
+            <button type="button" disabled={disabled} onClick={() => arrangeDemo('both-safe')}>
+              {locale === 'bg' ? 'Демо: две здрави плочки' : 'Demo: two safe tiles'}
             </button>
             {comparison && (
               <strong className="cpi-lab-comparison" role="status">
@@ -264,7 +286,11 @@ export function MysteryLab({
               className="cpi-lab-hint"
               type="button"
               disabled={
-                disabled || oracle || state.hints === 0 || state.current.revealedSafeSide !== null
+                disabled ||
+                oracle ||
+                state.hints === 0 ||
+                state.current.revealedSafeSide !== null ||
+                state.current.noSafeTile
               }
               onClick={() => issue({ type: 'hint', row: state.currentRow, life: 0 })}
             >

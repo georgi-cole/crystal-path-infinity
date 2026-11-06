@@ -308,7 +308,7 @@ export function RankedScene({
                 rulesetVersion={run.rulesetVersion}
                 pact={run.pact}
                 hints={run.hints}
-                revealed={run.current.revealedSafeSide !== null}
+                revealed={run.current.revealedSafeSide !== null || !!run.current.noSafeTile}
                 disabled={!playing}
                 onChoose={(option) => {
                   if (
@@ -357,6 +357,13 @@ export function RankedScene({
                   })}
                 </p>
               )}
+              {run.current.noSafeTile && (
+                <p role="status">
+                  {locale === 'bg'
+                    ? 'И двете плочки са счупени. Подсказката е запазена.'
+                    : 'Both tiles are broken. Your hint was kept.'}
+                </p>
+              )}
               <div className="cpi-ranked-actions">
                 <button
                   type="button"
@@ -364,6 +371,7 @@ export function RankedScene({
                     !playing ||
                     run.hints === 0 ||
                     run.current.revealedSafeSide !== null ||
+                    run.current.noSafeTile ||
                     run.pact?.phase === 'offered' ||
                     (run.pact?.kind === 'false_oracle' && run.pact.phase === 'active')
                   }

@@ -2,12 +2,45 @@ import {
   createPracticeCursor,
   createRun,
   getCurrentRow,
+  hintSafeSide,
   PACT_RULESET_VERSION,
   PRACTICE_RNG,
   rollMysteryEffect,
   transitionRun,
 } from '@crystal-path-infinity/game-core';
-import type { EffectKind, TransitionResult } from '@crystal-path-infinity/game-core';
+import type { EffectKind, TransitionResult, RunState } from '@crystal-path-infinity/game-core';
+
+/** Explicitly scripted outcome, confined to the disposable demonstration room. */
+export function prepareMysteryLabStep(
+  state: RunState,
+  layout: 'mixed' | 'both-broken' | 'both-safe' = 'mixed',
+): RunState {
+  const current = getCurrentRow(state);
+  return {
+    ...state,
+    current: {
+      mysteryOutcome: state.current.mysteryOutcome,
+      lastChoice: state.current.lastChoice,
+      revealedSafeSide: null,
+    },
+    rows: state.rows.map((row) => {
+      if (row.index !== current.index) return row;
+      const changed = {
+        ...row,
+        safeSide: 'left' as const,
+        ...(row.risk
+          ? {
+              risk: {
+                lowRiskSide: row.risk.lowRiskSide,
+                broken: { left: layout === 'both-broken', right: layout !== 'both-safe' },
+              },
+            }
+          : {}),
+      };
+      return { ...changed, safeSide: hintSafeSide(changed) ?? changed.risk?.lowRiskSide ?? 'left' };
+    }),
+  };
+}
 
 /** An isolated practice fixture; never persisted, ranked or offered as a real score. */
 export function createMysteryLabRun(

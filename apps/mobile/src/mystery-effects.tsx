@@ -19,6 +19,17 @@ import './mystery-effects.css';
 export function EffectGlyph({ kind, burst = false }: { kind: EffectKind; burst?: boolean }) {
   let glyph;
   switch (kind) {
+    case 'coyote_10s':
+      glyph = (
+        <>
+          <path
+            className="cpi-glyph-rise"
+            d="m15 12 8 5 10-4 7 9-11 3-6 11-7-3 6-13-7-8Zm14 13 9 10m-23-2-6 5"
+          />
+          <path className="cpi-glyph-rise cpi-glyph-echo" d="M3 17h9M1 24h12M5 31h7" />
+        </>
+      );
+      break;
     case 'shield_5s':
       glyph = (
         <>
@@ -229,7 +240,9 @@ export function MysteryFeedbackView({
             {Math.abs(feedback.hintDelta)} ◈
           </b>
         )}
-        {feedback.action === 'triggered' && feedback.kind === 'shield_5s' && <b>0 SP</b>}
+        {feedback.action === 'triggered' &&
+          ['shield_5s', 'coyote_10s'].includes(feedback.kind) &&
+          feedback.spDelta === 0 && <b>0 SP</b>}
       </div>
     </div>
   );
@@ -278,7 +291,13 @@ export function MysteryEffects({
               />
             </summary>
             <p>{copy.detail}</p>
-            <small className="cpi-force-priority">{mysteryText(locale, 'priority')}</small>
+            <small className="cpi-force-priority">
+              {effects.some((active) => active.kind === 'coyote_10s')
+                ? locale === 'bg'
+                  ? 'Койотът спира само щетата от плочката; лечебните грешки работят, а другите цени остават.'
+                  : 'Coyote stops tile damage only; healing wrong steps work, and other costs remain.'
+                : mysteryText(locale, 'priority')}
+            </small>
           </details>
         );
       })}

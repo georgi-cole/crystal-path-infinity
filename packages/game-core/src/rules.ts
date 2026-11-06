@@ -5,6 +5,7 @@ export const RULESET_VERSION = 'infinity-v1';
 /** Experimental, separately identified balance; existing ranked runs remain v1. */
 export const PACT_RULESET_VERSION = 'infinity-v2-pacts';
 export const BALANCE_RULESET_VERSION = 'infinity-v3-balance';
+export const RISK_RULESET_VERSION = 'infinity-v4-hidden-risk';
 export const STARTING_SP = 300;
 export const MAX_SP = 400;
 export const STARTING_HINTS = 2;
@@ -91,13 +92,30 @@ export const BALANCE_RULESET = Object.freeze({
   fixedDamage: 5,
 });
 
+export const RISK_MYSTERY_TABLE: typeof MYSTERY_TABLE = Object.freeze([
+  ...BALANCE_MYSTERY_TABLE.map((entry) => Object.freeze({ ...entry, weight: entry.weight * 0.96 })),
+  Object.freeze({ kind: 'coyote_10s' as const, weight: 4 }),
+]);
+export const RISK_RULESET = Object.freeze({
+  ...BALANCE_RULESET,
+  version: RISK_RULESET_VERSION,
+  mysteryTable: RISK_MYSTERY_TABLE,
+  lowBreakRisk: 0.01,
+  highBreakRisk: 0.4,
+});
+
+export function usesBalanceRules(version: string): boolean {
+  return version === BALANCE_RULESET_VERSION || version === RISK_RULESET_VERSION;
+}
+
 export function supportsPacts(version: string): boolean {
-  return version === PACT_RULESET_VERSION || version === BALANCE_RULESET_VERSION;
+  return version === PACT_RULESET_VERSION || usesBalanceRules(version);
 }
 
 export function getRuleset(
   version: string = RULESET_VERSION,
-): typeof RULESET | typeof PACT_RULESET | typeof BALANCE_RULESET {
+): typeof RULESET | typeof PACT_RULESET | typeof BALANCE_RULESET | typeof RISK_RULESET {
+  if (version === RISK_RULESET_VERSION) return RISK_RULESET;
   if (version === BALANCE_RULESET_VERSION) return BALANCE_RULESET;
   if (version === PACT_RULESET_VERSION) return PACT_RULESET;
   if (version !== RULESET_VERSION) throw new RangeError(`Unsupported ruleset: ${version}`);
@@ -110,7 +128,7 @@ export function getRowBandDamage(
 ): number {
   const row = BigInt(decimal(oneBasedRow));
   if (row < 1n) throw new RangeError('Damage requires a one-based row.');
-  if (rulesetVersion === BALANCE_RULESET_VERSION) return BALANCE_RULESET.fixedDamage;
+  if (usesBalanceRules(rulesetVersion)) return BALANCE_RULESET.fixedDamage;
   if (row <= 10n) return 10;
   if (row <= 25n) return 15;
   return 20;

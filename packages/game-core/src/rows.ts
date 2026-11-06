@@ -6,8 +6,39 @@ import {
   MYSTERY_MAX_GAP,
   MYSTERY_MIN_GAP,
   RULESET_VERSION,
+  RISK_RULESET,
+  RISK_RULESET_VERSION,
 } from './rules.ts';
-import type { BridgeRow, RandomCursor, RandomSource, RowStreamState } from './types.ts';
+import type { BridgeRow, RandomCursor, RandomSource, RowStreamState, TileSide } from './types.ts';
+
+export function isBrokenTile(row: BridgeRow, side: TileSide): boolean {
+  return row.risk ? row.risk.broken[side] : side !== row.safeSide;
+}
+
+/** A true surviving tile, not merely the side assigned the smaller risk. */
+export function hintSafeSide(row: BridgeRow): TileSide | null {
+  if (!row.risk) return row.safeSide;
+  const preferred = row.risk.lowRiskSide;
+  if (!row.risk.broken[preferred]) return preferred;
+  const other = preferred === 'left' ? 'right' : 'left';
+  return row.risk.broken[other] ? null : other;
+}
+
+export function assertRowRisk(row: BridgeRow, version: string): void {
+  if (version !== RISK_RULESET_VERSION) {
+    if (row.risk !== undefined) throw new RangeError('Risk draws outside v4.');
+    return;
+  }
+  if (
+    !row.risk ||
+    !['left', 'right'].includes(row.risk.lowRiskSide) ||
+    !row.risk.broken ||
+    typeof row.risk.broken.left !== 'boolean' ||
+    typeof row.risk.broken.right !== 'boolean' ||
+    row.safeSide !== (hintSafeSide(row) ?? row.risk.lowRiskSide)
+  )
+    throw new RangeError('Invalid hidden risk row.');
+}
 
 function gap(value: number): bigint {
   return BigInt(MYSTERY_MIN_GAP + Math.floor(value * (MYSTERY_MAX_GAP - MYSTERY_MIN_GAP + 1)));
@@ -51,13 +82,37 @@ export function takeRows(stream: RowStreamState, count: number, rng: RandomSourc
   for (let i = 0; i < count; i += 1) {
     const side = drawRandom(cursor, rng);
     cursor = side.cursor;
+    const lowRiskSide = side.value < 0.5 ? 'left' : 'right';
+    let risk: BridgeRow['risk'];
+    if (stream.rulesetVersion === RISK_RULESET_VERSION) {
+      const left = drawRandom(cursor, rng);
+      const right = drawRandom(left.cursor, rng);
+      cursor = right.cursor;
+      risk = {
+        lowRiskSide,
+        broken: {
+          left:
+            left.value <
+            (lowRiskSide === 'left' ? RISK_RULESET.lowBreakRisk : RISK_RULESET.highBreakRisk),
+          right:
+            right.value <
+            (lowRiskSide === 'right' ? RISK_RULESET.lowBreakRisk : RISK_RULESET.highBreakRisk),
+        },
+      };
+    }
     const hasMystery = nextIndex === nextMysteryIndex;
     if (hasMystery) {
       const distance = drawRandom(cursor, rng);
       cursor = distance.cursor;
       nextMysteryIndex = addDecimal(nextIndex, gap(distance.value));
     }
-    rows.push({ index: nextIndex, safeSide: side.value < 0.5 ? 'left' : 'right', hasMystery });
+    const row: BridgeRow = {
+      index: nextIndex,
+      safeSide: lowRiskSide,
+      hasMystery,
+      ...(risk ? { risk } : {}),
+    };
+    rows.push(risk ? { ...row, safeSide: hintSafeSide(row) ?? lowRiskSide } : row);
     nextIndex = addDecimal(nextIndex);
   }
   return {

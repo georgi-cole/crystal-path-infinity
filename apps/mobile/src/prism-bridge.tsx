@@ -143,6 +143,7 @@ function paneState(row: PresentedRow | undefined, side: TileSide, feedback?: Sce
   if (feedback?.row === row.index && feedback.side === side)
     return feedback.kind === 'safe' ? ' is-safe' : ' is-wrong';
   if (row.hint === side) return ' is-hinted';
+  if (row.noSafeTile) return ' is-cracked';
   if (row.chosen === side) return row.wrong ? ' is-cracked' : ' is-cleared';
   return '';
 }

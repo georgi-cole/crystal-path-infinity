@@ -4,6 +4,7 @@ import {
   offerPact,
   PACT_RULESET_VERSION,
   BALANCE_RULESET_VERSION,
+  RISK_RULESET_VERSION,
   applyMysteryEffect,
 } from '@crystal-path-infinity/game-core';
 import type { RunState } from '@crystal-path-infinity/game-core';
@@ -154,6 +155,34 @@ function setup(options: { heartbeatWindowMs?: number; rulesetVersion?: string } 
 }
 
 describe('ranked authority trust boundary', () => {
+  it('keeps v4 risks private, persists a free no-safe hint and applies Coyote on the server', async () => {
+    const f = setup({ rulesetVersion: RISK_RULESET_VERSION });
+    let reply = await f.start();
+    reply = await f.execute(reply, { type: 'resume' });
+    const stored = f.record(reply);
+    f.repository.account().runs.set(stored.state.runId, {
+      ...stored,
+      state: {
+        ...stored.state,
+        effects: [applyMysteryEffect('coyote_10s', 0).addedEffect!],
+        rows: stored.state.rows.map((row) => ({
+          ...row,
+          safeSide: 'left',
+          risk: { lowRiskSide: 'left', broken: { left: true, right: true } },
+        })),
+      },
+    });
+    reply = await f.execute(reply, { type: 'hint', row: '1', life: 0 });
+    expect(reply.snapshot.current.noSafeTile).toBe(true);
+    expect(reply.snapshot.hints).toBe(2);
+    expect(JSON.stringify(reply)).not.toMatch(
+      /lowRiskSide|"risk"|"broken"|"safeSide"|mysteryRng|"stream"/,
+    );
+    const advanced = await f.choose(reply);
+    expect(advanced.snapshot.sp).toBe(300);
+    expect(advanced.snapshot.effects[0]).toMatchObject({ kind: 'coyote_10s', expiresAt: 10000 });
+    expect(advanced.snapshot.history[0].noSafeTile).toBe(true);
+  });
   it('projects uncapped v3 resources and row effects without losing their remaining charges', async () => {
     const f = setup({ rulesetVersion: BALANCE_RULESET_VERSION });
     let reply = await f.start();

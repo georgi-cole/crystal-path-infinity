@@ -4,7 +4,7 @@ import {
   getRowBandDamage,
   PRACTICE_RNG,
   STARTING_SP,
-  BALANCE_RULESET_VERSION,
+  RISK_RULESET_VERSION,
   transitionRun,
 } from '@crystal-path-infinity/game-core';
 import type {
@@ -45,7 +45,7 @@ export function createTutorialSession(): TutorialSession {
       runId: 'tutorial-only-not-a-score',
       routeRng: createPracticeCursor(14014),
       mysteryRng: createPracticeCursor(3),
-      rulesetVersion: BALANCE_RULESET_VERSION,
+      rulesetVersion: RISK_RULESET_VERSION,
       observedAt: 0,
       buffer: { ahead: 8, history: 2 },
     },
@@ -56,6 +56,10 @@ export function createTutorialSession(): TutorialSession {
       ? {
           ...row,
           safeSide: index % 2 === 0 ? 'left' : 'right',
+          risk: {
+            lowRiskSide: index % 2 === 0 ? 'left' : 'right',
+            broken: { left: index % 2 !== 0, right: index % 2 === 0 },
+          },
           hasMystery: index === 3,
         }
       : row,

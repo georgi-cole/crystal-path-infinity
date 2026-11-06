@@ -1,5 +1,6 @@
 import {
-  BALANCE_RULESET_VERSION,
+  RISK_RULESET_VERSION,
+  usesBalanceRules,
   EFFECT_DURATION_MS,
   EFFECT_TICK_MS,
   MAX_ACTIVE_EFFECTS,
@@ -9,6 +10,7 @@ import type { ActiveEffect, RunState, TimedActiveEffect } from './types.ts';
 
 export function effectDuration(kind: ActiveEffect['kind']): number | null {
   if (kind === 'regen_3rows' || kind === 'bleed_3rows') return null;
+  if (kind === 'coyote_10s') return 10_000;
   return kind.endsWith('_21s') ? 21_000 : EFFECT_DURATION_MS;
 }
 
@@ -27,7 +29,7 @@ export function assertActiveEffects(
     if (effect.startedAt > now) throw new RangeError('Effect starts in the future.');
     if (!isTimedEffect(effect)) {
       if (
-        version !== BALANCE_RULESET_VERSION ||
+        !usesBalanceRules(version) ||
         !['regen_3rows', 'bleed_3rows'].includes(effect.kind) ||
         effect.nextTickAt !== null ||
         !Number.isInteger(effect.rowsLeft) ||
@@ -39,7 +41,11 @@ export function assertActiveEffects(
       continue;
     }
     const newKind = effect.kind === 'double_gain_21s' || effect.kind === 'double_loss_21s';
-    if (newKind && version !== BALANCE_RULESET_VERSION) throw new RangeError('Unsupported effect.');
+    if (
+      (newKind && !usesBalanceRules(version)) ||
+      (effect.kind === 'coyote_10s' && version !== RISK_RULESET_VERSION)
+    )
+      throw new RangeError('Unsupported effect.');
     assertNonNegativeInteger(effect.expiresAt, 'Effect expiry');
     if (
       effect.expiresAt - effect.startedAt !== effectDuration(effect.kind) ||
@@ -66,6 +72,7 @@ export function assertActiveEffects(
         'inversion_5s',
         'double_gain_21s',
         'double_loss_21s',
+        'coyote_10s',
       ].includes(effect.kind)
     ) {
       throw new RangeError('Invalid one-shot effect.');

@@ -34,7 +34,7 @@ export function mysteryFeedbackFromEvents(
   const choice = latest.find(
     (event) =>
       event.type === 'choice-resolved' &&
-      (event.consumedKind || (event.wrong && event.spDelta > 0)),
+      (event.consumedKind || event.protectedBy || (event.wrong && event.spDelta > 0)),
   );
   const pulse = latest.find(
     (event) => event.type === 'effects-ticked' && (event.appliedDelta ?? event.delta) !== 0,
@@ -68,7 +68,7 @@ export function mysteryFeedbackFromEvents(
   if (event.type === 'choice-resolved')
     return {
       id,
-      kind: event.consumedKind ?? 'inversion_5s',
+      kind: event.consumedKind ?? event.protectedBy ?? 'inversion_5s',
       spDelta: event.spDelta,
       hintDelta: 0,
       action: 'triggered',
