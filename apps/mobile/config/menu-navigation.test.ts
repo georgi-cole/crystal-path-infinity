@@ -128,6 +128,7 @@ describe('CPI-013 standalone menu and route model', () => {
     expect(html).toContain(en['vault.wilds']);
     expect(html).toContain(en['vault.league']);
     expect(html.match(/<article class="cpi-vault-world /g)).toHaveLength(2);
+    expect(html).toContain('6 worlds. Find your favourite.');
     expect(html).toContain(en['vault.nextWorlds']);
     expect(html).toContain(en['vault.test']);
     expect(html).toContain(en['vault.testDetail']);

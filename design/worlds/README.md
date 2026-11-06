@@ -22,13 +22,13 @@ with hints, SP warnings, fractures and controls visible.
 
 ## Art direction
 
-| Layer | Chaos Workshop | Jellyverse |
+| Layer | Boltmuffin | Squishphony |
 | --- | --- | --- |
 | Emotion | Warm mischief, curiosity, a handmade place | Gentle wonder, buoyancy, a dreamlike place |
 | Silhouette | Copper observatories, toothed rings, hanging lanterns | Floating reefs, opal plants, ringed moon |
 | Material | Brushed copper frames, champagne crystal, mint light | Opal crystal, lilac facets, cyan edges |
 | Ambient motion | Very slow edge cogs, drifting steam, sparse sparks | Swaying edge tendrils, haze, sparse bubbles |
-| Companion | Pip, an asymmetric copper robot with a mint heart | Lumi, an opalescent jelly with a cyan star |
+| Companion | Boltmuffin, an asymmetric copper robot with a mint heart | Squishphony, an opalescent jelly with a cyan star |
 | Audio | Warm bell melody, bass, sustained harmony, soft ticks | Spacious glass melody, long harmony, light bubble notes |
 
 ## Focus and animation rules
@@ -62,7 +62,7 @@ with hints, SP warnings, fractures and controls visible.
 
 The original raster environments and reaction sheets are paired with lightweight,
 code-native SVG props in `world-treasures.tsx`. Chaos uses a riveted copper cache,
-mint energy lens and mechanical power settings. Jellyverse uses a pearl capsule,
+mint energy lens and mechanical power settings. Squishphony uses a pearl capsule,
 star clasp and opal charms. Lids, cores and bases are separate layers; opening
 and power release fit inside the existing 1.45-second mystery beat. No hidden
 reward or route affects an unopened box's appearance.
@@ -127,16 +127,16 @@ world from Pokémon, Halo or other franchises is bundled.
 
 | World | Recognizable signature | Environment and props | Sound and safety |
 | --- | --- | --- | --- |
-| Prismwilds | Mica: one giant hollow jade geode ear, one blunt basalt ear, amber seed brow | Hollow seed-vaults, fossil reeds, rough basalt seed caches, jade power settings | Hollow reed pulses, offbeat chimes; a crystal seed glider |
-| Foldrush Circuit | Rally: a living orange/graphite folded pennant, silver running shoes | Aerial race fins, incomplete cyan lap ring, angled baton cases and enamel medals | Syncopated plucks and low racing pulses; a folded rescue banner |
-| Skyhound Yard | Riff: wiry charcoal/ivory terrier, one floppy ear, copper eye patch, rescue backpack | Copper courier rooftops, teal utility tags, weathered satchel caches | Swung rooftop plucks and copper clicks; backpack parachute |
-| Moonrunner Quarter | Nyx: ink-black kitten, one white paw, ivory brow slash, indigo cape | Narrow slate rooftops, amber window cuts, moonstone weather vanes and folding moon vaults | Sparse minor glass notes and midnight bass; cape opens into a glider |
+| Rockmallow | Rockmallow: one giant hollow jade geode ear, one blunt basalt ear, amber seed brow | Hollow seed-vaults, fossil reeds, rough basalt seed caches, jade power settings | Hollow reed pulses, offbeat chimes; a crystal seed glider |
+| Flipzel | Flipzel: a living orange/graphite folded pennant, silver running shoes | Aerial race fins, incomplete cyan lap ring, angled baton cases and enamel medals | Syncopated plucks and low racing pulses; a folded rescue banner |
+| Pawrachute | Pawrachute: wiry charcoal/ivory terrier, one floppy ear, copper eye patch, rescue backpack | Copper courier rooftops, teal utility tags, weathered satchel caches | Swung rooftop plucks and copper clicks; backpack parachute |
+| Purralune | Purralune: ink-black kitten, one white paw, ivory brow slash, indigo cape | Narrow slate rooftops, amber window cuts, moonstone weather vanes and folding moon vaults | Sparse minor glass notes and midnight bass; cape opens into a glider |
 
 Puppy and kitten are separate purchases and environments. Their safety is never
 an entitlement or a consumable. Zero SP, a wrong pane, a mystery and an idle
 clock all end the crossing normally; the pet is visibly rescued and appears
 safe at home in the result. Continuations extend the run, not the pet's safety.
-Pip and Lumi also return safely through their own equipment. A nonfatal wrong
+Boltmuffin and Squishphony also return safely through their own equipment. A nonfatal wrong
 choice still lands on the publicly resolved intact pane, including after resume.
 Reduced motion uses a static protected pose; hidden/native-suspended and paused
 states freeze the actor and decoration. No new clock, route or RNG is introduced.
@@ -161,3 +161,29 @@ The deterministic synth script reproduces all six original compositions.
 Payments remain simulated and local. Continuation packs are 3/5/10/25; SP reserve
 packs are 100/500/1000/2500/5000/10000. Theme ownership changes no game rule or
 ranked eligibility, and both pet worlds can be tried without buying anything.
+
+
+Public names are deliberately short and child-friendly: **Boltmuffin, Squishphony, Rockmallow, Flipzel, Pawrachute and Purralune**. Each character and world share a name. Internal IDs and historical generation prompts stay stable so existing test ownership, receipts and reproducible art are preserved.
+
+
+## Meaningful name system
+
+Names combine a familiar word with a character trait, material or sensory
+promise. Sound alone is not the brief. The working international names are the
+same in English and Bulgarian; surrounding copy is translated. Character and
+world share the name, while technical IDs and existing receipts stay stable.
+
+| Name | Wordplay | Character promise |
+| --- | --- | --- |
+| Rockmallow | rock + marshmallow | A strong geode keeper with a warm, soft heart |
+| Flipzel | flip + pretzel | Quick turns, springy jumps and folded ribbon forms |
+| Pawrachute | paw + parachute | A rooftop puppy whose rescue backpack always gets him home |
+| Purralune | purr + lune (moon) | A moonlit rooftop kitten with an unfolding flight cape |
+| Boltmuffin | bolt + muffin | A small mechanical troublemaker with a sweet side |
+| Squishphony | squish + symphony | Soft luminous jelly, buoyancy and its own original melody |
+
+Exact-name searches and official-store searches are first-pass creative
+screening, not a claim of trademark exclusivity. Historical generation prompts
+retain their source aliases for reproduction; `generation-v2.json` records the
+current public names and wordplay. No unrelated personal search results are
+retained in the repository.

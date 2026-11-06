@@ -191,6 +191,8 @@
   line-height: 1.6;
 }
 .cpi-vault-world {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   overflow: hidden;
   border: 1px solid #a797b140;
@@ -199,6 +201,7 @@
   box-shadow: 0 18px 45px #0004;
 }
 .cpi-vault-world-picture {
+  flex-shrink: 0;
   position: relative;
   aspect-ratio: 2.3;
   overflow: hidden;
@@ -234,6 +237,9 @@
   backdrop-filter: blur(10px);
 }
 .cpi-vault-world-copy {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
   padding: 1rem;
 }
 .cpi-vault-kicker {
@@ -679,7 +685,7 @@ button.cpi-vault-primary {
   }
   .cpi-vault-world-copy h2 {
     font-size: 1.2rem;
-    min-height: 2.25rem;
+    min-height: 1.4rem;
     line-height: 1.15;
   }
   .cpi-vault-world-copy p {

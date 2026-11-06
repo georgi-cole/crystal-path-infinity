@@ -5,37 +5,37 @@ export const WORLD_ASSETS = {
   chaos: {
     environment: 'assets/worlds/chaos/environment-v1.webp',
     companion: 'assets/worlds/chaos/companion-reactions-v1.webp',
-    companionName: 'Pip',
+    companionName: 'Boltmuffin',
     material: 'copper',
   },
   jelly: {
     environment: 'assets/worlds/jelly/environment-v1.webp',
     companion: 'assets/worlds/jelly/companion-reactions-v1.webp',
-    companionName: 'Lumi',
+    companionName: 'Squishphony',
     material: 'opal',
   },
   wilds: {
     environment: 'assets/worlds/wilds/environment-v2.webp',
     companion: 'assets/worlds/wilds/companion-reactions-v2.webp',
-    companionName: 'Mica',
+    companionName: 'Rockmallow',
     material: 'jade',
   },
   league: {
     environment: 'assets/worlds/league/environment-v2.webp',
     companion: 'assets/worlds/league/companion-reactions-v2.webp',
-    companionName: 'Rally',
+    companionName: 'Flipzel',
     material: 'enamel',
   },
   puppy: {
     environment: 'assets/worlds/puppy/environment-v2.webp',
     companion: 'assets/worlds/puppy/companion-reactions-v2.webp',
-    companionName: 'Riff',
+    companionName: 'Pawrachute',
     material: 'enamel',
   },
   kitten: {
     environment: 'assets/worlds/kitten/environment-v2.webp',
     companion: 'assets/worlds/kitten/companion-reactions-v2.webp',
-    companionName: 'Nyx',
+    companionName: 'Purralune',
     material: 'moonstone',
   },
 } as const satisfies Record<Exclude<ThemeId, 'obsidian'>, object>;

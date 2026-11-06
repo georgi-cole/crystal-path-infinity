@@ -154,7 +154,11 @@ export function StoreVault({ onTryTheme }: { onTryTheme?: (theme: ThemeId) => vo
                   : 'vault.worldCollectionTitle',
             )}
           </h1>
-          <p>{t('vault.intro')}</p>
+          <p>
+            {filter === 'worlds'
+              ? t('vault.worldCollectionCount', { count: number(WORLD_ORDER.length) })
+              : t('vault.intro')}
+          </p>
           <span className="cpi-store-status">
             <i />
             {t('vault.test')}

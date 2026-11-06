@@ -406,7 +406,7 @@ describe('test-store presentation and assets', () => {
       expect(state.status).toBe('dead');
       expect(html).toContain('Home, safe and sound');
       expect(html).toContain('safely');
-      expect(html).toContain(theme === 'puppy' ? 'Riff' : 'Nyx');
+      expect(html).toContain(theme === 'puppy' ? 'Pawrachute' : 'Purralune');
       expect(html).toContain('Your friend is already safe');
       expect(html).not.toContain('The abyss remembers');
       expect(html).not.toContain('DEATH CLOCK');
