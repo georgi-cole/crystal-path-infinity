@@ -7,7 +7,7 @@ describe('iOS provisioning before any game process', () => {
     await prepareIosSimulator(execute);
     expect(execute.mock.calls).toEqual([
       ['cold-boot', 900_000],
-      ['shutdown', 60_000],
+      ['shutdown', 180_000],
       ['warm-boot', 180_000],
       ['system-launch', 180_000],
       ['system-terminate', 60_000],

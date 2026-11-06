@@ -10,6 +10,8 @@ export const RISK_RULESET_VERSION = 'infinity-v4-hidden-risk';
 export const DIRECTOR_RULESET_VERSION = 'infinity-v5-mystery';
 export const RELIC_RULESET_VERSION = 'infinity-v6-relics';
 export const DISCOVERY_RULESET_VERSION = 'infinity-v7-discovery';
+export const CLASSIC_MYSTERY_RULESET_VERSION = 'infinity-v8-classic-mystery';
+export const CLASSIC_STORE_RULESET_VERSION = 'infinity-v9-classic-store';
 export const DISCOVERY_INTRO_MS = 4_000;
 export const CHOICE_GRACE_MS = 60_000;
 export const IDLE_WARNING_MS = 3_000;
@@ -24,6 +26,10 @@ export const MAX_ACTIVE_EFFECTS = 2;
 export const MYSTERY_MIN_GAP = 3;
 export const MYSTERY_MAX_GAP = 6;
 export const MAX_REVIVES = 10;
+/** Explicitly local/test-only economy. Historical and ranked rules keep their ten-life cap. */
+export const STORE_TEST_RULESET_VERSION = 'infinity-store-test-v1';
+export const STORE_TEST_MAX_REVIVES = 15;
+export const RESERVE_SP_PER_RUN = 200;
 /** Operational allocation bound, not a limit on route distance. */
 export const MAX_ROW_BATCH = 256;
 export const MAX_BUFFER_ROWS = 256;
@@ -136,8 +142,23 @@ export const DISCOVERY_RULESET = Object.freeze({
   version: DISCOVERY_RULESET_VERSION,
 });
 
+export const CLASSIC_MYSTERY_RULESET = Object.freeze({
+  ...DISCOVERY_RULESET,
+  version: CLASSIC_MYSTERY_RULESET_VERSION,
+  lowBreakRisk: 0,
+  highBreakRisk: 1,
+});
+export function usesClassicTiles(version: string): boolean {
+  return version === CLASSIC_MYSTERY_RULESET_VERSION || version === CLASSIC_STORE_RULESET_VERSION;
+}
+export function usesDiscoveryRules(version: string): boolean {
+  return version === DISCOVERY_RULESET_VERSION || usesClassicTiles(version);
+}
+export function usesStoreTestRules(version: string): boolean {
+  return version === STORE_TEST_RULESET_VERSION || version === CLASSIC_STORE_RULESET_VERSION;
+}
 export function usesRelicRules(version: string): boolean {
-  return version === RELIC_RULESET_VERSION || version === DISCOVERY_RULESET_VERSION;
+  return version === RELIC_RULESET_VERSION || usesDiscoveryRules(version);
 }
 
 export function usesMysteryDirectorRules(version: string): boolean {
@@ -159,6 +180,16 @@ export function supportsPacts(version: string): boolean {
 const PACED_RULESET = Object.freeze({ ...RULESET, version: PACED_RULESET_VERSION });
 const SCAN_RULESET = Object.freeze({ ...RULESET, version: SCAN_RULESET_VERSION });
 
+const STORE_TEST_RULESET = Object.freeze({
+  ...RULESET,
+  version: STORE_TEST_RULESET_VERSION,
+  reviveSp: Object.freeze([...RULESET.reviveSp, 150, 150, 150, 150, 150]),
+});
+const CLASSIC_STORE_RULESET = Object.freeze({
+  ...CLASSIC_MYSTERY_RULESET,
+  version: CLASSIC_STORE_RULESET_VERSION,
+  reviveSp: STORE_TEST_RULESET.reviveSp,
+});
 export function getRuleset(
   version: string = RULESET_VERSION,
 ):
@@ -170,7 +201,13 @@ export function getRuleset(
   | typeof RELIC_RULESET
   | typeof DISCOVERY_RULESET
   | typeof PACED_RULESET
-  | typeof SCAN_RULESET {
+  | typeof SCAN_RULESET
+  | typeof STORE_TEST_RULESET
+  | typeof CLASSIC_MYSTERY_RULESET
+  | typeof CLASSIC_STORE_RULESET {
+  if (version === STORE_TEST_RULESET_VERSION) return STORE_TEST_RULESET;
+  if (version === CLASSIC_MYSTERY_RULESET_VERSION) return CLASSIC_MYSTERY_RULESET;
+  if (version === CLASSIC_STORE_RULESET_VERSION) return CLASSIC_STORE_RULESET;
   if (version === PACED_RULESET_VERSION) return PACED_RULESET;
   if (version === SCAN_RULESET_VERSION) return SCAN_RULESET;
   if (version === DISCOVERY_RULESET_VERSION) return DISCOVERY_RULESET;
@@ -195,11 +232,16 @@ export function getRowBandDamage(
   return 20;
 }
 
-export function getReviveSp(ordinal: number): number {
-  if (!Number.isInteger(ordinal) || ordinal < 1 || ordinal > MAX_REVIVES) {
+export function getMaxRevives(version: string): number {
+  getRuleset(version);
+  return usesStoreTestRules(version) ? STORE_TEST_MAX_REVIVES : MAX_REVIVES;
+}
+
+export function getReviveSp(ordinal: number, version = RULESET_VERSION): number {
+  if (!Number.isInteger(ordinal) || ordinal < 1 || ordinal > getMaxRevives(version)) {
     throw new RangeError('Revive ordinal must be between one and ten.');
   }
-  return RULESET.reviveSp[ordinal - 1];
+  return ordinal <= 5 ? 200 : 150;
 }
 
 export function clampSp(sp: number, rulesetVersion = RULESET_VERSION): number {

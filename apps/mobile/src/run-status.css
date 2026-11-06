@@ -229,3 +229,9 @@
 .cpi-reduced-motion .cpi-run-status .cpi-mystery-feedback {
   animation: none;
 }
+
+.cpi-effect-glyph > .cpi-world-power {
+  width: 100%;
+  height: 100%;
+  display: block;
+}

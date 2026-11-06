@@ -254,7 +254,10 @@ jobs:
     name: Development iOS build and simulator launch
     needs: web
     if: ${{ needs.web.outputs.native_mode == 'smoke' || needs.web.outputs.native_mode == 'full' }}
-    runs-on: macos-26
+    # Use the 14 GB standard host and the current supported Xcode/iOS pair.
+    # OS control commands run asynchronously so attached native logs drain
+    # throughout every real foreground/background transition.
+    runs-on: macos-26-intel
     timeout-minutes: 45
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
@@ -318,6 +321,14 @@ jobs:
           print('Simulator app identity, version, embedded environment, portrait and permission checks passed')
           PY
           tar -czf build/cpi003-ios-simulator.tar.gz -C build/ios/Build/Products/Debug-iphonesimulator App.app
+      - name: Prepare the disposable simulator host
+        # Archived failures saturated the 7 GB Mac before CPI was installed.
+        # Host search indexing is unrelated to our offline startup/lifecycle gate.
+        # Mount the runtime before disabling indexing so mounted volumes are covered.
+        run: |
+          sysctl hw.memsize hw.ncpu > apps/mobile/artifacts/ios-host-hardware.txt
+          xcrun simctl list --json runtimes > apps/mobile/artifacts/ios-host-runtimes.json
+          sudo mdutil -a -i off 2>&1 | tee apps/mobile/artifacts/ios-host-indexing.log
       - name: Open the minimum screen on iOS Simulator
         # Allow bounded first-boot migration and process startup on a fresh simulator.
         timeout-minutes: 30

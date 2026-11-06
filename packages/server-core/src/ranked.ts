@@ -10,7 +10,7 @@ import {
   isTimedEffect,
   PACT_OPTIONS,
   usesMysteryDirectorRules,
-  DISCOVERY_RULESET_VERSION,
+  usesDiscoveryRules,
   getDeathClock,
   transitionRun,
 } from '@crystal-path-infinity/game-core';
@@ -337,7 +337,7 @@ export function rankedSnapshot(record: StoredRankedRun): RankedSnapshot {
             rowsLeft: effect.rowsLeft,
           },
     ),
-    ...(state.rulesetVersion === DISCOVERY_RULESET_VERSION ? { discovery: state.discovery } : {}),
+    ...(usesDiscoveryRules(state.rulesetVersion) ? { discovery: state.discovery } : {}),
     ...(usesMysteryDirectorRules(state.rulesetVersion)
       ? { mysteryRhythm: state.mysteryDirector!.rhythm, deathClock: getDeathClock(state) }
       : {}),

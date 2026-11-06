@@ -17,11 +17,14 @@ import { bridgePane, projectBridgePoint, advancesOneRow } from './bridge-geometr
 import { glassPattern, glassSeed, projectGlassPattern } from './glass-fracture';
 import type { HintScan } from './run-signals';
 import { BridgeFlight } from './bridge-flight';
+import { MysteryCache } from './world-treasures';
 import type { SceneCinematic } from './scene-cinematics';
 
 const WIDTH = 900,
   HEIGHT = 700;
-const COLORS = ['#fa589c', '#62dfed', '#79e3af'];
+import { useThemeId } from './store-context';
+import { THEMES } from './store-catalog';
+import type { WorldId } from './store-catalog';
 type Point = { x: number; y: number };
 const coordinates = (points: Point[]) =>
   points.map((p) => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' ');
@@ -68,6 +71,58 @@ function reflectedLight(points: Point[], kind: 'rail' | 'strip') {
 function inset(points: Point[]) {
   const center = points.reduce((a, p) => ({ x: a.x + p.x / 4, y: a.y + p.y / 4 }), { x: 0, y: 0 });
   return points.map((p) => blend(p, center, 0.045));
+}
+function worldInlay(points: Point[], theme: WorldId) {
+  const motifs: Record<WorldId, number[][]> = {
+    chaos: [
+      [0.1, 0.25],
+      [0.1, 0.72],
+      [0.28, 0.72],
+      [0.28, 0.78],
+      [0.06, 0.78],
+      [0.06, 0.25],
+    ],
+    jelly: [
+      [0.48, 0.19],
+      [0.57, 0.5],
+      [0.48, 0.8],
+      [0.39, 0.5],
+    ],
+    wilds: [
+      [0.09, 0.27],
+      [0.23, 0.35],
+      [0.18, 0.61],
+      [0.12, 0.48],
+      [0.07, 0.65],
+      [0.04, 0.39],
+    ],
+    league: [
+      [0.09, 0.25],
+      [0.26, 0.25],
+      [0.17, 0.5],
+      [0.26, 0.5],
+      [0.09, 0.78],
+      [0.15, 0.54],
+      [0.04, 0.54],
+    ],
+    puppy: [
+      [0.07, 0.24],
+      [0.24, 0.31],
+      [0.21, 0.55],
+      [0.15, 0.48],
+      [0.12, 0.7],
+      [0.04, 0.61],
+    ],
+    kitten: [
+      [0.2, 0.22],
+      [0.1, 0.45],
+      [0.19, 0.72],
+      [0.08, 0.62],
+      [0.04, 0.43],
+      [0.1, 0.28],
+    ],
+  };
+  return motifs[theme].map(([u, v]) => onFace(points, u, v));
 }
 function MovingPolygon({
   shape,
@@ -180,6 +235,7 @@ function PaneFragments({
   collapsed: boolean;
   falling: boolean;
 }) {
+  const material = THEMES[useThemeId()];
   const pattern = useMemo(() => glassPattern(seed, detail), [seed, detail]);
   const shards = projectGlassPattern(pattern, points);
   const old = previous ? projectGlassPattern(pattern, previous) : null;
@@ -193,8 +249,8 @@ function PaneFragments({
             shape={[...shard.points]}
             previous={(old && [...old[i].points]) || undefined}
             step={step}
-            fill={shard.glint > 0.5 ? '#c7e5ee4d' : '#9bb4bb29'}
-            stroke="#d6f5ffb3"
+            fill={material.glass + (shard.glint > 0.5 ? '4d' : '29')}
+            stroke={material.surface.edge + 'b3'}
             strokeWidth=".65"
           />
         ) : falling ? (
@@ -202,8 +258,8 @@ function PaneFragments({
             key={i}
             className="cpi-glass-shard"
             points={coordinates([...shard.points])}
-            fill={shard.glint > 0.65 ? '#e1f5ff47' : shard.glint > 0.3 ? '#839ea936' : '#cedde622'}
-            stroke={i % 4 === 0 ? '#edfcffbb' : '#bddce67a'}
+            fill={material.glass + (shard.glint > 0.65 ? '47' : shard.glint > 0.3 ? '36' : '22')}
+            stroke={material.surface.edge + (i % 4 === 0 ? 'bb' : '7a')}
             strokeWidth={i % 3 === 0 ? 0.9 : 0.5}
             style={
               {
@@ -289,6 +345,9 @@ export function PrismBridge({
 }) {
   const id = useId().replace(/:/g, ''),
     { t, number, locale } = useLanguage();
+  const themeId = useThemeId();
+  const theme = THEMES[themeId];
+  const COLORS = theme.colors;
   const osReduced = useSyncExternalStore(subscribeMotion, motionSnapshot, serverMotionSnapshot);
   const reduced = reducedMotion || osReduced;
   const currentIndex = rows?.find((r) => r.phase === 'current')?.index ?? '0';
@@ -342,13 +401,13 @@ export function PrismBridge({
       >
         <defs>
           <linearGradient id={id + 'glass'} x1="0" y1="0" x2=".8" y2="1">
-            <stop stopColor="#e2edf0" stopOpacity=".32" />
+            <stop stopColor={theme.surface.highlight} stopOpacity=".32" />
             <stop offset=".36" stopColor="#98adb3" stopOpacity=".09" />
-            <stop offset=".58" stopColor="#c7dae0" stopOpacity=".15" />
-            <stop offset="1" stopColor="#101318" stopOpacity=".48" />
+            <stop offset=".58" stopColor={theme.glass} stopOpacity=".15" />
+            <stop offset="1" stopColor={theme.surface.shadow} stopOpacity=".48" />
           </linearGradient>
           <linearGradient id={id + 'edge'} x2="1" y2=".3">
-            <stop stopColor="#ecfbff" stopOpacity=".92" />
+            <stop stopColor={theme.surface.edge} stopOpacity=".92" />
             <stop offset=".45" stopColor="#c3dbe1" stopOpacity=".28" />
             <stop offset="1" stopColor="#d4f0ee" stopOpacity=".8" />
           </linearGradient>
@@ -356,7 +415,7 @@ export function PrismBridge({
             <stop stopColor="#bfb8ce" stopOpacity="0" />
             <stop offset=".3" stopColor="#a9a7af" stopOpacity=".2" />
             <stop offset=".65" stopColor="#ddd6e7" stopOpacity=".6" />
-            <stop offset="1" stopColor="#87828f" stopOpacity=".4" />
+            <stop offset="1" stopColor={theme.surface.frame} stopOpacity=".4" />
           </linearGradient>
           <radialGradient id={id + 'under'}>
             <stop stopColor="#a9469c" stopOpacity=".1" />
@@ -492,6 +551,19 @@ export function PrismBridge({
                         fill="#ececf5"
                         opacity=".13"
                       />
+                      {themeId !== 'obsidian' && distance <= 5 && (
+                        <MovingPolygon
+                          className="cpi-world-pane-inlay"
+                          shape={worldInlay(pts, themeId)}
+                          previous={old && worldInlay(old, themeId)}
+                          step={camera.row}
+                          fill={themeId === 'chaos' ? theme.surface.frame : theme.glass}
+                          fillOpacity=".1"
+                          stroke={theme.surface.edge}
+                          strokeOpacity=".22"
+                          strokeWidth=".6"
+                        />
+                      )}
                       {distance <= 6 && (
                         <>
                           <MovingPolygon
@@ -719,16 +791,25 @@ export function PrismBridge({
                   !row.mysteryAvailable
                 }
               >
-                <MysteryCube tier={row.mysteryTier ?? 'standard'} />
-                <span className="cpi-box-tier-label">
-                  {locale === 'bg'
-                    ? { standard: 'ИСКРА', choice: 'СДЕЛКА', major: 'РИТУАЛ', anomaly: '50/50' }[
-                        row.mysteryTier ?? 'standard'
-                      ]
-                    : { standard: 'SPARK', choice: 'TRADE', major: 'RITUAL', anomaly: '50/50' }[
-                        row.mysteryTier ?? 'standard'
-                      ]}
-                </span>
+                {themeId !== 'obsidian' ? (
+                  <MysteryCache theme={themeId} />
+                ) : (
+                  <>
+                    <MysteryCube tier={row.mysteryTier ?? 'standard'} />
+                    <span className="cpi-box-tier-label">
+                      {locale === 'bg'
+                        ? {
+                            standard: 'ИСКРА',
+                            choice: 'СДЕЛКА',
+                            major: 'РИТУАЛ',
+                            anomaly: '50/50',
+                          }[row.mysteryTier ?? 'standard']
+                        : { standard: 'SPARK', choice: 'TRADE', major: 'RITUAL', anomaly: '50/50' }[
+                            row.mysteryTier ?? 'standard'
+                          ]}
+                    </span>
+                  </>
+                )}
               </button>
             )}
         </div>

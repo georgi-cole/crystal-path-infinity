@@ -39,8 +39,8 @@ jobs:
 
   deploy:
     name: Publish guest game
-    # The owner explicitly approved publishing this PR's guest preview without merging it.
-    if: (github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')) || (github.ref == 'refs/heads/design/obsidian-glass' && github.event_name == 'workflow_dispatch')
+    # The owner approved publishing the test-store branch for phone testing.
+    if: (github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')) || (github.ref == 'refs/heads/codex/store-test-mode' && github.event_name == 'workflow_dispatch')
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 10

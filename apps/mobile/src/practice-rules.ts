@@ -1,4 +1,4 @@
-import { DISCOVERY_RULESET_VERSION } from '@crystal-path-infinity/game-core';
+import { CLASSIC_MYSTERY_RULESET_VERSION } from '@crystal-path-infinity/game-core';
 
 /** The practice owner and its rehearsal must always select the same rules. */
-export const PRACTICE_RULESET_VERSION = DISCOVERY_RULESET_VERSION;
+export const PRACTICE_RULESET_VERSION = CLASSIC_MYSTERY_RULESET_VERSION;

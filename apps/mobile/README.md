@@ -104,7 +104,7 @@ npm run native:generate -- --platform ios --environment production --check
 
 **Android:** use JDK 21, Android SDK platform/API 36, and build tools 36.0.0. Set `ANDROID_HOME` to the SDK installation. The generated project supplies the Gradle **8.14.3** wrapper; a separate global Gradle installation is unnecessary. The app targets portrait orientation, a dark background, and disabled cleartext traffic.
 
-**iOS:** compilation requires a Mac. CI selects **Xcode 26.6** and an **iOS 26.5** iPhone Simulator, matching the toolchain observed in [CPI-002](../../docs/spikes/CPI-002-results.md). The generator chooses manual signing with signing disabled and an empty identity; CI builds an unsigned Simulator app. Running on a physical iPhone requires explicit local Xcode signing configuration, including an appropriate team/provisioning setup. Keep signing credentials and provisioning profiles out of the repository; regeneration replaces local project settings.
+**iOS:** compilation requires a Mac. CI pins **Xcode 26.6** and an **iOS 26.5** iPhone Simulator on the standard 14 GB `macos-26-intel` host, matching the toolchain observed in [CPI-002](../../docs/spikes/CPI-002-results.md). The generator chooses manual signing with signing disabled and an empty identity; CI builds an unsigned Simulator app. Running on a physical iPhone requires explicit local Xcode signing configuration, including an appropriate team/provisioning setup. Keep signing credentials and provisioning profiles out of the repository; regeneration replaces local project settings.
 
 The generator restores the app-specific [Swift Package Manager lock](native-locks/Package.resolved), captured from CPI-003's first successful iOS compilation. Its sole package is Capacitor 8.5.3. CI then requires the recorded package versions instead of silently updating resolution.
 
@@ -126,6 +126,8 @@ node --experimental-strip-types apps/mobile/scripts/smoke-native.mjs --platform 
 ```
 
 The script does not compile. Android needs the dedicated accelerated `cpi003-development` AVD with the API 36 **AOSP/default x86_64** image and emulator port 5554 available; the script wipes that AVD's data. iOS needs an available iPhone device type with the iOS 26.5 runtime; the script creates a fresh named simulator and deletes only that simulator afterward. The workflow contains the setup commands.
+
+OS control commands are awaited asynchronously, so the attached native log stream continues draining during real Settings/background/resume transitions. Fresh-device shutdown has a 180-second provisioning budget after observed 60-second shutdown failures on both Tahoe/iOS 26.5 and Sequoia/iOS 26.2 hosts. Settings commands use the existing 180-second system-launch budget. React/page/bridge readiness and actual lifecycle observations retain their original limits and assertions. Continuous `ios-host-pressure.log` sampling retains process/memory evidence without putting a synchronous process report ahead of required first-boot cleanup.
 
 Fresh iOS provisioning has a 900-second boot deadline and a 180-second first native process gate deadline, recorded in `ios-smoke-device.json`. The driver advances as soon as the required observation arrives. These limits accommodate cold OS migration and launch overhead; they add no retries and do not relax lifecycle or runtime-error assertions. The iOS smoke step is capped at 30 minutes. The [CPI-007 decision](../../docs/decisions/CPI-007-clock-lifecycle.md#fresh-ios-simulator-provisioning) records the failed CI evidence that motivated these allowances.
 

@@ -7,6 +7,7 @@ import {
   MYSTERY_MIN_GAP,
   RULESET_VERSION,
   RISK_RULESET,
+  usesClassicTiles,
   usesRiskRules,
 } from './rules.ts';
 import type { BridgeRow, RandomCursor, RandomSource, RowStreamState, TileSide } from './types.ts';
@@ -93,10 +94,22 @@ export function takeRows(stream: RowStreamState, count: number, rng: RandomSourc
         broken: {
           left:
             left.value <
-            (lowRiskSide === 'left' ? RISK_RULESET.lowBreakRisk : RISK_RULESET.highBreakRisk),
+            (lowRiskSide === 'left'
+              ? usesClassicTiles(stream.rulesetVersion)
+                ? 0
+                : RISK_RULESET.lowBreakRisk
+              : usesClassicTiles(stream.rulesetVersion)
+                ? 1
+                : RISK_RULESET.highBreakRisk),
           right:
             right.value <
-            (lowRiskSide === 'right' ? RISK_RULESET.lowBreakRisk : RISK_RULESET.highBreakRisk),
+            (lowRiskSide === 'right'
+              ? usesClassicTiles(stream.rulesetVersion)
+                ? 0
+                : RISK_RULESET.lowBreakRisk
+              : usesClassicTiles(stream.rulesetVersion)
+                ? 1
+                : RISK_RULESET.highBreakRisk),
         },
       };
     }

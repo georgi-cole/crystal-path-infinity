@@ -4,7 +4,7 @@ import {
   usesBalanceRules,
   usesRiskRules,
   usesMysteryDirectorRules,
-  DISCOVERY_RULESET_VERSION,
+  usesDiscoveryRules,
   assertDiscovery,
   MYSTERY_TIERS,
   getRuleset,
@@ -286,7 +286,7 @@ export function parseRankedReply(value: unknown): RankedReply | null {
   const discoveryRules =
     raw !== null &&
     typeof raw === 'object' &&
-    (raw as Record<string, unknown>).rulesetVersion === DISCOVERY_RULESET_VERSION;
+    usesDiscoveryRules(String((raw as Record<string, unknown>).rulesetVersion));
   const usesPacts =
     raw !== null &&
     typeof raw === 'object' &&

@@ -3,6 +3,8 @@ import './brand-tokens.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
+import { TestStoreProvider } from './store-provider';
+import './theme-worlds.css';
 import { LanguageProvider } from './language-provider';
 import { startStartupDiagnostics } from './startup-diagnostics';
 import { getGameplayLifecycle } from './gameplay-lifecycle';
@@ -22,7 +24,9 @@ if (!root) throw new Error('The application root is missing.');
 createRoot(root).render(
   <StrictMode>
     <LanguageProvider>
-      <App />
+      <TestStoreProvider>
+        <App />
+      </TestStoreProvider>
     </LanguageProvider>
   </StrictMode>,
 );

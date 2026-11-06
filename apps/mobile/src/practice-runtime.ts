@@ -1,6 +1,7 @@
 import { createTimedRunSession } from '@crystal-path-infinity/game-core';
 import type {
   PauseReason,
+  BeforeRunCommit,
   RandomSource,
   RunState,
   SessionCommand,
@@ -29,7 +30,10 @@ export interface PracticeRuntime {
   readonly ready: Promise<void>;
   readonly getState: () => RunState;
   readonly isRunning: () => boolean;
-  readonly bind: (command: SessionCommand) => () => Promise<TimedSessionResult>;
+  readonly bind: (
+    command: SessionCommand,
+    beforeCommit?: BeforeRunCommit,
+  ) => () => Promise<TimedSessionResult>;
   readonly hold: (reason: PauseReason) => Promise<PracticePauseLease>;
   readonly refresh: () => Promise<void>;
   /** Synchronous cleanup retains the last acknowledged checkpoint. */
@@ -177,8 +181,8 @@ export function createPracticeRuntime(options: PracticeRuntimeOptions): Practice
     ready,
     getState: session.getState,
     isRunning,
-    bind(command) {
-      const bound = session.bind(command);
+    bind(command, beforeCommit) {
+      const bound = session.bind(command, beforeCommit);
       const epoch = lifecycleEpoch;
       const gameplay = ['choose', 'hint', 'mystery', 'pact', 'tick'].includes(command.type);
       const scoped = !('deathId' in command);

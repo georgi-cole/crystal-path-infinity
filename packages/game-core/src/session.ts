@@ -18,6 +18,8 @@ export type SessionCommand =
   | { readonly type: 'pact'; readonly option: PactOption }
   | Exclude<RunCommand, { readonly row: string }>;
 
+export type BeforeRunCommit = (result: TransitionResult, previous: RunState) => void;
+
 export type SessionTime = Omit<TransitionContext, 'rng'>;
 export type SessionRejectionReason =
   RejectionReason | 'session-disposed' | 'stale-command' | 'command-consumed';
@@ -32,7 +34,7 @@ export type BoundRunCommand = (time: SessionTime | (() => SessionTime)) => Sessi
 export interface RunSession {
   readonly getState: () => RunState;
   /** Bind when presenting an action. Non-tick bindings deliver at most one core transition. */
-  readonly bind: (command: SessionCommand) => BoundRunCommand;
+  readonly bind: (command: SessionCommand, beforeCommit?: BeforeRunCommit) => BoundRunCommand;
   /** Invalidate callbacks and retain the checkpoint; never implicitly end the run. */
   readonly dispose: () => RunState;
 }
@@ -59,7 +61,7 @@ export function createRunSession(initialState: RunState, rng: RandomSource): Run
       disposed = true;
       return state;
     },
-    bind(input) {
+    bind(input, beforeCommit) {
       // Retain only small scope values, not a full historical RunState or event log.
       const row = state.currentRow;
       const life = state.revivesApplied;
@@ -92,6 +94,7 @@ export function createRunSession(initialState: RunState, rng: RandomSource): Run
           ...(typeof time === 'function' ? time() : time),
           rng,
         });
+        if (next.accepted) beforeCommit?.(next, state);
         // A rejected input can still carry due effects/death. Always commit its state.
         // A thrown transition leaves both the owned checkpoint and binding untouched.
         if (

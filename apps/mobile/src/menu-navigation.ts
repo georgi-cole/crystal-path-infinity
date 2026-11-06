@@ -32,7 +32,8 @@ export function canResumePractice(load: PracticeLoad): boolean {
     load.status === 'ready' &&
     (load.state.status === 'playing' ||
       (load.state.status === 'dead' &&
-        (load.state.pendingReward !== null ||
+        (load.state.storeTest !== undefined ||
+          load.state.pendingReward !== null ||
           load.state.reviveReceipts.some((receipt) => receipt.status === 'granted'))))
   );
 }

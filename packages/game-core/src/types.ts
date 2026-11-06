@@ -184,7 +184,17 @@ export interface ReviveReceipt {
 }
 
 export type EndReason = 'user-ended' | 'death-declined' | 'revive-limit';
+export type TestResource = 'sp' | 'hints' | 'credit' | 'ad';
+export interface StoreTestRun {
+  readonly assisted: boolean;
+  readonly reserveSpent: number;
+  readonly hintsSpent: number;
+  readonly creditContinues: number;
+  readonly adContinues: number;
+  readonly sequence: number;
+}
 export interface RunResult {
+  readonly storeTest?: StoreTestRun;
   readonly runId: string;
   readonly rulesetVersion: string;
   readonly lastClearedRow: Decimal;
@@ -203,6 +213,7 @@ export interface RunResult {
 
 /** PRIVATE authoritative/practice state. Never a ranked-client response. */
 export interface RunState {
+  readonly storeTest?: StoreTestRun;
   readonly schemaVersion: 1;
   readonly rulesetVersion: string;
   readonly runId: string;
@@ -233,7 +244,7 @@ export interface RunState {
   readonly deaths: number;
   readonly death: DeathSnapshot | null;
   readonly pendingReward: PendingReward | null;
-  /** At most ten records, retained to reject late duplicate grants/restores. */
+  /** Bounded by this run's versioned continuation limit. */
   readonly reviveReceipts: readonly ReviveReceipt[];
   readonly revivesGranted: number;
   readonly revivesApplied: number;
@@ -277,6 +288,12 @@ export type RunCommand =
       readonly option: PactOption;
     }
   | { readonly type: 'tick' }
+  | {
+      readonly type: 'test-resource';
+      readonly resource: TestResource;
+      readonly amount: number;
+      readonly sequence: number;
+    }
   | { readonly type: 'end'; readonly forfeitGrantedReward?: boolean }
   | ({ readonly type: 'mark-reward-pending' } & PendingReward)
   | ({ readonly type: 'clear-reward-pending' } & PendingReward)
@@ -318,7 +335,10 @@ export type RejectionReason =
   | 'reward-already-granted'
   | 'missing-grant'
   | 'grant-mismatch'
-  | 'forfeiture-required';
+  | 'forfeiture-required'
+  | 'test-only'
+  | 'invalid-resource'
+  | 'resource-limit';
 
 interface EventTime {
   readonly activeTimeMs: number;
@@ -347,6 +367,11 @@ export type RunEvent = EventTime &
         readonly spDelta: number;
         readonly sp: number;
         readonly minute: number;
+      }
+    | {
+        readonly type: 'test-resource-used';
+        readonly resource: TestResource;
+        readonly amount: number;
       }
     | { readonly type: 'hint-used'; readonly row: Decimal; readonly safeSide: TileSide }
     | { readonly type: 'hint-unavailable'; readonly row: Decimal }

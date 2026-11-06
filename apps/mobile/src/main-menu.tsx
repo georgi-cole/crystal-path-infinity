@@ -18,7 +18,11 @@ import type { NameReportClient } from './leaderboard/name-report-client';
 import { LanguageSettings, PrivacyAccountSupport } from './locale-settings';
 import { useLanguage } from './language-context';
 import { BridgeTutorial } from './bridge-tutorial';
+import { useThemeId } from './store-context';
+import type { ThemeId } from './store-catalog';
 import { StoreVault } from './store-vault';
+import { WorldHomeIdentity, WorldNavGlyph } from './world-navigation';
+import { isPetWorld } from './world-kits';
 import type { TutorialProgress } from './tutorial-progress';
 import type { PracticeLoad, PracticeSettings } from './practice-save';
 import { canResumePractice, rankedServiceState } from './menu-navigation';
@@ -32,6 +36,8 @@ const INTRO_HUB_BASE = import.meta.env.BASE_URL + 'intro-hub/';
 type GlyphName = 'play' | 'practice' | 'ranking' | 'profile' | 'settings' | 'store' | 'arrow';
 
 function Glyph({ name }: { name: GlyphName }) {
+  const theme = useThemeId();
+  if (theme !== 'obsidian') return <WorldNavGlyph theme={theme} name={name} />;
   const art: Record<GlyphName, ReactNode> = {
     play: <path d="m9 5 11 7-11 7V5Z" />,
     practice: (
@@ -127,6 +133,7 @@ function HubUtilityControls({
   onOpen,
 }: Pick<MainMenuProps, 'settings' | 'onSettingsChange' | 'onOpen'>) {
   const { t } = useLanguage();
+  const theme = useThemeId();
   return (
     <div className="cpi-hub-utilities" aria-label={t('settings.audioLegend')}>
       <div className="cpi-hub-utility-stack">
@@ -146,12 +153,16 @@ function HubUtilityControls({
             aria-pressed={settings[key]}
             onClick={() => onSettingsChange({ ...settings, [key]: !settings[key] })}
           >
-            <img
-              className="cpi-hub-chip-glyph"
-              src={INTRO_HUB_BASE + 'utilities/' + icon}
-              alt=""
-              aria-hidden="true"
-            />
+            {theme !== 'obsidian' ? (
+              <WorldNavGlyph theme={theme} name={key === 'music' ? 'music' : 'sound'} />
+            ) : (
+              <img
+                className="cpi-hub-chip-glyph"
+                src={INTRO_HUB_BASE + 'utilities/' + icon}
+                alt=""
+                aria-hidden="true"
+              />
+            )}
           </button>
         ))}
       </div>
@@ -161,12 +172,16 @@ function HubUtilityControls({
         aria-label={t('settings.open')}
         onClick={() => onOpen('settings')}
       >
-        <img
-          className="cpi-hub-chip-glyph"
-          src={INTRO_HUB_BASE + 'utilities/settings_v2.svg'}
-          alt=""
-          aria-hidden="true"
-        />
+        {theme !== 'obsidian' ? (
+          <WorldNavGlyph theme={theme} name="settings" />
+        ) : (
+          <img
+            className="cpi-hub-chip-glyph"
+            src={INTRO_HUB_BASE + 'utilities/settings_v2.svg'}
+            alt=""
+            aria-hidden="true"
+          />
+        )}
       </button>
     </div>
   );
@@ -184,6 +199,7 @@ function StatusPill({
 }
 
 export interface MainMenuProps {
+  onTryTheme?: (theme: ThemeId) => void;
   view: MenuView;
   saved: PracticeLoad;
   best: string | null;
@@ -281,6 +297,7 @@ function MenuHome({
 >) {
   const canResume = canResumePractice(saved);
   const { t, number } = useLanguage();
+  const theme = useThemeId();
   return (
     <div className="cpi-home-composition">
       <div className="cpi-home-scenery" aria-hidden="true">
@@ -291,7 +308,11 @@ function MenuHome({
         <h1 id="menu-title" data-menu-heading tabIndex={-1}>
           Infinity
         </h1>
-        <p className="cpi-menu-tagline">{t('menu.tagline')}</p>
+        {theme === 'obsidian' ? (
+          <p className="cpi-menu-tagline">{t('menu.tagline')}</p>
+        ) : (
+          <WorldHomeIdentity theme={theme} />
+        )}
       </section>
 
       <section className="cpi-menu-scoreboard" aria-label={t('menu.progress')}>
@@ -382,8 +403,9 @@ export function ConfirmNewPractice({
 }) {
   const damaged = saved.status === 'corrupt';
   const { t } = useLanguage();
+  const theme = useThemeId();
   return (
-    <div className="cpi-menu-modal" role="presentation">
+    <div className="cpi-menu-modal" role="presentation" data-world={theme}>
       <section
         className="cpi-menu-dialog"
         role="dialog"
@@ -408,6 +430,7 @@ export function ConfirmNewPractice({
 }
 
 export function MainMenu({
+  onTryTheme,
   view,
   saved,
   best,
@@ -436,6 +459,7 @@ export function MainMenu({
   nameReportClient = null,
 }: MainMenuProps) {
   const service = rankedServiceState(online);
+  const themeId = useThemeId();
   const { t, number, locale } = useLanguage();
   return (
     <main
@@ -444,6 +468,7 @@ export function MainMenu({
         view +
         (settings.reducedMotion ? ' cpi-reduced-motion' : '')
       }
+      data-world={themeId}
       data-testid="app-ready"
     >
       <StageAtmosphere subdued={view !== 'home'} />
@@ -479,7 +504,7 @@ export function MainMenu({
           </>
         ) : view === 'practice' ? (
           <MenuPanel title={t('general.practice')} eyebrow={t('menu.practiceEyebrow')}>
-            <p>{t('menu.practiceIntro')}</p>
+            <p>{t(isPetWorld(themeId) ? 'vault.petPractice' : 'menu.practiceIntro')}</p>
             <MenuAction
               label={tutorialProgress === 'completed' ? t('menu.replay') : t('menu.learn')}
               description={t('menu.tutorialExercise')}
@@ -525,7 +550,7 @@ export function MainMenu({
             reducedMotion={settings.reducedMotion}
           />
         ) : view === 'store' ? (
-          <StoreVault />
+          <StoreVault onTryTheme={onTryTheme} />
         ) : view === 'play' ? (
           <MenuPanel title={t('general.play')} eyebrow={t('menu.playEyebrow')}>
             {rankedClient ? (

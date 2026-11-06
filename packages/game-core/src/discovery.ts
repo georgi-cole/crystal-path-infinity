@@ -1,6 +1,11 @@
 import { addSafeInteger, assertNonNegativeInteger } from './numbers.ts';
 import { isPactKind } from './pacts.ts';
-import { DISCOVERY_RULESET_VERSION, DISCOVERY_INTRO_MS, getRuleset } from './rules.ts';
+import {
+  DISCOVERY_RULESET_VERSION,
+  DISCOVERY_INTRO_MS,
+  getRuleset,
+  usesDiscoveryRules,
+} from './rules.ts';
 import type { EffectKind, MysteryDiscovery, RunState } from './types.ts';
 
 export function needsDiscoveryIntroduction(kind: EffectKind): boolean {
@@ -37,7 +42,7 @@ export function assertDiscovery(value: MysteryDiscovery, activeTimeMs: number): 
 }
 
 export function discoverMystery(state: RunState, kind: EffectKind): RunState {
-  if (state.rulesetVersion !== DISCOVERY_RULESET_VERSION || state.discovery!.known.includes(kind))
+  if (!usesDiscoveryRules(state.rulesetVersion) || state.discovery!.known.includes(kind))
     return state;
   const introduce = needsDiscoveryIntroduction(kind) && state.sp > 0;
   return {

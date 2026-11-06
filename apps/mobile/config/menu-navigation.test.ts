@@ -123,20 +123,18 @@ describe('CPI-013 standalone menu and route model', () => {
     expect(html).toContain('type="checkbox"');
   });
 
-  it('previews the requested store categories without fabricated prices or purchase controls', () => {
+  it('presents original worlds and an explicit simulated checkout, without a no-ads promise', () => {
     const html = render('store');
-    for (const key of [
-      'store.sp',
-      'store.hints',
-      'store.noAds',
-      'store.bridges',
-      'store.backgrounds',
-      'store.themes',
-    ] as const)
-      expect(html).toContain(en[key]);
-    expect(html).toContain(en['store.unavailable']);
-    expect(html).toContain('role="tablist"');
-    expect(html).not.toMatch(/Buy now|Purchase now|\$\d|data-price|aria-valuenow/);
+    expect(html).toContain(en['vault.wilds']);
+    expect(html).toContain(en['vault.league']);
+    expect(html.match(/<article class="cpi-vault-world /g)).toHaveLength(2);
+    expect(html).toContain(en['vault.nextWorlds']);
+    expect(html).toContain(en['vault.test']);
+    expect(html).toContain(en['vault.testDetail']);
+    expect(html).toContain(en['vault.reserve']);
+    expect(html).toContain(en['vault.credits']);
+    expect(html).not.toContain(en['store.noAds']);
+    expect(html).toContain('aria-pressed="true"');
   });
 
   it('requires a modal to replace a saved run and has a distinct cancel action', () => {

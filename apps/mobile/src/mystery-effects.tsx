@@ -1,3 +1,5 @@
+import { useThemeId } from './store-context';
+import { WorldPowerGlyph } from './world-treasures';
 import type { MysteryFeedback } from './mystery-feedback';
 import { useEffect, useState } from 'react';
 import {
@@ -19,6 +21,13 @@ import './mystery-effects.css';
 import { HolographicOffer } from './mystery-box';
 
 export function EffectGlyph({ kind, burst = false }: { kind: EffectKind; burst?: boolean }) {
+  const theme = useThemeId();
+  if (theme !== 'obsidian')
+    return (
+      <span className="cpi-effect-glyph" data-effect={kind}>
+        <WorldPowerGlyph theme={theme} kind={kind} />
+      </span>
+    );
   let glyph;
   switch (kind) {
     case 'coyote_10s':
