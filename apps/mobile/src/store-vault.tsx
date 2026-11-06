@@ -1,4 +1,4 @@
-import { CLASSIC_STORE_RULESET_VERSION } from '@crystal-path-infinity/game-core';
+import { BUSINESS_STORE_RULESET_VERSION } from '@crystal-path-infinity/game-core';
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useLanguage } from './language-context';
@@ -87,13 +87,22 @@ function StoreDialog({
 
 type Dialog =
   { kind: 'theme'; theme: WorldId } | { kind: 'checkout'; id: string } | { kind: 'reset' } | null;
-export function StoreVault({ onTryTheme }: { onTryTheme?: (theme: ThemeId) => void }) {
+export function StoreVault({
+  onTryTheme,
+  initialFilter = 'worlds',
+  onReturnToRun,
+}: {
+  onTryTheme?: (theme: ThemeId) => void;
+  initialFilter?: 'worlds' | 'essentials';
+  onReturnToRun?: () => void;
+}) {
   const { t, number, locale } = useLanguage();
   const { store, snapshot, error } = useTestStore();
   const assistedBest =
-    store?.assistedBest(snapshot.checkpoint?.rulesetVersion ?? CLASSIC_STORE_RULESET_VERSION) ??
+    store?.assistedBest(snapshot.checkpoint?.rulesetVersion ?? BUSINESS_STORE_RULESET_VERSION) ??
     null;
-  const [filter, setFilter] = useState<'worlds' | 'essentials' | 'collection'>('worlds');
+  const [filter, setFilter] = useState<'worlds' | 'essentials' | 'collection'>(initialFilter);
+  const [allPacks, setAllPacks] = useState(false);
   const [resource, setResource] = useState<'credit' | 'sp' | 'hints'>('credit');
   const [family, setFamily] = useState<'all' | 'adventure' | 'sport' | 'pets'>('all');
   const [worldPage, setWorldPage] = useState(0);
@@ -343,7 +352,10 @@ export function StoreVault({ onTryTheme }: { onTryTheme?: (theme: ThemeId) => vo
                   type="button"
                   key={kind}
                   aria-pressed={resource === kind}
-                  onClick={() => setResource(kind)}
+                  onClick={() => {
+                    setResource(kind);
+                    setAllPacks(false);
+                  }}
                 >
                   <span aria-hidden="true">
                     {kind === 'credit' ? '↻' : kind === 'sp' ? '✦' : '◈'}
@@ -387,12 +399,18 @@ export function StoreVault({ onTryTheme }: { onTryTheme?: (theme: ThemeId) => vo
                   </div>
                 </header>
                 <div className="cpi-vault-packs">
-                  {STORE_PRODUCTS.filter((product) => product.kind === kind).map(
-                    (product, index, products) => (
+                  {STORE_PRODUCTS.filter((product) => product.kind === kind)
+                    .filter((_, index) => allPacks || index < 2)
+                    .map((product, index) => (
                       <article key={product.id} className={'cpi-vault-pack is-' + kind}>
                         <StorePackArt kind={kind} tier={index} />
-                        {index === products.length - 1 && (
-                          <span className="cpi-vault-pack-tag">{t('vault.bestValue')}</span>
+                        {product.id ===
+                          (kind === 'credit'
+                            ? 'test.credits.3'
+                            : kind === 'sp'
+                              ? 'test.sp.500'
+                              : 'test.hints.10') && (
+                          <span className="cpi-vault-pack-tag">{t('vault.recommended')}</span>
                         )}
                         <span className="cpi-vault-pack-number">
                           {number(product.quantity)}
@@ -417,9 +435,18 @@ export function StoreVault({ onTryTheme }: { onTryTheme?: (theme: ThemeId) => vo
                           <span aria-hidden="true">+</span>
                         </button>
                       </article>
-                    ),
-                  )}
+                    ))}
                 </div>
+                {STORE_PRODUCTS.filter((product) => product.kind === kind).length > 2 && (
+                  <button
+                    className="cpi-vault-more-packs"
+                    type="button"
+                    aria-expanded={allPacks}
+                    onClick={() => setAllPacks(!allPacks)}
+                  >
+                    {t(allPacks ? 'vault.fewerPacks' : 'vault.morePacks')}
+                  </button>
+                )}
                 <details className="cpi-vault-details">
                   <summary>{t('vault.howItWorks')}</summary>
                   <p>
@@ -438,6 +465,11 @@ export function StoreVault({ onTryTheme }: { onTryTheme?: (theme: ThemeId) => vo
           </>
         )}
         <footer className="cpi-vault-footer">
+          {onReturnToRun && (
+            <button className="cpi-vault-return" type="button" onClick={onReturnToRun}>
+              {t('vault.returnToRun')}
+            </button>
+          )}
           <p>{t('vault.testDetail')}</p>
           {assistedBest !== null && <p>{t('vault.localBest', { row: number(assistedBest) })}</p>}
           <button type="button" onClick={() => setDialog({ kind: 'reset' })}>

@@ -113,6 +113,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
     typeof window === 'undefined' ? 'home' : viewFromHash(window.location.hash),
   );
   const [confirmNew, setConfirmNew] = useState(false);
+  const [storeEntry, setStoreEntry] = useState<'worlds' | 'essentials'>('worlds');
   const confirmingRef = useRef(false);
   const backExitInFlight = useRef(false);
   const [exitRequest, setExitRequest] = useState(0);
@@ -255,6 +256,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
 
   const navigate = (next: MenuView) => {
     if (gameRef.current || confirmingRef.current || view === next) return;
+    if (next === 'store') setStoreEntry('worlds');
     window.history.pushState({ cpiNavigation: true }, '', viewHash(next));
     setView(next);
     setStorageWarning(null);
@@ -467,6 +469,10 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
           key={game.token}
           initialState={game.initial}
           onExit={() => closePractice()}
+          onStore={() => {
+            setStoreEntry('essentials');
+            closePractice('store');
+          }}
           onViewRankings={() => closePractice('rankings')}
           onExitCancelled={cancelGameExit}
           exitRequest={exitRequest}
@@ -504,6 +510,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
             window.history.pushState({ cpiNavigation: true }, '', '#practice-run');
           }}
           view={view}
+          storeEntry={storeEntry}
           saved={visibleSaved}
           best={best}
           online={online}

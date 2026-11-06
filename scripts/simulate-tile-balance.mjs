@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
-  CLASSIC_STORE_RULESET_VERSION, createPracticeCursor, createRun,
+  CLASSIC_STORE_RULESET_VERSION, BUSINESS_STORE_RULESET_VERSION, marketingSale, createPracticeCursor, createRun,
   PRACTICE_RNG, transitionRun, tileExperimentVersion,
 } from '../packages/game-core/src/index.ts';
 
@@ -30,7 +30,7 @@ export function chooseOffer(view, estimatedBreakRate) {
   switch(pact.kind) {
     case 'blood_oath': return 'accept';
     case 'false_oracle': return view.revealed ? 'decline' : 'accept';
-    case 'marketing': return hints>0?'sell_all':'decline';
+    case 'marketing': return (view.marketingHints??hints)>0?'sell_all':'decline';
     case 'half_life': return sp>=2 && sp<=30 && hints<2?'accept':'decline';
     case 'borrowed_time': return sp<25?'accept':'decline';
     case 'soul_exchange': return hints>0?'hint':'sp';
@@ -43,12 +43,12 @@ export function chooseOffer(view, estimatedBreakRate) {
   }
 }
 function viewOf(state) {
-  return {sp:state.sp,hints:state.hints,pact:state.pact,revealed:state.current.revealedSafeSide!==null||!!state.current.noSafeTile};
+  return {sp:state.sp,hints:state.hints,marketingHints:marketingSale(state).count,pact:state.pact,revealed:state.current.revealedSafeSide!==null||!!state.current.noSafeTile};
 }
 export function simulateRun(combination, mode, seed, horizonMs=600000, controls={}) {
   const {maxAdContinues=0,maxCreditContinues=0,reserveSp=0,adDurationMs=30000}=controls;
   if(!Number.isInteger(maxAdContinues)||maxAdContinues<0||maxAdContinues>10||!Number.isInteger(maxCreditContinues)||maxCreditContinues<0||maxCreditContinues+maxAdContinues>15||!Number.isInteger(reserveSp)||reserveSp<0||reserveSp>200||!Number.isFinite(adDurationMs)||adDurationMs<0)throw new Error('Invalid continuation controls.');
-  const version=combination.classic?CLASSIC_STORE_RULESET_VERSION:tileExperimentVersion(combination.high,combination.low,true);
+  const version=combination.classic?(controls.business?BUSINESS_STORE_RULESET_VERSION:CLASSIC_STORE_RULESET_VERSION):tileExperimentVersion(combination.high,combination.low,true,!!controls.business);
   const routeSeed=BigInt(seed)+0x71fa9b4d832e1471n;
   let state=createRun({runId:`practice-simulation-${seed}`,rulesetVersion:version,routeRng:createPracticeCursor(routeSeed),mysteryRng:createPracticeCursor(routeSeed^0x9e3779b97f4a7c15n),observedAt:0},PRACTICE_RNG);
   const random=coinSource(seed);

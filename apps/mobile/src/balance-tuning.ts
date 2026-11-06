@@ -1,6 +1,6 @@
 import {
-  CLASSIC_MYSTERY_RULESET_VERSION,
-  CLASSIC_STORE_RULESET_VERSION,
+  BUSINESS_RULESET_VERSION,
+  BUSINESS_STORE_RULESET_VERSION,
   tileExperimentVersion,
 } from '@crystal-path-infinity/game-core';
 import type { PracticeStorage } from './practice-save';
@@ -52,9 +52,9 @@ export function writeBalanceTuning(
 export function tuningRuleset(tuning: BalanceTuning, store: boolean): string {
   return tuning.mode === 'classic'
     ? store
-      ? CLASSIC_STORE_RULESET_VERSION
-      : CLASSIC_MYSTERY_RULESET_VERSION
-    : tileExperimentVersion(tuning.high, tuning.low, store);
+      ? BUSINESS_STORE_RULESET_VERSION
+      : BUSINESS_RULESET_VERSION
+    : tileExperimentVersion(tuning.high, tuning.low, store, true);
 }
 export function nextPracticeRuleset(store: boolean): string {
   if (import.meta.env.MODE === 'production' || typeof window === 'undefined')

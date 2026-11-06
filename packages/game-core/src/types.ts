@@ -192,6 +192,10 @@ export interface StoreTestRun {
   readonly creditContinues: number;
   readonly adContinues: number;
   readonly sequence: number;
+  /** Remaining purchased hints; present only on the business ruleset. */
+  readonly paidHints?: number;
+  /** Purchased-hint SP already counted in reserveSpent. */
+  readonly convertedHintSp?: number;
 }
 export interface RunResult {
   readonly storeTest?: StoreTestRun;

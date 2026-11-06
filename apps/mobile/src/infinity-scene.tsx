@@ -35,6 +35,7 @@ import {
   PRACTICE_RNG,
   presentRowPressure,
   HINT_SCAN_MS,
+  marketingSale,
 } from '@crystal-path-infinity/game-core';
 import type {
   RunEvent,
@@ -391,6 +392,7 @@ export function InfinitySceneView({
               <PactPanel
                 pact={state.pact}
                 hints={state.hints}
+                marketingHints={marketingSale(state).count}
                 revealed={state.current.revealedSafeSide !== null}
                 disabled={!interactive}
                 onChoose={(option) => onPact?.(option)}
@@ -433,6 +435,7 @@ export function InfinitySceneView({
             <PactPanel
               pact={state.pact}
               hints={state.hints}
+              marketingHints={marketingSale(state).count}
               revealed={state.current.revealedSafeSide !== null}
               disabled={!ready || busy || paused || !!error}
               onChoose={(option) => onPact?.(option)}
@@ -734,9 +737,9 @@ export function InfinitySceneView({
                     type="button"
                     data-cpi-overlay-primary
                     disabled={busy}
-                    onClick={onRequestEnd}
+                    onClick={outcome.phase === 'dead' ? onRestart : onRequestEnd}
                   >
-                    {t('general.endRun')}
+                    {t(outcome.phase === 'dead' ? 'vault.restartFree' : 'general.endRun')}
                   </button>
                   <button type="button" disabled={busy} onClick={onExit}>
                     {t(outcome.forfeitsGrant ? 'general.saveLeave' : 'game.returnMenu')}
@@ -831,6 +834,7 @@ function makeInitialRun(testEconomy = false): RunState {
 interface InfinityRunProps {
   trial?: boolean;
   onExit: () => void;
+  onStore?: () => void;
   onViewRankings: () => void;
   onExitCancelled: () => void;
   exitRequest: number;
@@ -843,6 +847,7 @@ interface InfinityRunProps {
 function InfinityRun({
   trial = false,
   onExit,
+  onStore,
   onViewRankings,
   onExitCancelled,
   exitRequest,
@@ -1143,48 +1148,52 @@ function InfinityRun({
       setError(reason instanceof Error ? reason.message : 'Clock is unavailable.');
     }
   }
-  const exit = useCallback(async () => {
-    if (exitLock.current) return;
-    if (commandLock.current) {
-      onExitCancelled();
-      return;
-    }
-    exitLock.current = true;
-    try {
-      const runtime = runtimeRef.current;
-      if (
-        (runtime?.getState().status ?? state.status) === 'playing' &&
-        !paused &&
-        !window.confirm(t('app.saveLeaveConfirm'))
-      ) {
+  const exit = useCallback(
+    async (destination: 'home' | 'store' = 'home') => {
+      if (exitLock.current) return;
+      if (commandLock.current) {
         onExitCancelled();
         return;
       }
-      if (runtime) {
-        try {
-          const latest = runtime.getState();
-          if (
-            latest.status === 'dead' &&
-            !latest.storeTest &&
-            latest.pendingReward === null &&
-            !latest.reviveReceipts.some((receipt) => receipt.status === 'granted')
-          ) {
-            // Leaving a declined death finalizes its result instead of advertising a dead Resume.
-            await runtime.bind({ type: 'end', forfeitGrantedReward: false })();
-          }
-          if (!paused) await runtime.hold('recovery');
-          onCheckpoint(runtime.getState());
-        } catch (cause) {
-          setError(cause instanceof Error ? cause.message : 'Unable to pause and save.');
+      exitLock.current = true;
+      try {
+        const runtime = runtimeRef.current;
+        if (
+          (runtime?.getState().status ?? state.status) === 'playing' &&
+          !paused &&
+          !window.confirm(t('app.saveLeaveConfirm'))
+        ) {
           onExitCancelled();
           return;
         }
+        if (runtime) {
+          try {
+            const latest = runtime.getState();
+            if (
+              latest.status === 'dead' &&
+              !latest.storeTest &&
+              latest.pendingReward === null &&
+              !latest.reviveReceipts.some((receipt) => receipt.status === 'granted')
+            ) {
+              // Leaving a declined death finalizes its result instead of advertising a dead Resume.
+              await runtime.bind({ type: 'end', forfeitGrantedReward: false })();
+            }
+            if (!paused) await runtime.hold('recovery');
+            onCheckpoint(runtime.getState());
+          } catch (cause) {
+            setError(cause instanceof Error ? cause.message : 'Unable to pause and save.');
+            onExitCancelled();
+            return;
+          }
+        }
+        if (destination === 'store' && onStore) onStore();
+        else onExit();
+      } finally {
+        exitLock.current = false;
       }
-      onExit();
-    } finally {
-      exitLock.current = false;
-    }
-  }, [state.status, paused, onCheckpoint, onExit, onExitCancelled, t]);
+    },
+    [state.status, paused, onCheckpoint, onExit, onStore, onExitCancelled, t],
+  );
 
   async function useResource(resource: TestResource, amount: number): Promise<boolean> {
     const runtime = runtimeRef.current;
@@ -1246,7 +1255,19 @@ function InfinityRun({
       trial={trial}
       resourcePanel={
         store && state.storeTest && !trial ? (
-          <RunReserves state={state} busy={busy} onUse={useResource} message={resourceMessage} />
+          <RunReserves
+            state={state}
+            busy={busy}
+            onUse={useResource}
+            message={resourceMessage}
+            onOpenStore={
+              onStore
+                ? () => {
+                    void exit('store');
+                  }
+                : undefined
+            }
+          />
         ) : undefined
       }
       state={state}
@@ -1306,7 +1327,13 @@ function InfinityRun({
       onExit={() => {
         void exit();
       }}
-      onRestart={onRestart}
+      onRestart={() => {
+        if (runtimeRef.current?.getState().status === 'dead') {
+          void issue({ type: 'end', forfeitGrantedReward: false }).then(() => {
+            if (runtimeRef.current?.getState().status === 'finished') onRestart();
+          });
+        } else onRestart();
+      }}
       onRetry={() => {
         void retry();
       }}
@@ -1320,6 +1347,7 @@ function InfinityRun({
 export function InfinityPractice({
   trialTheme,
   onExit,
+  onStore,
   onViewRankings,
   onExitCancelled,
   exitRequest = 0,
@@ -1330,6 +1358,7 @@ export function InfinityPractice({
 }: {
   trialTheme?: ThemeId;
   onExit: () => void;
+  onStore?: () => void;
   onViewRankings: () => void;
   onExitCancelled?: () => void;
   exitRequest?: number;
@@ -1354,6 +1383,7 @@ export function InfinityPractice({
         settings={settings}
         onSettingsChange={onSettingsChange}
         onExit={onExit}
+        onStore={onStore}
         onViewRankings={onViewRankings}
         onExitCancelled={onExitCancelled ?? (() => {})}
         exitRequest={exitRequest}

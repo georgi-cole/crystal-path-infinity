@@ -8,6 +8,7 @@ import {
   SURVIVAL_BONUS_SP,
 } from './pacing.ts';
 import { parseTileExperiment } from './tile-experiments.ts';
+import { changeHintBalance } from './business-economy.ts';
 import {
   assertDiscovery,
   discoverMystery,
@@ -44,6 +45,7 @@ import {
   getDeathClock,
   rebaseDeathPressure,
   deathClockPaid,
+  refreshDecisionWindow,
 } from './mystery-director.ts';
 import {
   assertRowStream,
@@ -81,6 +83,8 @@ import {
   usesDiscoveryRules,
   usesStoreTestRules,
   CHOICE_GRACE_MS,
+  usesBusinessRules,
+  assertSpAmount,
 } from './rules.ts';
 import type {
   BufferPolicy,
@@ -150,6 +154,7 @@ export function createRun(options: CreateRunOptions, rng: RandomSource): RunStat
             creditContinues: 0,
             adContinues: 0,
             sequence: 0,
+            ...(usesBusinessRules(rulesetVersion) ? { paidHints: 0, convertedHintSp: 0 } : {}),
           },
         }
       : {}),
@@ -239,6 +244,17 @@ export function assertRunState(state: RunState, rng?: RandomSource): void {
         (economy.reserveSpent > 0 || economy.hintsSpent > 0 || economy.creditContinues > 0)
     )
       throw new RangeError('Invalid test resource accounting.');
+    if (usesBusinessRules(state.rulesetVersion)) {
+      assertNonNegativeInteger(economy.paidHints!, 'Purchased hints');
+      assertNonNegativeInteger(economy.convertedHintSp!, 'Converted hint SP');
+      if (
+        economy.paidHints! > state.hints ||
+        economy.convertedHintSp! > economy.reserveSpent ||
+        economy.convertedHintSp! % 20 !== 0 ||
+        economy.paidHints! + economy.convertedHintSp! / 20 > economy.hintsSpent
+      )
+        throw new RangeError('Invalid purchased hint accounting.');
+    }
   } else if (state.storeTest !== undefined)
     throw new RangeError('Test resources are unavailable on this ruleset.');
   assertBuffer(state.buffer);
@@ -248,7 +264,6 @@ export function assertRunState(state: RunState, rng?: RandomSource): void {
   if (state.currentRow !== addDecimal(state.lastClearedRow))
     throw new RangeError('Inconsistent progress.');
   for (const [name, value] of Object.entries({
-    sp: state.sp,
     hints: state.hints,
     activeTimeMs: state.activeTimeMs,
     lastObservedAt: state.lastObservedAt,
@@ -258,6 +273,7 @@ export function assertRunState(state: RunState, rng?: RandomSource): void {
     revivesToReachScore: state.revivesToReachScore,
   }))
     assertNonNegativeInteger(value, name);
+  assertSpAmount(state.sp, 'SP', state.rulesetVersion);
   if (state.achievedAt !== null) {
     assertNonNegativeInteger(state.achievedAt, 'Score timestamp');
     if (state.achievedAt > state.lastObservedAt)
@@ -566,7 +582,13 @@ function settleTime(state: RunState, context: TransitionContext, events: RunEven
     let pressureLoss = 0;
     let paid = pressure?.paid ?? 0;
     if (pressure && clock && due > pressure.anchorAt) {
-      paid = deathClockPaid(pressure.anchorSp, pressure.anchorAt, clock.warningAt, due);
+      paid = deathClockPaid(
+        pressure.anchorSp,
+        pressure.anchorAt,
+        clock.warningAt,
+        due,
+        next.rulesetVersion,
+      );
       pressureLoss = paid - pressure.paid;
       if (due === clock.expiresAt) pressureLoss = Math.max(0, next.sp + delta);
     }
@@ -839,12 +861,16 @@ function testResourceTransition(
   next = {
     ...next,
     storeTest: {
+      ...economy,
       assisted: economy.assisted || resource !== 'ad',
       reserveSpent: economy.reserveSpent + (resource === 'sp' ? command.amount : 0),
       hintsSpent: economy.hintsSpent + (resource === 'hints' ? 1 : 0),
       creditContinues: economy.creditContinues + (resource === 'credit' ? 1 : 0),
       adContinues: economy.adContinues + (resource === 'ad' ? 1 : 0),
       sequence: command.sequence,
+      ...(usesBusinessRules(state.rulesetVersion)
+        ? { paidHints: economy.paidHints! + (resource === 'hints' ? 1 : 0) }
+        : {}),
     },
   };
   events.push({ ...eventTime(next), type: 'test-resource-used', resource, amount: command.amount });
@@ -920,19 +946,19 @@ export function transitionRun(
       if (next.hints === 0) return result(next, events, 'no-hints');
       const safeSide = hintSafeSide(getCurrentRow(next));
       if (safeSide === null) {
-        next = { ...next, current: { ...next.current, noSafeTile: true } };
+        next = refreshDecisionWindow({ ...next, current: { ...next.current, noSafeTile: true } });
         events.push({ ...eventTime(next), type: 'hint-unavailable', row: next.currentRow });
         return result(next, events);
       }
       next = {
-        ...next,
-        hints: next.hints - 1,
+        ...changeHintBalance(next, next.hints - 1),
         current: { ...next.current, revealedSafeSide: safeSide },
         ...([SCAN_RULESET_VERSION, STORE_TEST_RULESET_VERSION].includes(next.rulesetVersion) &&
         next.pacing
           ? { pacing: { ...next.pacing, hintScanStartedAt: next.activeTimeMs } }
           : {}),
       };
+      next = refreshDecisionWindow(next);
       events.push({ ...eventTime(next), type: 'hint-used', row: next.currentRow, safeSide });
       return result(next, events);
     }
@@ -963,7 +989,7 @@ export function transitionRun(
         hintDelta: hints - next.hints,
       });
       next = {
-        ...next,
+        ...changeHintBalance(next, hints),
         sp,
         hints,
         mysteryRng: draw.cursor,
@@ -980,7 +1006,7 @@ export function transitionRun(
       };
       if (directed)
         next = rebaseDeathPressure(recordMysteryOpen(next, kind, context.rng), beforeMysterySp);
-      next = discoverMystery(next, kind);
+      next = discoverMystery(refreshDecisionWindow(next), kind);
       return result(sp === 0 ? die(next, 'mystery', events) : next, events);
     }
     case 'pact': {
@@ -1016,6 +1042,16 @@ export function transitionRun(
         hintDelta: hints - next.hints,
         bank: change.pact?.bank ?? 0,
       });
+      next = changeHintBalance(next, hints, change.paidHintsSold);
+      if (change.paidHintsSold && next.storeTest && usesBusinessRules(next.rulesetVersion))
+        next = {
+          ...next,
+          storeTest: {
+            ...next.storeTest,
+            reserveSpent: next.storeTest.reserveSpent + change.paidHintsSold * 20,
+            convertedHintSp: next.storeTest.convertedHintSp! + change.paidHintsSold * 20,
+          },
+        };
       next = {
         ...next,
         sp,

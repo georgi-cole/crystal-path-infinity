@@ -337,6 +337,7 @@ export function PactPanel({
   sp = 100,
   rulesetVersion = RULESET_VERSION,
   activeTimeMs = 0,
+  marketingHints = hints,
 }: {
   pact: MysteryPact | null | undefined;
   hints: number;
@@ -346,6 +347,7 @@ export function PactPanel({
   sp?: number;
   rulesetVersion?: string;
   activeTimeMs?: number;
+  marketingHints?: number;
 }) {
   const { locale } = useLanguage();
   if (!pact) return null;
@@ -407,6 +409,7 @@ export function PactPanel({
         onChoose={onChoose}
         activeTimeMs={activeTimeMs}
         rulesetVersion={rulesetVersion}
+        marketingHints={marketingHints}
       />
     );
   const copy = effectCopy(locale, pact.kind, rulesetVersion);

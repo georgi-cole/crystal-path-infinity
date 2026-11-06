@@ -22,7 +22,7 @@ export const crystalGuideEn = {
     'Follow the light on the left. A hint shows the way; taking the step is still up to you.',
   'guide.pursuitTitle': 'Death hates to be kept waiting.',
   'guide.pursuitBody':
-    'Stay too long and the Death Clock starts draining your SP. Move before your light runs out.',
+    'The Death Clock gives you a moment to react, then drains SP faster and faster. A new hint or reward gives you time to read. Move before your light runs out.',
   'guide.survivalWhisper': 'Take a step to stop the drain.',
   'guide.temptationTitle': 'Curiosity has a price.',
   'guide.temptationBody':
@@ -78,7 +78,7 @@ export const crystalGuideBg = {
     'Последвай светлината вляво. Подсказката сочи пътя; стъпката все още е твоя.',
   'guide.pursuitTitle': 'Смъртта не обича да чака.',
   'guide.pursuitBody':
-    'Ако се забавиш, Death Clock започва да отнема SP. Направи стъпка, преди светлината ти да угасне.',
+    'Death Clock ти дава миг за реакция, после SP изтичат все по-бързо. Нова подсказка или награда ти дава време за прочитане. Стъпи, преди светлината ти да угасне.',
   'guide.survivalWhisper': 'Направи стъпка, за да спреш загубата на SP.',
   'guide.temptationTitle': 'Любопитството има цена.',
   'guide.temptationBody':

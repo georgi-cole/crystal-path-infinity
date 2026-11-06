@@ -64,3 +64,16 @@
   color: #b4e0d7;
   font-weight: 500;
 }
+.cpi-balance-focus {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.cpi-balance-focus button {
+  flex: 1 1 9rem;
+  cursor: pointer;
+}
+.cpi-balance-focus button[aria-pressed='true'] {
+  border-color: #b4e0d7;
+  background: #20302d;
+}

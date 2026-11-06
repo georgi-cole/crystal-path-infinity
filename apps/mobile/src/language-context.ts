@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react';
-import { localizeInteger, translate } from './i18n';
+import { localizeNumber, translate } from './i18n';
 import type { LocaleCode, LocaleChoice } from './i18n';
 import type { MessageKey, MessageParams } from './i18n/messages';
 
@@ -18,7 +18,7 @@ const fallback: LanguageContextValue = {
   setChoice: () => {},
   warning: false,
   t: (key, params) => translate('en', key, params),
-  number: (value) => localizeInteger(value, 'en'),
+  number: (value) => localizeNumber(value, 'en'),
 };
 
 export const LanguageContext = createContext<LanguageContextValue>(fallback);

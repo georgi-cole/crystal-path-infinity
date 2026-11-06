@@ -2,7 +2,7 @@ import { DiscoveryIntroduction } from './mystery-introduction';
 import { mysteryFeedbackFromEvents, runCuesFromEvents } from './mystery-feedback';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  DISCOVERY_RULESET_VERSION,
+  BUSINESS_RULESET_VERSION,
   getDeathClock,
   mysteryTier,
   MYSTERY_TIERS,
@@ -39,7 +39,7 @@ export function MysteryLab({
   availableKinds?: readonly EffectKind[];
 }) {
   const { locale } = useLanguage();
-  const version = DISCOVERY_RULESET_VERSION;
+  const version = BUSINESS_RULESET_VERSION;
   const [kind, setKind] = useState<EffectKind>(initialKind);
   const [startingSp, setStartingSp] = useState(100);
   const [spDraft, setSpDraft] = useState('100');

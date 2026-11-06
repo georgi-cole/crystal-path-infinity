@@ -200,6 +200,7 @@ function StatusPill({
 }
 
 export interface MainMenuProps {
+  storeEntry?: 'worlds' | 'essentials';
   onTryTheme?: (theme: ThemeId) => void;
   view: MenuView;
   saved: PracticeLoad;
@@ -432,6 +433,7 @@ export function ConfirmNewPractice({
 
 export function MainMenu({
   onTryTheme,
+  storeEntry = 'worlds',
   view,
   saved,
   best,
@@ -552,7 +554,11 @@ export function MainMenu({
             reducedMotion={settings.reducedMotion}
           />
         ) : view === 'store' ? (
-          <StoreVault onTryTheme={onTryTheme} />
+          <StoreVault
+            onTryTheme={onTryTheme}
+            initialFilter={storeEntry}
+            onReturnToRun={canResumePractice(saved) ? onResume : undefined}
+          />
         ) : view === 'play' ? (
           <MenuPanel title={t('general.play')} eyebrow={t('menu.playEyebrow')}>
             {rankedClient ? (

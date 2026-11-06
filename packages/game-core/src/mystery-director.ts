@@ -7,6 +7,8 @@ import {
   CHOICE_GRACE_MS,
   IDLE_WARNING_MS,
   DEATH_COUNTDOWN_MS,
+  usesBusinessRules,
+  assertSpAmount,
 } from './rules.ts';
 import { isPactKind } from './pacts.ts';
 import type { EffectKind, MysteryTier, RandomSource, RunState } from './types.ts';
@@ -185,7 +187,23 @@ export function rebaseDeathPressure(state: RunState, previousSp: number): RunSta
   };
 }
 
-export function getDeathClock(state: RunState): { warningAt: number; expiresAt: number } | null {
+/** A newly accepted hint or box gets a fresh reading window, once per action. */
+export function refreshDecisionWindow(state: RunState): RunState {
+  return usesBusinessRules(state.rulesetVersion) && state.mysteryDirector
+    ? {
+        ...state,
+        mysteryDirector: {
+          ...state.mysteryDirector,
+          lastStepAt: state.activeTimeMs,
+          pressure: undefined,
+        },
+      }
+    : state;
+}
+
+export function getDeathClock(
+  state: RunState,
+): { warningAt: number; expiresAt: number; firstLossAt?: number } | null {
   if (!usesMysteryDirectorRules(state.rulesetVersion) || state.status !== 'playing') return null;
   const warningAt =
     state.pact?.phase === 'offered'
@@ -198,6 +216,7 @@ export function getDeathClock(state: RunState): { warningAt: number; expiresAt: 
   return {
     warningAt,
     expiresAt: addSafeInteger(warningAt, DEATH_COUNTDOWN_MS, 'Death clock expiry'),
+    ...(usesBusinessRules(state.rulesetVersion) ? { firstLossAt: warningAt + 3000 } : {}),
   };
 }
 
@@ -208,7 +227,29 @@ export function deathClockPaid(
   anchorAt: number,
   warningAt: number,
   now: number,
+  version?: string,
 ): number {
+  if (version && usesBusinessRules(version)) {
+    // First loss is half a point at three clock seconds. The remaining budget
+    // follows the same accelerating curve over the final seven seconds.
+    const first = warningAt + 3000;
+    if (now < first) return 0;
+    const units = BigInt(anchorSp * 2);
+    const duration = 7000n;
+    const polynomial = (at: number) => {
+      const t = BigInt(Math.max(0, Math.min(7000, at - first)));
+      return 3n * t * t * duration + 2n * t * t * t;
+    };
+    const end = 5n * duration * duration * duration;
+    if (anchorAt < first) {
+      const initial = units > 0n ? 1n : 0n;
+      return Number(initial + ((units - initial) * polynomial(now)) / end) / 2;
+    }
+    const start = polynomial(anchorAt);
+    return end <= start
+      ? anchorSp
+      : Number((units * (polynomial(now) - start)) / (end - start)) / 2;
+  }
   const duration = BigInt(DEATH_COUNTDOWN_MS);
   const polynomial = (at: number) => {
     const t = BigInt(Math.max(0, Math.min(DEATH_COUNTDOWN_MS, at - warningAt)));
@@ -239,8 +280,8 @@ export function assertMysteryDirector(state: RunState): void {
   if (d.lastStepAt > state.activeTimeMs) throw new RangeError('Last step in future.');
   if (d.pressure) {
     assertNonNegativeInteger(d.pressure.anchorAt, 'Pressure anchor');
-    assertNonNegativeInteger(d.pressure.anchorSp, 'Pressure budget');
-    assertNonNegativeInteger(d.pressure.paid, 'Pressure paid');
+    assertSpAmount(d.pressure.anchorSp, 'Pressure budget', state.rulesetVersion);
+    assertSpAmount(d.pressure.paid, 'Pressure paid', state.rulesetVersion);
     if (d.pressure.anchorAt > state.activeTimeMs || d.pressure.paid > d.pressure.anchorSp)
       throw new RangeError('Invalid death clock pressure.');
   }

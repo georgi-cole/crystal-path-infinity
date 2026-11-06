@@ -56,7 +56,10 @@ describe('automatic guide/rules synchronization', () => {
       { type: 'tick' },
       time(GUIDE_PACING.grace + GUIDE_PACING.countdown / 2),
     );
-    expect(midpoint.state.sp).toBe(GUIDE_RULES.startingSp * 0.8);
+    const firstLoss = transitionRun(run, { type: 'tick' }, time(GUIDE_PACING.grace + 3000));
+    expect(firstLoss.state.sp).toBe(GUIDE_RULES.startingSp - 0.5);
+    expect(midpoint.state.sp).toBeLessThan(firstLoss.state.sp);
+    expect(midpoint.state.sp).toBeGreaterThan(GUIDE_RULES.startingSp * 0.8);
     const fatal = transitionRun(
       run,
       { type: 'tick' },

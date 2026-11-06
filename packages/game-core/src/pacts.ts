@@ -1,4 +1,5 @@
 import { drawRandom } from './random.ts';
+import { marketingSale } from './business-economy.ts';
 import { usesBalanceRules, supportsPacts } from './rules.ts';
 import type {
   EffectKind,
@@ -90,6 +91,7 @@ export function assertPact(state: RunState): void {
 }
 
 export interface PactResolution {
+  readonly paidHintsSold?: number;
   readonly pact: MysteryPact | null;
   readonly spDelta: number;
   readonly hintDelta: number;
@@ -140,9 +142,10 @@ export function choosePact(
   }
   if (pact.kind === 'marketing') {
     if (option === 'decline') return result(0, 0, null, 'declined');
-    if (!['sell_one', 'sell_all'].includes(option) || state.hints < 1) return null;
-    const count = option === 'sell_one' ? 1 : state.hints;
-    return result(count * MARKET_SP_PER_HINT, -count, null, 'traded');
+    if ((option !== 'sell_one' && option !== 'sell_all') || state.hints < 1) return null;
+    const sale = marketingSale(state, option);
+    if (sale.count < 1) return null;
+    return { ...result(sale.sp, -sale.count, null, 'traded'), paidHintsSold: sale.paidCount };
   }
   if (pact.kind === 'soul_exchange') {
     if (option !== 'sp' && option !== 'hint') return null;

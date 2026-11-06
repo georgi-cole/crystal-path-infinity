@@ -83,6 +83,7 @@ export function HolographicOffer({
   onChoose,
   activeTimeMs,
   rulesetVersion,
+  marketingHints = hints,
 }: {
   pact: MysteryPact;
   sp: number;
@@ -92,12 +93,13 @@ export function HolographicOffer({
   onChoose: (option: PactOption) => void;
   activeTimeMs: number;
   rulesetVersion: string;
+  marketingHints?: number;
 }) {
   const { locale } = useLanguage();
   const bg = locale === 'bg',
     tier = mysteryTier(pact.kind),
     copy = effectCopy(locale, pact.kind, rulesetVersion);
-  const cards = mysteryChoiceCards(pact, sp, hints, revealed, bg);
+  const cards = mysteryChoiceCards(pact, sp, hints, revealed, bg, marketingHints);
   const primary = cards.slice(0, 2),
     extra = cards.slice(2);
   const [showDetails, setShowDetails] = useState(false);
@@ -203,6 +205,13 @@ export function HolographicOffer({
       {showDetails && (
         <div className="cpi-relic-details" id={detailsId}>
           <p>{copy.detail}</p>
+          {pact.kind === 'marketing' && marketingHints < hints && (
+            <p>
+              {bg
+                ? 'Резервните подсказки споделят лимита за SP в този опит. Останалите можеш да използваш по пътя.'
+                : 'Reserve hints share this run’s SP allowance. You can still use the remaining hints on the bridge.'}
+            </p>
+          )}
           {cards
             .filter((card) => !card.quiet)
             .map((card) => (
@@ -291,7 +300,7 @@ export function DeathClockBadge({
   activeTimeMs,
   offered = false,
 }: {
-  clock: { warningAt: number; expiresAt: number } | null | undefined;
+  clock: { warningAt: number; expiresAt: number; firstLossAt?: number } | null | undefined;
   activeTimeMs: number;
   offered?: boolean;
 }) {
@@ -301,7 +310,15 @@ export function DeathClockBadge({
   return (
     <div className={'cpi-idle-pressure' + (active ? ' is-active' : '')} role="timer">
       <span>
-        {active ? 'Death clock · SP ↓' : locale === 'bg' ? 'Следваща стъпка' : 'Next step'}
+        {active
+          ? clock.firstLossAt && activeTimeMs < clock.firstLossAt
+            ? locale === 'bg'
+              ? 'Death clock · избери плочка'
+              : 'Death clock · choose a tile'
+            : 'Death clock · SP ↓'
+          : locale === 'bg'
+            ? 'Следваща стъпка'
+            : 'Next step'}
       </span>
       <b>
         {Math.max(

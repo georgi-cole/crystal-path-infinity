@@ -47,6 +47,31 @@ export function BalanceTuner() {
           ? 'Прилага се само към следващия New crossing. Текущият и запазеният опит запазват правилата си.'
           : 'Applies to the next New crossing. Current and saved crossings keep their rules.'}
       </p>
+      <div
+        className="cpi-balance-focus"
+        aria-label={bg ? 'Основно сравнение' : 'Primary comparison'}
+      >
+        <button
+          type="button"
+          aria-pressed={active.mode === 'classic'}
+          onClick={() => {
+            setCustom(false);
+            apply(DEFAULT_BALANCE_TUNING);
+          }}
+        >
+          {bg ? 'A · Оригинал 50/50' : 'A · Original 50/50'}
+        </button>
+        <button
+          type="button"
+          aria-pressed={active.mode === 'independent' && active.high === 80 && active.low === 1}
+          onClick={() => {
+            setCustom(false);
+            apply({ mode: 'independent', high: 80, low: 1 });
+          }}
+        >
+          B · 80% / 1%
+        </button>
+      </div>
       <label>
         {bg ? 'Комбинация' : 'Combination'}
         <select

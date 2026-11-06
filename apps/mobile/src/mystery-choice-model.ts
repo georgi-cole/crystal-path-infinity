@@ -18,6 +18,7 @@ export function mysteryChoiceCards(
   hints: number,
   revealed: boolean,
   bg: boolean,
+  marketingHints = hints,
 ): MysteryChoiceCard[] {
   const stats = (s: number, h: number) =>
     `${Math.max(0, s)} SP · ${Math.max(0, h)} ${bg ? (h === 1 ? 'подсказка' : 'подсказки') : h === 1 ? 'hint' : 'hints'}`;
@@ -38,9 +39,9 @@ export function mysteryChoiceCards(
           title: bg ? 'Дай половината' : 'Trade half',
           price: `−${Math.ceil(sp / 2)} SP`,
           reward: bg ? '+5 подсказки' : '+5 hints',
-          risk: bg ? `Остават ${Math.floor(sp / 2)} SP` : `${Math.floor(sp / 2)} SP left`,
+          risk: bg ? `Остават ${sp - Math.ceil(sp / 2)} SP` : `${sp - Math.ceil(sp / 2)} SP left`,
           glyph: 'life',
-          lines: [stats(Math.floor(sp / 2), hints + 5)],
+          lines: [stats(sp - Math.ceil(sp / 2), hints + 5)],
           disabled: sp < 2,
         },
         leave(),
@@ -54,18 +55,32 @@ export function mysteryChoiceCards(
           reward: '+20 SP',
           glyph: 'hint',
           lines: [stats(sp + 20, hints - 1)],
-          disabled: hints < 1,
+          disabled: marketingHints < 1,
         },
-        ...(hints > 1
+        ...(marketingHints > 1
           ? [
               {
                 option: 'sell_all' as const,
-                title: bg ? 'Продай всички' : 'Sell all hints',
-                price: `−${hints} ◈`,
-                reward: `+${hints * 20} SP`,
-                risk: bg ? 'Оставаш без подсказки' : 'No hints left',
+                title:
+                  marketingHints === hints
+                    ? bg
+                      ? 'Продай всички'
+                      : 'Sell all hints'
+                    : bg
+                      ? `Продай ${marketingHints}`
+                      : `Sell ${marketingHints} hints`,
+                price: `−${marketingHints} ◈`,
+                reward: `+${marketingHints * 20} SP`,
+                risk:
+                  marketingHints === hints
+                    ? bg
+                      ? 'Оставаш без подсказки'
+                      : 'No hints left'
+                    : bg
+                      ? 'Останалите остават за пътя'
+                      : 'Keep the rest for the bridge',
                 glyph: 'hint' as const,
-                lines: [stats(sp + hints * 20, 0)],
+                lines: [stats(sp + marketingHints * 20, hints - marketingHints)],
               },
             ]
           : []),

@@ -1,4 +1,11 @@
 export const storeEn = {
+  'vault.recommended': 'A good place to start',
+  'vault.morePacks': 'More packs',
+  'vault.fewerPacks': 'Show small packs',
+  'vault.shopCredits': 'Get credits · skip the ad',
+  'vault.keepHints': 'The remaining hints stay available on the bridge.',
+  'vault.restartFree': 'Start again · free',
+  'vault.returnToRun': 'Return to your crossing',
   'vault.petPaused': 'A rooftop breather',
   'vault.petPausedDetail': 'The route is waiting. Your little friend is taking a breather.',
   'vault.petPractice':
@@ -192,6 +199,13 @@ export const storeEn = {
 } as const;
 
 export const storeBg: Record<keyof typeof storeEn, string> = {
+  'vault.recommended': 'Добро начало',
+  'vault.morePacks': 'Още пакети',
+  'vault.fewerPacks': 'Покажи малките пакети',
+  'vault.shopCredits': 'Вземи кредити · без реклама',
+  'vault.keepHints': 'Останалите подсказки са достъпни по пътя.',
+  'vault.restartFree': 'Нов опит · безплатно',
+  'vault.returnToRun': 'Обратно към твоя опит',
   'vault.petPaused': 'Почивка на покрива',
   'vault.petPausedDetail': 'Маршрутът ще почака. Малкият ти приятел си поема дъх.',
   'vault.petPractice':

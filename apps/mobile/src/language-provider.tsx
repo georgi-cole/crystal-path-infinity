@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import {
   LOCALES,
   languageDirection,
-  localizeInteger,
+  localizeNumber,
   readLanguageChoice,
   resolveLocale,
   translate,
@@ -59,7 +59,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     [locale],
   );
   const number = useCallback(
-    (value: string | number | null) => localizeInteger(value, locale),
+    (value: string | number | null) => localizeNumber(value, locale),
     [locale],
   );
 

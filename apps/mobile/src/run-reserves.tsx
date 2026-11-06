@@ -9,11 +9,13 @@ export function RunReserves({
   busy,
   onUse,
   message,
+  onOpenStore,
 }: {
   state: RunState;
   busy: boolean;
   onUse: (resource: TestResource, amount: number) => Promise<boolean>;
   message: string;
+  onOpenStore?: () => void;
 }) {
   const { t, number } = useLanguage();
   const { snapshot, error } = useTestStore();
@@ -89,6 +91,11 @@ export function RunReserves({
                     onClick={() => request('credit', 1, t('vault.useCredit', { sp: number(sp) }))}
                   >
                     {t('vault.useCredit', { sp: number(sp) })}
+                  </button>
+                )}
+                {snapshot.credits === 0 && onOpenStore && (
+                  <button type="button" disabled={busy || !!error} onClick={onOpenStore}>
+                    {t('vault.shopCredits')}
                   </button>
                 )}
                 {state.revivesApplied < 10 && (
