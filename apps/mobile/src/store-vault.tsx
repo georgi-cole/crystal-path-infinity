@@ -136,6 +136,7 @@ export function StoreVault({ onTryTheme }: { onTryTheme?: (theme: ThemeId) => vo
     );
   const pages = Math.max(1, Math.ceil(themeProducts.length / 2));
   const page = Math.min(worldPage, pages - 1);
+  const visibleWorlds = themeProducts.slice(page * 2, page * 2 + 2);
   const checkout =
     dialog?.kind === 'checkout' && snapshot.pending?.id === dialog.id ? snapshot.pending : null;
   const checkoutProduct = checkout ? storeProduct(checkout.productId) : null;
@@ -241,7 +242,9 @@ export function StoreVault({ onTryTheme }: { onTryTheme?: (theme: ThemeId) => vo
           </nav>
         )}
         {filter !== 'essentials' && (
-          <div className="cpi-vault-worlds">
+          <div
+            className={'cpi-vault-worlds' + (visibleWorlds.length === 1 ? ' has-one-world' : '')}
+          >
             {filter === 'collection' && (
               <article className="cpi-vault-original">
                 <div>
@@ -258,7 +261,7 @@ export function StoreVault({ onTryTheme }: { onTryTheme?: (theme: ThemeId) => vo
                 </button>
               </article>
             )}
-            {themeProducts.slice(page * 2, page * 2 + 2).map((product) => {
+            {visibleWorlds.map((product) => {
               const theme = product.theme!;
               const owned = snapshot.owned.includes(theme);
               return (

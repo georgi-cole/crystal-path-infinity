@@ -203,6 +203,24 @@
   aspect-ratio: 2.3;
   overflow: hidden;
 }
+.cpi-vault-worlds.has-one-world > .cpi-vault-world {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+}
+.cpi-vault-worlds.has-one-world .cpi-vault-world-picture {
+  aspect-ratio: auto;
+  min-height: 13rem;
+}
+.cpi-vault-worlds.has-one-world .cpi-world-poster-companion {
+  width: 65%;
+  max-width: 11rem;
+  bottom: 5%;
+  right: 8%;
+}
+.cpi-vault-worlds.has-one-world .cpi-vault-world-copy {
+  align-self: center;
+}
 .cpi-vault-world-tag {
   position: absolute;
   top: 0.65rem;
