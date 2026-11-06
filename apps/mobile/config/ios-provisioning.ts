@@ -5,7 +5,7 @@
  */
 export const iosProvisioningBudgetsMs = {
   coldBoot: 900_000,
-  shutdown: 60_000,
+  shutdown: 180_000,
   warmBoot: 180_000,
   systemLaunch: 180_000,
   systemTerminate: 60_000,

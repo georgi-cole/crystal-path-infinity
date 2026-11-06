@@ -861,17 +861,17 @@ async function android() {
 }
 
 async function ios() {
-  // Use the explicit iOS 26.2 CI baseline on the compatible Sequoia host.
+  // Use the explicit iOS 26.5 runtime and drain logs during OS control commands.
   // Bound OS provisioning separately from the unchanged app/lifecycle checks.
   const provisioningBudgetsMs = iosProvisioningBudgetsMs;
   const available = JSON.parse(text('xcrun', ['simctl', 'list', '--json', 'devices', 'available']));
   save('ios-simulators.json', JSON.stringify(available, null, 2));
   const runtimes = JSON.parse(text('xcrun', ['simctl', 'list', '--json', 'runtimes']));
   save('ios-runtimes.json', JSON.stringify(runtimes, null, 2));
-  const runtime = 'com.apple.CoreSimulator.SimRuntime.iOS-26-2';
+  const runtime = 'com.apple.CoreSimulator.SimRuntime.iOS-26-5';
   assert.ok(
     runtimes.runtimes.some((item) => item.identifier === runtime && item.isAvailable),
-    'The Xcode 26.3 smoke requires the installed iOS 26.2 runtime',
+    'The Xcode 26.6 smoke requires the installed iOS 26.5 runtime',
   );
   const types = JSON.parse(text('xcrun', ['simctl', 'list', '--json', 'devicetypes']));
   save('ios-device-types.json', JSON.stringify(types, null, 2));
@@ -897,6 +897,13 @@ async function ios() {
     'ios-host-pressure.log',
   );
   save('ios-simctl-launch-help.txt', text('xcrun', ['simctl', 'help', 'launch']));
+  // Keep the event loop draining attached native logs while launch services run.
+  // spawnSync can block that pipe during a foreground/background transition.
+  async function control(commandArgs, file, timeout = 60_000) {
+    await runLogged('xcrun', commandArgs, file, timeout);
+    return readFileSync(join(evidenceRoot, file), 'utf8').trim();
+  }
+
   save(
     'ios-smoke-device.json',
     JSON.stringify(
@@ -913,7 +920,7 @@ async function ios() {
   );
   try {
     console.log(
-      `Booting fresh ${device.name} / iOS 26.2 simulator (budget ${provisioningBudgetsMs.coldBoot / 1000}s); progress is recorded in ios-boot.log`,
+      `Booting fresh ${device.name} / iOS 26.5 simulator (budget ${provisioningBudgetsMs.coldBoot / 1000}s); progress is recorded in ios-boot.log`,
     );
     await prepareIosSimulator(async (step, timeout) => {
       console.log(`iOS provisioning: ${step} (budget ${timeout / 1000}s)`);
@@ -931,32 +938,36 @@ async function ios() {
         // The continuous host-pressure capture already records processes/memory.
         // Reset promptly: synchronous diagnostics can hang on migration's busy
         // services and prevent this required cleanup from running at all.
-        return text('xcrun', ['simctl', 'shutdown', udid], { timeout });
+        return control(['simctl', 'shutdown', udid], 'ios-migration-shutdown.log', timeout);
       }
       if (step === 'system-launch') {
-        const output = text('xcrun', ['simctl', 'launch', udid, 'com.apple.Preferences'], {
+        const output = await control(
+          ['simctl', 'launch', udid, 'com.apple.Preferences'],
+          'ios-launchservice-control.txt',
           timeout,
-        });
+        );
         save('ios-launchservice-control.txt', output + '\n');
         recordLifecycleAction('ios-system-app-launch-confirmed');
         return output;
       }
-      const output = text('xcrun', ['simctl', 'terminate', udid, 'com.apple.Preferences'], {
+      const output = await control(
+        ['simctl', 'terminate', udid, 'com.apple.Preferences'],
+        'ios-launchservice-terminate.txt',
         timeout,
-      });
+      );
       recordLifecycleAction('ios-system-app-terminated');
       return output;
     });
     // Install only after post-migration services pass the control round trip.
-    text(
-      'xcrun',
+    await control(
       [
         'simctl',
         'install',
         udid,
         join(appRoot, 'build/ios/Build/Products/Debug-iphonesimulator/App.app'),
       ],
-      { timeout: provisioningBudgetsMs.install },
+      'ios-install.log',
+      provisioningBudgetsMs.install,
     );
     for (attempt = 1; attempt <= iosColdStarts; attempt += 1) {
       boundary = undefined;
@@ -993,7 +1004,11 @@ async function ios() {
           'iOS page ran before the native interruption',
         );
         recordLifecycleAction('prebridge-background-via-settings');
-        text('xcrun', ['simctl', 'launch', udid, 'com.apple.Preferences']);
+        await control(
+          ['simctl', 'launch', udid, 'com.apple.Preferences'],
+          `ios-attempt-${attempt}-prebridge-settings.txt`,
+          provisioningBudgetsMs.systemLaunch,
+        );
         await waitFor('iOS real background before page creation', 30_000, () =>
           readAnalysis().prebridgeGates.some((gate) => gate.stage === 'paused'),
         );
@@ -1003,7 +1018,10 @@ async function ios() {
           'iOS prebridge background unexpectedly initialized a page',
         );
         recordLifecycleAction('prebridge-native-pause-observed');
-        text('xcrun', ['simctl', 'launch', udid, buildInfo.appId]);
+        await control(
+          ['simctl', 'launch', udid, buildInfo.appId],
+          `ios-attempt-${attempt}-prebridge-resume.txt`,
+        );
       }
       await waitFor('iOS React, page-load, and native bridge readiness', 120_000, () => {
         assertRunning(child, 'simctl attached launch');
@@ -1015,7 +1033,11 @@ async function ios() {
       recordLifecycleAction('background-via-settings', { boundary });
       save(
         'ios-background-launch.txt',
-        text('xcrun', ['simctl', 'launch', udid, 'com.apple.Preferences']),
+        await control(
+          ['simctl', 'launch', udid, 'com.apple.Preferences'],
+          `ios-attempt-${attempt}-background.txt`,
+          provisioningBudgetsMs.systemLaunch,
+        ),
       );
       await waitFor('iOS document pause after opening Settings', 30_000, () => {
         assertRunning(child, 'simctl attached launch');
@@ -1028,20 +1050,32 @@ async function ios() {
       });
       recordLifecycleAction('document-pause-observed');
       recordLifecycleAction('resume-existing-app');
-      save('ios-resume.txt', text('xcrun', ['simctl', 'launch', udid, buildInfo.appId]));
+      save(
+        'ios-resume.txt',
+        await control(
+          ['simctl', 'launch', udid, buildInfo.appId],
+          `ios-attempt-${attempt}-resume.txt`,
+        ),
+      );
       await waitFor('iOS bridge round-trip after app background/resume', 30_000, () => {
         assertRunning(child, 'simctl attached launch');
         return hasResumeEvidence(boundary);
       });
       assertRunning(child, 'simctl attached launch');
       const screenshot = join(evidenceRoot, 'ios-launch.png');
-      text('xcrun', ['simctl', 'io', udid, 'screenshot', screenshot]);
+      await control(
+        ['simctl', 'io', udid, 'screenshot', screenshot],
+        `ios-attempt-${attempt}-screenshot.log`,
+      );
       assertPng(screenshot);
       recordLifecycleAction('observation-complete');
       observationComplete = true;
       saveAttempt(boundary, true);
       recordLifecycleAction('terminate-for-process-webview-recreation');
-      text('xcrun', ['simctl', 'terminate', udid, buildInfo.appId]);
+      await control(
+        ['simctl', 'terminate', udid, buildInfo.appId],
+        `ios-attempt-${attempt}-terminate.txt`,
+      );
       await stopLog(child);
       saveAttempt(boundary, true);
     }
