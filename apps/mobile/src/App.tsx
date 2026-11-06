@@ -117,7 +117,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
   const [bootError, setBootError] = useState('');
   const [bootAttempt, setBootAttempt] = useState(0);
   const [view, setView] = useState<MenuView>(() =>
-    typeof window === 'undefined' ? 'home' : viewFromHash(window.location.hash),
+    typeof window === 'undefined' ? 'home' : viewFromHash(window.location.hash, QA_TOOLS_ENABLED),
   );
   const [confirmNew, setConfirmNew] = useState(false);
   const [storeEntry, setStoreEntry] = useState<'worlds' | 'essentials'>('worlds');
@@ -234,7 +234,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
         confirmingRef.current = false;
         setConfirmNew(false);
       }
-      setView(viewFromHash(window.location.hash));
+      setView(viewFromHash(window.location.hash, QA_TOOLS_ENABLED));
     };
     window.addEventListener('online', onConnection);
     window.addEventListener('offline', onConnection);

@@ -164,6 +164,10 @@ describe('CPI-013 standalone menu and route model', () => {
     expect(render('tutorial')).toContain(en['guide.footingTitle']);
     expect(viewFromHash('#practice-run')).toBe('practice');
     expect(viewFromHash('#new-practice')).toBe('practice');
+    for (const hash of ['#practice', '#practice-run', '#new-practice']) {
+      expect(viewFromHash(hash, false)).toBe('home');
+      expect(viewFromHash(hash, true)).toBe('practice');
+    }
     expect(viewFromHash('#unknown-route')).toBe('home');
     expect(viewFromHash('javascript:alert(1)')).toBe('home');
     expect(historyFlag(null, 'cpiNavigation')).toBe(false);

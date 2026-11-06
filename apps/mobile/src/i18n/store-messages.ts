@@ -3,8 +3,6 @@ export const storeEn = {
   'vault.continuationUnavailable':
     'No continuation is available right now. Start a new crossing for free.',
   'vault.unequip': 'Unequip',
-  'vault.useObsidian': 'Use Black Obsidian',
-  'vault.defaultWorld': 'Your original world is always available.',
   'vault.purchasesUnavailable':
     'Purchases are unavailable right now. You can still explore every world.',
   'vault.unavailable': 'Unavailable',
@@ -213,8 +211,6 @@ export const storeBg: Record<keyof typeof storeEn, string> = {
   'vault.continuationUnavailable':
     'В момента няма достъпно продължаване. Започни нов опит безплатно.',
   'vault.unequip': 'Свали света',
-  'vault.useObsidian': 'Използвай Black Obsidian',
-  'vault.defaultWorld': 'Първоначалният свят е винаги достъпен.',
   'vault.purchasesUnavailable':
     'Покупките в момента не са достъпни. Можеш да разгледаш всеки свят.',
   'vault.unavailable': 'Недостъпно',

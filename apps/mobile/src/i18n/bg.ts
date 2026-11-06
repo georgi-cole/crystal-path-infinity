@@ -1,10 +1,12 @@
 import { storeBg } from './store-messages';
+import { supportBg } from './support-messages';
 import type { MessageKey } from './messages';
 import { crystalGuideBg } from './crystal-guide-messages';
 
 /** Bulgarian preview copy — reviewed by the product owner before public release. */
 export const bg = {
   ...storeBg,
+  ...supportBg,
   ...crystalGuideBg,
   'game.stabilityShort': 'Стабилност',
   'game.runDetails': 'Детайли за опита',

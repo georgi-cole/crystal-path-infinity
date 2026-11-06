@@ -36,6 +36,7 @@
   font-size: 1rem;
 }
 .cpi-language-select:focus-visible,
+.cpi-support-contact:focus-visible,
 .cpi-settings-section button:focus-visible {
   outline: 3px solid var(--cpi-focus);
   outline-offset: 3px;
@@ -46,6 +47,19 @@
 }
 .cpi-settings-section .cpi-menu-fine-print {
   max-width: 100%;
+}
+.cpi-support-contact {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 2.75rem;
+  padding: 0.65rem 0.85rem;
+  text-decoration: none;
+}
+.cpi-support-address {
+  overflow-wrap: anywhere;
+  user-select: text;
 }
 @media (max-width: 350px) {
   .cpi-settings-section {

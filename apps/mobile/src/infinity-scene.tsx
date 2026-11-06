@@ -782,7 +782,7 @@ export function InfinitySceneView({
                 <div className="cpi-overlay-actions">
                   {onMysteryJournal && (
                     <button type="button" disabled={busy} onClick={onMysteryJournal}>
-                      {locale === 'bg' ? 'Открити мистерии' : 'Discovered mysteries'}
+                      {t('guide.journalTab')}
                     </button>
                   )}
                   {onMysteryLab && (

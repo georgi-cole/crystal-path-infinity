@@ -1,5 +1,8 @@
 /** Short field notes. Mechanical numbers come from the live rehearsal, not prose. */
 export const crystalGuideEn = {
+  'guide.reference': 'How to play and your discoveries',
+  'guide.learnTab': 'How to play',
+  'guide.journalTab': 'Discoveries',
   'guide.eyebrow': 'READ THE CRYSTAL',
   'guide.rehearsal': 'REHEARSAL',
   'guide.chapters': 'Before you cross',
@@ -56,6 +59,9 @@ export const crystalGuideEn = {
 } as const;
 
 export const crystalGuideBg = {
+  'guide.reference': 'Как се играе и твоите находки',
+  'guide.learnTab': 'Как се играе',
+  'guide.journalTab': 'Открития',
   'guide.eyebrow': 'РАЗЧЕТИ КРИСТАЛА',
   'guide.rehearsal': 'РЕПЕТИЦИЯ',
   'guide.chapters': 'Преди да прекрачиш',

@@ -449,7 +449,7 @@ describe('mystery feedback, practice chamber and public contracts', () => {
       createElement(MysteryEffects, { effects: state.effects, activeTimeMs: 0 }),
     );
     expect(html).toContain('is-positive');
-    expect(html).toContain('every wrong tile heals');
+    expect(html).toContain('every broken tile gives you SP');
     expect(html).toContain('5.0s');
   });
 

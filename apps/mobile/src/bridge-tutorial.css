@@ -124,10 +124,11 @@ html:has(.cpi-crystal-guide) {
   min-height: 2.75rem;
   padding: 0.9rem 1.1rem;
   border: 1px solid #b5789c82;
-  border-radius: 0.45rem;
+  border-radius: 6px;
   background: linear-gradient(125deg, #3a2034, #130d14);
   color: #f2dcec;
-  font: 550 0.78rem var(--cpi-font-body);
+  font: 600 0.83rem var(--cpi-font-body);
+  letter-spacing: 0.025em;
   cursor: pointer;
   transition:
     border-color 0.2s,
@@ -257,29 +258,26 @@ html:has(.cpi-crystal-guide) {
   text-transform: uppercase;
   pointer-events: none;
 }
-.cpi-guide-pursuit {
+.cpi-guide-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-block: 1rem;
+}
+.cpi-guide-tabs .cpi-menu-action {
+  width: auto;
+  min-height: 3rem;
+  padding: 0.65rem 1rem;
+}
+.cpi-guide-tabs .cpi-menu-action-chevron {
+  display: none;
+}
+.cpi-guide-clock {
   position: absolute;
-  top: 22%;
-  right: 8%;
-  display: grid;
-  justify-items: center;
-  gap: 0.35rem;
-  color: #e788a1;
+  z-index: 3;
+  top: 4.5rem;
+  inset-inline: 1.4rem;
   pointer-events: none;
-  animation: cpi-guide-heartbeat 1.2s ease-in-out infinite;
-}
-.cpi-guide-pursuit svg {
-  width: 3rem;
-  height: 3rem;
-  stroke: currentColor;
-  stroke-width: 1;
-}
-.cpi-guide-pursuit span {
-  font-size: 0.32rem;
-  letter-spacing: 0.14em;
-  max-width: 5rem;
-  text-align: center;
-  line-height: 1.7;
 }
 .cpi-guide-stage.is-pursued {
   border-color: #e685a24d;

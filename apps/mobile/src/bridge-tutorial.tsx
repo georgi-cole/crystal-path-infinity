@@ -1,6 +1,6 @@
 import { practiceStorage } from './app-profile';
 import { useEffect, useRef, useState } from 'react';
-import { HINT_SCAN_MS } from '@crystal-path-infinity/game-core';
+import { HINT_SCAN_MS, getDeathClock } from '@crystal-path-infinity/game-core';
 import type { CSSProperties } from 'react';
 import { applyTutorialAction, createTutorialSession } from './bridge-tutorial-model';
 import type { TutorialAction, TutorialStep } from './bridge-tutorial-model';
@@ -12,6 +12,8 @@ import { presentInfinityScene } from './infinity-presentation';
 import { createSceneDirector } from './scene-cinematics';
 import type { SceneCinematic } from './scene-cinematics';
 import { EffectGlyph } from './effect-glyph';
+import { DeathClockBadge } from './mystery-box';
+import { ThemeScope } from './store-provider';
 import { collectRunSignals, EMPTY_RUN_SIGNALS, liveSignal } from './run-signals';
 import type { RunSignals } from './run-signals';
 import { createHintCaptionGate } from './hint-caption';
@@ -142,7 +144,7 @@ export function BridgeTutorial({
             aria-current={index === chapter ? 'step' : undefined}
           >
             <span className="cpi-guide-chapter-mark" aria-hidden="true">
-              {index < chapter || completed ? 'âœ“' : number(index + 1)}
+              {index < chapter || completed ? '\u2713' : number(index + 1)}
             </span>
             <span>{t(CHAPTER_LABELS[index])}</span>
           </li>
@@ -165,18 +167,18 @@ export function BridgeTutorial({
             {canChoose && (
               <button
                 type="button"
-                className="cpi-guide-primary"
+                className="cpi-guide-primary cpi-menu-action cpi-menu-action--primary"
                 disabled={busy}
                 onClick={() => act(stepAction)}
               >
                 {t(step === 'pressure' ? 'guide.move' : 'guide.stepLeft')}
-                <span aria-hidden="true">â†—</span>
+                <span aria-hidden="true">{'\u2197'}</span>
               </button>
             )}
             {step === 'hint' && (
               <button
                 type="button"
-                className="cpi-guide-primary"
+                className="cpi-guide-primary cpi-menu-action cpi-menu-action--primary"
                 disabled={busy}
                 onClick={() => act('use-hint')}
               >
@@ -188,12 +190,12 @@ export function BridgeTutorial({
               <>
                 <button
                   type="button"
-                  className="cpi-guide-primary"
+                  className="cpi-guide-primary cpi-menu-action cpi-menu-action--primary"
                   disabled={busy}
                   onClick={() => act('try-mystery')}
                 >
                   {t('guide.openMystery')}
-                  <span aria-hidden="true">â†—</span>
+                  <span aria-hidden="true">{'\u2197'}</span>
                 </button>
                 <button
                   type="button"
@@ -206,87 +208,95 @@ export function BridgeTutorial({
               </>
             )}
             {step === 'mystery-opened' && (
-              <button type="button" className="cpi-guide-primary" onClick={() => act('end-run')}>
+              <button
+                type="button"
+                className="cpi-guide-primary cpi-menu-action cpi-menu-action--primary"
+                onClick={() => act('end-run')}
+              >
                 {t('guide.finish')}
-                <span aria-hidden="true">â†—</span>
+                <span aria-hidden="true">{'\u2197'}</span>
               </button>
             )}
             {completed && (
-              <button type="button" className="cpi-guide-primary" onClick={onStartPractice}>
+              <button
+                type="button"
+                className="cpi-guide-primary cpi-menu-action cpi-menu-action--primary"
+                onClick={onStartPractice}
+              >
                 {t('guide.begin')}
-                <span aria-hidden="true">â†—</span>
+                <span aria-hidden="true">{'\u2197'}</span>
               </button>
             )}
           </div>
         </div>
-        <div
-          className={
-            'cpi-guide-stage' +
-            (step === 'pressure' ? ' is-pursued' : '') +
-            (completed ? ' is-complete' : '')
-          }
-          aria-label={t('guide.stage')}
-          aria-describedby="cpi-guide-instruction"
-        >
-          <div className="cpi-guide-instruments">
-            <div>
-              <span>{t('guide.light')}</span>
-              <strong>
-                {number(run.sp)} <small>SP</small>
-              </strong>
-              <i
-                style={
-                  {
-                    '--guide-light': `${(run.sp / (GUIDE_RULES.maxSp ?? GUIDE_RULES.startingSp)) * 100}%`,
-                  } as CSSProperties
-                }
-              />
+        <ThemeScope theme="obsidian">
+          <div
+            className={
+              'cpi-guide-stage' +
+              (step === 'pressure' ? ' is-pursued' : '') +
+              (completed ? ' is-complete' : '')
+            }
+            aria-label={t('guide.stage')}
+            aria-describedby="cpi-guide-instruction"
+            data-world="obsidian"
+          >
+            <div className="cpi-guide-instruments">
+              <div>
+                <span>{t('guide.light')}</span>
+                <strong>
+                  {number(run.sp)} <small>SP</small>
+                </strong>
+                <i
+                  style={
+                    {
+                      '--guide-light': `${(run.sp / (GUIDE_RULES.maxSp ?? GUIDE_RULES.startingSp)) * 100}%`,
+                    } as CSSProperties
+                  }
+                />
+              </div>
+              <span className="cpi-guide-hints">
+                <EffectGlyph kind="gain_hint" />
+                {number(run.hints)}
+              </span>
             </div>
-            <span className="cpi-guide-hints">
-              <EffectGlyph kind="gain_hint" />
-              {number(run.hints)}
+            <PrismBridge
+              rows={cinematic?.rows ?? view.rows}
+              interactive={!busy && (canChoose || step === 'mystery')}
+              allowChoices={canChoose}
+              allowedSide="left"
+              showStepCaptions={false}
+              showHintCaption={step === 'hint-revealed' && showHintCaption}
+              onChoose={() => act(stepAction)}
+              onMystery={() => act('try-mystery')}
+              reducedMotion={reducedMotion}
+              phase={cinematic?.phase}
+              feedback={cinematic?.feedback}
+              fractureSeed="crystal-rehearsal"
+              hintScan={hint}
+            />
+            {step === 'pressure' && !busy && (
+              <div className="cpi-guide-clock">
+                <DeathClockBadge clock={getDeathClock(run)} activeTimeMs={run.activeTimeMs} />
+              </div>
+            )}
+            {step === 'mystery-opened' && mystery?.type === 'mystery-resolved' && (
+              <div className="cpi-guide-revelation" aria-hidden="true">
+                <EffectGlyph kind={mystery.kind} />
+                <span>{t('guide.openedSignal')}</span>
+              </div>
+            )}
+            {completed && (
+              <div className="cpi-guide-complete-mark" aria-hidden="true">
+                <svg viewBox="0 0 80 80" fill="none">
+                  <path d="m18 41 15 15 31-32M12 11h14m28 0h14v14M68 55v14H54M26 69H12V55M12 25V11" />
+                </svg>
+              </div>
+            )}
+            <span className="cpi-guide-stage-caption">
+              {t(completed ? 'guide.completeSignal' : 'guide.practiceSignal')}
             </span>
           </div>
-          <PrismBridge
-            rows={cinematic?.rows ?? view.rows}
-            interactive={!busy && (canChoose || step === 'mystery')}
-            allowChoices={canChoose}
-            allowedSide="left"
-            showStepCaptions={false}
-            showHintCaption={step === 'hint-revealed' && showHintCaption}
-            onChoose={() => act(stepAction)}
-            onMystery={() => act('try-mystery')}
-            reducedMotion={reducedMotion}
-            phase={cinematic?.phase}
-            feedback={cinematic?.feedback}
-            fractureSeed="crystal-rehearsal"
-            hintScan={hint}
-          />
-          {step === 'pressure' && !busy && (
-            <div className="cpi-guide-pursuit" aria-hidden="true">
-              <svg viewBox="0 0 60 60" fill="none">
-                <path d="M20 7h20M20 53h20M23 9c0 12 2 13 7 21-5 8-7 9-7 21m14-42c0 12-2 13-7 21 5 8 7 9 7 21M26 45h8" />
-              </svg>
-              <span>{t('guide.pursuitSignal')}</span>
-            </div>
-          )}
-          {step === 'mystery-opened' && mystery?.type === 'mystery-resolved' && (
-            <div className="cpi-guide-revelation" aria-hidden="true">
-              <EffectGlyph kind={mystery.kind} />
-              <span>{t('guide.openedSignal')}</span>
-            </div>
-          )}
-          {completed && (
-            <div className="cpi-guide-complete-mark" aria-hidden="true">
-              <svg viewBox="0 0 80 80" fill="none">
-                <path d="m18 41 15 15 31-32M12 11h14m28 0h14v14M68 55v14H54M26 69H12V55M12 25V11" />
-              </svg>
-            </div>
-          )}
-          <span className="cpi-guide-stage-caption">
-            {t(completed ? 'guide.completeSignal' : 'guide.practiceSignal')}
-          </span>
-        </div>
+        </ThemeScope>
       </div>
       <footer className="cpi-guide-footer">
         <span role="status" aria-live="polite">
@@ -295,7 +305,7 @@ export function BridgeTutorial({
         {!completed && (
           <button type="button" className="cpi-guide-text-button" onClick={onSkip}>
             {t('guide.skip')}
-            <span aria-hidden="true">â†—</span>
+            <span aria-hidden="true">{'\u2197'}</span>
           </button>
         )}
       </footer>

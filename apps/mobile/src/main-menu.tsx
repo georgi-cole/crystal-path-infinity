@@ -99,18 +99,21 @@ export function MenuAction({
   description,
   icon,
   variant = 'secondary',
+  current = false,
   onClick,
 }: {
   label: string;
   description?: string;
   icon?: GlyphName;
   variant?: 'primary' | 'secondary' | 'quiet';
+  current?: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       className={'cpi-menu-action cpi-menu-action--' + variant}
       type="button"
+      aria-current={current ? 'page' : undefined}
       onClick={onClick}
     >
       {icon && (
@@ -337,7 +340,7 @@ function MenuHome({
         <MenuAction
           label={t('general.practice')}
           icon="practice"
-          onClick={() => onOpen('practice')}
+          onClick={QA_TOOLS_ENABLED ? () => onOpen('practice') : canResume ? onResume : onNew}
         />
         <MenuAction
           label={tutorialProgress === 'completed' ? t('menu.replay') : t('menu.learn')}
@@ -465,7 +468,7 @@ export function MainMenu({
 }: MainMenuProps) {
   const service = rankedServiceState(online);
   const themeId = useThemeId();
-  const { t, number, locale } = useLanguage();
+  const { t, number } = useLanguage();
   return (
     <main
       className={
@@ -540,29 +543,39 @@ export function MainMenu({
               icon="practice"
               onClick={onNew}
             />
-            <MenuAction
-              label={locale === 'bg' ? 'Открити мистерии' : 'Discovered mysteries'}
-              description={
-                locale === 'bg' ? 'Твоите находки по моста' : 'Your discoveries on the bridge'
-              }
-              icon="practice"
-              onClick={() => onOpen('journal')}
-            />
             {QA_TOOLS_ENABLED && import.meta.env.MODE !== 'production' && <BalanceTuner />}
             <p className="cpi-menu-fine-print">{t('menu.practiceLocal')}</p>
           </MenuPanel>
-        ) : view === 'journal' ? (
-          <MysteryJournal reducedMotion={settings.reducedMotion} />
-        ) : view === 'tutorial' ? (
-          <BridgeTutorial
-            onComplete={() => onTutorialProgress('completed')}
-            onSkip={() => {
-              onTutorialProgress('skipped');
-              onOpen('practice');
-            }}
-            onStartPractice={() => onOpen('practice')}
-            reducedMotion={settings.reducedMotion}
-          />
+        ) : view === 'tutorial' || view === 'journal' ? (
+          <div className="cpi-guide-library">
+            <nav className="cpi-guide-tabs" aria-label={t('guide.reference')}>
+              <MenuAction
+                label={t('guide.learnTab')}
+                variant={view === 'tutorial' ? 'primary' : 'quiet'}
+                current={view === 'tutorial'}
+                onClick={() => onOpen('tutorial')}
+              />
+              <MenuAction
+                label={t('guide.journalTab')}
+                variant={view === 'journal' ? 'primary' : 'quiet'}
+                current={view === 'journal'}
+                onClick={() => onOpen('journal')}
+              />
+            </nav>
+            {view === 'journal' ? (
+              <MysteryJournal reducedMotion={settings.reducedMotion} />
+            ) : (
+              <BridgeTutorial
+                onComplete={() => onTutorialProgress('completed')}
+                onSkip={() => {
+                  onTutorialProgress('skipped');
+                  onOpen('home');
+                }}
+                onStartPractice={onNew}
+                reducedMotion={settings.reducedMotion}
+              />
+            )}
+          </div>
         ) : view === 'store' ? (
           <StoreVault
             onTryTheme={onTryTheme}
@@ -593,7 +606,7 @@ export function MainMenu({
                   description={t('menu.practiceNow')}
                   icon="practice"
                   variant="primary"
-                  onClick={() => onOpen('practice')}
+                  onClick={canResumePractice(saved) ? onResume : onNew}
                 />
               </>
             )}
@@ -635,7 +648,7 @@ export function MainMenu({
             <MenuAction
               label={t('menu.practiceOffline')}
               icon="practice"
-              onClick={() => onOpen('practice')}
+              onClick={canResumePractice(saved) ? onResume : onNew}
             />
           </MenuPanel>
         ) : view === 'profile' ? (
@@ -653,7 +666,7 @@ export function MainMenu({
             <MenuAction
               label={t('menu.practiceUnsigned')}
               icon="practice"
-              onClick={() => onOpen('practice')}
+              onClick={canResumePractice(saved) ? onResume : onNew}
             />
           </MenuPanel>
         ) : (

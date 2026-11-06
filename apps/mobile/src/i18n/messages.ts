@@ -11,9 +11,11 @@ import { savedPendingMessages } from '../ranked/saved-pending-messages';
 import { operationMessages } from '../operations/operations.messages';
 
 import { storeEn } from './store-messages';
+import { supportEn } from './support-messages';
 
 export const en = {
   ...storeEn,
+  ...supportEn,
   ...crystalGuideEn,
   ...accountControlMessages,
   ...nameReportMessages,

@@ -21,6 +21,8 @@ Explore shows artwork, one short description and a companion expression on touch
 
 Simulated checkout and test disclosures belong only to development/QA. Player staging/production shows unavailable purchases until real billing is connected. See [the player/QA decision](../../docs/decisions/PLAYER-QA-RELEASE-PREVIEW.md) for current behavior and verification boundaries.
 
+**Later owner review on 6 November:** guide tabs and support use the shared menu control styling; the outer tutorial controls/progress and final continuation panels inherit each world's materials. The owner subsequently requested one exception: the bridge demonstration inside Rules always uses Black Obsidian, including its SP/hint instruments, without the equipped world's scenery or companion. This local scope does not unequip the world; the outer guide page keeps its design. Discoveries is a tab in How to play and a pause action, with no separate home/settings/practice-hub button. Its explanations use short English/Bulgarian paragraphs and simple examples, with demonstrations only in QA. Only Unequip is needed to return to Obsidian; the extra global banner is removed. Original Crystal Path step/collapse MP3s now replace the synthetic step/rescue selection for every world. Box opening uses the existing owner-source `ui_wildcard_draw.mp3`; falling glass and shared background music are unchanged. Earlier short synthetic step/rescue files remain for reproduction, not as current playback promises.
+
 ## References and decisions
 
 - [Monument Valley 3: art and design, with John Lau](https://legacy-activation-v2.unity3d.com/vn/resources/monument-valley-3-blurring-art-and-design):

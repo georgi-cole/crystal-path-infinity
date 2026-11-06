@@ -3,6 +3,7 @@ import { useLanguage } from './language-context';
 import type { LocaleChoice } from './i18n';
 import type { ReactNode } from 'react';
 import './locale-settings.css';
+import { SUPPORT_EMAIL, SUPPORT_MAILTO } from './support-contact';
 
 /**
  * Real, persisted language selection plus truthful permanent privacy/account
@@ -88,7 +89,18 @@ export function PrivacyAccountSupport({
           <span id="cpi-support-heading">{t('settings.supportTitle')}</span>
         </summary>
         <div className="cpi-settings-expanded">
-          <p>{t('settings.supportUnavailable')}</p>
+          <p>{t('support.intro')}</p>
+          <p>{t('support.message')}</p>
+          <a
+            className="cpi-menu-action cpi-menu-action--secondary cpi-support-contact"
+            href={SUPPORT_MAILTO}
+          >
+            <span className="cpi-menu-action-title">{t('support.contact')}</span>{' '}
+            <span aria-hidden="true">↗</span>
+          </a>
+          <span className="cpi-support-address">{SUPPORT_EMAIL}</span>
+          <p className="cpi-menu-fine-print">{t('support.compose')}</p>
+          <p className="cpi-menu-fine-print">{t('support.private')}</p>
         </div>
       </details>
     </div>

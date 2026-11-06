@@ -1,6 +1,7 @@
 import { practiceStorage, QA_TOOLS_ENABLED } from './app-profile';
 import { useEffect, useRef, useState } from 'react';
-import { DISCOVERY_RULESET_VERSION, mysteryTier } from '@crystal-path-infinity/game-core';
+import { useThemeId } from './store-context';
+import { BUSINESS_RULESET_VERSION, mysteryTier } from '@crystal-path-infinity/game-core';
 import type { EffectKind, RunState } from '@crystal-path-infinity/game-core';
 import { useLanguage } from './language-context';
 import { EffectGlyph } from './mystery-effects';
@@ -21,8 +22,9 @@ export function MysteryJournal({
   reducedMotion?: boolean;
   known?: readonly EffectKind[];
 }) {
-  const { locale } = useLanguage(),
+  const { locale, t } = useLanguage(),
     bg = locale === 'bg';
+  const theme = useThemeId();
   const [known] = useState(() => {
     let stored: EffectKind[] = [];
     try {
@@ -50,10 +52,10 @@ export function MysteryJournal({
       />
     );
   return (
-    <section className="cpi-mystery-journal">
+    <section className="cpi-mystery-journal" data-world={theme}>
       <header>
         <h1 ref={heading} tabIndex={-1}>
-          {bg ? 'Открити мистерии' : 'Discovered mysteries'}
+          {t('guide.journalTab')}
         </h1>
         {onClose && (
           <button type="button" onClick={onClose}>
@@ -76,7 +78,7 @@ export function MysteryJournal({
       )}
       <div className="cpi-journal-grid">
         {known.map((kind) => {
-          const copy = effectCopy(locale, kind, DISCOVERY_RULESET_VERSION);
+          const copy = effectCopy(locale, kind, state?.rulesetVersion ?? BUSINESS_RULESET_VERSION);
           return (
             <article key={kind} data-tier={mysteryTier(kind)}>
               <header>
@@ -85,8 +87,10 @@ export function MysteryJournal({
               </header>
               <p>{mysteryDiscoverySummary(kind, bg) ?? copy.detail}</p>
               <details>
-                <summary>{bg ? 'Подробности' : 'Details'}</summary>
-                <p>{copy.detail}</p>
+                <summary>{bg ? 'Как действа?' : 'How does it work?'}</summary>
+                {copy.detail.split('\n\n').map((paragraph) => (
+                  <p key={paragraph}>{paragraph}</p>
+                ))}
               </details>
               {QA_TOOLS_ENABLED && (
                 <button

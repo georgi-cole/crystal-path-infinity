@@ -3,6 +3,7 @@ import { getReviveSp, getRuleset, RESERVE_SP_PER_RUN } from '@crystal-path-infin
 import type { RunState, TestResource } from '@crystal-path-infinity/game-core';
 import { useLanguage } from './language-context';
 import { useTestStore } from './store-context';
+import { QA_TOOLS_ENABLED } from './app-profile';
 
 export function RunReserves({
   state,
@@ -25,7 +26,7 @@ export function RunReserves({
     label: string;
   } | null>(null);
   const economy = state.storeTest;
-  if (!economy || state.status === 'finished') return null;
+  if (!QA_TOOLS_ENABLED || !economy || state.status === 'finished') return null;
   const refill = Math.max(
     0,
     Math.min(

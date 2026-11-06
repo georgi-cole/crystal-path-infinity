@@ -241,18 +241,6 @@ export function StoreVault({
             </button>
           ))}
         </nav>
-        {snapshot.equipped !== 'obsidian' && (
-          <div className="cpi-vault-default-world">
-            <span>{t('vault.defaultWorld')}</span>
-            <button
-              type="button"
-              disabled={!store || !!error}
-              onClick={() => act(() => store?.equip('obsidian'))}
-            >
-              {t('vault.useObsidian')}
-            </button>
-          </div>
-        )}
         {filter === 'worlds' && (
           <nav className="cpi-vault-world-families" aria-label={t('vault.worlds')}>
             {(['all', 'adventure', 'sport', 'pets'] as const).map((id) => (

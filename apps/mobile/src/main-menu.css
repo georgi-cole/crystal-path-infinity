@@ -275,7 +275,9 @@
   padding: 0.65rem;
   gap: 0.6rem;
 }
-.cpi-menu-actions > .cpi-menu-action:not(.cpi-menu-action--primary) .cpi-menu-action-title {
+.cpi-menu-actions > .cpi-menu-action:not(.cpi-menu-action--primary) .cpi-menu-action-title,
+.cpi-guide-tabs .cpi-menu-action-title,
+.cpi-support-contact .cpi-menu-action-title {
   font-size: 0.73rem;
 }
 .cpi-menu-actions > .cpi-menu-action:not(.cpi-menu-action--primary) .cpi-menu-action-chevron {
@@ -759,7 +761,9 @@
   .cpi-menu-action--primary {
     min-height: 3.8rem;
   }
-  .cpi-menu-actions > .cpi-menu-action:not(.cpi-menu-action--primary) .cpi-menu-action-title {
+  .cpi-menu-actions > .cpi-menu-action:not(.cpi-menu-action--primary) .cpi-menu-action-title,
+  .cpi-guide-tabs .cpi-menu-action-title,
+  .cpi-support-contact .cpi-menu-action-title {
     font-size: 0.67rem;
   }
   .cpi-menu-footer {

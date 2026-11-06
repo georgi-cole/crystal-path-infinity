@@ -11,6 +11,18 @@ import { StoreVault } from '../src/store-vault';
 import { TestStoreProvider } from '../src/store-provider';
 import { BalanceTuner } from '../src/balance-tuner';
 import { MysteryJournal } from '../src/mystery-discovery';
+import { RunReserves } from '../src/run-reserves';
+import {
+  BUSINESS_STORE_RULESET_VERSION,
+  createRun,
+  createPracticeCursor,
+  PRACTICE_RNG,
+  transitionRun,
+} from '@crystal-path-infinity/game-core';
+import { MainMenu } from '../src/main-menu';
+import { DEFAULT_PRACTICE_SETTINGS } from '../src/practice-save';
+import { PrivacyAccountSupport } from '../src/locale-settings';
+import { SUPPORT_EMAIL, SUPPORT_MAILTO } from '../src/support-contact';
 import {
   brandLaunchFrame,
   BRAND_LAUNCH_MS,
@@ -40,6 +52,32 @@ describe('player presentation and QA isolation', () => {
     const journal = renderToStaticMarkup(createElement(MysteryJournal, { known: ['shield_5s'] }));
     expect(journal).toContain('Aegis');
     expect(journal).not.toContain('Try it');
+    const run = createRun(
+      {
+        runId: 'practice-player-guard',
+        rulesetVersion: BUSINESS_STORE_RULESET_VERSION,
+        observedAt: 0,
+        routeRng: createPracticeCursor(1),
+        mysteryRng: createPracticeCursor(2),
+      },
+      PRACTICE_RNG,
+    );
+    const dead = transitionRun(
+      run,
+      { type: 'tick' },
+      { rng: PRACTICE_RNG, activeTimeMs: 13_000, achievedAt: 13_000 },
+    ).state;
+    expect(dead.status).toBe('dead');
+    expect(
+      renderToStaticMarkup(
+        createElement(RunReserves, {
+          state: dead,
+          busy: false,
+          onUse: () => Promise.resolve(false),
+          message: '',
+        }),
+      ),
+    ).toBe('');
   });
   it('keeps player saves, records and discoveries separate without deleting QA data', () => {
     const map = new Map<string, string>(),
@@ -60,6 +98,32 @@ describe('player presentation and QA isolation', () => {
     expect(qa.getItem('checkpoint')).toBe('qa-run');
     player.removeItem('checkpoint');
     expect(qa.getItem('checkpoint')).toBe('qa-run');
+  });
+  it('keeps discoveries inside the guide and provides the owner-approved support contact', () => {
+    const noop = () => {};
+    const options = {
+      saved: { status: 'empty' as const },
+      best: null,
+      online: false,
+      settings: DEFAULT_PRACTICE_SETTINGS,
+      onOpen: noop,
+      onBack: noop,
+      onResume: noop,
+      onNew: noop,
+      onSettingsChange: noop,
+      onRetryConnection: noop,
+      tutorialProgress: 'unseen' as const,
+      onTutorialProgress: noop,
+    };
+    const render = (view: 'home' | 'tutorial' | 'settings') =>
+      renderToStaticMarkup(createElement(MainMenu, { ...options, view }));
+    expect(render('home')).not.toContain('Discoveries');
+    expect(render('settings')).not.toContain('Discoveries');
+    expect(render('tutorial')).toContain('Discoveries');
+    const help = renderToStaticMarkup(createElement(PrivacyAccountSupport));
+    expect(help).toContain(SUPPORT_EMAIL);
+    expect(help).toContain(SUPPORT_MAILTO);
+    expect(help).not.toContain('Submit ticket');
   });
 });
 

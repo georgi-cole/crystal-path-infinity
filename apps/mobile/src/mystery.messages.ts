@@ -4,6 +4,8 @@ import {
   usesRiskRules,
   RULESET_VERSION,
   usesRelicRules,
+  usesClassicTiles,
+  usesBusinessRules,
 } from '@crystal-path-infinity/game-core';
 import type { LocaleCode } from './i18n';
 
@@ -17,151 +19,152 @@ const enEffects: Record<EffectKind, EffectCopy> = {
   mystery_silence_30s: {
     title: 'The rift · Silence',
     detail:
-      'The violet box flips a fair 50/50 coin: 30 seconds without new mystery boxes, or 30 seconds with a box every 3 rows. This time: Silence. The usual 5-row spacing resumes afterwards. Existing choices remain available.',
+      'No new mystery boxes appear for 30 seconds. You can still use a box or choice that is already there. Then boxes return to their usual 5-row spacing.\n\nThe violet box has two equally likely results: Silence or Surge. You received Silence.',
     positive: false,
   },
   mystery_surge_30s: {
     title: 'The rift · Surge',
     detail:
-      'The violet box flips a fair 50/50 coin: 30 seconds without new mystery boxes, or 30 seconds with a box every 3 rows. This time: Surge. Cooldowns still protect rare choices. The usual 5-row spacing resumes afterwards.',
+      'For 30 seconds, a mystery box appears every 3 rows. Then boxes return to their usual 5-row spacing. Rare choices still need a break before they can appear again.\n\nThe violet box has two equally likely results: Silence or Surge. You received Surge.',
     positive: true,
   },
   coyote_10s: {
     title: 'Run Coyote · 10s',
     detail:
-      'For 10 seconds, broken tiles take no SP. Bleeding, mystery losses, pact penalties and debts still apply. Healing wrong steps still work. Aegis and Brittle oath are kept while Coyote protects you.',
+      'For 10 seconds, broken tiles cannot take your SP. For example, a tile that would take 5 SP takes nothing.\n\nThis only protects you from tiles. Bleeding, harmful boxes, trade costs, debts and the death clock can still take SP. Healing tiles still heal you. Aegis and Brittle oath wait until Coyote ends.',
     positive: true,
   },
   double_gain_21s: {
     title: 'Double SP · 21s',
     detail:
-      'For 21 seconds, SP healing and rewards are doubled. Trade prices and agreed debts stay exact. Duplicate drops refresh the timer; they do not multiply again.',
+      'For 21 seconds, SP healing and rewards give twice as much. A +10 SP reward gives +20 SP.\n\nTrades and debts keep their usual amounts. Finding this effect again restarts its timer; the bonus stays double.',
     positive: true,
   },
   double_loss_21s: {
     title: 'Double damage · 21s',
     detail:
-      'For 21 seconds, wrong-tile damage, harmful mysteries and bleeding take twice as much SP. Trade prices and agreed debts stay exact. Duplicate drops refresh the timer.',
+      'For 21 seconds, broken tiles, harmful boxes and bleeding take twice as much SP. A hit that would take 5 SP takes 10 SP.\n\nTrades and debts keep their usual amounts. The death clock is unchanged. Finding this effect again restarts its timer; damage stays double.',
     positive: false,
   },
   regen_3rows: {
     title: 'Second breath',
     detail:
-      'After each of the next 3 survived rows, recover 6 SP: 18 in total. You must survive the tile first. Waiting does not use charges.',
+      'Finish a row and stay alive to gain 6 SP. This works for your next 3 steps: 18 SP in total.\n\nA safe tile or a broken tile can count. If the tile takes your SP to 0, this effect cannot save you. Waiting does not use it up.',
     positive: true,
   },
   bleed_3rows: {
     title: 'The bleed',
     detail:
-      'After each of the next 3 survived tile choices, lose another 3 SP: 9 in total. Even a correct tile can now kill you. Waiting does not remove the curse; Aegis does not stop it.',
+      'After each of your next 3 steps, you lose an extra 3 SP: 9 SP in total. Even a safe tile costs you these 3 SP.\n\nIf your SP reaches 0, the crossing ends. Waiting and Aegis do not remove this effect.',
     positive: false,
   },
   half_life: {
     title: 'Half Life',
     detail:
-      'Sell half your current SP for 5 hints. Example: 100 SP and 2 hints become 50 SP and 7 hints. With an odd SP total, keep the rounded-down half. You may walk away for free.',
+      'Choose whether to give up half your SP for 5 extra hints. Example: with 100 SP and 2 hints, you would have 50 SP and 7 hints after the trade.\n\nThe choice shows exactly how much SP you will keep. You can refuse and lose nothing.',
     positive: false,
   },
   marketing: {
     title: 'Marketing',
     detail:
-      'Sell 1 hint for exactly 20 SP, or sell all your hints at that rate. Example: 100 SP and 3 hints become 120 SP and 2 hints. The price is fixed, even during Double SP. You may walk away for free.',
+      'Choose whether to sell hints. Each hint you sell gives you 20 SP. With 100 SP and 3 hints, selling one leaves you with 120 SP and 2 hints.\n\nYou can sell one or all the hints the choice allows. Double SP does not change this price. You can refuse and lose nothing.',
     positive: false,
   },
   heal_10: {
     title: 'Crystal spark',
-    detail: 'Restore 10 SP immediately. Maximum stability: 400.',
+    detail: 'You gain 10 SP as soon as you open the box. You do not need to do anything else.',
     positive: true,
   },
   heal_20: {
     title: 'Crystal heart',
-    detail: 'Restore 20 SP immediately. Maximum stability: 400.',
+    detail: 'You gain 20 SP as soon as you open the box. You do not need to do anything else.',
     positive: true,
   },
   gain_hint: {
     title: 'A stolen secret',
-    detail: 'Gain one hint. Spend it to reveal a current row for certain.',
+    detail:
+      'You gain 1 hint. Use the hint button to reveal where it is safe to step on the current row.',
     positive: true,
   },
   shield_5s: {
     title: 'Aegis',
     detail:
-      'For 5 seconds: block the next wrong-tile damage, then shatter. Does not stop bleeding, vault fees or debt.',
+      'For up to 5 seconds, the shield blocks one hit from a broken tile. It then shatters and disappears. If no tile hits it, it expires.\n\nIt only blocks tile damage. Bleeding, box losses, debts and the death clock can still take SP.',
     positive: true,
   },
   regen_5s: {
     title: 'Second breath',
     detail:
-      'For 5 seconds: nine pulses of +2 SP, up to +18. Rising sparks mean healing; the numbers show the SP actually restored.',
+      'You gain 2 SP at a time, up to 18 SP over 5 seconds. You can see your SP rise with each pulse.',
     positive: true,
   },
   lucky_5s: {
     title: 'Borrowed luck',
     detail:
-      'For 5 seconds: the next wrong tile heals +10 / +15 / +20 instead of hurting, then the charm breaks.',
+      'For up to 5 seconds, the next broken tile gives you SP instead of taking it. It gives 10, 15 or 20 SP, depending on the row.\n\nThis works once. The charm then breaks. If you do not use it in time, it expires.',
     positive: true,
   },
   hurt_10: {
     title: 'Crystal bite',
-    detail: 'Lose 10 SP immediately. Can be fatal.',
+    detail: 'You lose 10 SP as soon as you open the box. If your SP reaches 0, the crossing ends.',
     positive: false,
   },
   hurt_15: {
     title: 'Deep fracture',
-    detail: 'Lose 15 SP immediately. Can be fatal.',
+    detail: 'You lose 15 SP as soon as you open the box. If your SP reaches 0, the crossing ends.',
     positive: false,
   },
   lose_hint: {
     title: 'A forgotten secret',
-    detail: 'Lose one hint. Nothing is taken if you have none.',
+    detail: 'The box takes 1 hint. If you have no hints, you lose nothing.',
     positive: false,
   },
   fragility_5s: {
     title: 'Brittle oath',
     detail:
-      'For 5 seconds: your next damaging wrong tile hits twice as hard, then the curse breaks.',
+      'For up to 5 seconds, the next broken tile that hurts you takes twice as much SP. A hit that would take 5 SP takes 10 SP.\n\nThis works once, then disappears. A shielded hit does not use it up.',
     positive: false,
   },
   drain_5s: {
     title: 'The bleed',
     detail:
-      'For 5 seconds: nine pulses of −2 SP, up to −18. Falling drops drain real SP and can kill. Aegis cannot stop this.',
+      'You lose 2 SP at a time, up to 18 SP over 5 seconds. Aegis cannot stop this loss. If your SP reaches 0, the crossing ends.',
     positive: false,
   },
   inversion_5s: {
     title: 'Twisted fate',
     detail:
-      'For 5 seconds: every wrong tile heals +5 / +7 / +10 instead of hurting. The turning arrows mean repeated healing, not a curse.',
+      'For 5 seconds, every broken tile gives you SP instead of taking it: 5, 7 or 10 SP, depending on the row.\n\nThis can work more than once before time runs out. Safe tiles give no extra SP from this effect.',
     positive: true,
   },
   blood_oath: {
     title: 'Blood oath',
     detail:
-      'Take +35 SP now. For 3 rows, each wrong tile that still damages you takes another 15 SP. Refusing costs 8 SP.',
+      'Accept to gain 35 SP now. For your next 3 steps, each broken tile that hurts you takes an extra 15 SP. A usual 5 SP hit would cost 20 SP.\n\nA shielded tile does not take the extra 15 SP. Refusing the deal costs 8 SP.',
     positive: false,
   },
   false_oracle: {
     title: 'The lying oracle',
     detail:
-      'For 3 rows, an omen is correct 70% of the time. Correct tiles grant +5 SP; wrong-tile damage doubles. Hints are sealed. Silence it: lose one hint, or 15 SP if you have none.',
+      'Accept to see an arrow for your next 3 steps. It points to the safe tile with a 70% chance each time, so it can be wrong. You cannot use hints during the deal.\n\nA safe step gives 5 SP. A broken tile takes twice its usual SP. Refusing costs 1 hint, or 15 SP if you have no hints.',
     positive: false,
   },
   hungry_vault: {
     title: 'The hungry vault',
     detail:
-      'Stake 12 SP. Consecutive correct tiles build a bank: 15 → 40 → 85 SP. Cash out after any success, or risk the next row. One wrong tile destroys the bank and takes 10 SP beyond tile damage. Refusing costs 8 SP.',
+      'Pay 12 SP to start. One safe step puts 15 SP in the vault. Two safe steps in a row make it 40 SP. Three make it 85 SP, paid out automatically.\n\nAfter the first or second safe step, choose: collect what is in the vault, or risk the next step for more. A broken tile loses the whole prize and takes 10 extra SP. Refusing to start costs 8 SP.',
     positive: false,
   },
   borrowed_time: {
     title: 'Borrowed tomorrow',
     detail:
-      'Take +50 SP now. After 3 rows, repay 65 SP, even if it kills you. After the first row you may settle early for 55 SP. Refusing costs 8 SP. Healing above 400 is lost; the debt is not reduced.',
+      'Accept to gain 50 SP now. After your third step, 65 SP is taken back. You need to find more SP before then, or the debt can end your crossing.\n\nAfter your first step, you can repay early for 55 SP. Refusing the loan costs 8 SP.',
     positive: false,
   },
   soul_exchange: {
     title: 'Soul exchange',
     detail:
-      'Offer SP: pay 25, then 65% for 2 hints; otherwise 1 hint and another −15 SP. Offer a hint: spend 1, then 65% for +40 SP or 35% for −30 SP. A fatal SP payment grants no prize.',
+      'Choose one of two trades.\n\nGive SP: pay 25 SP. There is a 65% chance to gain 2 hints. Otherwise, gain 1 hint and lose another 15 SP.\n\nGive a hint: spend 1 hint. There is a 65% chance to gain 40 SP. Otherwise, lose 30 SP instead.\n\nYou must choose a trade; there is no free refusal. If the first 25 SP payment takes you to 0, you receive no hints.',
     positive: false,
   },
 };
@@ -170,151 +173,152 @@ const bgEffects: Record<EffectKind, EffectCopy> = {
   mystery_silence_30s: {
     title: 'Разломът · Тишина',
     detail:
-      'Виолетовата кутия тегли 50/50: 30 секунди без нови мистерии или 30 секунди с кутия през 3 реда. Този път: Тишина. После се връща обичайният ритъм през 5 реда. Вече появил се избор остава.',
+      'За 30 секунди не се появяват нови мистериозни кутии. Можеш да използваш кутия или избор, които вече са се появили. После кутиите отново идват през 5 реда.\n\nВиолетовата кутия има два еднакво вероятни резултата: Тишина или Поток. На теб се падна Тишина.',
     positive: false,
   },
   mystery_surge_30s: {
     title: 'Разломът · Поток',
     detail:
-      'Виолетовата кутия тегли 50/50: 30 секунди без нови мистерии или 30 секунди с кутия през 3 реда. Този път: Поток. Периодите без повторение за редките сделки остават. После ритъмът отново е през 5 реда.',
+      'За 30 секунди се появява мистериозна кутия през 3 реда. После кутиите отново идват през 5 реда. Редките сделки все още имат нужда от почивка, преди да се появят пак.\n\nВиолетовата кутия има два еднакво вероятни резултата: Тишина или Поток. На теб се падна Поток.',
     positive: true,
   },
   coyote_10s: {
     title: 'Run Coyote · 10 сек.',
     detail:
-      'За 10 секунди счупените плочки не отнемат SP. Кървене, вредни мистерии, цени на пактове и дългове продължават. Лечебните грешки още работят. Щитът и Крехката клетва се запазват, докато Койотът те пази.',
+      'За 10 секунди счупените плочки не могат да ти вземат SP. Например плочка, която би ти взела 5 SP, не взема нищо.\n\nТова те пази само от плочките. Кървенето, вредните кутии, сделките, дълговете и death clock все още могат да отнемат SP. Плочките, които дават SP, продължават да ги дават. Щитът и Крехката клетва изчакват Койотът да приключи.',
     positive: true,
   },
   double_gain_21s: {
     title: 'Двойни SP · 21 сек.',
     detail:
-      'За 21 секунди получаваш двойно SP от лечение и награди. Цените на сделките и договорените дългове остават точни. Повторно изтегляне подновява времето, без ново умножение.',
+      'За 21 секунди лечението и SP наградите дават два пъти повече. Награда от 10 SP става 20 SP.\n\nСделките и дълговете запазват обичайните си суми. Ако намериш ефекта пак, времето започва отначало, а наградите остават двойни.',
     positive: true,
   },
   double_loss_21s: {
     title: 'Двойни щети · 21 сек.',
     detail:
-      'За 21 секунди грешните плочки, вредните мистерии и кървенето отнемат двойно SP. Цените на сделките и договорените дългове остават точни. Повторно изтегляне подновява времето.',
+      'За 21 секунди счупените плочки, вредните кутии и кървенето отнемат два пъти повече SP. Удар за 5 SP вече отнема 10 SP.\n\nСделките и дълговете запазват обичайните си суми. Death clock не се променя. Ако намериш ефекта пак, времето започва отначало, а щетите остават двойни.',
     positive: false,
   },
   regen_3rows: {
     title: 'Втори дъх',
     detail:
-      'След всеки от следващите 3 преживени реда възстановяваш 6 SP: общо 18. Първо трябва да оцелееш при стъпката. Изчакването не харчи зарядите.',
+      'Премини ред и остани жив, за да получиш 6 SP. Това действа за следващите ти 3 стъпки: общо 18 SP.\n\nБроят се и здравите, и счупените плочки. Ако плочката свали SP до 0, този ефект не може да те спаси. Изчакването не го изразходва.',
     positive: true,
   },
   bleed_3rows: {
     title: 'Кървенето',
     detail:
-      'След всеки от следващите 3 преживени избора губиш още 3 SP: общо 9. Дори правилна плочка вече може да те убие. Изчакването не премахва проклятието; щитът не го спира.',
+      'След всяка от следващите ти 3 стъпки губиш още 3 SP: общо 9 SP. Дори върху здрава плочка губиш тези 3 SP.\n\nАко SP стигнат 0, опитът приключва. Изчакването и щитът не премахват този ефект.',
     positive: false,
   },
   half_life: {
     title: 'Half Life',
     detail:
-      'Продаваш половината от текущите си SP срещу 5 подсказки. Пример: 100 SP и 2 подсказки стават 50 SP и 7 подсказки. При нечетен брой запазваш закръглената надолу половина. Можеш да откажеш без цена.',
+      'Избираш дали да дадеш половината си SP за 5 допълнителни подсказки. Пример: ако имаш 100 SP и 2 подсказки, след сделката ще имаш 50 SP и 7 подсказки.\n\nБутонът показва точно колко SP ще запазиш. Можеш да откажеш, без да губиш нищо.',
     positive: false,
   },
   marketing: {
     title: 'Marketing',
     detail:
-      'Продаваш 1 подсказка за точно 20 SP или всичките по същия курс. Пример: 100 SP и 3 подсказки стават 120 SP и 2 подсказки. Курсът остава фиксиран дори при Двойни SP. Можеш да откажеш без цена.',
+      'Избираш дали да продадеш подсказки. За всяка продадена подсказка получаваш 20 SP. Ако имаш 100 SP и 3 подсказки, продажбата на една оставя 120 SP и 2 подсказки.\n\nМожеш да продадеш една или всички позволени подсказки. Двойни SP не променя тази цена. Можеш да откажеш, без да губиш нищо.',
     positive: false,
   },
   heal_10: {
     title: 'Кристална искра',
-    detail: 'Възстановява 10 SP веднага. Максимална стабилност: 400.',
+    detail: 'Получаваш 10 SP веднага щом отвориш кутията. Не трябва да правиш нищо друго.',
     positive: true,
   },
   heal_20: {
     title: 'Кристално сърце',
-    detail: 'Възстановява 20 SP веднага. Максимална стабилност: 400.',
+    detail: 'Получаваш 20 SP веднага щом отвориш кутията. Не трябва да правиш нищо друго.',
     positive: true,
   },
   gain_hint: {
     title: 'Открадната тайна',
-    detail: 'Получаваш една подсказка. Използвай я, за да разкриеш със сигурност текущия ред.',
+    detail:
+      'Получаваш 1 подсказка. Натисни бутона за подсказка, за да видиш къде е безопасно да стъпиш на текущия ред.',
     positive: true,
   },
   shield_5s: {
     title: 'Егида · Щит',
     detail:
-      'За 5 секунди: спира щетата от следващата грешна плочка, след което се пръсва. Не спира кървенето, таксата на трезора или дълга.',
+      'Щитът те пази до 5 секунди. Поема един удар от счупена плочка, после се счупва и изчезва. Ако не го използваш, изчезва след тези 5 секунди.\n\nПази само от щети от плочки. Кървенето, вредните кутии, дълговете и death clock все още могат да ти вземат SP.',
     positive: true,
   },
   regen_5s: {
     title: 'Втори дъх',
     detail:
-      'За 5 секунди: девет пулса по +2 SP, общо до +18. Издигащите се искри означават лечение; числата показват реално възстановените SP.',
+      'Получаваш по 2 SP наведнъж, до общо 18 SP за 5 секунди. Виждаш как точките ти се увеличават при всяко пулсиране.',
     positive: true,
   },
   lucky_5s: {
     title: 'Заемен късмет',
     detail:
-      'За 5 секунди: следващата грешна плочка лекува с +10 / +15 / +20 вместо да наранява. После талисманът се счупва.',
+      'За следващите 5 секунди първата счупена плочка ти дава SP, вместо да ти взема. Получаваш 10, 15 или 20 SP според реда.\n\nДейства само веднъж. След това талисманът се счупва. Ако не го използваш навреме, изчезва.',
     positive: true,
   },
   hurt_10: {
     title: 'Кристална захапка',
-    detail: 'Губиш 10 SP веднага. Може да е смъртоносно.',
+    detail: 'Губиш 10 SP веднага щом отвориш кутията. Ако SP стигнат 0, опитът приключва.',
     positive: false,
   },
   hurt_15: {
     title: 'Дълбока пукнатина',
-    detail: 'Губиш 15 SP веднага. Може да е смъртоносно.',
+    detail: 'Губиш 15 SP веднага щом отвориш кутията. Ако SP стигнат 0, опитът приключва.',
     positive: false,
   },
   lose_hint: {
     title: 'Забравена тайна',
-    detail: 'Губиш една подсказка. Ако нямаш, не губиш нищо.',
+    detail: 'Кутията ти взема 1 подсказка. Ако нямаш подсказки, не губиш нищо.',
     positive: false,
   },
   fragility_5s: {
     title: 'Крехка клетва',
     detail:
-      'За 5 секунди: следващата грешна плочка, която те наранява, удря двойно. После проклятието се пречупва.',
+      'За следващите 5 секунди първата счупена плочка, която те нарани, взема двойно повече SP. Удар за 5 SP става удар за 10 SP.\n\nДейства веднъж, после изчезва. Ако щитът спре удара, ефектът остава за следващата плочка.',
     positive: false,
   },
   drain_5s: {
     title: 'Кървенето',
     detail:
-      'За 5 секунди: девет пулса по −2 SP, общо до −18. Падащите капки отнемат реални SP и могат да убият. Щитът не ги спира.',
+      'Губиш по 2 SP наведнъж, до общо 18 SP за 5 секунди. Щитът не спира тази загуба. Ако SP стигнат 0, опитът приключва.',
     positive: false,
   },
   inversion_5s: {
     title: 'Обърната съдба',
     detail:
-      'За 5 секунди: всяка грешна плочка лекува с +5 / +7 / +10 вместо да наранява. Въртящите се стрелки означават многократно лечение, не проклятие.',
+      'За 5 секунди всяка счупена плочка ти дава SP, вместо да ти взема: 5, 7 или 10 SP според реда.\n\nМоже да подейства няколко пъти, докато времето изтече. Здравите плочки не дават допълнителни SP от този ефект.',
     positive: true,
   },
   blood_oath: {
     title: 'Кръвна клетва',
     detail:
-      'Вземи +35 SP сега. За 3 реда всяка грешна плочка, която те наранява, отнема още 15 SP. Отказът струва 8 SP.',
+      'Ако приемеш, получаваш 35 SP веднага. За следващите ти 3 стъпки всяка счупена плочка, която те нарани, взема още 15 SP. Обичаен удар за 5 SP ще ти струва 20 SP.\n\nАко щитът спре удара, не губиш допълнителните 15 SP. Отказът от сделката струва 8 SP.',
     positive: false,
   },
   false_oracle: {
     title: 'Лъжливият оракул',
     detail:
-      'За 3 реда предзнаменованието е вярно в 70% от случаите. Правилните плочки дават +5 SP; щетата от грешните е двойна. Подсказките са запечатани. Заглуши го: губиш една подсказка, или 15 SP, ако нямаш.',
+      'Ако приемеш, виждаш стрелка за следващите 3 стъпки. При всяка тя има 70% шанс да сочи здравата плочка, затова може да те подведе. Докато сделката действа, не можеш да използваш подсказки.\n\nЗдрава стъпка дава 5 SP. Счупена плочка взема двойно повече SP от обичайното. Отказът струва 1 подсказка, а ако нямаш — 15 SP.',
     positive: false,
   },
   hungry_vault: {
     title: 'Алчният трезор',
     detail:
-      'Заложи 12 SP. Последователни правилни плочки трупат награда: 15 → 40 → 85 SP. Прибери я след успех или рискувай следващия ред. Една грешна плочка унищожава наградата и отнема още 10 SP върху щетата. Отказът струва 8 SP.',
+      'Плащаш 12 SP, за да започнеш. Една здрава стъпка събира 15 SP в трезора. Две здрави стъпки подред правят 40 SP. Три правят 85 SP, които получаваш автоматично.\n\nСлед първата или втората здрава стъпка избираш: вземи събраното или рискувай за още. Счупена плочка губи цялата награда и ти взема още 10 SP. Отказът да започнеш струва 8 SP.',
     positive: false,
   },
   borrowed_time: {
     title: 'Заем от бъдещето',
     detail:
-      'Вземи +50 SP сега. След 3 реда връщаш 65 SP, дори това да те убие. След първия ред можеш да погасиш рано за 55 SP. Отказът струва 8 SP. Лечението над 400 се губи; дългът остава.',
+      'Ако приемеш, получаваш 50 SP веднага. След третата ти стъпка се отнемат 65 SP. Дотогава трябва да намериш още SP, иначе дългът може да сложи край на опита.\n\nСлед първата стъпка можеш да върнеш заема по-рано за 55 SP. Отказът от заема струва 8 SP.',
     positive: false,
   },
   soul_exchange: {
     title: 'Размяна на душа',
     detail:
-      'Дай SP: плащаш 25, после 65% за 2 подсказки; иначе 1 подсказка и още −15 SP. Дай подсказка: харчиш 1, после 65% за +40 SP или 35% за −30 SP. Смъртоносно плащане на SP не носи награда.',
+      'Избираш една от две размени.\n\nДаваш SP: плащаш 25 SP. Имаш 65% шанс да получиш 2 подсказки. Иначе получаваш 1 подсказка, но губиш още 15 SP.\n\nДаваш подсказка: харчиш 1 подсказка. Имаш 65% шанс да получиш 40 SP. Иначе губиш 30 SP.\n\nТрябва да избереш размяна — няма безплатен отказ. Ако първите 25 SP те свалят до 0, не получаваш подсказки.',
     positive: false,
   },
 };
@@ -485,35 +489,36 @@ export function effectCopy(
         }
       : original;
   if (!usesBalanceRules(version)) return copy;
-  if (usesRiskRules(version) && kind === 'false_oracle')
+  if (usesBusinessRules(version) && kind === 'marketing')
+    return {
+      ...copy,
+      detail:
+        copy.detail +
+        (locale === 'bg'
+          ? '\n\nПодсказките от магазина ползват същия лимит от 200 SP за опита като SP резерва. Бутонът показва колко можеш да продадеш. Намерените и подарените подсказки нямат това ограничение.'
+          : '\n\nHints from the store share the SP reserve limit of 200 SP per crossing. The choice shows how many you can sell. Found and gifted hints do not have this limit.'),
+    };
+  if (usesRiskRules(version) && !usesClassicTiles(version) && kind === 'false_oracle')
     return {
       ...copy,
       detail:
         locale === 'bg'
-          ? 'За 3 реда оракулът посочва по-нискорисковата страна в 70% от случаите, а другата в 30%. Това не гарантира здрава плочка. Подсказките са запечатани. Здрава стъпка дава +5 SP; счупена удвоява действителната щета. Отказът струва 1 подсказка или 15 SP.'
-          : 'For 3 rows, the oracle points to the lower-risk side 70% of the time and the other side 30%. It cannot guarantee surviving glass. Hints are sealed. A safe step gives +5 SP; a broken tile doubles actual damage. Refusal costs 1 hint or 15 SP.',
+          ? 'Ако приемеш, виждаш стрелка за следващите 3 стъпки. При всяка тя има 70% шанс да сочи по-малко опасната страна. И тази плочка може да се счупи. Докато сделката действа, не можеш да използваш подсказки.\n\nЗдрава стъпка дава 5 SP. Счупена плочка взема двойно повече SP от обичайното. Отказът струва 1 подсказка, а ако нямаш — 15 SP.'
+          : 'Accept to see an arrow for your next 3 steps. It points to the less dangerous side with a 70% chance each time. That tile can still break. You cannot use hints during the deal.\n\nA safe step gives 5 SP. A broken tile takes twice its usual SP. Refusing costs 1 hint, or 15 SP if you have no hints.',
     };
   const detail =
     locale === 'bg'
       ? {
-          heal_10: 'Възстановява 10 SP веднага.',
-          heal_20: 'Възстановява 20 SP веднага.',
           lucky_5s:
-            'За 5 секунди: следващата грешна плочка дава +5 SP вместо −5 SP. След това талисманът се пръсва и изчезва. Един заряд.',
+            'За следващите 5 секунди първата счупена плочка ти дава 5 SP, вместо да ти вземе 5 SP. Например от 100 SP ставаш със 105 SP.\n\nДейства само веднъж, после талисманът се счупва. Ако не го използваш навреме, изчезва.',
           inversion_5s:
-            'За 5 секунди: ВСЯКА грешна плочка дава +5 SP вместо −5 SP. Пример: 100 → 105 SP, вместо 100 → 95. Не се изразходва след първата грешка.',
-          borrowed_time:
-            'Вземи +50 SP сега. След 3 избора връщаш 65 SP. След първия можеш да погасиш за 55 SP. Отказът струва 8 SP. Това е кратък авариен запас; без нови ресурси дългът може да те убие.',
+            'За 5 секунди всяка счупена плочка ти дава 5 SP, вместо да ти вземе 5 SP. Например две счупени плочки в това време вдигат 100 SP на 110 SP.\n\nМоже да подейства няколко пъти, докато времето изтече. Здравите плочки не дават допълнителни SP от този ефект. Другите активни ефекти могат да променят резултата.',
         }
       : {
-          heal_10: 'Restore 10 SP immediately.',
-          heal_20: 'Restore 20 SP immediately.',
           lucky_5s:
-            'For 5 seconds: the NEXT wrong tile gives +5 SP instead of −5 SP. The charm then bursts and disappears. One charge.',
+            'For up to 5 seconds, the next broken tile gives you 5 SP instead of taking 5 SP. For example, 100 SP becomes 105 SP.\n\nThis works once, then the charm breaks. If you do not use it in time, it expires.',
           inversion_5s:
-            'For 5 seconds: EVERY wrong tile gives +5 SP instead of −5 SP. Example: 100 → 105 SP rather than 100 → 95. The first wrong step does not consume it.',
-          borrowed_time:
-            'Take +50 SP now. After 3 choices repay 65 SP. After the first choice you may settle for 55 SP. Refusal costs 8 SP. This is a short emergency reserve; without new resources the debt can kill you.',
+            'For 5 seconds, every broken tile gives you 5 SP instead of taking 5 SP. For example, two broken tiles in that time raise 100 SP to 110 SP.\n\nThis can work more than once before time runs out. Safe tiles give no extra SP from this effect. Other active effects can change the result.',
         };
   return { ...copy, detail: detail[kind as keyof typeof detail] ?? copy.detail };
 }

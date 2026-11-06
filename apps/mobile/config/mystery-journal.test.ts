@@ -5,6 +5,7 @@ import {
   createRun,
   createPracticeCursor,
   DISCOVERY_RULESET_VERSION,
+  BUSINESS_RULESET_VERSION,
   PRACTICE_RNG,
   transitionRun,
 } from '@crystal-path-infinity/game-core';
@@ -148,6 +149,20 @@ describe('personal mystery discoveries', () => {
     expect(restricted).toContain('Twisted fate');
     expect(restricted).not.toContain('Half Life');
     expect(restricted).not.toContain('Marketing');
+  });
+
+  it('explains the current oracle and purchased-hint limits without rewriting an older run', () => {
+    const known = ['false_oracle', 'marketing'] as const;
+    const current = renderToStaticMarkup(createElement(MysteryJournal, { known }));
+    expect(current).toContain('points to the safe tile');
+    expect(current).toContain('200 SP per crossing');
+    expect(current).toContain('How does it work?');
+    for (const version of [DISCOVERY_RULESET_VERSION, BUSINESS_RULESET_VERSION]) {
+      const state = createMysteryLabRun('false_oracle', 100, 91025, version).state;
+      const html = renderToStaticMarkup(createElement(MysteryJournal, { known, state }));
+      expect(html.includes('less dangerous side')).toBe(version === DISCOVERY_RULESET_VERSION);
+      expect(html.includes('200 SP per crossing')).toBe(version === BUSINESS_RULESET_VERSION);
+    }
   });
 
   it('treats unavailable or malformed optional storage as an empty journal', () => {
