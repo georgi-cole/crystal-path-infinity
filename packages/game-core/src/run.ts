@@ -1,4 +1,10 @@
 import {
+  assertDiscovery,
+  discoverMystery,
+  settleDiscoveryIntroduction,
+  endDiscoveryIntroduction,
+} from './discovery.ts';
+import {
   assertActiveEffects,
   isTimedEffect,
   scaleSpDelta,
@@ -59,6 +65,7 @@ import {
   STARTING_HINTS,
   STARTING_SP,
   usesMysteryDirectorRules,
+  DISCOVERY_RULESET_VERSION,
   CHOICE_GRACE_MS,
 } from './rules.ts';
 import type {
@@ -95,6 +102,14 @@ function assertBuffer(buffer: BufferPolicy): void {
 export function createRun(options: CreateRunOptions, rng: RandomSource): RunState {
   const rulesetVersion = options.rulesetVersion ?? RULESET_VERSION;
   getRuleset(rulesetVersion);
+  if (options.discoveredMysteries !== undefined) {
+    if (rulesetVersion !== DISCOVERY_RULESET_VERSION)
+      throw new RangeError('Discoveries outside v7.');
+    assertDiscovery(
+      { known: options.discoveredMysteries, introduction: null },
+      options.activeTimeMs ?? 0,
+    );
+  }
   assertNonEmpty(options.runId, 'Run ID');
   assertNonNegativeInteger(options.observedAt, 'Observation timestamp');
   const activeTimeMs = options.activeTimeMs ?? 0;
@@ -120,6 +135,9 @@ export function createRun(options: CreateRunOptions, rng: RandomSource): RunStat
     activeTimeMs,
     lastObservedAt: options.observedAt,
     effects: [],
+    ...(rulesetVersion === DISCOVERY_RULESET_VERSION
+      ? { discovery: { known: [...(options.discoveredMysteries ?? [])], introduction: null } }
+      : {}),
     ...(supportsPacts(rulesetVersion) ? { pact: null } : {}),
     ...(usesMysteryDirectorRules(rulesetVersion)
       ? { mysteryDirector: { nextRow: '5', lastStepAt: activeTimeMs, history: [], rhythm: null } }
@@ -152,6 +170,18 @@ export function assertRunState(state: RunState, rng?: RandomSource): void {
   getRuleset(state.rulesetVersion);
   assertPact(state);
   assertMysteryDirector(state);
+  if (state.rulesetVersion === DISCOVERY_RULESET_VERSION) {
+    const discovery = state.discovery;
+    if (!discovery) throw new RangeError('Missing mystery discoveries.');
+    assertDiscovery(discovery, state.activeTimeMs);
+    if (
+      discovery.introduction &&
+      (state.status !== 'playing' ||
+        state.pact?.phase === 'offered' ||
+        state.current.mysteryOutcome !== discovery.introduction.kind)
+    )
+      throw new RangeError('Introduction outside active play.');
+  } else if (state.discovery !== undefined) throw new RangeError('Discoveries outside v7.');
   assertNonEmpty(state.runId, 'Run ID');
   assertBuffer(state.buffer);
   decimal(state.lastClearedRow);
@@ -319,6 +349,7 @@ function finish(state: RunState, reason: EndReason, events: RunEvent[]): RunStat
     effects: [],
     ...(state.pact ? { pact: null } : {}),
     result: finalResult,
+    ...(state.discovery ? { discovery: { ...state.discovery, introduction: null } } : {}),
   };
 }
 
@@ -335,6 +366,7 @@ function die(state: RunState, cause: DeathCause, events: RunEvent[]): RunState {
   const dead: RunState = {
     ...state,
     status: 'dead',
+    ...(state.discovery ? { discovery: { ...state.discovery, introduction: null } } : {}),
     sp: 0,
     deaths: sequence,
     death,
@@ -347,6 +379,7 @@ function die(state: RunState, cause: DeathCause, events: RunEvent[]): RunState {
 
 /** At most nine pulses per remaining effect, independent of an arbitrarily large clock jump. */
 function settleTime(state: RunState, context: TransitionContext, events: RunEvent[]): RunState {
+  state = settleDiscoveryIntroduction(state, context.activeTimeMs, context.achievedAt);
   const clock = getDeathClock(state);
   const clockExpired = clock !== null && clock.expiresAt <= context.activeTimeMs;
   if (clockExpired) context = { ...context, activeTimeMs: clock.expiresAt };
@@ -756,6 +789,7 @@ export function transitionRun(
       };
       if (directed)
         next = rebaseDeathPressure(recordMysteryOpen(next, kind, context.rng), beforeMysterySp);
+      next = discoverMystery(next, kind);
       return result(sp === 0 ? die(next, 'mystery', events) : next, events);
     }
     case 'pact': {
@@ -818,6 +852,7 @@ export function transitionRun(
       return result(sp === 0 ? die(next, 'mystery', events) : next, events);
     }
     case 'choose': {
+      next = endDiscoveryIntroduction(next);
       const row = getCurrentRow(next);
       const wrong = isBrokenTile(row, command.side);
       const resolution = wrong

@@ -35,6 +35,14 @@ export type PactOption =
   'accept' | 'decline' | 'cashout' | 'settle' | 'sp' | 'hint' | 'sell_one' | 'sell_all';
 
 export type MysteryTier = 'standard' | 'choice' | 'major' | 'anomaly';
+export interface MysteryDiscovery {
+  readonly known: readonly EffectKind[];
+  readonly introduction: {
+    readonly kind: EffectKind;
+    readonly startedAt: number;
+    readonly expiresAt: number;
+  } | null;
+}
 export interface MysteryRhythm {
   readonly kind: 'mystery_silence_30s' | 'mystery_surge_30s';
   readonly startedAt: number;
@@ -206,6 +214,7 @@ export interface RunState {
   /** Absent in legacy v1 checkpoints. Only the versioned pact ruleset can use this. */
   readonly pact?: MysteryPact | null;
   readonly mysteryDirector?: MysteryDirector;
+  readonly discovery?: MysteryDiscovery;
   readonly buffer: BufferPolicy;
   /** Zero-based index of rows[0], independent of bounded array positions. */
   readonly bufferOffset: Decimal;
@@ -226,6 +235,8 @@ export interface RunState {
 }
 
 export interface CreateRunOptions {
+  /** Trusted practice/profile discoveries. Never accepted from a ranked action. */
+  readonly discoveredMysteries?: readonly EffectKind[];
   readonly runId: string;
   readonly routeRng: RandomCursor;
   readonly mysteryRng: RandomCursor;

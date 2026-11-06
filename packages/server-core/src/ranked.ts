@@ -10,6 +10,7 @@ import {
   isTimedEffect,
   PACT_OPTIONS,
   usesMysteryDirectorRules,
+  DISCOVERY_RULESET_VERSION,
   getDeathClock,
   transitionRun,
 } from '@crystal-path-infinity/game-core';
@@ -92,6 +93,7 @@ export interface RankedSnapshot {
   readonly pact?: RunState['pact'];
   readonly mysteryRhythm?: NonNullable<RunState['mysteryDirector']>['rhythm'];
   readonly deathClock?: ReturnType<typeof getDeathClock>;
+  readonly discovery?: RunState['discovery'];
   readonly death: Pick<NonNullable<RunState['death']>, 'id' | 'fatalRow' | 'cause'> | null;
   readonly revivesGranted: number;
   readonly revivesApplied: number;
@@ -323,6 +325,7 @@ export function rankedSnapshot(record: StoredRankedRun): RankedSnapshot {
             rowsLeft: effect.rowsLeft,
           },
     ),
+    ...(state.rulesetVersion === DISCOVERY_RULESET_VERSION ? { discovery: state.discovery } : {}),
     ...(usesMysteryDirectorRules(state.rulesetVersion)
       ? { mysteryRhythm: state.mysteryDirector!.rhythm, deathClock: getDeathClock(state) }
       : {}),

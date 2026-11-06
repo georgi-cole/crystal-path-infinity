@@ -3,7 +3,7 @@ import {
   usesBalanceRules,
   usesRiskRules,
   RULESET_VERSION,
-  RELIC_RULESET_VERSION,
+  usesRelicRules,
 } from '@crystal-path-infinity/game-core';
 import type { LocaleCode } from './i18n';
 
@@ -478,8 +478,7 @@ export function effectCopy(
 ): EffectCopy {
   const original = (locale === 'bg' ? bgEffects : enEffects)[kind];
   const copy =
-    version === RELIC_RULESET_VERSION &&
-    (kind === 'mystery_silence_30s' || kind === 'mystery_surge_30s')
+    usesRelicRules(version) && (kind === 'mystery_silence_30s' || kind === 'mystery_surge_30s')
       ? {
           ...original,
           detail: original.detail

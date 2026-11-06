@@ -1,7 +1,8 @@
+import { DiscoveryIntroduction } from './mystery-introduction';
 import { mysteryFeedbackFromEvents, runCuesFromEvents } from './mystery-feedback';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  RELIC_RULESET_VERSION,
+  DISCOVERY_RULESET_VERSION,
   getDeathClock,
   mysteryTier,
   MYSTERY_TIERS,
@@ -29,16 +30,20 @@ import { MysteryTierLegend, MysteryRhythmBadge, DeathClockBadge } from './myster
 export function MysteryLab({
   onClose,
   reducedMotion,
+  initialKind = 'half_life',
+  availableKinds,
 }: {
   onClose: () => void;
   reducedMotion: boolean;
+  initialKind?: EffectKind;
+  availableKinds?: readonly EffectKind[];
 }) {
   const { locale } = useLanguage();
-  const version = RELIC_RULESET_VERSION;
-  const [kind, setKind] = useState<EffectKind>('half_life');
+  const version = DISCOVERY_RULESET_VERSION;
+  const [kind, setKind] = useState<EffectKind>(initialKind);
   const [startingSp, setStartingSp] = useState(100);
   const [spDraft, setSpDraft] = useState('100');
-  const [initial] = useState(() => createMysteryLabRun('half_life', 100, 91025, version));
+  const [initial] = useState(() => createMysteryLabRun(initialKind, 100, 91025, version));
   const [state, setState] = useState<RunState>(initial.state);
   const [feedback, setFeedback] = useState<MysteryFeedback | null>(null);
   const [cues, setCues] = useState<RunCues>({});
@@ -56,7 +61,10 @@ export function MysteryLab({
     current.current = result.state;
     setState(result.state);
     const nextFeedback = mysteryFeedbackFromEvents(result.events, result.state);
-    if (nextFeedback) setFeedback(nextFeedback);
+    if (nextFeedback)
+      setFeedback(
+        result.state.discovery?.introduction && nextFeedback.action === null ? null : nextFeedback,
+      );
     const nextCues = runCuesFromEvents(result.events, result.state);
     if (nextCues.hints || nextCues.consumption)
       setCues((previous) => ({ ...previous, ...nextCues }));
@@ -144,7 +152,9 @@ export function MysteryLab({
   };
   const oracle = state.pact?.kind === 'false_oracle' && state.pact.phase === 'active';
   const copy = effectCopy(locale, kind, version);
-  const all = getRuleset(version).mysteryTable.map((entry) => entry.kind);
+  const all = getRuleset(version)
+    .mysteryTable.map((entry) => entry.kind)
+    .filter((kind) => !availableKinds || availableKinds.includes(kind));
   const catalog = (kinds: readonly EffectKind[]) => (
     <div>
       {kinds.map((item) => (
@@ -171,39 +181,55 @@ export function MysteryLab({
   return (
     <main className={'cpi-mystery-lab' + (reducedMotion ? ' cpi-reduced-motion' : '')}>
       <header>
-        <h1>{mysteryText(locale, 'lab')}</h1>
+        <h1>
+          {availableKinds
+            ? locale === 'bg'
+              ? 'Демонстрация'
+              : 'Demonstration'
+            : mysteryText(locale, 'lab')}
+        </h1>
         <button type="button" onClick={onClose}>
-          {mysteryText(locale, 'back')}
+          {availableKinds
+            ? locale === 'bg'
+              ? 'Назад към дневника'
+              : 'Back to journal'
+            : mysteryText(locale, 'back')}
         </button>
       </header>
       <p className="cpi-lab-intro">
-        {mysteryText(locale, 'labIntro').replace('{count}', String(all.length))}
+        {availableKinds
+          ? locale === 'bg'
+            ? 'Изпробвай откритите си мистерии. Времето започва спряно.'
+            : 'Try your discovered mysteries. Time starts frozen.'
+          : mysteryText(locale, 'labIntro').replace('{count}', String(all.length))}
         <br />
         {mysteryText(locale, 'labNote')}
       </p>
       <div className="cpi-lab-layout">
         <nav className="cpi-lab-catalog" aria-label={mysteryText(locale, 'lab')}>
           <MysteryTierLegend />
-          {MYSTERY_TIERS.map((tier) => (
-            <section key={tier} data-tier={tier}>
-              <h2>
-                {locale === 'bg'
-                  ? {
-                      standard: 'Искри · обикновени ефекти',
-                      choice: 'Сделки · умерен избор',
-                      major: 'Ритуали · голямо решение',
-                      anomaly: 'Разломи · специални събития',
-                    }[tier]
-                  : {
-                      standard: 'Sparks · ordinary effects',
-                      choice: 'Trades · moderate choices',
-                      major: 'Rituals · major choices',
-                      anomaly: 'Rifts · special events',
-                    }[tier]}
-              </h2>
-              {catalog(all.filter((item) => mysteryTier(item) === tier))}
-            </section>
-          ))}
+          {MYSTERY_TIERS.filter((tier) => all.some((kind) => mysteryTier(kind) === tier)).map(
+            (tier) => (
+              <section key={tier} data-tier={tier}>
+                <h2>
+                  {locale === 'bg'
+                    ? {
+                        standard: 'Искри · обикновени ефекти',
+                        choice: 'Сделки · умерен избор',
+                        major: 'Ритуали · голямо решение',
+                        anomaly: 'Разломи · специални събития',
+                      }[tier]
+                    : {
+                        standard: 'Sparks · ordinary effects',
+                        choice: 'Trades · moderate choices',
+                        major: 'Rituals · major choices',
+                        anomaly: 'Rifts · special events',
+                      }[tier]}
+                </h2>
+                {catalog(all.filter((item) => mysteryTier(item) === tier))}
+              </section>
+            ),
+          )}
         </nav>
         <section ref={room} className="cpi-lab-room" aria-label={copy.title}>
           <div className="cpi-lab-instrument">
@@ -259,6 +285,11 @@ export function MysteryLab({
             activeTimeMs={state.activeTimeMs}
             rulesetVersion={version}
           />
+          <DiscoveryIntroduction
+            discovery={state.discovery}
+            activeTimeMs={state.activeTimeMs}
+            rulesetVersion={state.rulesetVersion}
+          />
           <PactPanel
             pact={state.pact}
             sp={state.sp}
@@ -276,7 +307,7 @@ export function MysteryLab({
           <DeathClockBadge
             clock={getDeathClock(state)}
             activeTimeMs={state.activeTimeMs}
-            offered={frozen}
+            offered={frozen || !!state.discovery?.introduction}
           />
           {isPactKind(kind) && !state.pact && <p>{copy.detail}</p>}
           {state.current.noSafeTile && (

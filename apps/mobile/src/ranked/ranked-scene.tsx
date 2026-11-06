@@ -1,3 +1,4 @@
+import { DiscoveryIntroduction } from '../mystery-introduction';
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { useLanguage } from '../language-context';
 import type { RankedClient, RankedClientState } from './ranked-client';
@@ -308,7 +309,12 @@ export function RankedScene({
               <DeathClockBadge
                 clock={run.deathClock}
                 activeTimeMs={run.activeTimeMs}
-                offered={run.pact?.phase === 'offered'}
+                offered={run.pact?.phase === 'offered' || !!run.discovery?.introduction}
+              />
+              <DiscoveryIntroduction
+                discovery={run.discovery}
+                activeTimeMs={run.activeTimeMs}
+                rulesetVersion={run.rulesetVersion}
               />
               <PactPanel
                 sp={run.sp}

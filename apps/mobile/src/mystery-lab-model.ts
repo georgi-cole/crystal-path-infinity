@@ -22,6 +22,7 @@ export function prepareMysteryLabStep(
   return {
     ...state,
     current: {
+      ...(state.current.mysteryTier ? { mysteryTier: state.current.mysteryTier } : {}),
       mysteryOutcome: state.current.mysteryOutcome,
       lastChoice: state.current.lastChoice,
       revealedSafeSide: null,

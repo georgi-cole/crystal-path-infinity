@@ -1,6 +1,7 @@
+import { rememberMysteries } from './mystery-journal-model';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { RunState } from '@crystal-path-infinity/game-core';
-import { RELIC_RULESET_VERSION } from '@crystal-path-infinity/game-core';
+import { DISCOVERY_RULESET_VERSION } from '@crystal-path-infinity/game-core';
 import { Capacitor } from '@capacitor/core';
 import {
   clearPracticeCheckpoint,
@@ -50,7 +51,15 @@ const showBuildDetails = build.environment !== 'production';
 function loadLocalPractice(): PracticeLoad {
   if (typeof window === 'undefined') return { status: 'empty' };
   try {
-    return readPracticeCheckpoint(window.localStorage);
+    const loaded = readPracticeCheckpoint(window.localStorage);
+    if (loaded.status === 'ready') {
+      try {
+        rememberMysteries(window.localStorage, loaded.state);
+      } catch {
+        /* Journal writes never invalidate the saved run. */
+      }
+    }
+    return loaded;
   } catch {
     return {
       status: 'corrupt',
@@ -158,7 +167,9 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
       try {
         personalBest = readPracticePersonalBest(
           window.localStorage,
-          checkpoint.status === 'ready' ? checkpoint.state.rulesetVersion : RELIC_RULESET_VERSION,
+          checkpoint.status === 'ready'
+            ? checkpoint.state.rulesetVersion
+            : DISCOVERY_RULESET_VERSION,
         );
       } catch {
         // Personal best is optional local metadata, not ranked authority.
@@ -298,6 +309,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
   const onCheckpoint = useCallback((state: RunState) => {
     try {
       writePracticeCheckpoint(window.localStorage, state);
+      rememberMysteries(window.localStorage, state);
       setStorageWarning(null);
     } catch {
       setStorageWarning(
@@ -358,7 +370,9 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
       setBest(
         readPracticePersonalBest(
           window.localStorage,
-          checkpoint.status === 'ready' ? checkpoint.state.rulesetVersion : RELIC_RULESET_VERSION,
+          checkpoint.status === 'ready'
+            ? checkpoint.state.rulesetVersion
+            : DISCOVERY_RULESET_VERSION,
         ),
       );
     } catch {

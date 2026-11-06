@@ -13,6 +13,8 @@ import {
   RISK_RULESET_VERSION,
   DIRECTOR_RULESET_VERSION,
   RELIC_RULESET_VERSION,
+  DISCOVERY_RULESET_VERSION,
+  usesRelicRules,
   usesMysteryDirectorRules,
   getDeathClock,
   applyMysteryEffect,
@@ -66,6 +68,7 @@ function wire(state: RunState) {
       history: [],
       effects: state.effects,
       pact: state.pact,
+      ...(state.discovery ? { discovery: state.discovery } : {}),
       ...(usesMysteryDirectorRules(state.rulesetVersion)
         ? { mysteryRhythm: state.mysteryDirector!.rhythm, deathClock: getDeathClock(state) }
         : {}),
@@ -82,8 +85,8 @@ function wire(state: RunState) {
 
 describe('mystery feedback, practice chamber and public contracts', () => {
   it.each(
-    [DIRECTOR_RULESET_VERSION, RELIC_RULESET_VERSION].flatMap((version) =>
-      getRuleset(version).mysteryTable.map(({ kind }) => ({ version, kind })),
+    [DIRECTOR_RULESET_VERSION, RELIC_RULESET_VERSION, DISCOVERY_RULESET_VERSION].flatMap(
+      (version) => getRuleset(version).mysteryTable.map(({ kind }) => ({ version, kind })),
     ),
   )(
     'opens and decodes $version / $kind with its actual clock and public tier',
@@ -94,13 +97,13 @@ describe('mystery feedback, practice chamber and public contracts', () => {
       if (kind === 'mystery_silence_30s' || kind === 'mystery_surge_30s') {
         for (const locale of ['bg', 'en'] as const) {
           const detail = effectCopy(locale, kind, version).detail;
-          expect(detail.includes('5–7')).toBe(version === RELIC_RULESET_VERSION);
+          expect(detail.includes('5–7')).toBe(usesRelicRules(version));
         }
       }
     },
   );
 
-  it.each([DIRECTOR_RULESET_VERSION, RELIC_RULESET_VERSION])(
+  it.each([DIRECTOR_RULESET_VERSION, RELIC_RULESET_VERSION, DISCOVERY_RULESET_VERSION])(
     'keeps %s choices compact and refreshes their live price during the death clock',
     (version) => {
       const opened = createMysteryLabRun('half_life', 100, 91025, version).state;
@@ -148,6 +151,18 @@ describe('mystery feedback, practice chamber and public contracts', () => {
     expect(mysteryChoiceCards(market.pact!, 100, 0, false, false)[0].disabled).toBe(true);
   });
 
+  it('decodes a bounded first discovery and rejects injected fields or an extended reading window', () => {
+    const state = createMysteryLabRun('inversion_5s', 100, 91025, DISCOVERY_RULESET_VERSION).state;
+    const reply = wire(state);
+    expect(parseRankedReply(reply)?.snapshot.discovery?.introduction?.expiresAt).toBe(4000);
+    for (const discovery of [
+      { ...state.discovery, pressure: 1 },
+      { ...state.discovery, introduction: { ...state.discovery!.introduction, expiresAt: 5000 } },
+      { ...state.discovery, known: ['half_life'], introduction: state.discovery!.introduction },
+    ])
+      expect(parseRankedReply({ ...reply, snapshot: { ...reply.snapshot, discovery } })).toBeNull();
+  });
+
   it('decodes rhythm and death clock without leaking cooldowns, and rejects forged grace, tiers and durations', () => {
     const state = createMysteryLabRun('half_life', 100, 91025, DIRECTOR_RULESET_VERSION).state;
     const reply = wire(state);
@@ -178,7 +193,7 @@ describe('mystery feedback, practice chamber and public contracts', () => {
     ).toBeNull();
   });
 
-  it.each([DIRECTOR_RULESET_VERSION, RELIC_RULESET_VERSION])(
+  it.each([DIRECTOR_RULESET_VERSION, RELIC_RULESET_VERSION, DISCOVERY_RULESET_VERSION])(
     'persists a partially drained %s decision without resetting grace or mixing scores',
     (version) => {
       const opened = createMysteryLabRun('half_life', 100, 91025, version).state;
@@ -210,7 +225,7 @@ describe('mystery feedback, practice chamber and public contracts', () => {
       expect(
         readPracticePersonalBest(
           storage,
-          version === RELIC_RULESET_VERSION ? DIRECTOR_RULESET_VERSION : RELIC_RULESET_VERSION,
+          version === DIRECTOR_RULESET_VERSION ? RELIC_RULESET_VERSION : DIRECTOR_RULESET_VERSION,
         ),
       ).toBeNull();
     },

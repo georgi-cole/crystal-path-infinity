@@ -8,6 +8,7 @@ import {
   deathClockPaid,
   DIRECTOR_RULESET_VERSION,
   RELIC_RULESET_VERSION,
+  DISCOVERY_RULESET_VERSION,
   getCurrentRow,
   getDeathClock,
   getRuleset,
@@ -22,11 +23,17 @@ import {
 import type { EffectKind, MysteryTier, RunCommand, RunState } from '../src/index.ts';
 
 const version = DIRECTOR_RULESET_VERSION;
-function fresh(rulesetVersion = version, seed = 91, ahead = 8): RunState {
+function fresh(
+  rulesetVersion = version,
+  seed = 91,
+  ahead = 8,
+  discoveredMysteries?: EffectKind[],
+): RunState {
   return createRun(
     {
       runId: 'practice-director',
       rulesetVersion,
+      ...(discoveredMysteries ? { discoveredMysteries } : {}),
       buffer: { ahead, history: 2 },
       routeRng: createPracticeCursor(53),
       mysteryRng: createPracticeCursor(seed),
@@ -340,28 +347,31 @@ describe('three-second idle grace and progressive ten-second death clock', () =>
 });
 
 describe('v6 relic cadence', () => {
-  it('draws every normal gap in the inclusive 5–7 range, including the first box', () => {
-    const firstRows = new Set<number>();
-    const gaps = new Set<number>();
-    for (let seed = 1; seed <= 12; seed += 1) {
-      let state = fresh(RELIC_RULESET_VERSION, seed);
-      const first = Number(state.mysteryDirector!.nextRow);
-      firstRows.add(first);
-      let previous = 0;
-      for (let i = 1; i <= 80; i += 1) {
-        if (getCurrentRow(state).hasMystery) {
-          const gap = Number(state.currentRow) - previous;
-          expect(gap).toBeGreaterThanOrEqual(5);
-          expect(gap).toBeLessThanOrEqual(7);
-          gaps.add(gap);
-          previous = Number(state.currentRow);
-        } else if (!previous) expect(i).toBeLessThan(first);
-        state = safeStep(state, i * 100);
+  it.each([RELIC_RULESET_VERSION, DISCOVERY_RULESET_VERSION])(
+    'draws every %s normal gap in the inclusive 5–7 range, including the first box',
+    (rulesetVersion) => {
+      const firstRows = new Set<number>();
+      const gaps = new Set<number>();
+      for (let seed = 1; seed <= 12; seed += 1) {
+        let state = fresh(rulesetVersion, seed);
+        const first = Number(state.mysteryDirector!.nextRow);
+        firstRows.add(first);
+        let previous = 0;
+        for (let i = 1; i <= 80; i += 1) {
+          if (getCurrentRow(state).hasMystery) {
+            const gap = Number(state.currentRow) - previous;
+            expect(gap).toBeGreaterThanOrEqual(5);
+            expect(gap).toBeLessThanOrEqual(7);
+            gaps.add(gap);
+            previous = Number(state.currentRow);
+          } else if (!previous) expect(i).toBeLessThan(first);
+          state = safeStep(state, i * 100);
+        }
       }
-    }
-    expect([...firstRows].sort()).toEqual([5, 6, 7]);
-    expect([...gaps].sort()).toEqual([5, 6, 7]);
-  });
+      expect([...firstRows].sort()).toEqual([5, 6, 7]);
+      expect([...gaps].sort()).toEqual([5, 6, 7]);
+    },
+  );
 
   it('preserves the same upcoming boxes across buffering, hints, ticks and checkpoint restoration', () => {
     let small = fresh(RELIC_RULESET_VERSION, 317, 4);
@@ -403,4 +413,167 @@ describe('v6 relic cadence', () => {
       expect(repeated.mysteryRng).toEqual(state.mysteryRng);
     },
   );
+});
+
+describe('v7 first discoveries', () => {
+  it.each([
+    ['fragility_5s', 290],
+    ['shield_5s', 300],
+    ['lucky_5s', 305],
+    ['coyote_10s', 300],
+    ['bleed_3rows', 292],
+    ['regen_3rows', 301],
+  ] as const)(
+    'applies %s to the early step, including its real cost or protection',
+    (kind, expectedSp) => {
+      const state = open(kind, fresh(DISCOVERY_RULESET_VERSION));
+      const current = getCurrentRow(state);
+      const prepared = {
+        ...state,
+        rows: state.rows.map((row) =>
+          row.index === current.index
+            ? { ...row, risk: { ...row.risk!, broken: { left: true, right: true } } }
+            : row,
+        ),
+      };
+      const result = act(
+        prepared,
+        { type: 'choose', row: state.currentRow, life: 0, side: 'left' },
+        1000,
+      );
+      expect(result.state.sp).toBe(expectedSp);
+      expect(result.state.discovery!.introduction).toBeNull();
+      expect(result.events.some((event) => event.type === 'choice-resolved' && event.wrong)).toBe(
+        true,
+      );
+    },
+  );
+
+  it('explains a new effect once, preserves its full duration and applies it on an early next step', () => {
+    let state = open('inversion_5s', fresh(DISCOVERY_RULESET_VERSION));
+    expect(state.discovery).toEqual({
+      known: ['inversion_5s'],
+      introduction: { kind: 'inversion_5s', startedAt: 0, expiresAt: 4000 },
+    });
+    state = act(state, { type: 'tick' }, 1800).state;
+    expect(state.sp).toBe(300);
+    expect(state.effects[0].expiresAt! - state.activeTimeMs).toBe(5000);
+    const row = getCurrentRow(state);
+    state = {
+      ...state,
+      rows: state.rows.map((r) =>
+        r.index === row.index
+          ? { ...r, risk: { ...r.risk!, broken: { left: true, right: true } } }
+          : r,
+      ),
+    };
+    state = act(
+      state,
+      { type: 'choose', row: state.currentRow, life: 0, side: 'left' },
+      2000,
+    ).state;
+    expect(state.discovery!.introduction).toBeNull();
+    expect(state.sp).toBe(305);
+    expect(state.effects[0].expiresAt! - state.activeTimeMs).toBe(5000);
+    const repeated = open('inversion_5s', {
+      ...state,
+      mysteryDirector: { ...state.mysteryDirector!, history: [] },
+    });
+    expect(repeated.discovery!.known).toEqual(['inversion_5s']);
+    expect(repeated.discovery!.introduction).toBeNull();
+  });
+
+  it('automatically releases at four seconds and cannot postpone the death clock indefinitely', () => {
+    const opened = open('shield_5s', fresh(DISCOVERY_RULESET_VERSION));
+    const resumed = act(opened, { type: 'tick' }, 4000).state;
+    expect(resumed.discovery!.introduction).toBeNull();
+    expect(resumed.effects[0].expiresAt! - resumed.activeTimeMs).toBe(5000);
+    expect(getDeathClock(resumed)).toEqual({ warningAt: 7000, expiresAt: 17000 });
+    const oneJump = act(opened, { type: 'tick' }, 500000).state;
+    expect(oneJump.status).toBe('dead');
+    expect(oneJump.activeTimeMs).toBe(17000);
+    expect(oneJump.death?.cause).toBe('death_clock');
+    let stepped = resumed;
+    for (let time = 4500; time <= 17000; time += 500)
+      stepped = act(stepped, { type: 'tick' }, time).state;
+    expect(stepped.sp).toBe(oneJump.sp);
+    expect(stepped.death?.activeTimeMs).toBe(oneJump.death?.activeTimeMs);
+  });
+
+  it('freezes existing damage pulses and a running mystery rhythm too', () => {
+    const base = fresh(DISCOVERY_RULESET_VERSION);
+    const opened = open('inversion_5s', {
+      ...base,
+      effects: [applyMysteryEffect('drain_5s', 0).addedEffect!],
+      mysteryDirector: {
+        ...base.mysteryDirector!,
+        rhythm: { kind: 'mystery_silence_30s', startedAt: 0, expiresAt: 30000 },
+      },
+    });
+    const waiting = act(opened, { type: 'tick' }, 4000).state;
+    expect(waiting.sp).toBe(300);
+    expect(waiting.mysteryDirector!.rhythm!.expiresAt - waiting.activeTimeMs).toBe(30000);
+    expect(act(waiting, { type: 'tick' }, 4500).state.sp).toBe(298);
+  });
+
+  it('keeps the original remaining introduction after checkpoint recovery and foreground pauses', () => {
+    const initial = open('coyote_10s', fresh(DISCOVERY_RULESET_VERSION));
+    let now = 0;
+    const timed = createTimedRunSession(initial, PRACTICE_RNG, { monotonicNow: () => now });
+    timed.releaseRecovery();
+    now = 1000;
+    timed.tick();
+    const hold = timed.hold('user');
+    now = 90000;
+    hold.release();
+    expect(timed.tick().state.activeTimeMs).toBe(1000);
+    now = 92000;
+    const checkpoint = JSON.parse(JSON.stringify(timed.tick().state)) as RunState;
+    expect(checkpoint.discovery!.introduction!.expiresAt - checkpoint.activeTimeMs).toBe(1000);
+    const resumed = transitionRun(
+      checkpoint,
+      { type: 'tick' },
+      { activeTimeMs: 4000, achievedAt: checkpoint.lastObservedAt + 1000, rng: PRACTICE_RNG },
+    ).state;
+    assertRunState(resumed, PRACTICE_RNG);
+    expect(resumed.discovery!.introduction).toBeNull();
+    expect(resumed.effects[0].expiresAt! - resumed.activeTimeMs).toBe(10000);
+  });
+
+  it('inherits discoveries in a new run and never adds an introduction to instant rewards or choices', () => {
+    const inherited = open('shield_5s', fresh(DISCOVERY_RULESET_VERSION, 91, 8, ['shield_5s']));
+    expect(inherited.discovery!.introduction).toBeNull();
+    for (const kind of [
+      'heal_10',
+      'hurt_15',
+      'gain_hint',
+      'lose_hint',
+      'half_life',
+      'soul_exchange',
+    ] as const) {
+      const found = open(kind, fresh(DISCOVERY_RULESET_VERSION));
+      expect(found.discovery!.known).toContain(kind);
+      expect(found.discovery!.introduction).toBeNull();
+    }
+    const ended = act(
+      open('shield_5s', fresh(DISCOVERY_RULESET_VERSION)),
+      { type: 'end' },
+      500,
+    ).state;
+    expect(ended.status).toBe('finished');
+    expect(ended.discovery!.introduction).toBeNull();
+  });
+
+  it('rejects invented, duplicated or extended discoveries, and leaves v6 timing unchanged', () => {
+    const state = open('shield_5s', fresh(DISCOVERY_RULESET_VERSION));
+    for (const discovery of [
+      { ...state.discovery!, known: ['shield_5s', 'shield_5s'] },
+      { ...state.discovery!, introduction: { ...state.discovery!.introduction!, expiresAt: 5000 } },
+      { ...state.discovery!, known: ['not-found'] },
+    ])
+      expect(() => assertRunState({ ...state, discovery } as RunState)).toThrow();
+    const old = open('shield_5s', fresh(RELIC_RULESET_VERSION));
+    expect(old.discovery).toBeUndefined();
+    expect(act(old, { type: 'tick' }, 2000).state.effects[0].expiresAt).toBe(5000);
+  });
 });

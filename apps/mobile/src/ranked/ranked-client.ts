@@ -4,6 +4,8 @@ import {
   usesBalanceRules,
   usesRiskRules,
   usesMysteryDirectorRules,
+  DISCOVERY_RULESET_VERSION,
+  assertDiscovery,
   MYSTERY_TIERS,
   getRuleset,
   supportsPacts,
@@ -19,6 +21,7 @@ import type {
   TimedEffectKind,
   MysteryTier,
   MysteryRhythm,
+  MysteryDiscovery,
 } from '@crystal-path-infinity/game-core';
 import { canRecheckOperation, parseOperationFailure } from '../operations/operation-failure.ts';
 import type { OperationFailure } from '../operations/operation-failure';
@@ -68,6 +71,7 @@ export interface RankedRun {
   readonly effects: readonly ActiveEffect[];
   readonly pact?: MysteryPact | null;
   readonly mysteryRhythm?: MysteryRhythm | null;
+  readonly discovery?: MysteryDiscovery;
   readonly deathClock?: { readonly warningAt: number; readonly expiresAt: number } | null;
   readonly death: {
     readonly id: string;
@@ -261,6 +265,10 @@ export function parseRankedReply(value: unknown): RankedReply | null {
     raw !== null &&
     typeof raw === 'object' &&
     usesMysteryDirectorRules(String((raw as Record<string, unknown>).rulesetVersion));
+  const discoveryRules =
+    raw !== null &&
+    typeof raw === 'object' &&
+    (raw as Record<string, unknown>).rulesetVersion === DISCOVERY_RULESET_VERSION;
   const usesPacts =
     raw !== null &&
     typeof raw === 'object' &&
@@ -290,6 +298,7 @@ export function parseRankedReply(value: unknown): RankedReply | null {
       'rewardPending',
       ...(usesPacts ? ['pact'] : []),
       ...(directorRules ? ['mysteryRhythm', 'deathClock'] : []),
+      ...(discoveryRules ? ['discovery'] : []),
     ]) ||
     !object(lease, ['token', 'generation', 'expiresAt']) ||
     typeof lease.token !== 'string' ||
@@ -476,6 +485,35 @@ export function parseRankedReply(value: unknown): RankedReply | null {
     return null;
   }
   let rhythm: MysteryRhythm | null = null;
+  let discovery: MysteryDiscovery | undefined;
+  if (discoveryRules) {
+    const value = raw.discovery;
+    if (
+      !object(value, ['known', 'introduction']) ||
+      (value.introduction !== null &&
+        !object(value.introduction, ['kind', 'startedAt', 'expiresAt']))
+    )
+      return null;
+    try {
+      assertDiscovery(value as unknown as MysteryDiscovery, raw.activeTimeMs);
+    } catch {
+      return null;
+    }
+    discovery = {
+      known: [...(value.known as MysteryDiscovery['known'])],
+      introduction:
+        value.introduction === null
+          ? null
+          : { ...(value.introduction as NonNullable<MysteryDiscovery['introduction']>) },
+    };
+    if (
+      discovery.introduction &&
+      (raw.status !== 'playing' ||
+        pact?.phase === 'offered' ||
+        current.mysteryOutcome !== discovery.introduction.kind)
+    )
+      return null;
+  }
   let deathClock: RankedRun['deathClock'] = null;
   if (directorRules) {
     if (raw.mysteryRhythm !== null) {
@@ -503,7 +541,8 @@ export function parseRankedReply(value: unknown): RankedReply | null {
         !integer(item.expiresAt) ||
         item.expiresAt - item.warningAt !== 10000 ||
         item.expiresAt <= raw.activeTimeMs ||
-        (pact?.phase === 'offered' && item.warningAt !== pact.offeredAt! + 60000)
+        (pact?.phase === 'offered' && item.warningAt !== pact.offeredAt! + 60000) ||
+        (discovery?.introduction && item.warningAt !== discovery.introduction.expiresAt + 3000)
       )
         return null;
       deathClock = { warningAt: item.warningAt, expiresAt: item.expiresAt };
@@ -554,6 +593,7 @@ export function parseRankedReply(value: unknown): RankedReply | null {
       paused: raw.paused,
       current: { ...current, hasMystery: (raw.current as { hasMystery: boolean }).hasMystery },
       ...(directorRules ? { mysteryRhythm: rhythm, deathClock } : {}),
+      ...(discoveryRules ? { discovery } : {}),
       history,
       effects,
       ...(usesPacts ? { pact } : {}),

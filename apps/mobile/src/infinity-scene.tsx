@@ -1,3 +1,6 @@
+import { DiscoveryIntroduction } from './mystery-introduction';
+import { MysteryJournal } from './mystery-discovery';
+import { readMysteryJournal } from './mystery-journal-model';
 import { mysteryFeedbackFromEvents, runCuesFromEvents } from './mystery-feedback';
 import { StageAtmosphere } from './stage-atmosphere';
 import { PrismBridge } from './prism-bridge';
@@ -8,12 +11,13 @@ import {
   getRuleset,
   STARTING_SP,
   PRACTICE_RNG,
-  RELIC_RULESET_VERSION,
+  DISCOVERY_RULESET_VERSION,
   getDeathClock,
   isPactKind,
 } from '@crystal-path-infinity/game-core';
 import type {
   RunEvent,
+  EffectKind,
   RunState,
   PactOption,
   SessionCommand,
@@ -70,6 +74,7 @@ export interface InfinitySceneViewProps {
   readonly mysteryFeedback?: MysteryFeedback | null;
   readonly resourceCues?: RunCues;
   readonly onMysteryLab?: () => void;
+  readonly onMysteryJournal?: () => void;
   readonly onPause: () => void;
   readonly onEnd: () => void;
   readonly onRequestEnd: () => void;
@@ -100,6 +105,7 @@ export function InfinitySceneView({
   mysteryFeedback = null,
   resourceCues = {},
   onMysteryLab,
+  onMysteryJournal,
   onPause,
   onEnd,
   onRequestEnd,
@@ -283,7 +289,7 @@ export function InfinitySceneView({
         <DeathClockBadge
           clock={getDeathClock(state)}
           activeTimeMs={state.activeTimeMs}
-          offered={pactOffered}
+          offered={pactOffered || !!state.discovery?.introduction}
         />
         {state.current.noSafeTile && (
           <p className="cpi-sp-danger-copy is-low" role="status">
@@ -293,6 +299,11 @@ export function InfinitySceneView({
           </p>
         )}
         <section className="cps-board" aria-label={t('game.bridge')} dir="ltr">
+          <DiscoveryIntroduction
+            discovery={state.discovery}
+            activeTimeMs={state.activeTimeMs}
+            rulesetVersion={state.rulesetVersion}
+          />
           <PactPanel
             sp={state.sp}
             rulesetVersion={state.rulesetVersion}
@@ -523,9 +534,14 @@ export function InfinitySceneView({
                 </details>
                 <AudioSettingsControls settings={settings} onChange={onSettingsChange} />
                 <div className="cpi-overlay-actions">
+                  {onMysteryJournal && (
+                    <button type="button" disabled={busy} onClick={onMysteryJournal}>
+                      {locale === 'bg' ? 'Открити мистерии' : 'Discovered mysteries'}
+                    </button>
+                  )}
                   {onMysteryLab && (
                     <button type="button" disabled={busy} onClick={onMysteryLab}>
-                      {mysteryText(locale, 'lab')}
+                      {mysteryText(locale, 'lab')} · {locale === 'bg' ? 'Тест' : 'Test'}
                     </button>
                   )}
                   <button type="button" data-cpi-overlay-primary disabled={busy} onClick={onPause}>
@@ -548,6 +564,12 @@ export function InfinitySceneView({
 }
 
 function makeInitialRun(): RunState {
+  let discoveredMysteries: EffectKind[] = [];
+  try {
+    discoveredMysteries = readMysteryJournal(window.localStorage);
+  } catch {
+    /* Optional local discoveries. */
+  }
   const seed = new Uint32Array(2);
   crypto.getRandomValues(seed);
   const route = (BigInt(seed[0]) << 32n) | BigInt(seed[1]);
@@ -559,7 +581,8 @@ function makeInitialRun(): RunState {
       mysteryRng: createPracticeCursor(mystery),
       observedAt: Date.now(),
       buffer: { ahead: 8, history: 2 },
-      rulesetVersion: RELIC_RULESET_VERSION,
+      rulesetVersion: DISCOVERY_RULESET_VERSION,
+      discoveredMysteries,
     },
     PRACTICE_RNG,
   );
@@ -600,6 +623,7 @@ function InfinityRun({
   const [mysteryFeedback, setMysteryFeedback] = useState<MysteryFeedback | null>(null);
   const [resourceCues, setResourceCues] = useState<RunCues>({});
   const [labOpen, setLabOpen] = useState(false);
+  const [journalOpen, setJournalOpen] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [personalBest, setPersonalBest] = useState<string | null>(null);
   const [newPersonalBest, setNewPersonalBest] = useState(false);
@@ -661,7 +685,12 @@ function InfinityRun({
         }
         setState(result.state);
         const mysteryNotice = mysteryFeedbackFromEvents(result.events, result.state);
-        if (mysteryNotice) setMysteryFeedback(mysteryNotice);
+        if (mysteryNotice)
+          setMysteryFeedback(
+            result.state.discovery?.introduction && mysteryNotice.action === null
+              ? null
+              : mysteryNotice,
+          );
         const cues = runCuesFromEvents(result.events, result.state);
         if (cues.consumption || cues.hints)
           setResourceCues((previous) => ({ ...previous, ...cues }));
@@ -843,6 +872,14 @@ function InfinityRun({
     handledExitRequest.current = exitRequest;
     void exit();
   }, [exitRequest, exit]);
+  if (journalOpen)
+    return (
+      <MysteryJournal
+        state={state}
+        reducedMotion={settings.reducedMotion}
+        onClose={() => setJournalOpen(false)}
+      />
+    );
   if (labOpen)
     return <MysteryLab onClose={() => setLabOpen(false)} reducedMotion={settings.reducedMotion} />;
   return (
@@ -851,7 +888,8 @@ function InfinityRun({
       feedback={feedback}
       mysteryFeedback={mysteryFeedback}
       resourceCues={resourceCues}
-      onMysteryLab={() => setLabOpen(true)}
+      onMysteryLab={import.meta.env.MODE !== 'production' ? () => setLabOpen(true) : undefined}
+      onMysteryJournal={() => setJournalOpen(true)}
       onPact={(option) => {
         unlockAudio();
         void issue({ type: 'pact', option });

@@ -7,6 +7,8 @@ import {
   RISK_RULESET_VERSION,
   DIRECTOR_RULESET_VERSION,
   RELIC_RULESET_VERSION,
+  DISCOVERY_RULESET_VERSION,
+  discoverMystery,
   applyMysteryEffect,
 } from '@crystal-path-infinity/game-core';
 import type { RunState } from '@crystal-path-infinity/game-core';
@@ -157,7 +159,7 @@ function setup(options: { heartbeatWindowMs?: number; rulesetVersion?: string } 
 }
 
 describe('ranked authority trust boundary', () => {
-  it.each([DIRECTOR_RULESET_VERSION, RELIC_RULESET_VERSION])(
+  it.each([DIRECTOR_RULESET_VERSION, RELIC_RULESET_VERSION, DISCOVERY_RULESET_VERSION])(
     'owns the progressive death clock in %s and exposes no private director ledger',
     async (version) => {
       const f = setup({ rulesetVersion: version });
@@ -183,6 +185,39 @@ describe('ranked authority trust boundary', () => {
       expect(reply.snapshot.lastClearedRow).toBe('0');
     },
   );
+  it('owns the four-second introduction and activates its effect before the next step', async () => {
+    const f = setup({ rulesetVersion: DISCOVERY_RULESET_VERSION });
+    let reply = await f.start();
+    reply = await f.execute(reply, { type: 'resume' });
+    const stored = f.record(reply);
+    f.repository.account().runs.set(stored.state.runId, {
+      ...stored,
+      state: discoverMystery(
+        {
+          ...stored.state,
+          current: { ...stored.state.current, mysteryOutcome: 'inversion_5s' },
+          effects: [applyMysteryEffect('inversion_5s', 0).addedEffect!],
+          rows: stored.state.rows.map((row) => ({
+            ...row,
+            safeSide: 'left',
+            risk: { lowRiskSide: 'left', broken: { left: true, right: true } },
+          })),
+        },
+        'inversion_5s',
+      ),
+    });
+    f.advance(2000);
+    reply = await f.execute(reply, { type: 'heartbeat' });
+    expect(reply.snapshot.discovery!.introduction?.expiresAt).toBe(4000);
+    expect(reply.snapshot.effects[0].expiresAt! - reply.snapshot.activeTimeMs).toBe(5000);
+    expect(reply.snapshot.sp).toBe(300);
+    reply = await f.choose(reply);
+    expect(reply.snapshot.sp).toBe(305);
+    expect(reply.snapshot.discovery!.introduction).toBeNull();
+    expect(reply.snapshot.discovery!.known).toEqual(['inversion_5s']);
+    expect(JSON.stringify(reply)).not.toMatch(/mysteryDirector|mysteryRng|lowRiskSide|anchorSp/);
+  });
+
   it('keeps v4 risks private, persists a free no-safe hint and applies Coyote on the server', async () => {
     const f = setup({ rulesetVersion: RISK_RULESET_VERSION });
     let reply = await f.start();

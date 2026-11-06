@@ -1,3 +1,4 @@
+import { MysteryJournal } from './mystery-discovery';
 import type { ReactNode } from 'react';
 import { StageAtmosphere } from './stage-atmosphere';
 import { PrismBridge } from './prism-bridge';
@@ -424,7 +425,7 @@ export function MainMenu({
   nameReportClient = null,
 }: MainMenuProps) {
   const service = rankedServiceState(online);
-  const { t, number } = useLanguage();
+  const { t, number, locale } = useLanguage();
   return (
     <main
       className={
@@ -485,18 +486,54 @@ export function MainMenu({
               icon="practice"
               onClick={onNew}
             />
+            <MenuAction
+              label={locale === 'bg' ? 'Открити мистерии' : 'Discovered mysteries'}
+              description={
+                locale === 'bg' ? 'Твоите находки по моста' : 'Your discoveries on the bridge'
+              }
+              icon="practice"
+              onClick={() => onOpen('journal')}
+            />
             <p className="cpi-menu-fine-print">{t('menu.practiceLocal')}</p>
           </MenuPanel>
-        ) : view === 'tutorial' ? (
-          <BridgeTutorial
-            onComplete={() => onTutorialProgress('completed')}
-            onSkip={() => {
-              onTutorialProgress('skipped');
-              onOpen('practice');
-            }}
-            onStartPractice={() => onOpen('practice')}
-            reducedMotion={settings.reducedMotion}
-          />
+        ) : view === 'tutorial' || view === 'journal' ? (
+          <>
+            <nav
+              className="cpi-rules-tabs"
+              aria-label={locale === 'bg' ? 'Правила и открития' : 'Rules and discoveries'}
+            >
+              <button
+                type="button"
+                aria-pressed={view === 'tutorial'}
+                onClick={() => onOpen('tutorial')}
+              >
+                {locale === 'bg' ? 'Как се играе' : 'How to play'}
+              </button>
+              <button
+                type="button"
+                aria-pressed={view === 'journal'}
+                onClick={() => onOpen('journal')}
+              >
+                {locale === 'bg' ? 'Открити мистерии' : 'Discovered mysteries'}
+              </button>
+            </nav>
+            {view === 'journal' ? (
+              <MysteryJournal
+                state={saved.status === 'ready' ? saved.state : undefined}
+                reducedMotion={settings.reducedMotion}
+              />
+            ) : (
+              <BridgeTutorial
+                onComplete={() => onTutorialProgress('completed')}
+                onSkip={() => {
+                  onTutorialProgress('skipped');
+                  onOpen('practice');
+                }}
+                onStartPractice={() => onOpen('practice')}
+                reducedMotion={settings.reducedMotion}
+              />
+            )}
+          </>
         ) : view === 'play' ? (
           <MenuPanel title={t('general.play')} eyebrow={t('menu.playEyebrow')}>
             {rankedClient ? (

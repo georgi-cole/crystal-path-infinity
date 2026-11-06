@@ -6,6 +6,7 @@ export const MENU_VIEWS = [
   'play',
   'practice',
   'tutorial',
+  'journal',
   'rankings',
   'profile',
   'settings',

@@ -1,7 +1,7 @@
 import { addDecimal, addSafeInteger, assertNonNegativeInteger, decimal } from './numbers.ts';
 import { drawRandom } from './random.ts';
 import {
-  RELIC_RULESET_VERSION,
+  usesRelicRules,
   usesMysteryDirectorRules,
   getRuleset,
   CHOICE_GRACE_MS,
@@ -28,9 +28,7 @@ export function scheduleNextMystery(
   const rules = getRuleset(state.rulesetVersion);
   const surge = state.mysteryDirector!.rhythm?.kind === 'mystery_surge_30s';
   const draw =
-    !surge && state.rulesetVersion === RELIC_RULESET_VERSION
-      ? drawRandom(state.mysteryRng, rng)
-      : null;
+    !surge && usesRelicRules(state.rulesetVersion) ? drawRandom(state.mysteryRng, rng) : null;
   const gap = surge
     ? 3
     : rules.mysteryMinGap +
@@ -192,7 +190,11 @@ export function getDeathClock(state: RunState): { warningAt: number; expiresAt: 
   const warningAt =
     state.pact?.phase === 'offered'
       ? addSafeInteger(state.pact.offeredAt!, CHOICE_GRACE_MS, 'Decision grace')
-      : addSafeInteger(state.mysteryDirector!.lastStepAt, IDLE_WARNING_MS, 'Idle grace');
+      : addSafeInteger(
+          state.discovery?.introduction?.expiresAt ?? state.mysteryDirector!.lastStepAt,
+          IDLE_WARNING_MS,
+          'Idle grace',
+        );
   return {
     warningAt,
     expiresAt: addSafeInteger(warningAt, DEATH_COUNTDOWN_MS, 'Death clock expiry'),
