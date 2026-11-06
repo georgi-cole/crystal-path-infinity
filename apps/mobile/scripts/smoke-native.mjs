@@ -861,24 +861,24 @@ async function android() {
 }
 
 async function ios() {
-  // Fresh iOS 26.5 migration exceeded 360s and native first launch took 89s in CI.
-  // Bound that provisioning work separately from the unchanged app/lifecycle checks.
+  // Use the explicit iOS 26.2 CI baseline on the compatible Sequoia host.
+  // Bound OS provisioning separately from the unchanged app/lifecycle checks.
   const provisioningBudgetsMs = iosProvisioningBudgetsMs;
   const available = JSON.parse(text('xcrun', ['simctl', 'list', '--json', 'devices', 'available']));
   save('ios-simulators.json', JSON.stringify(available, null, 2));
   const runtimes = JSON.parse(text('xcrun', ['simctl', 'list', '--json', 'runtimes']));
   save('ios-runtimes.json', JSON.stringify(runtimes, null, 2));
-  const runtime = 'com.apple.CoreSimulator.SimRuntime.iOS-26-5';
+  const runtime = 'com.apple.CoreSimulator.SimRuntime.iOS-26-2';
   assert.ok(
     runtimes.runtimes.some((item) => item.identifier === runtime && item.isAvailable),
-    'The Xcode 26.6 smoke requires the installed iOS 26.5 runtime',
+    'The Xcode 26.3 smoke requires the installed iOS 26.2 runtime',
   );
   const types = JSON.parse(text('xcrun', ['simctl', 'list', '--json', 'devicetypes']));
   save('ios-device-types.json', JSON.stringify(types, null, 2));
   // The 7 GB hosted Mac reached 0% idle CPU and >2 GB compressed memory before
   // CPI installation. An SE has 750x1334 pixels rather than 1206x2622 and no
-  // simulated Apple Intelligence hardware. Keep the SAME iOS runtime, fresh
-  // device, two processes and every app/bridge/lifecycle assertion.
+  // simulated Apple Intelligence hardware. Keep the fresh device, two processes
+  // and every app/bridge/lifecycle assertion on the documented runtime.
   const device = types.devicetypes.find(
     (item) => item.identifier === 'com.apple.CoreSimulator.SimDeviceType.iPhone-SE-3rd-generation',
   );
@@ -913,7 +913,7 @@ async function ios() {
   );
   try {
     console.log(
-      `Booting fresh ${device.name} / iOS 26.5 simulator (budget ${provisioningBudgetsMs.coldBoot / 1000}s); progress is recorded in ios-boot.log`,
+      `Booting fresh ${device.name} / iOS 26.2 simulator (budget ${provisioningBudgetsMs.coldBoot / 1000}s); progress is recorded in ios-boot.log`,
     );
     await prepareIosSimulator(async (step, timeout) => {
       console.log(`iOS provisioning: ${step} (budget ${timeout / 1000}s)`);

@@ -254,13 +254,13 @@ jobs:
     name: Development iOS build and simulator launch
     needs: web
     if: ${{ needs.web.outputs.native_mode == 'smoke' || needs.web.outputs.native_mode == 'full' }}
-    # Standard Intel has 14 GB RAM; the 7 GB arm64 host exhausts memory
-    # running iOS 26.5 system apps before CPI is installed. Keep Xcode/iOS
-    # versions, provisioning budgets and every actual native assertion.
-    runs-on: macos-26-intel
+    # Pin a supported Xcode 26 toolchain on the standard 14 GB Sequoia host.
+    # Tahoe / iOS 26.5 repeatedly stalled in OS-only commands; retain full
+    # native assertions and record the explicit iOS 26.2 test baseline.
+    runs-on: macos-15-intel
     timeout-minutes: 45
     env:
-      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
       NATIVE_PROFILE: ${{ needs.web.outputs.native_mode }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
