@@ -1,10 +1,10 @@
 # Акаунти, реклами и покупки: настройки за рилийз
 
-Дата: **7 ноември 2026**. Бранч: `codex/mystery-pacts`. Кодът е подготвен за отделен сървър; това **не означава, че услугите вече са активни**. Актуалната проверка и промените в конзолите са записани в стъпка 1. Новият backend не е разгърнат; не е публикувана store версия.
+Дата: **7 ноември 2026**. Бранч: `codex/mystery-pacts`. Отделният staging сървър е разгърнат. Подписана Android сборка и 18 Google Play продукта са подготвени за вътрешно тестване. Достъпът до покупки в играта и публичният рилийз остават отделни стъпки.
 
 ## С какво да започнеш
 
-Провери оставащото по конзолите в стъпка 1: основните Apple договори и DAC7 са активни, а Google Trader и записването за 15% service fee са завършени след изрични потвърждения от собственика. Следват домейнът и Resend, отделните Supabase проекти, служебните ключове и продуктите в магазините. Това са собственическите настройки от стъпки 1–8; ключовете се попълват в частната конфигурация, а не в чата.
+Вече можеш да се присъединиш към [Android Internal Testing](https://play.google.com/apps/internaltest/4701734144458822899) с един от двата добавени Google акаунта. За първата покупка от играта остават достъпът на сървъра до Google Play, изолирана staging настройка за тестерите и проверка на телефон. Ключовете се попълват в частната конфигурация. Стъпки 1–8 пазят и статуса на останалите настройки за двете платформи.
 
 Стъпки 9–12 описват последващото техническо внедряване и приемане. Командите са записани за възпроизводимост; този етап се изпълнява след наличните акаунти/ключове. Той включва действително качване на сървъра, периодичните задачи, публичната account страница и тестовете на телефони. Подготвеният код и автоматичните проверки не заменят тези действия.
 
@@ -97,7 +97,7 @@
 1. Създай Google Cloud service account за Crystal Path и включи **Google Play Android Developer API**.
 2. Добави неговия служебен имейл в Play Console → Users and permissions с достъп **само до Crystal Path** и нужните права за четене/обработка на покупки и поръчки. Не са нужни права за публикуване на версии.
 3. Създай server-only JSON key. Запиши `client_email` като `CPI_GOOGLE_CLIENT_EMAIL`, а `private_key` като `CPI_GOOGLE_PRIVATE_KEY`.
-4. Добави тестовите Google акаунти в License testing и направи internal testing запис за подписаната Android сборка.
+4. **Готово на 7 ноември 2026 г.** Списъкът `Crystal Path Billing QA` с двата одобрени акаунта е добавен в Crystal Path Internal Testing и в License testing. Последната настройка важи за целия Play developer акаунт. Съществуващите списъци и настройките на The Big Eye са запазени.
 
 Покупките се проверяват през Google API; [официалните указания за защита на Billing](https://developer.android.com/google/play/billing/security) описват сървърната проверка и потвърждаването. JSON ключът не влиза в приложението.
 
@@ -113,13 +113,15 @@ Team ID `C97T2A5255` не замества Issuer ID. Следвай [Apple: Gen
 
 ### 8. Създай истинските продукти в двата магазина
 
-Списъкът е в `backend/commerce-products.proposed.json`; генериран е и `backend/commerce-products.live.example.json` с отделни Android/iOS записи. **Статусът е unconfirmed — продуктите не са създадени с тази промяна.**
+Оригиналното предложение е в `backend/commerce-products.proposed.json`. `backend/commerce-products.live.example.json` остава пример с отделни Android/iOS записи и статус `unconfirmed`. За Android вече са създадени предложените SKU. Последно провереният Apple каталог е празен.
 
-Проверено на 7 ноември 2026 г. Google Play изисква първо да се качи подписана Android сборка с Billing. App Store Connect показва празен каталог. За реален sandbox тест сборките от Play Internal Testing и TestFlight трябва да са за регистрирания package/bundle `com.georgicole.crystalpath.infinity` и да сочат към staging backend. Локалната `.staging` сборка е отделна самоличност. [Google Play Billing testing](https://developer.android.com/google/play/billing/test) · [Apple StoreKit sandbox](https://developer.apple.com/documentation/storekit/testing-in-app-purchases-with-sandbox).
+**Google Play Internal Testing · 7 ноември 2026 г.** Подписаната `0.1.0` (version code `1`) от `bf7f804` е `Active` и `Available to internal testers`. Използва регистрирания package `com.georgicole.crystalpath.infinity`, включва Billing и сочи към отделния Crystal Path staging API. Рекламите са изключени в тази сборка. Потвърдени са подписът и AAB структурата. [Инсталиране през Internal Testing](https://play.google.com/apps/internaltest/4701734144458822899).
 
-За всяка платформа създай 18 продукта: 4 пакета кредити, 6 SP пакета, 2 пакета подсказки и 6 свята. Ресурсите са consumables, световете са non-consumables. Запази одобрените количества, имена, изображения и цени; световете са по 2,99 EUR референтно. Крайният показан текст за цена идва от магазина в местната валута.
+В Play Console са проверени 18 продукта с по една активна опция `buy`. Това са 4 пакета кредити, 6 SP пакета, 2 пакета подсказки и 6 свята. Използвани са имената и референтните EUR цени от каталога, с регионалното преобразуване на Google Play. За вътрешния тест са добавени английски имена и описания. Продуктовите икони и локализациите остават за подготовката за публичен рилийз. Ресурсите са consumables, световете са non-consumables. [Google Play каталог](https://play.google.com/console/u/0/developers/6752786779388158337/app/4972812942109567422/one-time-products).
 
-След създаването попълни истинските SKU и чак тогава смени manifest статуса на `confirmed-in-stores` и го постави в `CPI_COMMERCE_PRODUCTS`. Не променяй смисъла/количеството на продаден SKU; оттеглените SKU остават за възстановяване, с `available:false`.
+На телефон инсталирай от Google Play със същия акаунт, който е в License testing. При плащане провери обозначението за тестова покупка и избери тестовия метод на Google. Тестовият канал сам по себе си допуска и реално плащане за акаунти извън License testing. [Google Play Billing testing](https://developer.android.com/google/play/billing/test).
+
+Покупката и начисляването в играта все още не са проверени на телефон. Staging покупките са изключени. Остават Google Play server credentials, достъп за тестовите акаунти и потвърден сървърен SKU manifest. Текущата конфигурация при включване изисква и Apple credentials. За първи Android тест може да се подготви отделна Android-only staging конфигурация, която запазва проверката на всяка разписка. За iOS следват 18-те продукта, съответните sandbox тестери и TestFlight сборка за регистрирания bundle ID. Запази смисъла и количеството на вече продаден SKU. Оттеглените SKU остават за възстановяване с `available:false`. [Apple StoreKit sandbox](https://developer.apple.com/documentation/storekit/testing-in-app-purchases-with-sandbox).
 
 ### 9. Разгърни сървъра и периодичните задачи
 
