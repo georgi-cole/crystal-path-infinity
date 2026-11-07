@@ -14,6 +14,7 @@ import { effectCopy } from '../mystery.messages';
 import { HintCounter } from '../resource-feedback';
 import { DeathClockBadge, MysteryRhythmBadge, MysteryCube } from '../mystery-box';
 import { useCommerce } from '../commerce/commerce-context';
+import { canUseCreditFromReward, leaveVerifiedRun } from './ranked-leave';
 
 const EMPTY: RankedClientState = {
   phase: 'unavailable',
@@ -68,7 +69,10 @@ export function RankedScene({
   }, [resourceWindow, commerce.flow]);
   async function spend(resource: 'sp' | 'hints' | 'credit', amount: number) {
     if (!client?.spendResource || !run || client.snapshot().run?.runId !== run.runId) return;
-    if (await client.spendResource(resource, amount)) await commerce.flow?.refreshWallet();
+    if (await client.spendResource(resource, amount)) {
+      if (resource === 'credit' && rewardFlow?.runId === run.runId) await rewardFlow.recover();
+    }
+    await commerce.flow?.refreshWallet();
   }
 
   useEffect(() => {
@@ -165,17 +169,16 @@ export function RankedScene({
     setInterrupted(false);
   };
   const leave = async () => {
-    if (rewardFlow?.snapshot().fullscreen) return;
-    if (run && client?.snapshot().run?.runId !== run.runId) return;
+    if (!client || !run) {
+      onLeave();
+      return;
+    }
     if (
-      client &&
-      run?.status === 'dead' &&
-      rewardBound &&
-      (rewardState?.phase === 'earned_pending' || rewardState?.phase === 'granted')
-    ) {
-      await client.archivePending(run.runId);
-    } else await client?.command({ type: 'pause' });
-    onLeave();
+      await leaveVerifiedRun(client, run.runId, () =>
+        rewardFlow?.runId === run.runId ? rewardFlow.snapshot() : null,
+      )
+    )
+      onLeave();
   };
   const action = (type: 'choose' | 'hint' | 'mystery', side?: 'left' | 'right') => {
     if (
@@ -369,7 +372,7 @@ export function RankedScene({
                     !commerce.snapshot.wallet.credits ||
                     run.rewardPending ||
                     run.revivesGranted !== run.revivesApplied ||
-                    rewardBlocked
+                    !canUseCreditFromReward(rewardState)
                   }
                   onClick={() => void spend('credit', 1)}
                 >

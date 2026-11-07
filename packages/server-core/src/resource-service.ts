@@ -119,18 +119,19 @@ export function createResourceService(options: { database: SqlPool; now?: () => 
       const resource = input.resource as 'sp' | 'hints' | 'credit',
         amount = input.amount as number,
         column = resource === 'credit' ? 'credits' : resource;
-      if (
+      const funded = !(
         !current ||
         current.blocked ||
         !Number.isSafeInteger(Number(current[column])) ||
         Number(current[column]) < amount
-      )
-        throw new RankedError('resource-unavailable');
-      const outcome = applyServerResource(run.state, resource, amount, {
-        activeTimeMs: run.state.activeTimeMs,
-        achievedAt: stamp,
-        rng: RANKED_RNG,
-      });
+      );
+      const outcome = !funded
+        ? { state: run.state, accepted: false, reason: 'resource-limit', events: [] }
+        : applyServerResource(run.state, resource, amount, {
+            activeTimeMs: run.state.activeTimeMs,
+            achievedAt: stamp,
+            rng: RANKED_RNG,
+          });
       if (outcome.accepted) {
         await connection.query(
           `update cpi_private.commerce_wallets set ${column}=${column}-$2,revision=revision+1 where id=$1::uuid`,

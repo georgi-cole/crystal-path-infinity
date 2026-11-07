@@ -498,4 +498,97 @@ describe('new live authority and commercial ledger on the complete migration set
       ).rows[0].user_id,
     ).toBeNull();
   });
+  it('offers credit slot eleven after the shared ten ad-or-credit slots', async () => {
+    const start = await authority.start(actor, { idempotencyKey: randomUUID() });
+    let run = await stored(start.snapshot.runId),
+      state = run.state;
+    for (let i = 0; i < 10; i++) {
+      clock += 13000;
+      state = transitionRun(
+        state,
+        { type: 'tick' },
+        { rng: RANKED_RNG, activeTimeMs: state.activeTimeMs + 13000, achievedAt: clock },
+      ).state;
+      state = applyServerResource(state, 'credit', 1, {
+        rng: RANKED_RNG,
+        activeTimeMs: state.activeTimeMs,
+        achievedAt: clock,
+      }).state;
+    }
+    clock += 13000;
+    state = transitionRun(
+      state,
+      { type: 'tick' },
+      { rng: RANKED_RNG, activeTimeMs: state.activeTimeMs + 13000, achievedAt: clock },
+    ).state;
+    run = { ...run, state, clockUpdatedAt: clock, activeUntil: clock };
+    await save(run);
+    const recovered = await authority.recover(actor, {
+      runId: state.runId,
+      idempotencyKey: randomUUID(),
+      takeover: false,
+    });
+    const rewards = new RewardService({
+      database: fixture.pool,
+      platform: 'android',
+      environment: 'staging',
+      now: () => clock,
+    });
+    expect(await rewards.status(actor, { runId: state.runId })).toMatchObject({
+      status: 'limit',
+      offer: null,
+      revivesApplied: 10,
+    });
+    const paid = await spend(actor, {
+      schemaVersion: 1,
+      runId: state.runId,
+      idempotencyKey: randomUUID(),
+      sequence: recovered.snapshot.nextSequence,
+      leaseToken: recovered.lease.token,
+      leaseGeneration: recovered.lease.generation,
+      row: state.currentRow,
+      life: 10,
+      resource: 'credit',
+      amount: 1,
+    });
+    expect(paid.snapshot.revivesApplied).toBe(11);
+    expect(paid.snapshot.sp).toBe(150);
+    await authority.execute(actor, {
+      runId: state.runId,
+      idempotencyKey: randomUUID(),
+      sequence: paid.snapshot.nextSequence,
+      leaseToken: paid.lease.token,
+      command: { type: 'end' },
+    });
+  });
+  it('persists an insufficient-funds refusal so a later top-up cannot consume an old request', async () => {
+    const start = await authority.start(actor, { idempotencyKey: randomUUID() });
+    const input = {
+      schemaVersion: 1,
+      runId: start.snapshot.runId,
+      idempotencyKey: randomUUID(),
+      sequence: start.snapshot.nextSequence,
+      leaseToken: start.lease.token,
+      leaseGeneration: start.lease.generation,
+      row: '1',
+      life: 0,
+      resource: 'hints',
+      amount: 1,
+    };
+    const refused = await spend(actor, input);
+    expect(refused.accepted).toBe(false);
+    await fixture.db.query(
+      'update cpi_private.commerce_wallets set hints=hints+3,revision=revision+1 where user_id=$1',
+      [user],
+    );
+    expect(await spend(actor, input)).toEqual(refused);
+    expect((await commerce.wallet(user)).hints).toBe(3);
+    await authority.execute(actor, {
+      runId: start.snapshot.runId,
+      idempotencyKey: randomUUID(),
+      sequence: refused.snapshot.nextSequence,
+      leaseToken: refused.lease.token,
+      command: { type: 'end' },
+    });
+  });
 });

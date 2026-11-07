@@ -41,23 +41,25 @@ export function RewardOffer({
   }, [flow, online]);
   if (state.phase === 'playing') return null;
   const status =
-    state.phase === 'offer'
-      ? null
-      : state.phase === 'loading'
-        ? 'rewards.loading'
-        : state.phase === 'showing'
-          ? 'rewards.showing'
-          : state.phase === 'earned_pending'
-            ? state.waiting
-              ? 'rewards.pending'
-              : 'rewards.savedPending'
-            : state.phase === 'granted'
-              ? 'rewards.granted'
-              : state.phase === 'reviving'
-                ? 'rewards.reviving'
-                : state.phase === 'final'
-                  ? 'rewards.final'
-                  : 'rewards.unavailable';
+    state.phase === 'limit'
+      ? 'rewards.limit'
+      : state.phase === 'offer'
+        ? null
+        : state.phase === 'loading'
+          ? 'rewards.loading'
+          : state.phase === 'showing'
+            ? 'rewards.showing'
+            : state.phase === 'earned_pending'
+              ? state.waiting
+                ? 'rewards.pending'
+                : 'rewards.savedPending'
+              : state.phase === 'granted'
+                ? 'rewards.granted'
+                : state.phase === 'reviving'
+                  ? 'rewards.reviving'
+                  : state.phase === 'final'
+                    ? 'rewards.final'
+                    : 'rewards.unavailable';
   const problem =
     state.problem === 'offline'
       ? 'rewards.offline'

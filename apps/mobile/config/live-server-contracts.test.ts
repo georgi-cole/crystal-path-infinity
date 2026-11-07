@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   createRun,
   LIVE_RULESET_VERSION,
@@ -6,6 +6,9 @@ import {
 } from '@crystal-path-infinity/game-core';
 import { rankedSnapshot, RANKED_RNG } from '../../../packages/server-core/src/ranked.ts';
 import { parseRankedReply } from '../src/ranked/ranked-client';
+import { parseRewardView } from '../src/rewards/reward-client';
+import type { RewardClient, RewardView } from '../src/rewards/reward-client';
+import { RewardFlow } from '../src/rewards/reward-flow';
 function fixture() {
   const state = createRun(
     {
@@ -33,6 +36,55 @@ function fixture() {
   };
 }
 describe('live server/mobile contract', () => {
+  it('keeps credits available after ten shared continues and resumes after a credit', async () => {
+    const runId = fixture().state.runId;
+    let view: RewardView = {
+      schemaVersion: 1,
+      runId,
+      rulesetVersion: LIVE_RULESET_VERSION,
+      status: 'limit',
+      deathId: 'death:11',
+      offer: null,
+      intent: null,
+      grant: null,
+      revivesGranted: 10,
+      revivesApplied: 10,
+      revivesToReachScore: 0,
+    };
+    expect(parseRewardView(view, runId)).toEqual(view);
+    expect(parseRewardView({ ...view, revivesApplied: 9, revivesGranted: 9 }, runId)).toBeNull();
+    expect(parseRewardView({ ...view, rulesetVersion: 'infinity-v1' }, runId)).toBeNull();
+    const scope = {};
+    const client: RewardClient = {
+      accountScope: () => scope,
+      subscribeAccountScope: () => () => {},
+      eligibility: vi.fn(() => Promise.resolve(null)),
+      status: () => Promise.resolve(view),
+      intent: () => Promise.reject(new Error('No ad slot remains')),
+      applyGrant: () => Promise.resolve(false),
+    };
+    const flow = new RewardFlow({
+      runId,
+      client,
+      onGateChange: () => {},
+      synchronizeRun: () => Promise.resolve(true),
+    });
+    try {
+      await flow.recover();
+      expect(flow.snapshot()).toMatchObject({
+        phase: 'limit',
+        canWatch: false,
+        canEnd: true,
+        inputBlocked: true,
+      });
+      expect(client.eligibility).not.toHaveBeenCalled();
+      view = { ...view, status: 'playing', deathId: null, revivesGranted: 11, revivesApplied: 11 };
+      await flow.recover();
+      expect(flow.snapshot()).toMatchObject({ phase: 'playing', inputBlocked: false });
+    } finally {
+      flow.dispose();
+    }
+  });
   it('accepts fractional SP, first-loss grace, and an explicit assisted classification', () => {
     const run = fixture();
     const paid = applyServerResource(run.state, 'sp', 20, {

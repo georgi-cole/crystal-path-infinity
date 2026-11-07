@@ -16,7 +16,11 @@ import { PostgresRankedRepository } from './postgres-ranked.ts';
 import { createPendingRunsHandler } from './pending-runs-api.ts';
 import { PendingRunsService } from './pending-runs.ts';
 import { createModerationHandler } from './moderation-api.ts';
-import { createOperationsStatusHandler } from './operations-policy.ts';
+import {
+  createOperationsStatusHandler,
+  OperationsPolicyError,
+  operationsHttpStatus,
+} from './operations-policy.ts';
 import { createCommerceHandler } from './commerce-api.ts';
 import { createResourceService } from './resource-service.ts';
 import { createRewardHandler } from './reward-api.ts';
@@ -393,8 +397,42 @@ export function createLiveServer(options: LiveServerOptions) {
           actor = token ? await authenticate(token) : null;
         if (request.method !== 'POST' || url.search || !actor?.purchasesAllowed)
           return reply({ code: 'account_required' }, 401);
-        const result = await resources(actor, await privateJson(request));
-        const response = reply(result);
+        let response: Response;
+        try {
+          response = reply(await resources(actor, await privateJson(request)));
+        } catch (error) {
+          const codes = new Set([
+            'invalid-request',
+            'account-unavailable',
+            'run-not-found',
+            'lease-lost',
+            'lease-expired',
+            'sequence-conflict',
+            'idempotency-conflict',
+            'stale-resource-request',
+            'resource-unavailable',
+          ]);
+          if (error instanceof OperationsPolicyError)
+            response = reply({ code: error.code }, operationsHttpStatus(error));
+          else {
+            const code =
+              error instanceof RankedError && codes.has(error.code)
+                ? error.code
+                : 'service_unavailable';
+            response = reply(
+              { code },
+              code === 'service_unavailable'
+                ? 503
+                : code === 'invalid-request'
+                  ? 400
+                  : code === 'account-unavailable'
+                    ? 401
+                    : code === 'run-not-found'
+                      ? 404
+                      : 409,
+            );
+          }
+        }
         const origin = request.headers.get('origin');
         if (origin) response.headers.set('access-control-allow-origin', origin);
         return response;

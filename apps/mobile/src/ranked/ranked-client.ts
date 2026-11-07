@@ -1306,6 +1306,8 @@ export function createRankedClient(options: RankedClientOptions): RankedClient |
           code === 'reward-grant-unavailable' ||
           code === 'reward-state-conflict' ||
           code === 'archive-not-pending' ||
+          code === 'stale-resource-request' ||
+          code === 'resource-unavailable' ||
           code === 'run-archived'
         ) {
           if (code === 'active-run-exists' && latest?.snapshot.status === 'finished') {

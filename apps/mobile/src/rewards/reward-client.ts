@@ -10,7 +10,7 @@ export interface RewardView {
   readonly schemaVersion: 1;
   readonly runId: string;
   readonly rulesetVersion: string;
-  readonly status: 'offer' | 'pending' | 'granted' | 'playing' | 'finished';
+  readonly status: 'offer' | 'pending' | 'granted' | 'playing' | 'finished' | 'limit';
   readonly deathId: string | null;
   readonly offer: RewardPromise | null;
   readonly intent:
@@ -120,7 +120,9 @@ export function parseRewardView(value: unknown, runId: string): RewardView | nul
     value.runId !== runId ||
     typeof value.rulesetVersion !== 'string' ||
     !VERSION.test(value.rulesetVersion) ||
-    !['offer', 'pending', 'granted', 'playing', 'finished'].includes(value.status as string) ||
+    !['offer', 'pending', 'granted', 'playing', 'finished', 'limit'].includes(
+      value.status as string,
+    ) ||
     (value.deathId !== null &&
       (typeof value.deathId !== 'string' || !/^[A-Za-z0-9:_-]{1,120}$/.test(value.deathId))) ||
     !integer(value.revivesGranted, value.rulesetVersion === 'infinity-v11-live' ? 15 : 10) ||
@@ -168,7 +170,16 @@ export function parseRewardView(value: unknown, runId: string): RewardView | nul
       (value.deathId === null || offer !== null || !grant || value.revivesGranted !== next)) ||
     ((value.status === 'playing' || value.status === 'finished') &&
       (offer !== null || intent !== null || grant !== null)) ||
-    (value.status === 'playing' && value.deathId !== null)
+    (value.status === 'playing' && value.deathId !== null) ||
+    (value.status === 'limit' &&
+      (value.rulesetVersion !== 'infinity-v11-live' ||
+        value.deathId === null ||
+        value.revivesApplied < 10 ||
+        value.revivesApplied >= 15 ||
+        value.revivesGranted !== value.revivesApplied ||
+        offer !== null ||
+        intent !== null ||
+        grant !== null))
   )
     return null;
   return {

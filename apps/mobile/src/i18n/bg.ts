@@ -5,6 +5,9 @@ import { crystalGuideBg } from './crystal-guide-messages';
 
 /** Bulgarian preview copy — reviewed by the product owner before public release. */
 export const bg = {
+  'rewards.limit': 'Рекламните продължавания свършиха. Използвай кредит или приключи опита.',
+  'rewards.quota': 'Използвани продължавания: {applied}.',
+  'rewards.leave': 'Към менюто',
   'accountControls.confirm':
     'Да изтрием ли акаунта, резултатите и предметите? Това е необратимо. Покупките не могат да се прехвърлят в нов акаунт. Можеш да продължиш като гост.',
   'account.privacyFirst': 'Влез с код, изпратен на имейла ти. Без парола.',

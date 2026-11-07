@@ -1,5 +1,10 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { assertRunState, getReviveSp, transitionRun } from '@crystal-path-infinity/game-core';
+import {
+  assertRunState,
+  getReviveSp,
+  transitionRun,
+  LIVE_RULESET_VERSION,
+} from '@crystal-path-infinity/game-core';
 import type { SqlConnection, SqlPool } from './database.ts';
 import { PostgresTransaction } from './postgres-ranked.ts';
 import { rankedSnapshot, RANKED_RNG } from './ranked.ts';
@@ -41,7 +46,7 @@ export interface RewardView {
   readonly schemaVersion: 1;
   readonly runId: string;
   readonly rulesetVersion: string;
-  readonly status: 'offer' | 'pending' | 'granted' | 'playing' | 'finished';
+  readonly status: 'offer' | 'pending' | 'granted' | 'playing' | 'finished' | 'limit';
   readonly deathId: string | null;
   readonly offer: { ordinal: number; restoreSp: number } | null;
   readonly intent: {
@@ -322,7 +327,9 @@ export class RewardService {
             ? 'granted'
             : pending
               ? 'pending'
-              : 'offer';
+              : state.rulesetVersion === LIVE_RULESET_VERSION && state.revivesApplied >= 10
+                ? 'limit'
+                : 'offer';
     const offer =
       status === 'offer' && state.revivesApplied < 10
         ? { ordinal: state.revivesApplied + 1, restoreSp: getReviveSp(state.revivesApplied + 1) }

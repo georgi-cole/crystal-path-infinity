@@ -196,6 +196,9 @@ try {
   );
 } finally {
   try {
+    // Disposable fixture only: remove its active live run before restoring the old recovery allowlist.
+    // Production's ACTIVE_RULESET guard remains unchanged.
+    await admin.query('delete from auth.users where id=$1', [user]);
     const current = (await admin.query('select cpi_private.get_operations_policy() as policy'))
       .rows[0].policy;
     await admin.query('select cpi_private.set_operations_policy($1,$2,$3,$4,$5,$6,$7,$8,$9)', [
