@@ -85,6 +85,7 @@ import {
   CHOICE_GRACE_MS,
   usesBusinessRules,
   assertSpAmount,
+  LIVE_RULESET_VERSION,
 } from './rules.ts';
 import type {
   BufferPolicy,
@@ -129,6 +130,7 @@ export function createRun(options: CreateRunOptions, rng: RandomSource): RunStat
   }
   assertNonEmpty(options.runId, 'Run ID');
   if (
+    rulesetVersion !== LIVE_RULESET_VERSION &&
     (usesStoreTestRules(rulesetVersion) || parseTileExperiment(rulesetVersion)) &&
     !options.runId.startsWith('practice-')
   )
@@ -225,7 +227,10 @@ export function assertRunState(state: RunState, rng?: RandomSource): void {
   assertNonEmpty(state.runId, 'Run ID');
   if (usesStoreTestRules(state.rulesetVersion)) {
     const economy = state.storeTest;
-    if (!state.runId.startsWith('practice-') || !economy)
+    if (
+      (state.rulesetVersion !== LIVE_RULESET_VERSION && !state.runId.startsWith('practice-')) ||
+      !economy
+    )
       throw new RangeError('Test economy requires a local practice run.');
     for (const value of [
       economy.reserveSpent,
@@ -815,9 +820,16 @@ function testResourceTransition(
   command: Extract<RunCommand, { type: 'test-resource' }>,
   context: TransitionContext,
   events: RunEvent[],
+  server = false,
 ): TransitionResult {
   const economy = state.storeTest;
-  if (!usesStoreTestRules(state.rulesetVersion) || !state.runId.startsWith('practice-') || !economy)
+  if (
+    !usesStoreTestRules(state.rulesetVersion) ||
+    (server
+      ? state.rulesetVersion !== LIVE_RULESET_VERSION
+      : state.rulesetVersion === LIVE_RULESET_VERSION || !state.runId.startsWith('practice-')) ||
+    !economy
+  )
     return result(state, events, 'test-only');
   if (command.sequence !== economy.sequence + 1) return result(state, events, 'duplicate-revive');
   assertNonNegativeInteger(command.amount, 'Resource amount');
@@ -875,6 +887,25 @@ function testResourceTransition(
   };
   events.push({ ...eventTime(next), type: 'test-resource-used', resource, amount: command.amount });
   return result(rebaseDeathPressure(next, state.sp), events);
+}
+
+/** Pure calculation only. The server owns wallet debit, lease, idempotency and checkpoint commit. */
+export function applyServerResource(
+  state: RunState,
+  resource: 'sp' | 'hints' | 'credit',
+  amount: number,
+  context: TransitionContext,
+): TransitionResult {
+  assertRunState(state, context.rng);
+  const transition = testResourceTransition(
+    state,
+    { type: 'test-resource', resource, amount, sequence: (state.storeTest?.sequence ?? 0) + 1 },
+    context,
+    [],
+    true,
+  );
+  if (transition.accepted) assertRunState(transition.state, context.rng);
+  return transition;
 }
 
 /** Pure transition. The caller owns authenticated commands, active clock and RNG adapter. */

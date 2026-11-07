@@ -5,6 +5,29 @@ import { crystalGuideBg } from './crystal-guide-messages';
 
 /** Bulgarian preview copy — reviewed by the product owner before public release. */
 export const bg = {
+  'accountControls.confirm':
+    'Да изтрием ли акаунта, резултатите и предметите? Това е необратимо. Покупките не могат да се прехвърлят в нов акаунт. Можеш да продължиш като гост.',
+  'account.privacyFirst': 'Влез с код, изпратен на имейла ти. Без парола.',
+  'account.notReady': 'Входът още не е достъпен. Можеш да играеш като гост.',
+  'accountControls.reauth':
+    'Преди изтегляне на данни или изтриване ще ти изпратим нов код по имейл.',
+  'ranked.assisted': 'Опит с помощ · отделен резултат',
+  'ranked.reserveSp': 'Използвай {amount} SP',
+  'ranked.reserveHint': 'Използвай 1 подсказка',
+  'ranked.creditContinue': 'Продължи · 1 кредит',
+  'accountControls.codeSent': 'Въведи новия код, изпратен на имейла на акаунта.',
+  'accountControls.cancelCode': 'Отказ',
+  'accountControls.done': 'Готово',
+  'account.checkFirst': 'Кратка проверка преди вход.',
+  'account.check': 'Продължи',
+  'account.age': 'Възраст',
+  'account.country': 'Държава на пребиваване',
+  'account.selectCountry': 'Избери държава',
+  'account.agePrivacy': 'Не запазваме точната ти възраст. Винаги можеш да играеш като гост.',
+  'accountPortal.description':
+    'Влез, за да изтеглиш данните си или да изтриеш акаунта. При затваряне на страницата излизаш от профила.',
+  'accountPortal.unavailable':
+    'Услугите за акаунти още не са свързани. За помощ използвай имейла по-долу.',
   'account.signOut': 'Изход',
   'account.adPrivacy': 'Реклами и поверителност',
   'settings.privacyConnected':

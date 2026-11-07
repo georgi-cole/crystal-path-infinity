@@ -39,6 +39,7 @@ export function createNativeBillingAdapter(options: {
 }): NativeBillingAdapter {
   const sdk = options.sdk ?? NativePurchases;
   let configuring: Promise<void> | null = null;
+  const acknowledged = new WeakSet<PurchaseProof>();
   async function ready() {
     if (!options.available) throw new CommerceUnavailable();
     configuring ??= sdk.configure({ autoFinishTransactions: false }).catch(() => {
@@ -59,13 +60,15 @@ export function createNativeBillingAdapter(options: {
     if (options.platform === 'android') {
       if (transaction.purchaseState !== '1' || !bounded(transaction.purchaseToken, 8192))
         return null;
-      return {
+      const receipt: PurchaseProof = {
         platform: 'android',
         sku: transaction.productIdentifier,
         transactionId: transaction.transactionId,
         accountToken: accountToken.toLowerCase(),
         purchaseToken: transaction.purchaseToken,
       };
+      if (transaction.isAcknowledged === true) acknowledged.add(receipt);
+      return receipt;
     }
     if (!bounded(transaction.jwsRepresentation, 65536)) return null;
     return {
@@ -150,7 +153,8 @@ export function createNativeBillingAdapter(options: {
         await sdk.finishTransaction({ transactionId: receipt.transactionId });
       else if (!receipt.purchaseToken) throw new CommerceUnavailable();
       else if (consumable) await sdk.consumePurchase({ purchaseToken: receipt.purchaseToken });
-      else await sdk.acknowledgePurchase({ purchaseToken: receipt.purchaseToken });
+      else if (!acknowledged.has(receipt))
+        await sdk.acknowledgePurchase({ purchaseToken: receipt.purchaseToken });
     },
   };
 }

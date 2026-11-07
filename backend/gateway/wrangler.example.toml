@@ -1,0 +1,12 @@
+name = "crystal-path-api"
+main = "worker.mjs"
+compatibility_date = "2026-11-07"
+workers_dev = false
+[triggers]
+crons = ["* * * * *"]
+# Configure a custom domain, e.g. api.<your verified domain>. The game uses https://.../cpi.
+# No routes, account IDs or production secrets are guessed here.
+[vars]
+CPI_EDGE_URL = "https://REPLACE_PROJECT_REF.supabase.co/functions/v1/cpi-live"
+# Set CPI_GATEWAY_KEY with `wrangler secret put`, the same private 32-byte hex secret as the edge.
+# Set CPI_WORKER_KEY separately. It only authorizes scheduled private maintenance, never player requests.

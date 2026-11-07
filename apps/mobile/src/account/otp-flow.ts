@@ -11,8 +11,12 @@ export interface EligibilityPermit {
 }
 export type EligibilityDecision = EligibilityPermit | { status: 'parental_review' | 'unavailable' };
 
+export interface AccountAgeScreen {
+  readonly age: number;
+  readonly country: string;
+}
 export interface OtpGateway {
-  eligibility(): Promise<unknown>;
+  eligibility(screen?: AccountAgeScreen): Promise<unknown>;
   requestCode(email: string, permit: string): Promise<unknown>;
   verifyCode(email: string, code: string, permit: string): Promise<unknown>;
 }
@@ -153,7 +157,7 @@ export class AccountOtpFlow {
     this.update('offline');
   }
 
-  async checkEligibility(online: boolean): Promise<void> {
+  async checkEligibility(online: boolean, screen?: AccountAgeScreen): Promise<void> {
     this.cancel();
     if (!online) {
       this.update('offline');
@@ -162,7 +166,7 @@ export class AccountOtpFlow {
     const current = this.revision;
     this.update('checking');
     try {
-      const decision = validateEligibility(await this.gateway.eligibility(), this.now());
+      const decision = validateEligibility(await this.gateway.eligibility(screen), this.now());
       if (current !== this.revision) return;
       if (decision.status === 'eligible') {
         this.permit = decision;

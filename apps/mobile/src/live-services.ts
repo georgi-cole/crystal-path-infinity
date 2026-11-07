@@ -3,6 +3,7 @@ import type { ApprovedAccountServices } from './App';
 import { AccountSessionOwner } from './account/session-owner';
 import { protectedRefreshTokenStore } from './account/secure-session';
 import { createSessionTransport } from './account/session-gateway';
+import { createAccountControlsClient } from './account/account-controls-client';
 import { createOtpGateway } from './account/otp-gateway';
 import { createProfileClient } from './account/profile-client';
 import { createRankedClient } from './ranked/ranked-client';
@@ -29,7 +30,11 @@ export function createLiveServices(values: Readonly<Record<string, unknown>>): L
     typeof values.VITE_ACCOUNT_API_BASE_URL === 'string'
       ? values.VITE_ACCOUNT_API_BASE_URL
       : undefined;
-  const gateway = createOtpGateway(base),
+  const nativePlatform = Capacitor.getPlatform();
+  const gateway = createOtpGateway(base, fetch, {
+      platform: nativePlatform === 'ios' ? 'ios' : nativePlatform === 'android' ? 'android' : 'web',
+      build: Number(values.VITE_CLIENT_BUILD ?? 1),
+    }),
     transport = createSessionTransport(base);
   if (!base || !gateway || !transport) return null;
   const session = new AccountSessionOwner(protectedRefreshTokenStore, transport);
@@ -56,6 +61,7 @@ export function createLiveServices(values: Readonly<Record<string, unknown>>): L
       session,
       accountEntry: { gateway, session },
       signOut: () => session.signOut(),
+      accountControlsClient: createAccountControlsClient(base, session),
       adPrivacyOptions: ad?.available ? () => ad.showPrivacyOptions() : undefined,
       profileClient: createProfileClient(base, session),
       rankedClient: ranked,

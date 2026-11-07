@@ -4,6 +4,7 @@ import './account-controls.css';
 
 import { AccountControlsOwner, EMPTY_ACCOUNT_CONTROLS as empty } from './account-controls-model';
 import type { AccountControlsClient } from './account-controls-model';
+import { ReauthForm } from './reauth-form';
 export type { AccountControlsClient } from './account-controls-model';
 
 export function AccountControls({
@@ -31,6 +32,7 @@ export function AccountControls({
     owner.replace(client, scope);
     return () => {
       owner.clear();
+      client?.reauth?.cancel();
     };
   }, [owner, client, scope]);
   const busy =
@@ -38,10 +40,18 @@ export function AccountControls({
   return (
     <section className="cpi-account-controls" aria-labelledby="cpi-account-controls-title">
       <h2 id="cpi-account-controls-title">{t('accountControls.title')}</h2>
+      {client?.reauth && <ReauthForm prompt={client.reauth} />}
       {!client || scope === null ? (
         <p role="status">{t('accountControls.unavailable')}</p>
       ) : view.phase === 'deleted' ? (
-        <p role="status">{t('accountControls.deleted')}</p>
+        <>
+          <p role="status">{t('accountControls.deleted')}</p>
+          {client.finishDeletion && (
+            <button type="button" onClick={() => void client.finishDeletion?.()}>
+              {t('accountControls.done')}
+            </button>
+          )}
+        </>
       ) : view.phase === 'pending' ? (
         <>
           <p role="status">{t('accountControls.pending')}</p>

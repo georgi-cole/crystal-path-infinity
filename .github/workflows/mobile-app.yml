@@ -72,6 +72,9 @@ jobs:
         run: |
           npm exec --yes --package=deno@2.9.6 -- deno task --config supabase/functions/cpi-api/deno.json check
           npm exec --yes --package=deno@2.9.6 -- deno task --config supabase/functions/cpi-api/deno.json test
+          npm exec --yes --package=deno@2.9.6 -- deno task --config supabase/functions/cpi-live/deno.json check
+          npm exec --yes --package=deno@2.9.6 -- deno task --config supabase/functions/cpi-live/deno.json test
+          node --experimental-strip-types --test backend/tests/gateway.test.mjs
       - name: Test unsigned packaging safeguards and artifact verification
         run: |
           node --experimental-strip-types --test .github/scripts/unsigned-beta.test.mjs
@@ -484,9 +487,18 @@ jobs:
       - name: Validate independent backend environments and public-variable guard
         run: node --test backend/tests/environments.test.mjs
       - name: Test private commerce delivery and concurrent purchase replay
+        env:
+          CPI_RUNTIME_DB_PASSWORD: cpi-runtime-disposable-ci-only
         run: |
           psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261107000100_native_commerce.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261107000200_account_issuer.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261107000300_commerce_operations.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261107000400_live_economy.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261107000500_commerce_export.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261107000600_reward_launch_reviews.sql
+          psql -X -v ON_ERROR_STOP=1 -f backend/live-runtime-role.sql
           node --experimental-strip-types backend/tests/commerce-integration.mjs
+          node --experimental-strip-types backend/tests/live-services-integration.mjs
 
   required:
     name: App required checks

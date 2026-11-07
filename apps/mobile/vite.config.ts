@@ -53,6 +53,15 @@ export default defineConfig(({ mode }) => {
     server: { host: '127.0.0.1', port: 5174, strictPort: true },
     preview: { host: '127.0.0.1', port: 4174, strictPort: true },
     test: { environment: 'node', include: ['config/**/*.test.ts'] },
-    build: { target: 'es2022', outDir: mode === 'qa' ? 'dist-qa' : 'dist' },
+    build: {
+      target: 'es2022',
+      outDir: mode === 'qa' ? 'dist-qa' : 'dist',
+      rollupOptions: {
+        input: {
+          index: fileURLToPath(new URL('./index.html', import.meta.url)),
+          account: fileURLToPath(new URL('./account.html', import.meta.url)),
+        },
+      },
+    },
   };
 });

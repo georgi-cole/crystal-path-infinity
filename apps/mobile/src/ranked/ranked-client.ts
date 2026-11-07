@@ -12,6 +12,8 @@ import {
   assertActiveEffects,
   PACT_OPTIONS,
   VAULT_PAYOUTS,
+  usesBusinessRules,
+  LIVE_RULESET_VERSION,
 } from '@crystal-path-infinity/game-core';
 import type {
   ActiveEffect,
@@ -58,6 +60,13 @@ export interface RankedCurrent {
   readonly mysteryTier?: MysteryTier;
 }
 export interface RankedRun {
+  readonly economy?: {
+    readonly assisted: boolean;
+    readonly reserveSpent: number;
+    readonly hintsSpent: number;
+    readonly creditContinues: number;
+    readonly adContinues: number;
+  };
   readonly runId: string;
   readonly rulesetVersion: string;
   readonly status: 'playing' | 'dead' | 'finished';
@@ -85,7 +94,11 @@ export interface RankedRun {
   readonly pact?: MysteryPact | null;
   readonly mysteryRhythm?: MysteryRhythm | null;
   readonly discovery?: MysteryDiscovery;
-  readonly deathClock?: { readonly warningAt: number; readonly expiresAt: number } | null;
+  readonly deathClock?: {
+    readonly warningAt: number;
+    readonly expiresAt: number;
+    readonly firstLossAt?: number;
+  } | null;
   readonly death: {
     readonly id: string;
     readonly fatalRow: string;
@@ -132,6 +145,7 @@ export interface RankedClient {
   start(): Promise<void>;
   lookupActive(): Promise<string | null>;
   command(command: RankedCommand): Promise<void>;
+  spendResource?(resource: 'sp' | 'hints' | 'credit', amount: number): Promise<boolean>;
   /** Explicit use of a server-verified grant; never accepts SP or client proof. */
   applyVerifiedGrant(grantId: string, expectedRunId: string): Promise<boolean>;
   /** Explicitly detach a dead pending/granted run while retaining its server reward. */
@@ -193,6 +207,8 @@ const REASONS = new Set([
   'missing-grant',
   'grant-mismatch',
   'forfeiture-required',
+  'invalid-resource',
+  'resource-limit',
 ]);
 
 function object(
@@ -206,6 +222,14 @@ function object(
     !Array.isArray(value) &&
     keys.every((key) => Object.hasOwn(value, key)) &&
     Object.keys(value).every((key) => keys.includes(key) || optional.includes(key))
+  );
+}
+
+function points(value: unknown, version: string): value is number {
+  return (
+    typeof value === 'number' &&
+    value >= 0 &&
+    Number.isSafeInteger(usesBusinessRules(version) ? value * 2 : value)
   );
 }
 function decimal(value: unknown, positive = false): value is string {
@@ -279,6 +303,10 @@ export function parseRankedReply(value: unknown): RankedReply | null {
   )
     return null;
   const raw = value.snapshot;
+  const version =
+    raw && typeof raw === 'object' ? String((raw as Record<string, unknown>).rulesetVersion) : '';
+  const live = version === LIVE_RULESET_VERSION,
+    maxRevives = live ? 15 : 10;
   const directorRules =
     raw !== null &&
     typeof raw === 'object' &&
@@ -319,6 +347,7 @@ export function parseRankedReply(value: unknown): RankedReply | null {
         ...(usesPacts ? ['pact'] : []),
         ...(directorRules ? ['mysteryRhythm', 'deathClock'] : []),
         ...(discoveryRules ? ['discovery'] : []),
+        ...(live ? ['economy'] : []),
       ],
       ['pacing'],
     ) ||
@@ -336,13 +365,13 @@ export function parseRankedReply(value: unknown): RankedReply | null {
     !decimal(raw.lastClearedRow) ||
     !decimal(raw.currentRow, true) ||
     BigInt(raw.currentRow) !== BigInt(raw.lastClearedRow) + 1n ||
-    !integer(raw.sp) ||
+    !points(raw.sp, version) ||
     !integer(raw.hints) ||
     !integer(raw.activeTimeMs) ||
     (raw.achievedAt !== null && !integer(raw.achievedAt)) ||
     typeof raw.paused !== 'boolean' ||
     typeof raw.rewardPending !== 'boolean' ||
-    !integer(raw.revivesGranted, 10) ||
+    !integer(raw.revivesGranted, maxRevives) ||
     !integer(raw.revivesApplied, raw.revivesGranted) ||
     !integer(raw.revivesToReachScore, raw.revivesApplied) ||
     !Array.isArray(raw.history) ||
@@ -351,6 +380,28 @@ export function parseRankedReply(value: unknown): RankedReply | null {
     raw.effects.length > 2
   )
     return null;
+  let economy: RankedRun['economy'];
+  if (live) {
+    const e = raw.economy;
+    if (
+      !object(e, ['assisted', 'reserveSpent', 'hintsSpent', 'creditContinues', 'adContinues']) ||
+      typeof e.assisted !== 'boolean' ||
+      !integer(e.reserveSpent, 200) ||
+      !integer(e.hintsSpent) ||
+      !integer(e.creditContinues, 15) ||
+      !integer(e.adContinues, 10) ||
+      e.creditContinues + e.adContinues !== raw.revivesApplied ||
+      e.assisted !== (e.reserveSpent > 0 || e.hintsSpent > 0 || e.creditContinues > 0)
+    )
+      return null;
+    economy = {
+      assisted: e.assisted,
+      reserveSpent: e.reserveSpent,
+      hintsSpent: e.hintsSpent,
+      creditContinues: e.creditContinues,
+      adContinues: e.adContinues,
+    };
+  }
   const pacing = raw.pacing;
   if (raw.rulesetVersion === PACED_RULESET_VERSION || raw.rulesetVersion === SCAN_RULESET_VERSION) {
     if (
@@ -590,16 +641,25 @@ export function parseRankedReply(value: unknown): RankedReply | null {
     if (raw.status === 'playing') {
       const item = raw.deathClock;
       if (
-        !object(item, ['warningAt', 'expiresAt']) ||
+        !object(item, [
+          'warningAt',
+          'expiresAt',
+          ...(usesBusinessRules(version) ? ['firstLossAt'] : []),
+        ]) ||
         !integer(item.warningAt) ||
         !integer(item.expiresAt) ||
         item.expiresAt - item.warningAt !== 10000 ||
+        (usesBusinessRules(version) && item.firstLossAt !== item.warningAt + 3000) ||
         item.expiresAt <= raw.activeTimeMs ||
         (pact?.phase === 'offered' && item.warningAt !== pact.offeredAt! + 60000) ||
         (discovery?.introduction && item.warningAt !== discovery.introduction.expiresAt + 3000)
       )
         return null;
-      deathClock = { warningAt: item.warningAt, expiresAt: item.expiresAt };
+      deathClock = {
+        warningAt: item.warningAt,
+        expiresAt: item.expiresAt,
+        ...(usesBusinessRules(version) ? { firstLossAt: item.firstLossAt as number } : {}),
+      };
     } else if (raw.deathClock !== null) return null;
   }
   const death = raw.death;
@@ -624,7 +684,8 @@ export function parseRankedReply(value: unknown): RankedReply | null {
     return null;
   if (
     (raw.status === 'playing' && (raw.sp === 0 || death !== null || raw.rewardPending)) ||
-    (raw.status === 'dead' && (raw.sp !== 0 || death === null || raw.revivesApplied >= 10)) ||
+    (raw.status === 'dead' &&
+      (raw.sp !== 0 || death === null || raw.revivesApplied >= maxRevives)) ||
     (raw.rewardPending && raw.status !== 'dead') ||
     (death !== null && (death as { fatalRow: string }).fatalRow !== raw.currentRow) ||
     (raw.lastClearedRow !== '0' && raw.achievedAt === null)
@@ -683,12 +744,14 @@ export function parseRankedReply(value: unknown): RankedReply | null {
       revivesApplied: raw.revivesApplied,
       revivesToReachScore: raw.revivesToReachScore,
       rewardPending: raw.rewardPending,
+      ...(economy ? { economy } : {}),
     },
   };
 }
 
 interface PendingRequest {
-  readonly route: 'start' | 'action' | 'recover' | 'active' | 'reward_apply' | 'archive';
+  readonly route:
+    'start' | 'action' | 'recover' | 'active' | 'reward_apply' | 'archive' | 'resource';
   readonly body: string;
   readonly runId: string | null;
   readonly grantId?: string;
@@ -808,6 +871,48 @@ export function createRankedClient(options: RankedClientOptions): RankedClient |
     pending === null &&
     phase === 'idle';
   const client: RankedClient = {
+    async spendResource(resource, amount) {
+      syncAccount();
+      if (
+        !latest ||
+        latest.snapshot.rulesetVersion !== LIVE_RULESET_VERSION ||
+        pending ||
+        flight ||
+        phase !== 'ready' ||
+        !online ||
+        !account ||
+        !Number.isInteger(amount) ||
+        amount < 1 ||
+        amount > 200
+      )
+        return false;
+      const owner = account,
+        run = latest.snapshot;
+      pending = {
+        route: 'resource',
+        runId: run.runId,
+        body: JSON.stringify({
+          schemaVersion: 1,
+          runId: run.runId,
+          idempotencyKey: newId(),
+          sequence: run.nextSequence,
+          leaseToken: latest.lease.token,
+          leaseGeneration: latest.lease.generation,
+          row: run.currentRow,
+          life: run.revivesApplied,
+          resource,
+          amount,
+        }),
+      };
+      await send(pending);
+      return (
+        owner === options.session.accountScope() &&
+        latest?.snapshot.runId === run.runId &&
+        phase === 'ready' &&
+        !rejected &&
+        !pending
+      );
+    },
     snapshot() {
       const scope = syncAccount();
       return {
@@ -1068,9 +1173,11 @@ export function createRankedClient(options: RankedClientOptions): RankedClient |
     try {
       const result = await options.session.withAccountRequest(async (lease) => {
         const response = await fetcher(
-          request.route === 'reward_apply'
-            ? base.origin + path + '/rewards/apply'
-            : endpoint + request.route,
+          request.route === 'resource'
+            ? base.origin + path + '/commerce/spend'
+            : request.route === 'reward_apply'
+              ? base.origin + path + '/rewards/apply'
+              : endpoint + request.route,
           {
             method: 'POST',
             headers: {

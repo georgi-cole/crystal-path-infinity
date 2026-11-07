@@ -1,5 +1,8 @@
+import type { ReauthPrompt } from './reauth-prompt';
 /** The approved host owns fresh OTP reauthentication and durable receipt recovery. */
 export interface AccountControlsClient {
+  readonly reauth?: ReauthPrompt;
+  finishDeletion?(): Promise<void>;
   /** Gather every bounded page with fresh reauth subproofs; all next cursors must be null. */
   exportData(): Promise<unknown>;
   deleteAccount(): Promise<'deleted' | 'revocation_pending'>;
@@ -186,6 +189,7 @@ export function formatAccountExport(value: unknown): string {
       : { reports: list('reports', ['id', 'targetPublicId', 'reason', 'pending', 'createdAt']) }),
     rewards,
     adAuthorizations,
+    ...(value.commerce === undefined ? {} : { commerce: formatCommerceExport(value.commerce) }),
     next: fields(value.next, [
       'consent',
       'parental',
@@ -194,11 +198,78 @@ export function formatAccountExport(value: unknown): string {
       'report',
       'reward',
       'adAuthorization',
+      'purchase',
+      'spend',
+      'session',
+      'assistedResult',
     ]),
   };
   const text = JSON.stringify(output, null, 2);
   if (text.length > 2_000_000) throw new Error('Account export is too large to display');
   return text;
+}
+
+function formatCommerceExport(value: unknown) {
+  if (!record(value)) throw new Error('Invalid commerce export');
+  const list = (key: string, keys: readonly string[]) => {
+    const items = value[key];
+    if (!Array.isArray(items) || items.length > 10_000) throw new Error('Invalid commerce export');
+    return items.map((item) => fields(item, keys));
+  };
+  let wallet: unknown = null;
+  if (value.wallet !== null) {
+    if (
+      !record(value.wallet) ||
+      !Array.isArray(value.wallet.owned) ||
+      value.wallet.owned.length > 7 ||
+      value.wallet.owned.some(
+        (theme) =>
+          typeof theme !== 'string' ||
+          !['obsidian', 'chaos', 'jelly', 'wilds', 'league', 'puppy', 'kitten'].includes(theme),
+      )
+    )
+      throw new Error('Invalid wallet export');
+    wallet = {
+      ...fields(value.wallet, ['sp', 'hints', 'credits', 'revision', 'equipped', 'blocked']),
+      owned: value.wallet.owned,
+    };
+  }
+  return {
+    wallet,
+    purchases: list('purchases', [
+      'id',
+      'platform',
+      'environment',
+      'transactionId',
+      'sku',
+      'productKey',
+      'kind',
+      'quantity',
+      'theme',
+      'grantedAt',
+      'revokedAt',
+    ]),
+    spends: list('spends', ['id', 'runId', 'resource', 'amount', 'createdAt']),
+    sessions: list('sessions', [
+      'id',
+      'platform',
+      'createdAt',
+      'expiresAt',
+      'revokedAt',
+      'privacyContext',
+      'country',
+      'policyVersion',
+    ]),
+    assistedResults: list('assistedResults', [
+      'id',
+      'runId',
+      'rulesetVersion',
+      'lastClearedRow',
+      'revivesToReachScore',
+      'achievedAt',
+      'finalizedAt',
+    ]),
+  };
 }
 
 /** Independently testable ownership: a late A response cannot become B's data. */

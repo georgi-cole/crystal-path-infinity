@@ -35,6 +35,17 @@ function fixture(platform: 'android' | 'ios') {
   return { sdk, adapter };
 }
 describe('platform checkout adapter', () => {
+  it('restores a server-acknowledged world without acknowledging twice, while still consuming resources', async () => {
+    const f = fixture('android'),
+      acknowledged = { ...transaction, isAcknowledged: true };
+    f.sdk.getPurchases.mockResolvedValue({ purchases: [acknowledged] });
+    f.sdk.getUnfinishedTransactions.mockResolvedValue({ transactions: [] });
+    const receipts = await f.adapter.recover(token);
+    await f.adapter.finish(receipts[0], false);
+    expect(f.sdk.acknowledgePurchase).not.toHaveBeenCalled();
+    await f.adapter.finish(receipts[0], true);
+    expect(f.sdk.consumePurchase).toHaveBeenCalledOnce();
+  });
   it('uses localized prices, handles iOS uppercase UUIDs, and never auto-finishes', async () => {
     const { sdk, adapter } = fixture('ios');
     expect((await adapter.prices([product]))[0].displayPrice).toBe('2,99 €');

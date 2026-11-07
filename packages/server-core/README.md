@@ -1,9 +1,11 @@
 # Private MVP server modules
 
+New source candidate (7 November 2026): `supabase/functions/cpi-live` composes the private OTP/session issuer, authoritative v11 economy, verified rewards/commerce, account lifecycle and maintenance. It is disabled by default and has not been deployed. The original development `cpi-api` remains closed. See [architecture and remaining gates](../../docs/decisions/LIVE-SERVER-2026-11.md) and [owner setup](../../docs/RELEASE_SERVICES_SETUP_BG.md).
+
 These modules implement the trusted service contracts for the standalone game.
 They do not start a network listener, select a hosted project, deploy migrations,
 or enable account capture or advertising. The shipped mobile entry point injects
-no account services. Live services remain disabled by the owner's instruction.
+no account services. Default builds are not connected to live services; hosted activation requires the reviewed setup described above.
 
 `createMvpServer` composes explicitly supplied Fetch `Request` handlers at one
 validated HTTPS base path. Every composed handler must use the same `basePath`.

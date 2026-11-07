@@ -75,6 +75,13 @@ export interface StoredRankedRun {
 }
 
 export interface RankedSnapshot {
+  readonly economy?: {
+    readonly assisted: boolean;
+    readonly reserveSpent: number;
+    readonly hintsSpent: number;
+    readonly creditContinues: number;
+    readonly adContinues: number;
+  };
   readonly runId: string;
   readonly rulesetVersion: string;
   readonly status: RunState['status'];
@@ -258,7 +265,7 @@ function parseCommand(value: unknown): RankedCommand {
   );
   const row = integer(input.row, true);
   const life = input.life;
-  if (typeof life !== 'number' || !Number.isInteger(life) || life < 0 || life > 10) {
+  if (typeof life !== 'number' || !Number.isInteger(life) || life < 0 || life > 15) {
     fail('invalid-request');
   }
   if (type === 'choose') {
@@ -289,6 +296,17 @@ export function rankedSnapshot(record: StoredRankedRun): RankedSnapshot {
       : null,
   });
   return structuredClone({
+    ...(state.storeTest
+      ? {
+          economy: {
+            assisted: state.storeTest.assisted,
+            reserveSpent: state.storeTest.reserveSpent,
+            hintsSpent: state.storeTest.hintsSpent,
+            creditContinues: state.storeTest.creditContinues,
+            adContinues: state.storeTest.adContinues,
+          },
+        }
+      : {}),
     runId: state.runId,
     rulesetVersion: state.rulesetVersion,
     status: state.status,

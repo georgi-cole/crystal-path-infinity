@@ -123,7 +123,7 @@ export function parseRewardView(value: unknown, runId: string): RewardView | nul
     !['offer', 'pending', 'granted', 'playing', 'finished'].includes(value.status as string) ||
     (value.deathId !== null &&
       (typeof value.deathId !== 'string' || !/^[A-Za-z0-9:_-]{1,120}$/.test(value.deathId))) ||
-    !integer(value.revivesGranted, 10) ||
+    !integer(value.revivesGranted, value.rulesetVersion === 'infinity-v11-live' ? 15 : 10) ||
     !integer(value.revivesApplied, value.revivesGranted) ||
     !integer(value.revivesToReachScore, value.revivesApplied)
   )

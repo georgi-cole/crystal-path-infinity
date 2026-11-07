@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { PGlite } from '@electric-sql/pglite';
 import { createCommerceService } from '../src/commerce-service.ts';
 import type { SqlPool } from '../src/database.ts';
@@ -60,15 +60,14 @@ const service = createCommerceService({
 });
 beforeAll(async () => {
   database = await PGlite.create();
-  await database.exec(`create schema auth; create schema cpi_private;
+  await database.exec(`create schema auth;
     create role anon; create role authenticated; create role service_role;
-    create table auth.users(id uuid primary key);`);
-  await database.exec(
-    readFileSync(
-      new URL('../../../supabase/migrations/20261107000100_native_commerce.sql', import.meta.url),
-      'utf8',
-    ),
-  );
+    create table auth.users(id uuid primary key,email text unique,email_confirmed_at timestamptz);`);
+  const migrations = new URL('../../../supabase/migrations/', import.meta.url);
+  for (const name of readdirSync(migrations)
+    .filter((name) => name.endsWith('.sql'))
+    .sort())
+    await database.exec(readFileSync(new URL(name, migrations), 'utf8'));
   await database.query('insert into auth.users(id) values($1),($2)', [user, other]);
 }, 30000);
 afterAll(async () => {

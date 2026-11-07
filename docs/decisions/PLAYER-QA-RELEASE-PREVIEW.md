@@ -1,5 +1,7 @@
 # Player preview, QA profile and launch signature
 
+Update, 7 November 2026: [The live-server candidate](LIVE-SERVER-2026-11.md) adds separately gated account/ad/commerce composition and a public `account.html` self-service page. Default player and QA builds remain unconnected; unsigned release preparation still rejects live VITE configuration. QA demos/simulations are not added to the public account page. Native acceptance must be repeated for the new source; prior evidence is historical.
+
 Date: 6 November 2026. Branch: `codex/mystery-pacts`. Owner-requested preparation for reviewing the player experience; no merge, signing, store upload, live commerce or backend deployment is implied.
 
 ## Player and QA from the same source

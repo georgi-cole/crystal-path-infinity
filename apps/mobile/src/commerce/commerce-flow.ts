@@ -104,14 +104,30 @@ export class CommerceFlow {
   load = async (): Promise<void> =>
     this.operation('loading', async (current, signal) => {
       this.update({ ...this.state, products: [] });
-      const catalog = await this.gateway.catalog(signal);
-      if (!current()) return;
       const wallet = await this.gateway.wallet(signal);
       if (!current()) return;
       this.accept(wallet);
+      // Settle paid pending/unfinished transactions when the player opens the store,
+      // including after an app close. This never opens a new checkout.
+      const receipts = await this.native.recover(wallet.accountToken);
+      if (!current()) return;
+      for (const receipt of receipts.slice(0, 20)) {
+        await this.deliver(receipt, current, signal);
+        if (!current()) return;
+      }
+      const catalog = await this.gateway.catalog(signal);
+      if (!current()) return;
       const products = await this.native.prices(catalog);
       if (!current()) return;
       this.update({ ...this.state, phase: 'ready', products });
+    });
+  refreshWallet = async (): Promise<void> =>
+    this.operation('loading', async (current, signal) => {
+      const wallet = await this.gateway.wallet(signal);
+      if (current()) {
+        this.accept(wallet);
+        this.update({ ...this.state, phase: 'ready' });
+      }
     });
   private async deliver(
     receipt: PurchaseProof,

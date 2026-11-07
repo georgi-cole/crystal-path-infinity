@@ -29,7 +29,7 @@ const proof: PurchaseProof = {
   purchaseToken: 'private-provider-token',
   accountToken: token,
 };
-function fixture() {
+function fixture(pending = false) {
   let scope: object | null = {},
     listener = () => {};
   const native: NativeBillingAdapter = {
@@ -37,7 +37,7 @@ function fixture() {
     platform: 'android',
     prices: vi.fn(() => Promise.resolve([product])),
     purchase: vi.fn(() => Promise.resolve({ status: 'purchased' as const, proof })),
-    recover: vi.fn(() => Promise.resolve([proof])),
+    recover: vi.fn(() => Promise.resolve(pending ? [proof] : [])),
     finish: vi.fn(() => Promise.resolve()),
   };
   const gateway: CommerceGateway = {
@@ -72,13 +72,13 @@ function fixture() {
 }
 describe('real purchase delivery and recovery ownership', () => {
   it('restores a verified purchase even when a platform price is unavailable', async () => {
-    const f = fixture();
+    const f = fixture(true);
     vi.mocked(f.native.prices).mockRejectedValueOnce(new Error('product temporarily unavailable'));
     await f.flow.load();
     expect(f.flow.snapshot()).toMatchObject({
       phase: 'error',
       products: [],
-      wallet: { credits: 0 },
+      wallet: { credits: 3 },
     });
     await f.flow.recover();
     expect(f.flow.snapshot()).toMatchObject({ phase: 'ready', wallet: { credits: 3 } });
@@ -122,6 +122,7 @@ describe('real purchase delivery and recovery ownership', () => {
     vi.mocked(f.native.finish).mockRejectedValueOnce(new Error('connection lost'));
     await f.flow.buy(product.key);
     expect(f.flow.snapshot()).toMatchObject({ phase: 'error', wallet: { credits: 3 } });
+    vi.mocked(f.native.recover).mockResolvedValue([proof]);
     await f.flow.recover();
     expect(f.flow.snapshot()).toMatchObject({ phase: 'ready', wallet: { credits: 3 } });
     expect(f.gateway.verify).toHaveBeenCalledTimes(2);
@@ -165,6 +166,7 @@ describe('real purchase delivery and recovery ownership', () => {
       consumable: true,
       wallet: { ...initial, credits: 3 },
     });
+    vi.mocked(f.native.recover).mockResolvedValue([proof]);
     await f.flow.recover();
     expect(f.flow.snapshot().phase).toBe('error');
     expect(f.flow.snapshot().wallet?.credits).toBe(0);

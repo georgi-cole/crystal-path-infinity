@@ -19,6 +19,17 @@ export function createEdgeSqlPool(
   connectionString: string,
   makeClient: (options: EdgeDatabaseOptions) => EdgeDatabaseClient,
 ): SqlPool {
+  return createProjectSqlPool(DEVELOPMENT_PROJECT, connectionString, makeClient);
+}
+
+/** Explicit host configuration only. The historical development adapter above stays pinned. */
+export function createProjectSqlPool(
+  projectRef: string,
+  connectionString: string,
+  makeClient: (options: EdgeDatabaseOptions) => EdgeDatabaseClient,
+  loginRole: 'postgres' | 'cpi_runtime' = 'postgres',
+): SqlPool {
+  if (!/^[a-z]{20}$/.test(projectRef)) throw new Error('Invalid database project');
   const url = new URL(connectionString);
   if (
     !['postgres:', 'postgresql:'].includes(url.protocol) ||
@@ -28,9 +39,9 @@ export function createEdgeSqlPool(
     url.pathname !== '/postgres' ||
     url.port !== '5432' ||
     !(
-      (url.hostname === `db.${DEVELOPMENT_PROJECT}.supabase.co` && url.username === 'postgres') ||
+      (url.hostname === `db.${projectRef}.supabase.co` && url.username === loginRole) ||
       (/^aws-[0-9]+-[a-z0-9-]+\.pooler\.supabase\.com$/.test(url.hostname) &&
-        url.username === `postgres.${DEVELOPMENT_PROJECT}`)
+        url.username === `${loginRole}.${projectRef}`)
     )
   )
     throw new Error('Invalid development database target');

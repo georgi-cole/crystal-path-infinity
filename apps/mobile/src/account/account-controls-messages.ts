@@ -1,14 +1,17 @@
 export const accountControlMessages = {
+  'accountControls.codeSent': 'Enter the new code sent to your account email.',
+  'accountControls.cancelCode': 'Cancel',
+  'accountControls.done': 'Done',
   'accountControls.title': 'Your account data',
   'accountControls.unavailable':
     'Account export and deletion are unavailable until a verified account service is connected. Guest practice remains available.',
   'accountControls.reauth':
-    'The trusted account service will ask you to verify your identity before export or deletion.',
+    'We will send a new code to your email before exporting or deleting your account.',
   'accountControls.export': 'Export my data',
   'accountControls.exporting': 'Preparing private export...',
   'accountControls.delete': 'Delete my account',
   'accountControls.confirm':
-    'Delete this account, its profile and its results? This cannot be undone. Local guest practice does not require an account.',
+    'Delete this account, its profile, results and owned items? This cannot be undone. Purchases cannot be moved to a new account. Guest play remains available.',
   'accountControls.cancel': 'Keep account',
   'accountControls.confirmDelete': 'Confirm account deletion',
   'accountControls.deleting': 'Submitting deletion and checking session revocation...',

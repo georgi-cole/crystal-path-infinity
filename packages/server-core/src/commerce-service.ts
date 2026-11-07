@@ -1,5 +1,6 @@
 import type { SqlPool, SqlConnection } from './database.ts';
 import type { PurchaseProof, PurchaseVerifier, VerifiedPurchase } from './purchase-verification.ts';
+import type { PrivateCryptography } from './private-services.ts';
 const themes = ['obsidian', 'chaos', 'jelly', 'wilds', 'league', 'puppy', 'kitten'];
 export interface CommerceProduct {
   readonly key: string;
@@ -63,6 +64,8 @@ export function createCommerceService(options: {
   verifyPurchase: PurchaseVerifier;
   /** Only a host with v11 server spending, refund processing and account-data lifecycle may activate. */
   economyReady: boolean;
+  /** Required by the live host for durable Android acknowledgement; no raw token is logged. */
+  completionCrypto?: PrivateCryptography;
 }) {
   const products = options.products.map((product) => ({ ...product }));
   const keys = new Set<string>(),
@@ -99,12 +102,30 @@ export function createCommerceService(options: {
   async function transaction<T>(
     subject: string,
     work: (connection: SqlConnection, current: CommerceWallet) => Promise<T>,
+    fingerprint?: string,
   ): Promise<T> {
     ready(subject);
     const connection = await options.database.connect();
     let broken: Error | undefined;
     try {
       await connection.query('begin');
+      if (fingerprint)
+        await connection.query('select pg_advisory_xact_lock(hashtextextended($1,0))', [
+          'purchase:' + fingerprint,
+        ]);
+      await connection.query(
+        'insert into cpi_private.profile_owners(user_id) values($1::uuid) on conflict do nothing',
+        [subject],
+      );
+      const owner = await connection.query(
+        'select user_id from cpi_private.profile_owners where user_id=$1::uuid for update',
+        [subject],
+      );
+      const deleting = await connection.query(
+        'select 1 from cpi_private.account_deletion_requests where user_id=$1::uuid',
+        [subject],
+      );
+      if (owner.rows.length !== 1 || deleting.rows.length) throw new CommerceError();
       await connection.query(
         'insert into cpi_private.commerce_wallets(user_id) values($1::uuid) on conflict(user_id) do nothing',
         [subject],
@@ -185,57 +206,83 @@ export function createCommerceService(options: {
         verified.purchase.nativeConsumable !== (product.kind !== 'theme')
       )
         return { status: 'rejected' as const };
-      return transaction(subject, async (connection, current) => {
-        if (current.accountToken !== proof.accountToken) throw new CommerceError();
-        const result = await connection.query(
-          `insert into cpi_private.purchase_deliveries(fingerprint,wallet_id,platform,environment,transaction_id,sku,product_key)
-           values($1,$2::uuid,$3,$4,$5,$6,$7) on conflict do nothing returning fingerprint`,
-          [
-            verified.purchase.fingerprint,
-            current.accountToken,
-            proof.platform,
-            verified.purchase.environment,
-            proof.transactionId,
-            proof.sku,
-            product.key,
-          ],
-        );
-        if (result.rows.length) {
-          if (product.kind === 'theme')
-            await connection.query(
-              `update cpi_private.commerce_wallets set owned=case when $2=any(owned) then owned else array_append(owned,$2) end, revision=revision+1 where id=$1::uuid`,
-              [current.accountToken, product.theme!],
-            );
-          else {
-            const column = product.kind === 'credit' ? 'credits' : product.kind;
-            await connection.query(
-              `update cpi_private.commerce_wallets set ${column}=${column}+$2, revision=revision+1 where id=$1::uuid`,
-              [current.accountToken, product.quantity],
-            );
-          }
-        } else {
-          const existing = (
-            await connection.query(
-              'select wallet_id,sku,product_key,transaction_id from cpi_private.purchase_deliveries where fingerprint=$1',
-              [verified.purchase.fingerprint],
+      return transaction(
+        subject,
+        async (connection, current) => {
+          if (current.accountToken !== proof.accountToken) throw new CommerceError();
+          const refund = await connection.query(
+            'select 1 from cpi_private.purchase_refunds where reversed_at is null and (fingerprint=$1 or (platform=$2 and environment=$3 and transaction_id=$4))',
+            [
+              verified.purchase.fingerprint,
+              proof.platform,
+              verified.purchase.environment,
+              proof.transactionId,
+            ],
+          );
+          if (refund.rows.length) return { status: 'rejected' as const };
+          const result = await connection.query(
+            `insert into cpi_private.purchase_deliveries(fingerprint,wallet_id,platform,environment,transaction_id,sku,product_key,product_kind,quantity,theme)
+           values($1,$2::uuid,$3,$4,$5,$6,$7,$8,$9,$10) on conflict do nothing returning fingerprint`,
+            [
+              verified.purchase.fingerprint,
+              current.accountToken,
+              proof.platform,
+              verified.purchase.environment,
+              proof.transactionId,
+              proof.sku,
+              product.key,
+              product.kind,
+              product.quantity,
+              product.theme ?? null,
+            ],
+          );
+          if (result.rows.length) {
+            if (product.kind === 'theme')
+              await connection.query(
+                `update cpi_private.commerce_wallets set owned=case when $2=any(owned) then owned else array_append(owned,$2) end, revision=revision+1 where id=$1::uuid`,
+                [current.accountToken, product.theme!],
+              );
+            else {
+              const column = product.kind === 'credit' ? 'credits' : product.kind;
+              await connection.query(
+                `update cpi_private.commerce_wallets set ${column}=${column}+$2, revision=revision+1 where id=$1::uuid`,
+                [current.accountToken, product.quantity],
+              );
+            }
+          } else {
+            const existing = (
+              await connection.query(
+                'select wallet_id,sku,product_key,transaction_id from cpi_private.purchase_deliveries where fingerprint=$1',
+                [verified.purchase.fingerprint],
+              )
+            ).rows[0];
+            if (
+              !existing ||
+              existing.wallet_id !== current.accountToken ||
+              existing.sku !== product.sku ||
+              existing.product_key !== product.key ||
+              existing.transaction_id !== proof.transactionId
             )
-          ).rows[0];
-          if (
-            !existing ||
-            existing.wallet_id !== current.accountToken ||
-            existing.sku !== product.sku ||
-            existing.product_key !== product.key ||
-            existing.transaction_id !== proof.transactionId
-          )
-            throw new CommerceError();
-        }
-        return {
-          status: 'granted' as const,
-          transactionId: proof.transactionId,
-          consumable: product.kind !== 'theme',
-          wallet: await read(connection, current.accountToken),
-        };
-      });
+              throw new CommerceError();
+          }
+          if (proof.platform === 'android' && options.completionCrypto)
+            await connection.query(
+              `insert into cpi_private.purchase_completion_jobs(fingerprint,payload_encrypted,next_attempt_at) values($1,$2,$3) on conflict do nothing`,
+              [
+                verified.purchase.fingerprint,
+                options.completionCrypto.seal(proof, 'completion:' + verified.purchase.fingerprint),
+                Date.now() + 600_000,
+              ],
+            );
+          return {
+            status: 'granted' as const,
+            transactionId: proof.transactionId,
+            consumable: product.kind !== 'theme',
+            wallet: await read(connection, current.accountToken),
+          };
+        },
+        verified.purchase.fingerprint,
+      );
     },
     equip(subject: string, theme: string) {
       if (!themes.includes(theme)) throw new CommerceError();

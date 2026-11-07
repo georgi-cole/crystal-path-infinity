@@ -13,6 +13,7 @@ import { MysteryEffects, PactPanel, EffectGlyph } from '../mystery-effects';
 import { effectCopy } from '../mystery.messages';
 import { HintCounter } from '../resource-feedback';
 import { DeathClockBadge, MysteryRhythmBadge, MysteryCube } from '../mystery-box';
+import { useCommerce } from '../commerce/commerce-context';
 
 const EMPTY: RankedClientState = {
   phase: 'unavailable',
@@ -40,6 +41,7 @@ export function RankedScene({
   savedPendingClient?: SavedPendingClient | null;
 }) {
   const { t, number, locale } = useLanguage();
+  const commerce = useCommerce();
   const [observed, setObserved] = useState<{
     client: RankedClient;
     state: RankedClientState;
@@ -60,6 +62,14 @@ export function RankedScene({
   const rewardBlocked = rewardBound && rewardState?.inputBlocked === true;
   const playing = ready && run?.status === 'playing' && !run.paused && !confirm && !rewardBlocked;
   const busy = state.phase === 'pending';
+  const resourceWindow = !!run?.economy && (run.paused || run.status === 'dead');
+  useEffect(() => {
+    if (resourceWindow) void commerce.flow?.refreshWallet();
+  }, [resourceWindow, commerce.flow]);
+  async function spend(resource: 'sp' | 'hints' | 'credit', amount: number) {
+    if (!client?.spendResource || !run || client.snapshot().run?.runId !== run.runId) return;
+    if (await client.spendResource(resource, amount)) await commerce.flow?.refreshWallet();
+  }
 
   useEffect(() => {
     if (!client) return;
@@ -295,6 +305,7 @@ export function RankedScene({
       {run && (
         <>
           <div className="cpi-ranked-resources">
+            {run.economy?.assisted && <p>{t('ranked.assisted')}</p>}
             <p>{t('ranked.confirmed', { row: number(run.lastClearedRow) })}</p>
             <p>{t('ranked.sp', { sp: number(run.sp) })}</p>
             <p>
@@ -302,6 +313,71 @@ export function RankedScene({
               <HintCounter count={run.hints} cue={{ id: `ranked:${run.hints}`, delta: 0 }} />
             </p>
           </div>
+          {resourceWindow && client?.spendResource && commerce.snapshot.wallet && (
+            <div className="cpi-ranked-actions">
+              {run.status === 'playing' && (
+                <>
+                  <button
+                    type="button"
+                    disabled={
+                      !ready ||
+                      busy ||
+                      commerce.snapshot.phase !== 'ready' ||
+                      !commerce.snapshot.wallet.sp ||
+                      run.economy.reserveSpent >= 200 ||
+                      !!run.discovery?.introduction ||
+                      run.pact?.phase === 'offered'
+                    }
+                    onClick={() =>
+                      void spend(
+                        'sp',
+                        Math.min(20, commerce.snapshot.wallet!.sp, 200 - run.economy!.reserveSpent),
+                      )
+                    }
+                  >
+                    {t('ranked.reserveSp', {
+                      amount: Math.min(
+                        20,
+                        commerce.snapshot.wallet.sp,
+                        200 - run.economy.reserveSpent,
+                      ),
+                    })}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={
+                      !ready ||
+                      busy ||
+                      commerce.snapshot.phase !== 'ready' ||
+                      !commerce.snapshot.wallet.hints ||
+                      !!run.discovery?.introduction ||
+                      run.pact?.phase === 'offered'
+                    }
+                    onClick={() => void spend('hints', 1)}
+                  >
+                    {t('ranked.reserveHint')}
+                  </button>
+                </>
+              )}
+              {run.status === 'dead' && (
+                <button
+                  type="button"
+                  disabled={
+                    !ready ||
+                    busy ||
+                    commerce.snapshot.phase !== 'ready' ||
+                    !commerce.snapshot.wallet.credits ||
+                    run.rewardPending ||
+                    run.revivesGranted !== run.revivesApplied ||
+                    rewardBlocked
+                  }
+                  onClick={() => void spend('credit', 1)}
+                >
+                  {t('ranked.creditContinue')}
+                </button>
+              )}
+            </div>
+          )}
           {run.status === 'playing' && (
             <>
               <h3 className="cpi-ranked-row">{t('ranked.row', { row: number(run.currentRow) })}</h3>

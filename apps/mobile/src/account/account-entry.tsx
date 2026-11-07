@@ -7,6 +7,7 @@ import './account-entry.css';
 import { QA_TOOLS_ENABLED } from '../app-profile';
 import type { OtpGateway } from './otp-flow';
 import type { AccountSessionOwner } from './session-owner';
+import { ACCOUNT_COUNTRIES } from './country-codes';
 
 export interface AccountEntryBinding {
   readonly gateway: OtpGateway;
@@ -26,6 +27,7 @@ export function AccountEntry({
   binding?: AccountEntryBinding;
 }) {
   const { t, locale } = useLanguage();
+  const countryNames = useMemo(() => new Intl.DisplayNames([locale], { type: 'region' }), [locale]);
   const configuredOrigin: unknown = import.meta.env.VITE_ACCOUNT_API_BASE_URL;
   const gateway = useMemo(
     () =>
@@ -41,6 +43,8 @@ export function AccountEntry({
   const [code, setCode] = useState('');
   const [connecting, setConnecting] = useState(false);
   const [sessionFailed, setSessionFailed] = useState(false);
+  const [age, setAge] = useState('');
+  const [country, setCountry] = useState('');
   const mounted = useRef(true);
   const ownsConnection = useRef(false);
 
@@ -74,7 +78,7 @@ export function AccountEntry({
   }
   async function evaluate() {
     if (!flow) return;
-    const pending = flow.checkEligibility(online);
+    const pending = flow.checkEligibility(online, { age: Number(age), country });
     sync();
     await pending;
     sync();
@@ -93,6 +97,8 @@ export function AccountEntry({
     await pending;
     if (!mounted.current) return;
     setCode('');
+    setAge('');
+    setCountry('');
     sync();
     if (binding && flow.snapshot().step === 'verified_pending_session') {
       const ticket = flow.takeVerifiedTicket();
@@ -158,9 +164,43 @@ export function AccountEntry({
                     ? t('account.offline')
                     : t('account.checkFirst')}
               </p>
-              <button type="button" onClick={() => void evaluate()} disabled={!online}>
-                {t('account.check')}
-              </button>
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void evaluate();
+                }}
+              >
+                <label htmlFor="cpi-account-age">{t('account.age')}</label>
+                <input
+                  id="cpi-account-age"
+                  type="number"
+                  inputMode="numeric"
+                  min="0"
+                  max="120"
+                  required
+                  value={age}
+                  onChange={(event) => setAge(event.target.value)}
+                  autoComplete="off"
+                />
+                <label htmlFor="cpi-account-country">{t('account.country')}</label>
+                <select
+                  id="cpi-account-country"
+                  required
+                  value={country}
+                  onChange={(event) => setCountry(event.target.value)}
+                >
+                  <option value="">{t('account.selectCountry')}</option>
+                  {ACCOUNT_COUNTRIES.map((code) => (
+                    <option key={code} value={code}>
+                      {countryNames.of(code) ?? code}
+                    </option>
+                  ))}
+                </select>
+                <p>{t('account.agePrivacy')}</p>
+                <button type="submit" disabled={!online}>
+                  {t('account.check')}
+                </button>
+              </form>
             </>
           )}
           {state?.step === 'checking' && <p role="status">{t('account.checking')}</p>}

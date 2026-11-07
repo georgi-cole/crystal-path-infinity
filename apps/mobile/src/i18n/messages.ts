@@ -27,6 +27,10 @@ export const en = {
   'settings.accountAvailable':
     'Export or delete your account below. Identity verification is required.',
   'ranked.title': 'Verified run',
+  'ranked.assisted': 'Assisted run · separate score',
+  'ranked.reserveSp': 'Use {amount} SP',
+  'ranked.reserveHint': 'Use 1 hint',
+  'ranked.creditContinue': 'Continue · 1 credit',
   'ranked.unavailable': 'Verified play is unavailable. Guest practice remains available.',
   'ranked.start': 'Start verified run',
   'ranked.resume': 'Resume',
@@ -230,14 +234,20 @@ export const en = {
     'When account services are available, profile setup will explain what becomes public. Your age response for analytics will be optional, and no date of birth is required for practice.',
   'menu.practiceUnsigned': 'Practice without signing in',
   'account.title': 'Account access',
-  'account.privacyFirst':
-    'Account access requires separate privacy eligibility. Optional age analytics never grants permission to register.',
-  'account.notReady':
-    'Account setup is not available yet. The reviewed privacy and guardian service must be connected first.',
+  'account.privacyFirst': 'Sign in with a code sent to your email. No password needed.',
+  'account.notReady': 'Sign-in is not available yet. You can play as a guest.',
   'account.parentalReview': 'Additional parent or guardian review is needed before email sign-in.',
   'account.offline': 'Account access requires a connection. Local practice remains available.',
-  'account.checkFirst': 'Check whether account access is available for your privacy context.',
-  'account.check': 'Check account access',
+  'account.checkFirst': 'A quick check before sign-in.',
+  'account.check': 'Continue',
+  'account.age': 'Your age',
+  'account.country': 'Country of residence',
+  'account.selectCountry': 'Choose country',
+  'account.agePrivacy': 'We do not save your exact age. You can always play as a guest.',
+  'accountPortal.description':
+    'Sign in to export your data or delete your account. Closing this page signs you out.',
+  'accountPortal.unavailable':
+    'Account services are not connected yet. For help, contact support below.',
   'account.checking': 'Checking account eligibility…',
   'account.email': 'Email address',
   'account.sendCode': 'Send one-time code',

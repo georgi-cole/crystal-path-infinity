@@ -6,6 +6,7 @@ import { rankedSnapshot, RANKED_RNG } from './ranked.ts';
 import type { RankedActor, RankedReply, StoredRankedRun } from './ranked.ts';
 import { createGoogleRewardKeys, RewardError, verifyGoogleReward } from './reward-ssv.ts';
 import type { GoogleRewardKeys } from './reward-ssv.ts';
+import { SSV_CONSOLE_NONCE } from './ssv-console.ts';
 import {
   createOperationStartGate,
   createOperationRecoveryGate,
@@ -435,6 +436,7 @@ export class RewardService {
       });
       const intentId = uuid(this.newId());
       const nonce = uuid(this.newId());
+      if (nonce === SSV_CONSOLE_NONCE) fail('invalid-reward-state');
       const ordinal = state.revivesApplied + 1;
       await connection.query(
         `insert into cpi_private.reward_intents(id,run_id,death_id,ordinal,promised_restore_sp,ruleset_version,nonce,authorization_id,configuration_id,environment,created_at,expires_at,expected_ad_unit,expected_ad_networks,expected_reward_amount,expected_reward_item)
@@ -647,7 +649,16 @@ export class RewardService {
       if (!next.accepted) fail('reward-state-conflict');
       run = {
         ...run,
-        state: next.state,
+        state: next.state.storeTest
+          ? {
+              ...next.state,
+              storeTest: {
+                ...next.state.storeTest,
+                adContinues: next.state.storeTest.adContinues + 1,
+                sequence: next.state.storeTest.sequence + 1,
+              },
+            }
+          : next.state,
         nextSequence: (BigInt(sequence) + 1n).toString(),
         paused: true,
         clockUpdatedAt: now,
