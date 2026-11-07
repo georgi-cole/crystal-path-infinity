@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateKeyPairSync, sign } from 'node:crypto';
+import { createPublicKey, generateKeyPairSync, sign } from 'node:crypto';
 import { SSV_CONSOLE_NONCE, verifySsvConsole } from '../src/ssv-console.ts';
 const pair = generateKeyPairSync('ec', { namedCurve: 'prime256v1' }),
   now = Date.now(),
@@ -36,6 +36,13 @@ describe('AdMob URL verification without a player reward', () => {
         now,
       ),
     ).toEqual({ status: 'verified-no-reward' });
+  });
+  it('accepts the hosted Edge Runtime name for the same P-256 key', async () => {
+    const key = createPublicKey(pair.publicKey.export({ type: 'spki', format: 'pem' }));
+    Object.defineProperty(key, 'asymmetricKeyDetails', { value: { namedCurve: 'p256' } });
+    await expect(
+      verifySsvConsole(signed(), { get: () => Promise.resolve(key) }, contract, now),
+    ).resolves.toEqual({ status: 'verified-no-reward' });
   });
   it('rejects player nonces, wrong inventory, tampering and stale callbacks', async () => {
     const keys = { get: () => Promise.resolve(pair.publicKey) };

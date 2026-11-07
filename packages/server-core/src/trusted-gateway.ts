@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import type { AccountRequestContext } from './account-policy.ts';
 

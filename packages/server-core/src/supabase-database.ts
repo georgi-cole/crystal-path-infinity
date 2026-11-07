@@ -8,7 +8,7 @@ export interface EdgeDatabaseClient {
 }
 export interface EdgeDatabaseOptions {
   readonly connectionString: string;
-  readonly ssl: { readonly rejectUnauthorized: true };
+  readonly ssl: { readonly rejectUnauthorized: true; readonly ca?: string };
   readonly connectionTimeoutMillis: number;
   readonly query_timeout: number;
   readonly statement_timeout: number;
@@ -28,6 +28,7 @@ export function createProjectSqlPool(
   connectionString: string,
   makeClient: (options: EdgeDatabaseOptions) => EdgeDatabaseClient,
   loginRole: 'postgres' | 'cpi_runtime' = 'postgres',
+  ca?: string,
 ): SqlPool {
   if (!/^[a-z]{20}$/.test(projectRef)) throw new Error('Invalid database project');
   const url = new URL(connectionString);
@@ -47,7 +48,7 @@ export function createProjectSqlPool(
     throw new Error('Invalid development database target');
   const options: EdgeDatabaseOptions = {
     connectionString,
-    ssl: { rejectUnauthorized: true },
+    ssl: { rejectUnauthorized: true, ...(ca ? { ca } : {}) },
     connectionTimeoutMillis: 5000,
     query_timeout: 15000,
     statement_timeout: 12000,

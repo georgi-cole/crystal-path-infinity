@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import { createCipheriv, createDecipheriv, createHmac, randomBytes } from 'node:crypto';
 import type { SqlConnection, SqlPool } from './database.ts';
 

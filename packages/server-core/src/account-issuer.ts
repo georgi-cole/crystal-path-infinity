@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import { randomInt, randomUUID } from 'node:crypto';
 import type { SqlConnection, SqlPool } from './database.ts';
 import type { AccountDirectory, AccountMailer } from './account-providers.ts';

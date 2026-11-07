@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import { createHash, createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { OperationsPolicyError } from './operations-policy.ts';
 import {

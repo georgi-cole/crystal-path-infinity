@@ -43,6 +43,7 @@ export function createCpiLiveFunction(env: (name: string) => string | undefined)
         config.databaseUrl,
         (options) => new pg.Client(options),
         'cpi_runtime',
+        config.databaseCa,
       );
       const crypto = privateCryptography(config.pepper, config.encryptionKey);
       const issuer = createAccountIssuer({

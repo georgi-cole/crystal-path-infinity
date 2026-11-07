@@ -25,6 +25,7 @@ const names = [
   'CPI_REWARDS_ENABLED',
   'CPI_PURCHASES_ENABLED',
 ];
+if (values.CPI_DATABASE_CA) names.push('CPI_DATABASE_CA');
 if (values.CPI_PURCHASES_ENABLED === 'true')
   names.push(
     'CPI_COMMERCE_PRODUCTS',

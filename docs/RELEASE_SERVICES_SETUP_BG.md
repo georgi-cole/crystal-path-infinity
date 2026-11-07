@@ -51,7 +51,7 @@
 
 ### 3. Подготви изолирания Supabase проект
 
-На 7 ноември 2026 г. създадохме [Crystal Path Infinity Staging](https://supabase.com/dashboard/project/yfntwewvfsvljxcztoyp) (`yfntwewvfsvljxcztoyp`) в **GeorgiCole Free**, регион Ирландия. Проектът е Healthy и е създаден с изключено автоматично предоставяне на Data API достъп до новите таблици. Миграциите, `cpi-live` и връзките с доставчиците предстоят.
+На 7 ноември 2026 г. създадохме [Crystal Path Infinity Staging](https://supabase.com/dashboard/project/yfntwewvfsvljxcztoyp) (`yfntwewvfsvljxcztoyp`) в **GeorgiCole Free**, регион Ирландия. Проектът е Healthy и е създаден с изключено автоматично предоставяне на Data API достъп до новите таблици. По-късно приложихме и проверихме всичките 15 миграции, създадохме `cpi_runtime` и качихме `cpi-live`. Публичната Supabase регистрация, анонимният вход и вграденият email provider са изключени в staging.
 
 Споделеният `jbyguybxhezjhdbenevh` е архивиран и паузиран. Пауза спира и The Big Eye QA, което ползва същия DEV. The Big Eye production остава в другия активен слот. Новият сървър продължава да отказва споделения DEV адрес. [Запис за архива и паузата](operations/SUPABASE_DEV_2026-11-04.md#7-november-2026--archive-and-pause).
 
@@ -83,6 +83,7 @@
 | `CPI_PROJECT_REF`, `SUPABASE_URL` | Новият изолиран Supabase проект |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-only API key на този проект, за локалната проверка; hosted function получава своя platform key автоматично |
 | `CPI_DATABASE_URL` | TLS session connection за ограничения `cpi_runtime` вход |
+| `CPI_DATABASE_CA` | PEM сертификат от Database Settings, ако пулерът използва частен CA. В частния env файл постави редовете с `\n`. Сървърът проверява сертификата и името на хоста. |
 | `CPI_RUNTIME_DB_PASSWORD` | Локална парола само за създаване на DB входа; не се качва като function secret |
 | Четирите `CPI_*KEY`/pepper полета | Вече генерирани отделни стойности; пазят се частно |
 | `CPI_RESEND_API_KEY`, `CPI_MAIL_FROM` | Потвърденият Resend домейн и sending key |
@@ -114,13 +115,21 @@ Team ID `C97T2A5255` не замества Issuer ID. Следвай [Apple: Gen
 
 Списъкът е в `backend/commerce-products.proposed.json`; генериран е и `backend/commerce-products.live.example.json` с отделни Android/iOS записи. **Статусът е unconfirmed — продуктите не са създадени с тази промяна.**
 
+Проверено на 7 ноември 2026 г. Google Play изисква първо да се качи подписана Android сборка с Billing. App Store Connect показва празен каталог. За реален sandbox тест сборките от Play Internal Testing и TestFlight трябва да са за регистрирания package/bundle `com.georgicole.crystalpath.infinity` и да сочат към staging backend. Локалната `.staging` сборка е отделна самоличност. [Google Play Billing testing](https://developer.android.com/google/play/billing/test) · [Apple StoreKit sandbox](https://developer.apple.com/documentation/storekit/testing-in-app-purchases-with-sandbox).
+
 За всяка платформа създай 18 продукта: 4 пакета кредити, 6 SP пакета, 2 пакета подсказки и 6 свята. Ресурсите са consumables, световете са non-consumables. Запази одобрените количества, имена, изображения и цени; световете са по 2,99 EUR референтно. Крайният показан текст за цена идва от магазина в местната валута.
 
 След създаването попълни истинските SKU и чак тогава смени manifest статуса на `confirmed-in-stores` и го постави в `CPI_COMMERCE_PRODUCTS`. Не променяй смисъла/количеството на продаден SKU; оттеглените SKU остават за възстановяване, с `available:false`.
 
 ### 9. Разгърни сървъра и периодичните задачи
 
-Това са стъпките за изпълнение след попълването на акаунтите/ключовете; не са изпълнени срещу hosted проект в този бранч.
+**Проверено в staging на 7 ноември 2026 г.** Supabase CLI `3.0.0` потвърди, че след качването няма чакащи миграции. Ограниченият DB вход може да приеме `service_role` и не е член на `postgres`. Всичките 45 таблици в `cpi_private` имат принудително RLS. `cpi-live` използва сертификата от Supabase, а сървърът отхвърли директна неподписана заявка за вход.
+
+Ключът `crystal-path-staging-otp` в Resend е ограничен до изпращане от `auth.kolequant.xyz` и е записан в staging Edge secrets. Подписаният вътрешен тест с адрес от `resend.dev` провери доставяне, отхвърляне на грешен код, правилен код, размяна за сесия и оттегляне на сесията. При отваряне на staging gateway премахнахме тестовата държава от политиката. Публичната проверка през gateway връща `unavailable`, докато се определи достъп за тестерите.
+
+[Staging gateway](https://crystal-path-staging-api.kolequant.workers.dev) е разгърнат като отделен Cloudflare Worker на безплатния адрес `workers.dev`, версия `ddd86cc2-deeb-4d51-add9-84bcc38fbdc5`. Минутният cron е регистриран. Подписаният му handler беше извикан отделно срещу staging и завърши успешно. Временното Wrangler разрешение за този deployment е прекратено. Локалната конфигурация на Worker-а е в `%LOCALAPPDATA%/Kolequant/CrystalPath/Staging/Gateway`.
+
+Последователност за останалите настройки и за възпроизводим следващ deployment.
 
 1. Провери staging конфигурацията с `node --experimental-strip-types backend/scripts/live-readiness.mjs`. Докато липсват настройки, проверката показва само имената им.
 2. Свържи Supabase CLI с точния нов проект, прегледай migration dry run и приложи миграциите. Не ползвай `--include-all` за заобикаляне на несъвпадаща история.
@@ -150,6 +159,8 @@ Team ID `C97T2A5255` не замества Issuer ID. Следвай [Apple: Gen
 6. Свържи приложенията с правилните store записи, публикувай точния предоставен от AdMob `app-ads.txt` запис на developer домейна и проследи app verification/review. Първоначалното Requires review/Limited ad serving не е премахнато от кода.
 
 Не добавяй mediation мрежи без отделен SDK/privacy преглед. Операторските настройки са описани в `backend/live-operations.example.sql`; нормалният сървърен вход няма право сам да ги одобрява.
+
+**SSV проверка · 7 ноември 2026 г.** AdMob Verify URL мина за Android и iOS срещу staging Edge адреса. Конзолата подписа тестовия идентификатор `1234567890`, `reward_amount=1` и `reward_item=Continue`. За него в staging има отделен изключен договор с Android demo inventory, а резервираният nonce може да върне само `verified-no-reward`. Двата callback адреса в AdMob не са записвани. Следва тест на показване, затваряне и доставка на награда на телефон с тестова реклама.
 
 ### 11. Публикувай account страницата и Apple notifications адреса
 

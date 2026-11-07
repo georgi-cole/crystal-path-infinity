@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import { createHash, createSign } from 'node:crypto';
 import { SignedDataVerifier, Environment } from '@apple/app-store-server-library';
 import type {

@@ -98,6 +98,7 @@ export function readLiveConfiguration(env: (name: string) => string | undefined)
     rewardsEnabled,
     purchaseEnvironment,
     databaseUrl: require('CPI_DATABASE_URL'),
+    databaseCa: env('CPI_DATABASE_CA')?.replaceAll('\\n', '\n'),
     serviceKey: require('SUPABASE_SERVICE_ROLE_KEY'),
     pepper: keys[0],
     encryptionKey: keys[1],

@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import { timingSafeEqual } from 'node:crypto';
 import { LIVE_RULESET_VERSION, RULESET_VERSION } from '@crystal-path-infinity/game-core';
 import type { SqlPool } from './database.ts';

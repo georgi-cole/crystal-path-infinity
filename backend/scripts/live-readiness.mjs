@@ -80,6 +80,7 @@ if (process.argv.includes('--online')) {
         config.databaseUrl,
         (options) => new pg.Client(options),
         'cpi_runtime',
+        config.databaseCa,
       ),
       connection = await pool.connect();
     try {
