@@ -67,10 +67,12 @@ const checks = {
   purchasesEnabled: config.purchasesEnabled,
 };
 if (process.argv.includes('--online')) {
-  try {
-    checks.supportMailDns = (await resolveMx('kolequant.com')).length > 0;
-  } catch {
-    checks.supportMailDns = false;
+  if (config.environment === 'production' || process.argv.includes('--release')) {
+    try {
+      checks.supportMailDns = (await resolveMx('kolequant.com')).length > 0;
+    } catch {
+      checks.supportMailDns = false;
+    }
   }
   try {
     const pool = createProjectSqlPool(
