@@ -211,6 +211,15 @@ function hasResumeEvidence(boundary) {
       event.hasTriggerEvent,
   );
 }
+function hasNativeActivityEvidence(boundary, isActive) {
+  return readAnalysis().diagnostics.some(
+    (event) =>
+      event.sessionId === boundary.sessionId &&
+      event.sequence > boundary.sequenceBeforeBackground &&
+      event.event === 'native-state' &&
+      event.details?.lifecycle?.isActive === isActive,
+  );
+}
 function recordLifecycleAction(action, details = {}) {
   lifecycleActions.push({ timestamp: new Date().toISOString(), attempt, action, ...details });
   save(`${platform}-lifecycle-actions.json`, `${JSON.stringify(lifecycleActions, null, 2)}\n`);
@@ -903,6 +912,40 @@ async function ios() {
     await runLogged('xcrun', commandArgs, file, timeout);
     return readFileSync(join(evidenceRoot, file), 'utf8').trim();
   }
+  async function openSettingsUntilNativePause(boundary, file) {
+    const child = detachedLog('xcrun', ['simctl', 'launch', udid, 'com.apple.Preferences'], file);
+    const entry = transcript.at(-1);
+    let pauseObserved = false;
+    try {
+      await waitFor(
+        'iOS native inactive boundary after opening Settings',
+        provisioningBudgetsMs.systemLaunch,
+        () => {
+          if (child.smokeError) throw child.smokeError;
+          if (child.exitCode !== null && child.exitCode !== 0) {
+            throw new Error(`Settings launch failed; see ${file}`);
+          }
+          pauseObserved = hasNativeActivityEvidence(boundary, false);
+          return pauseObserved;
+        },
+      );
+      Object.assign(entry, {
+        completedBy: 'observed-native-inactive-boundary',
+        nativeBoundaryObservedAt: new Date().toISOString(),
+      });
+    } finally {
+      if (child.exitCode === null) {
+        if (pauseObserved) entry.stoppedAfterNativeBoundary = true;
+        child.kill('SIGKILL');
+        await waitFor('iOS Settings launch control cleanup', 10_000, () => child.smokeClosed);
+      }
+    }
+    assert.ok(
+      pauseObserved,
+      'iOS never reported a native inactive boundary after opening Settings',
+    );
+    return readFileSync(join(evidenceRoot, file), 'utf8').trim();
+  }
 
   save(
     'ios-smoke-device.json',
@@ -1033,22 +1076,13 @@ async function ios() {
       recordLifecycleAction('background-via-settings', { boundary });
       save(
         'ios-background-launch.txt',
-        await control(
-          ['simctl', 'launch', udid, 'com.apple.Preferences'],
-          `ios-attempt-${attempt}-background.txt`,
-          provisioningBudgetsMs.systemLaunch,
-        ),
+        await openSettingsUntilNativePause(boundary, `ios-attempt-${attempt}-background.txt`),
       );
-      await waitFor('iOS document pause after opening Settings', 30_000, () => {
+      await waitFor('iOS native inactive state after opening Settings', 30_000, () => {
         assertRunning(child, 'simctl attached launch');
-        return readAnalysis().diagnostics.some(
-          (event) =>
-            event.sessionId === boundary.sessionId &&
-            event.sequence > boundary.sequenceBeforeBackground &&
-            event.event === 'pause',
-        );
+        return hasNativeActivityEvidence(boundary, false);
       });
-      recordLifecycleAction('document-pause-observed');
+      recordLifecycleAction('native-inactive-boundary-observed');
       recordLifecycleAction('resume-existing-app');
       save(
         'ios-resume.txt',
@@ -1057,9 +1091,9 @@ async function ios() {
           `ios-attempt-${attempt}-resume.txt`,
         ),
       );
-      await waitFor('iOS bridge round-trip after app background/resume', 30_000, () => {
+      await waitFor('iOS bridge round-trip after native app resume', 30_000, () => {
         assertRunning(child, 'simctl attached launch');
-        return hasResumeEvidence(boundary);
+        return hasNativeActivityEvidence(boundary, true) && hasResumeEvidence(boundary);
       });
       assertRunning(child, 'simctl attached launch');
       const screenshot = join(evidenceRoot, 'ios-launch.png');
@@ -1129,7 +1163,7 @@ try {
     physicalDevice: false,
     startupNativeRoundTripObserved: true,
     resumedNativeRoundTripObserved: true,
-    documentPauseResumeObserved: true,
+    nativeInactiveActiveObserved: true,
     unexpectedJavaScriptOrRuntimeErrors: 0,
     confirmedExternalRuntimeErrorEntries: diagnostics.externalRuntimeErrors.length,
     scope:

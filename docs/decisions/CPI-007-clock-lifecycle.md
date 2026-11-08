@@ -62,7 +62,7 @@ Native CI uses a development-only native navigation gate, released by a real ope
 - Android: Home before first JavaScript, lock/wake before first JavaScript, then a normal third cold start. All three recreated processes/WebViews also perform post-readiness Home/resume.
 - iOS Simulator: Settings before first JavaScript, then a second recreated process/WebView. Both perform post-readiness Settings/resume. This does not claim an iOS lock-button test.
 
-The driver waits on observable native/page predicates, without fixed dwell sleeps. It checks gate ordering, no page before release, current-page readiness, foreground suspension and distinct recreated identities. App-scoped JavaScript exceptions and failed readiness remain failures. Gate controls are disabled in staging/production generation.
+The driver waits on observable native/page predicates, without fixed dwell sleeps. Post-readiness checks require native inactive/active snapshots on the same page and a successful native bridge round-trip after reactivation; Capacitor's legacy document pause/resume events are not used as a proxy for the native foreground clock. iOS Settings launch is observed concurrently with the native inactive boundary, so a slow `simctl` response cannot hide an already observed transition. The workflow checks gate ordering, no page before release, current-page readiness, foreground suspension and distinct recreated identities. App-scoped JavaScript exceptions and failed readiness remain failures. Gate controls are disabled in staging/production generation.
 
 ### Fresh iOS simulator provisioning
 

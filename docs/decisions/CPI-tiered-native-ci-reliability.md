@@ -34,12 +34,19 @@ succeeded for `smoke/full` or were explicitly skipped for `none`.
 
 Both native profiles require the same *real* launch and lifecycle observations:
 React and document readiness, native bridge startup, OS background/foreground,
-document pause/resume, native foreground clock boundary, successful bridge
-round-trip, screenshot, and zero unexpected runtime errors. Android also
+native inactive/active clock boundaries on the same page, successful bridge
+round-trip after reactivation, screenshot, and zero unexpected runtime errors. Android also
 requires real ordered native Activity pause/resume, process identity across
 Home/resume, and no target ANR. The smoke profile reduces the **number of
 recreated processes**, not the assertions within one process. It never retries
 a failed cold start.
+
+On 8 November 2026 the lifecycle assertion was tied directly to CPI-007's native
+foreground snapshots. Capacitor's document pause/resume events remain observed,
+but no longer stand in for the native clock transition. On iOS, the Settings
+launch command is monitored alongside the actual inactive snapshot; the command
+can be stopped after that transition is proven if `simctl` remains blocked.
+Earlier workflow artifacts remain unchanged and keep the assertions they ran.
 
 ## Nightly regression and manual escalation
 
