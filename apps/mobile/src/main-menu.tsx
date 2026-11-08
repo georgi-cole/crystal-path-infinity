@@ -310,6 +310,7 @@ function MenuHome({
   tutorialProgress,
   rankedClient,
   settings,
+  canSignIn,
 }: Pick<
   MainMenuProps,
   | 'saved'
@@ -320,7 +321,7 @@ function MenuHome({
   | 'tutorialProgress'
   | 'rankedClient'
   | 'settings'
->) {
+> & { canSignIn: boolean }) {
   const canResume = canResumePractice(saved);
   const { t, number } = useLanguage();
   const theme = useThemeId();
@@ -387,7 +388,7 @@ function MenuHome({
             onClick={() => onOpen('rankings')}
           />
           <MenuAction
-            label={t('general.profile')}
+            label={t(canSignIn ? 'account.signIn' : 'general.profile')}
             icon="profile"
             onClick={() => onOpen('profile')}
           />
@@ -534,6 +535,7 @@ export function MainMenu({
               tutorialProgress={tutorialProgress}
               rankedClient={rankedClient}
               settings={settings}
+              canSignIn={Boolean(accountEntry) && !accountConnected}
             />
           </>
         ) : view === 'practice' ? (

@@ -54,3 +54,19 @@ this change. Reviewed account/privacy/guardian services, real hosted A/B tests,
 native ad/consent integration, physical-device latency/interruption evidence and
 signed distribution remain release gates. The applied CPI-017 migration and its
 original deployment guard are unchanged.
+
+## Web signup preparation · 8 November 2026
+
+The player home shows a Sign in action when its account host is configured.
+New and returning players follow the same email-code flow after the existing
+age and residence check. The Crystal Path issuer verifies the code before it
+creates an account or starts a session. Browser credentials stay in the current
+tab's memory. Native sessions use protected storage.
+
+The web account binding supports profile, export and deletion. Guest crossings
+use local practice. The phone review builds use their isolated local wallets.
+
+Pages accepts the account flag for publication from main. It checks the exact
+production gateway and Pages origin before building. Activation requires a
+separate production Supabase project, reviewed country policy, email delivery
+and a hosted signup and re-entry check. [Production setup](../RELEASE_SERVICES_SETUP_BG.md).

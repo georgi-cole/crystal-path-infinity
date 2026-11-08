@@ -236,7 +236,8 @@ export const en = {
   'menu.profileFuture':
     'When account services are available, profile setup will explain what becomes public. Your age response for analytics will be optional, and no date of birth is required for practice.',
   'menu.practiceUnsigned': 'Practice without signing in',
-  'account.title': 'Account access',
+  'account.title': 'Sign in or create an account',
+  'account.signIn': 'Sign in',
   'account.privacyFirst': 'Sign in with a code sent to your email. No password needed.',
   'account.notReady': 'Sign-in is not available yet. You can play as a guest.',
   'account.parentalReview': 'Additional parent or guardian review is needed before email sign-in.',

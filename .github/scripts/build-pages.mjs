@@ -7,6 +7,7 @@ import { build, loadEnv } from 'vite';
 import { assertBuiltEnvironment } from '../../apps/mobile/config/environments.ts';
 import { assertUnsignedPublicVariables } from '../../apps/mobile/config/release-build.ts';
 import { STORE_PAYMENT_MODE } from '../../apps/mobile/src/store-catalog.ts';
+import { pagesAccountBuildEnv } from './pages-account-config.mjs';
 
 const repository = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const app = join(repository, 'apps/mobile');
@@ -15,8 +16,7 @@ const base = '/crystal-path-infinity/';
 const qaBase = `${base}tester/`;
 const qaOutput = join(app, 'dist-qa');
 
-// This public preview must not inherit account/ad configuration from env files
-// or the runner. Reuse the existing strict no-public-service-variable guard.
+// Only the verified Pages account configuration may set public service variables.
 assertUnsignedPublicVariables(loadEnv('production', app, 'VITE_'));
 assertUnsignedPublicVariables(loadEnv('qa', app, 'VITE_'));
 assertUnsignedPublicVariables(process.env);
@@ -24,7 +24,13 @@ assert.equal(STORE_PAYMENT_MODE, 'test', 'QA purchases must remain simulated.');
 if (Object.keys(process.env).some((name) => name.startsWith('CPI_RELEASE_')))
   throw new Error('Pages preview is separate from unsigned native release preparation.');
 
-await build({ root: app, mode: 'production', base, build: { outDir: output } });
+const accountEnv = await pagesAccountBuildEnv(process.env);
+Object.assign(process.env, accountEnv);
+try {
+  await build({ root: app, mode: 'production', base, build: { outDir: output } });
+} finally {
+  for (const name of Object.keys(accountEnv)) delete process.env[name];
+}
 
 const manifest = JSON.parse(readFileSync(join(app, 'package.json'), 'utf8'));
 const built = JSON.parse(readFileSync(join(output, 'build-info.json'), 'utf8'));
@@ -90,7 +96,11 @@ const deployment = {
   kind: 'guest-web-preview',
   sourceSha,
   base,
-  liveServices: { accounts: 'disabled', ranked: 'disabled', ads: 'disabled' },
+  liveServices: {
+    accounts: accountEnv.VITE_ACCOUNT_SERVICES_ENABLED === 'true' ? 'enabled' : 'disabled',
+    ranked: 'disabled',
+    ads: 'disabled',
+  },
   purchases: 'unavailable-no-live-billing',
 };
 writeFileSync(join(output, 'deployment-info.json'), JSON.stringify(deployment, null, 2) + '\n');

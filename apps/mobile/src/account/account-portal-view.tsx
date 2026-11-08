@@ -7,31 +7,26 @@ import { createSessionTransport } from './session-gateway';
 import { createOtpGateway } from './otp-gateway';
 import { AccountControls } from './account-controls';
 import { createAccountControlsClient } from './account-controls-client';
+import { createInMemoryRefreshTokenStore } from './secure-session';
+import { SIMULATED_STORE_ENABLED } from '../app-profile';
 /** Web self-service only: credentials live in memory, with no native SDK, analytics or guest-score promotion. */
 function portalServices() {
   const base: unknown = import.meta.env.VITE_ACCOUNT_API_BASE_URL;
-  if (import.meta.env.VITE_ACCOUNT_SERVICES_ENABLED !== 'true' || typeof base !== 'string')
+  if (
+    SIMULATED_STORE_ENABLED ||
+    import.meta.env.VITE_ACCOUNT_SERVICES_ENABLED !== 'true' ||
+    typeof base !== 'string'
+  )
     return null;
   const gateway = createOtpGateway(base),
     transport = createSessionTransport(base);
   if (!gateway || !transport) return null;
-  let memory: string | null = null;
-  const session = new AccountSessionOwner(
-    {
-      supported: true,
-      read: () => Promise.resolve(memory),
-      write: (value) => {
-        memory = value;
-        return Promise.resolve();
-      },
-      clear: () => {
-        memory = null;
-        return Promise.resolve();
-      },
-    },
-    transport,
-  );
-  return { session, gateway, controls: createAccountControlsClient(base, session) };
+  const session = new AccountSessionOwner(createInMemoryRefreshTokenStore(), transport);
+  return {
+    session,
+    binding: { gateway, session, canRestore: false },
+    controls: createAccountControlsClient(base, session),
+  };
 }
 export function AccountPortal() {
   const { t } = useLanguage();
@@ -56,10 +51,7 @@ export function AccountPortal() {
             </button>
           </>
         ) : services ? (
-          <AccountEntry
-            online={navigator.onLine}
-            binding={{ gateway: services.gateway, session: services.session }}
-          />
+          <AccountEntry online={navigator.onLine} binding={services.binding} />
         ) : (
           <p>{t('accountPortal.unavailable')}</p>
         )}

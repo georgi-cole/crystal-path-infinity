@@ -62,3 +62,21 @@ export const protectedRefreshTokenStore = createProtectedRefreshTokenStore(
   () => Capacitor.isNativePlatform(),
   nativeVault,
 );
+
+/** A browser tab can refresh its session in memory for as long as it is open. */
+export function createInMemoryRefreshTokenStore(): ProtectedRefreshTokenStore {
+  let credential: string | null = null;
+  return {
+    supported: true,
+    read: () => Promise.resolve(credential),
+    write: (value) => {
+      validateRefreshToken(value);
+      credential = value;
+      return Promise.resolve();
+    },
+    clear: () => {
+      credential = null;
+      return Promise.resolve();
+    },
+  };
+}

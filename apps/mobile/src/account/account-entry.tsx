@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AccountOtpFlow } from './otp-flow';
-import { createOtpGateway } from './otp-gateway';
 import type { AccountFlowProblem } from './otp-flow';
 import { useLanguage } from '../language-context';
 import './account-entry.css';
-import { QA_TOOLS_ENABLED } from '../app-profile';
 import type { OtpGateway } from './otp-flow';
 import type { AccountSessionOwner } from './session-owner';
 import { ACCOUNT_COUNTRIES } from './country-codes';
@@ -12,6 +10,7 @@ import { ACCOUNT_COUNTRIES } from './country-codes';
 export interface AccountEntryBinding {
   readonly gateway: OtpGateway;
   readonly session: AccountSessionOwner;
+  readonly canRestore: boolean;
 }
 
 /**
@@ -28,15 +27,7 @@ export function AccountEntry({
 }) {
   const { t, locale } = useLanguage();
   const countryNames = useMemo(() => new Intl.DisplayNames([locale], { type: 'region' }), [locale]);
-  const configuredOrigin: unknown = import.meta.env.VITE_ACCOUNT_API_BASE_URL;
-  const gateway = useMemo(
-    () =>
-      binding?.gateway ??
-      (QA_TOOLS_ENABLED
-        ? createOtpGateway(typeof configuredOrigin === 'string' ? configuredOrigin : undefined)
-        : null),
-    [configuredOrigin, binding],
-  );
+  const gateway = binding?.gateway;
   const flow = useMemo(() => (gateway ? new AccountOtpFlow(gateway) : null), [gateway]);
   const [state, setState] = useState(() => flow?.snapshot() ?? null);
   const [email, setEmail] = useState('');
@@ -117,7 +108,7 @@ export function AccountEntry({
     }
   }
   async function restore() {
-    if (!binding || connecting) return;
+    if (!binding?.canRestore || connecting) return;
     setConnecting(true);
     const active = await binding.session.restore();
     if (mounted.current) {
@@ -269,7 +260,7 @@ export function AccountEntry({
                 : t('account.notSignedIn')}
             </p>
           )}
-          {binding && (state?.step === 'guest' || state?.step === 'unavailable') && (
+          {binding?.canRestore && (state?.step === 'guest' || state?.step === 'unavailable') && (
             <button type="button" disabled={!online || connecting} onClick={() => void restore()}>
               {locale === 'bg' ? 'Възстанови входа' : 'Restore sign-in'}
             </button>
