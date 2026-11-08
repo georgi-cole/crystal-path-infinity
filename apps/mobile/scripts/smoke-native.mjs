@@ -920,7 +920,7 @@ async function ios() {
   );
   try {
     console.log(
-      `Booting fresh ${device.name} / iOS 26.5 simulator (budget ${provisioningBudgetsMs.coldBoot / 1000}s); progress is recorded in ios-boot.log`,
+      `Booting fresh ${device.name} / iOS 26.2 simulator (budget ${provisioningBudgetsMs.coldBoot / 1000}s); progress is recorded in ios-boot.log`,
     );
     await prepareIosSimulator(async (step, timeout) => {
       console.log(`iOS provisioning: ${step} (budget ${timeout / 1000}s)`);
