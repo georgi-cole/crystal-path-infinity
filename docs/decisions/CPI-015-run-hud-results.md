@@ -19,6 +19,8 @@ The End run control is available while alive, not only after death. It obtains t
 
 A finished practice run is committed *locally*. The word “submit” in CPI-015's future ranked flow can only be implemented against the server authority in CPI-017–025. There is no ranked API, signed receipt, production rewarded provider or client-supplied official score in CPI-015. A pending intent cannot be silently submitted or counted as a personal best.
 
+**Confirmation layout on 8 November 2026:** The End run confirmation stacks two full-width actions, with the safe return action first. Clock recovery uses the same stack. The result action groups opt into columns for their additional destinations.
+
 ## Tests and remaining acceptance
 
 The new unit and rendering tests verify active/dead/pending/grant-ready/finished phases; fatal wrong/mystery/drain labels; 5th=200, 6th=150 and 10th=150 SP restore presentations; no-fill/no-grant retaining the same ordinal; granted versus applied counters; no premature End during pending; explicit End during a paused timed session; frozen active time and idempotent terminal result; no hidden ending on dispose; long decimal scores; row 350→351; and clear routes to New run/Rankings. Existing game-core native pause/clock and engine tests must remain green.
