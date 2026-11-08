@@ -16,11 +16,13 @@
 се влиза отново с код.
 
 1. Подготви отделния production Supabase проект и разгърни `cpi-live` и
-   gateway на `https://api.crystalpath.kolequant.com/cpi` по стъпка 9.
+   gateway на `https://crystalpath-api.kolequant.xyz/cpi` по стъпка 9.
    Използвай `CPI_ENVIRONMENT=production`, отделния Resend ключ и прегледаната
    политика за допустимост. Добави `https://georgi-cole.github.io` към точните
    позволени origins. За пускане само на акаунти задай
    `CPI_PURCHASES_ENABLED=false` и `CPI_REWARDS_ENABLED=false`.
+   За кодовете използвай отделен ключ за изпращане от `auth.kolequant.xyz`
+   с адрес `crystal-path@auth.kolequant.xyz`.
 2. Провери доставянето на кода, нов акаунт, повторен вход и изтриване с одобрения
    приемателен акаунт. Провери, че браузърът получава позволение за точния
    Pages origin.
@@ -28,6 +30,10 @@
    `CPI_PAGES_ACCOUNTS_ENABLED=true` и стартирай Pages от `main`. Проверка
    преди build изисква достъпния production gateway с правилния origin.
    `deployment-info.json` показва състоянието на акаунтите.
+
+На 8 ноември 2026 г. Cloudflare потвърди активна зона `kolequant.xyz` и свободно
+име `crystalpath-api.kolequant.xyz`. Това е подготвеният адрес за уеб акаунти.
+Production конфигурацията отказва идентификатора на staging проекта.
 
 ## Какво е подготвено
 

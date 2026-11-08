@@ -1,4 +1,4 @@
-const productionApi = 'https://api.crystalpath.kolequant.com/cpi';
+const productionApi = 'https://crystalpath-api.kolequant.xyz/cpi';
 const pagesOrigin = 'https://georgi-cole.github.io';
 
 export async function pagesAccountBuildEnv(env, request = fetch) {

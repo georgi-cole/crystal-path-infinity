@@ -23,7 +23,7 @@ test('account activation is opt-in and reserved for publication from main', asyn
 
 test('accounts use the fixed production gateway with a verified Pages origin', async () => {
   const env = await pagesAccountBuildEnv(publication, (url, request) => {
-    assert.equal(url, 'https://api.crystalpath.kolequant.com/cpi/eligibility');
+    assert.equal(url, 'https://crystalpath-api.kolequant.xyz/cpi/eligibility');
     assert.equal(request.method, 'OPTIONS');
     assert.equal(request.redirect, 'error');
     assert.equal(request.headers.origin, 'https://georgi-cole.github.io');
@@ -38,7 +38,7 @@ test('accounts use the fixed production gateway with a verified Pages origin', a
   });
   assert.deepEqual(env, {
     VITE_ACCOUNT_SERVICES_ENABLED: 'true',
-    VITE_ACCOUNT_API_BASE_URL: 'https://api.crystalpath.kolequant.com/cpi',
+    VITE_ACCOUNT_API_BASE_URL: 'https://crystalpath-api.kolequant.xyz/cpi',
   });
   await assert.rejects(
     pagesAccountBuildEnv(publication, () => new Response(null, { status: 204 })),
