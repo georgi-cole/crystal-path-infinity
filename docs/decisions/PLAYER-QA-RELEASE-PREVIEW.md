@@ -1,5 +1,7 @@
 # Player preview, QA profile and launch signature
 
+**After the owner phone review · 8 November 2026.** Pages uploads only the production player build. The QA build and the simulated player review use the separate phone review host. [Publication boundary](CPI-011-pages-preview.md#production-artifact-after-phone-approval--8-november-2026).
+
 **8 November 2026 · pending owner phone review, merge and Pages deployment.** The Pages artifact will contain a player build at the site root and a separate QA profile at `/tester/` from the same `main` commit. The player build has no QA tools and shows purchases as unavailable while live billing is unconfigured. The tester path offers simulated checkout and reference prices. Wallet balances and unlocks stay in the browser. The public path has no password gate or connection to accounts, ranked play, ads, or billing.
 
 The six world card plates and calm companion poses are compact WebP derivatives bundled with the app. The closed and open relic art is also bundled. A brief light sweep accompanies the box's arrival. First discovery sends a glyph from the box into the HUD. New local v13 runs display the explanation for 10 seconds, with 7 seconds of clock protection that ends on the next step. Older saved runs keep their original timing. Empty status slots collapse, the activation notice does not duplicate the active effect, and previously broken tiles keep their settled fragments. The OS and web launch use a black backdrop with the metallic mark.

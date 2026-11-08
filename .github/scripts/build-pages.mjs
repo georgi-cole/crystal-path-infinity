@@ -10,27 +10,27 @@ import { STORE_PAYMENT_MODE } from '../../apps/mobile/src/store-catalog.ts';
 
 const repository = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const app = join(repository, 'apps/mobile');
-const output = join(app, 'dist');
+const output = join(app, 'dist-pages');
 const base = '/crystal-path-infinity/';
 const qaBase = `${base}tester/`;
-const qaOutput = join(output, 'tester');
+const qaOutput = join(app, 'dist-qa');
 
 // This public preview must not inherit account/ad configuration from env files
 // or the runner. Reuse the existing strict no-public-service-variable guard.
 assertUnsignedPublicVariables(loadEnv('production', app, 'VITE_'));
 assertUnsignedPublicVariables(loadEnv('qa', app, 'VITE_'));
 assertUnsignedPublicVariables(process.env);
-assert.equal(STORE_PAYMENT_MODE, 'test', 'Pages purchases must remain simulated.');
+assert.equal(STORE_PAYMENT_MODE, 'test', 'QA purchases must remain simulated.');
 if (Object.keys(process.env).some((name) => name.startsWith('CPI_RELEASE_')))
   throw new Error('Pages preview is separate from unsigned native release preparation.');
 
-await build({ root: app, mode: 'production', base });
+await build({ root: app, mode: 'production', base, build: { outDir: output } });
 
 const manifest = JSON.parse(readFileSync(join(app, 'package.json'), 'utf8'));
 const built = JSON.parse(readFileSync(join(output, 'build-info.json'), 'utf8'));
 assertBuiltEnvironment(built, 'production', manifest.version);
-for (const marker of ['qa-info.json', 'player-preview-info.json']) {
-  assert.equal(existsSync(join(output, marker)), false, 'Player root must not enable simulation.');
+for (const path of ['qa-info.json', 'player-preview-info.json', 'tester', 'player']) {
+  assert(!existsSync(join(output, path)), `Review content in the Pages artifact: ${path}`);
 }
 const html = readFileSync(join(output, 'index.html'), 'utf8');
 assert.match(html, /id="root"/);
@@ -46,15 +46,16 @@ for (const asset of assets) {
 const playerAppAsset = assets.find((asset) => /\/assets\/index-[^/]+\.js$/.test(asset));
 assert(playerAppAsset, 'Missing player application bundle.');
 const playerApp = readFileSync(join(output, playerAppAsset.slice(base.length)), 'utf8');
-assert(!playerApp.includes('testBuyPrice'), 'Player app must not include QA test-store prices.');
+for (const price of ['testBuyPrice', 'previewBuyPrice']) {
+  assert(!playerApp.includes(price), 'Player app must not include simulated store prices.');
+}
 
-// Publish a separately compiled, local-only test store at /tester/. The root
-// guest link remains the production player profile with no test tools enabled.
+// Validate QA separately. The workflow only uploads the production directory.
 await build({
   root: app,
   mode: 'qa',
   base: qaBase,
-  build: { outDir: qaOutput, emptyOutDir: false },
+  build: { outDir: qaOutput },
 });
 const qaBuilt = JSON.parse(readFileSync(join(qaOutput, 'build-info.json'), 'utf8'));
 assertBuiltEnvironment(qaBuilt, 'staging', manifest.version);
@@ -69,11 +70,14 @@ assert(
 );
 for (const asset of qaAssets) {
   assert(asset.startsWith(qaBase), `QA asset is outside the tester path: ${asset}`);
-  assert(existsSync(join(output, asset.slice(base.length))), `Missing QA built asset: ${asset}`);
+  assert(
+    existsSync(join(qaOutput, asset.slice(qaBase.length))),
+    `Missing QA built asset: ${asset}`,
+  );
 }
 const qaAppAsset = qaAssets.find((asset) => /\/assets\/index-[^/]+\.js$/.test(asset));
 assert(qaAppAsset, 'Missing QA application bundle.');
-const qaApp = readFileSync(join(output, qaAppAsset.slice(base.length)), 'utf8');
+const qaApp = readFileSync(join(qaOutput, qaAppAsset.slice(qaBase.length)), 'utf8');
 assert(qaApp.includes('testBuyPrice'), 'Tester app must include simulated test-store prices.');
 
 writeFileSync(join(output, '.nojekyll'), '');

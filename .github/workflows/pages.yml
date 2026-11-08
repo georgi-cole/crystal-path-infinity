@@ -35,7 +35,7 @@ jobs:
         run: node --experimental-strip-types .github/scripts/build-pages.mjs
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
-          path: apps/mobile/dist
+          path: apps/mobile/dist-pages
 
   deploy:
     name: Publish guest game
