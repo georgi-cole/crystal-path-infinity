@@ -8,6 +8,7 @@ import { QA_TOOLS_ENABLED } from '../app-profile';
 import type { OtpGateway } from './otp-flow';
 import type { AccountSessionOwner } from './session-owner';
 import { ACCOUNT_COUNTRIES } from './country-codes';
+import { playerInformationUrl } from '../support-contact';
 
 export interface AccountEntryBinding {
   readonly gateway: OtpGateway;
@@ -148,6 +149,11 @@ export function AccountEntry({
     <section className="cpi-account-entry" aria-labelledby="cpi-account-entry-title">
       <h2 id="cpi-account-entry-title">{t('account.title')}</h2>
       <p>{t('account.privacyFirst')}</p>
+      <p>
+        <a href={playerInformationUrl('privacy', locale)} target="_blank" rel="noopener noreferrer">
+          {t('support.privacyPolicy')}
+        </a>
+      </p>
       {!gateway ? (
         <p role="status">{t('account.notReady')}</p>
       ) : (

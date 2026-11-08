@@ -3,7 +3,7 @@ import { useLanguage } from './language-context';
 import type { LocaleChoice } from './i18n';
 import type { ReactNode } from 'react';
 import './locale-settings.css';
-import { SUPPORT_EMAIL, SUPPORT_MAILTO } from './support-contact';
+import { playerInformationUrl, SUPPORT_EMAIL, SUPPORT_MAILTO } from './support-contact';
 
 /**
  * Real, persisted language selection plus truthful permanent privacy/account
@@ -59,7 +59,7 @@ export function PrivacyAccountSupport({
   accountActions?: ReactNode;
   privacyActions?: ReactNode;
 } = {}) {
-  const { t } = useLanguage();
+  const { locale, t } = useLanguage();
   return (
     <div className="cpi-settings-destinations">
       <details className="cpi-settings-section cpi-settings-disclosure">
@@ -72,7 +72,15 @@ export function PrivacyAccountSupport({
         </summary>
         <div className="cpi-settings-expanded">
           <p>{t(accountConnected ? 'settings.privacyConnected' : 'settings.privacyInfo')}</p>
-          <p className="cpi-menu-fine-print">{t('settings.privacyUnavailable')}</p>
+          <a
+            className="cpi-menu-action cpi-menu-action--secondary cpi-support-contact"
+            href={playerInformationUrl('privacy', locale)}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {t('support.privacyPolicy')}
+            <span aria-hidden="true">↗</span>
+          </a>
           {privacyActions}
         </div>
       </details>
@@ -107,6 +115,15 @@ export function PrivacyAccountSupport({
         <div className="cpi-settings-expanded">
           <p>{t('support.intro')}</p>
           <p>{t('support.message')}</p>
+          <a
+            className="cpi-menu-action cpi-menu-action--secondary cpi-support-contact"
+            href={playerInformationUrl('support', locale)}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {t('support.page')}
+            <span aria-hidden="true">↗</span>
+          </a>
           <a
             className="cpi-menu-action cpi-menu-action--secondary cpi-support-contact"
             href={SUPPORT_MAILTO}

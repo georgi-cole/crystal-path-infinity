@@ -1,4 +1,6 @@
 export const supportEn = {
+  'support.privacyPolicy': 'Privacy policy',
+  'support.page': 'Support page',
   'support.contact': 'Email support',
   'support.intro': 'Need help with your crossing, a reward or a purchase?',
   'support.message': 'Tell us what happened and the steps that led to it. A screenshot can help.',
@@ -7,6 +9,8 @@ export const supportEn = {
 } as const;
 
 export const supportBg = {
+  'support.privacyPolicy': 'Политика за поверителност',
+  'support.page': 'Страница за поддръжка',
   'support.contact': 'Пиши на поддръжката',
   'support.intro': 'Имаш нужда от помощ с опит, награда или покупка?',
   'support.message':
