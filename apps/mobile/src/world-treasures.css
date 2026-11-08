@@ -57,10 +57,10 @@
   color: var(--relic-core, #c5f9df);
 }
 .world-wilds {
-  --relic-rim: #c8d5a8;
-  --relic-shell: #536959;
-  --relic-lens: #253e36;
-  --relic-core: #c1e3ac;
+  --relic-rim: #eadcc0;
+  --relic-shell: #77786a;
+  --relic-lens: #28322e;
+  --relic-core: #e6bb7c;
 }
 .world-league {
   --relic-rim: #f5c38d;
@@ -69,10 +69,10 @@
   --relic-core: #b7e6ed;
 }
 .world-puppy {
-  --relic-rim: #ebc69d;
-  --relic-shell: #946443;
-  --relic-lens: #293b3c;
-  --relic-core: #b3ded1;
+  --relic-rim: #f3dcc4;
+  --relic-shell: #ad755b;
+  --relic-lens: #303746;
+  --relic-core: #afd3e2;
 }
 .world-kitten {
   --relic-rim: #daccec;
