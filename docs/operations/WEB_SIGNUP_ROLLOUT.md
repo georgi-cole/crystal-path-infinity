@@ -52,10 +52,15 @@ submission. Proposed short copy follows.
 > You can play Crystal Path as a guest. To create an account, we first check
 > your age and where you live. If signup is available, we send a one-time code
 > to your email address. You can export your account data or ask us to delete
-> your account. Read the privacy notice for details.
+> your account. For account or privacy questions, email support@kolequant.xyz.
+> Read the privacy notice for details.
 
-The full notice needs the confirmed controller name and contact, the legal basis
-for eligibility and account processing, the providers and transfer safeguards,
+The owner approved `support@kolequant.xyz` for account and privacy requests on
+8 November 2026. Cloudflare forwarding is configured. Verify receipt in the
+monitored inbox during launch acceptance.
+
+The full notice still needs the controller’s legal name, the legal basis for
+eligibility and account processing, the providers and transfer safeguards,
 retention and backups, and how to exercise rights or make a complaint. Use the
 verified account flow and each provider's actual terms to confirm those details.
 The database is in Ireland. Check the processing locations for the gateway,
@@ -64,8 +69,8 @@ hosting and mail separately. [GDPR Article 13](https://eur-lex.europa.eu/eli/reg
 ## Launch acceptance
 
 1. Record the approved territory entries and publish the reviewed notice with
-   a monitored privacy contact. Enable the scheduled mail retry and cleanup
-   handler and check its operation.
+   `support@kolequant.xyz` as the privacy contact. Verify receipt there. Enable
+   the scheduled mail retry and cleanup handler and check its operation.
 2. Verify the age boundary, unknown and conflicting countries, and that closed
    cases stop before email. Check the guest path and the privacy link on a phone.
 3. Verify signup, re-entry on another device, export and deletion through a

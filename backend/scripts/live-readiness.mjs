@@ -4,6 +4,8 @@ import { resolveMx } from 'node:dns/promises';
 import pg from 'pg';
 import { readLiveConfiguration } from '../../packages/server-core/src/live-configuration.ts';
 import { createProjectSqlPool } from '../../packages/server-core/src/supabase-database.ts';
+
+const fullRelease = process.argv.includes('--release');
 const path =
   process.argv.find((value) => value.startsWith('--env='))?.slice(6) ??
   new URL('../.env.live.local', import.meta.url);
@@ -67,9 +69,10 @@ const checks = {
   purchasesEnabled: config.purchasesEnabled,
 };
 if (process.argv.includes('--online')) {
-  if (config.environment === 'production' || process.argv.includes('--release')) {
+  if (config.environment === 'production' || fullRelease) {
+    const supportMailDomain = fullRelease ? 'kolequant.com' : 'kolequant.xyz';
     try {
-      checks.supportMailDns = (await resolveMx('kolequant.com')).length > 0;
+      checks.supportMailDns = (await resolveMx(supportMailDomain)).length > 0;
     } catch {
       checks.supportMailDns = false;
     }
@@ -130,7 +133,7 @@ if (
 )
   process.exitCode = 1;
 if (
-  process.argv.includes('--release') &&
+  fullRelease &&
   (!checks.liveEnabled ||
     !checks.rewardsEnabled ||
     !checks.purchasesEnabled ||

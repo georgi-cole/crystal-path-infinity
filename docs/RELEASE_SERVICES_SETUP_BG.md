@@ -22,7 +22,8 @@
    позволени origins. За пускане само на акаунти задай
    `CPI_PURCHASES_ENABLED=false` и `CPI_REWARDS_ENABLED=false`.
    За кодовете използвай отделен ключ за изпращане от `auth.kolequant.xyz`
-   с адрес `crystal-path@auth.kolequant.xyz`.
+   с адрес `crystal-path@auth.kolequant.xyz`. За въпроси по уеб акаунти и
+   поверителност използвай одобрения `support@kolequant.xyz`.
 2. Провери доставянето на кода, нов акаунт, повторен вход и изтриване с одобрения
    приемателен акаунт. Провери, че браузърът получава позволение за точния
    Pages origin.
@@ -91,7 +92,9 @@ Resend прие код от `crystal-path@auth.kolequant.xyz` към своя с
 
 **Staging.** Подготвеният адрес за тестови кодове е `login@auth.kolequant.xyz`. Поддомейнът вече е потвърден в Resend. Когато има staging проект, създай отделен ключ само за изпращане от този поддомейн. Запиши ключа като `CPI_RESEND_API_KEY`, а адреса като `CPI_MAIL_FROM`. Адресът за изпращане може да се използва без собствена входяща кутия. [Resend: адреси на потвърден домейн](https://resend.com/docs/knowledge-base/how-do-i-create-an-email-address-or-sender-in-resend).
 
-**Production.** Запазваме избрания публичен адрес `support@kolequant.com`. Настрой DNS и входящата поща или препращането за него. За кодовете добави `kolequant.com` в Resend, постави DNS записите, показани от Resend, и потвърди домейна. В отделната production конфигурация използвай `CPI_MAIL_FROM=login@kolequant.com` и отделен ключ само за изпращане от този домейн. Онлайн проверката за production и за release проверява и DNS записите за входящата поща на `kolequant.com`.
+**Уеб акаунти.** На 8 ноември 2026 г. собственикът одобри `support@kolequant.xyz` за въпроси по акаунти и поверителност. Cloudflare има активно препращане за адреса. Production проверката `--online` проверява MX записите на `kolequant.xyz`. При приемането потвърди получаването в пощенската кутия.
+
+**Пълен production рилийз.** Запазваме избрания публичен адрес `support@kolequant.com`. Настрой DNS и входящата поща или препращането за него. За кодовете добави `kolequant.com` в Resend, постави DNS записите, показани от Resend, и потвърди домейна. В отделната production конфигурация използвай `CPI_MAIL_FROM=login@kolequant.com` и отделен ключ само за изпращане от този домейн. Проверката `--online --release` проверява и DNS записите за входящата поща на `kolequant.com`.
 
 Кодовете се изпращат през [Email API на Resend](https://resend.com/docs/api-reference/emails/send-email).
 
