@@ -113,7 +113,7 @@ Team ID `C97T2A5255` не замества Issuer ID. Следвай [Apple: Gen
 
 ### 8. Създай истинските продукти в двата магазина
 
-Оригиналното предложение е в `backend/commerce-products.proposed.json`. `backend/commerce-products.live.example.json` остава пример с отделни Android/iOS записи и статус `unconfirmed`. За Android вече са създадени предложените SKU. Последно провереният Apple каталог е празен.
+Оригиналното предложение е в `backend/commerce-products.proposed.json`. `backend/commerce-products.live.example.json` остава пример с отделни Android/iOS записи и статус `unconfirmed`. За Android вече са създадени предложените SKU. При проверката на 7 ноември Apple каталогът още беше празен.
 
 **Google Play Internal Testing · 7 ноември 2026 г.** Подписаната `0.1.0` (version code `1`) от `bf7f804` е `Active` и `Available to internal testers`. Използва регистрирания package `com.georgicole.crystalpath.infinity`, включва Billing и сочи към отделния Crystal Path staging API. Рекламите са изключени в тази сборка. Потвърдени са подписът и AAB структурата. [Инсталиране през Internal Testing](https://play.google.com/apps/internaltest/4701734144458822899).
 
@@ -122,6 +122,16 @@ Team ID `C97T2A5255` не замества Issuer ID. Следвай [Apple: Gen
 На телефон инсталирай от Google Play със същия акаунт, който е в License testing. При плащане провери обозначението за тестова покупка и избери тестовия метод на Google. Тестовият канал сам по себе си допуска и реално плащане за акаунти извън License testing. [Google Play Billing testing](https://developer.android.com/google/play/billing/test).
 
 Покупката и начисляването в играта все още не са проверени на телефон. Staging покупките са изключени. Остават Google Play server credentials, достъп за тестовите акаунти и потвърден сървърен SKU manifest. Текущата конфигурация при включване изисква и Apple credentials. За първи Android тест може да се подготви отделна Android-only staging конфигурация, която запазва проверката на всяка разписка. За iOS следват 18-те продукта, съответните sandbox тестери и TestFlight сборка за регистрирания bundle ID. Запази смисъла и количеството на вече продаден SKU. Оттеглените SKU остават за възстановяване с `available:false`. [Apple StoreKit sandbox](https://developer.apple.com/documentation/storekit/testing-in-app-purchases-with-sandbox).
+
+### iOS TestFlight в GitHub Actions
+
+**Каталог на 8 ноември 2026 г.** Crystal Path има 18 записа в Google Play и 18 съответстващи чернови в [App Store Connect](https://appstoreconnect.apple.com/apps/6831790531/distribution/iaps/drafts). Apple показва Prepare for Submission за всичките 18. Каталогът съдържа 4 пакета кредити, 6 SP пакета, 2 пакета подсказки и 6 постоянни свята. Базовите цени в България следват [първоначалния каталог](../backend/commerce-products.proposed.json). Преди App Review добавяме снимки на покупките в играта и включваме първия consumable и първия non-consumable със съответната версия.
+
+[CPI-035](https://github.com/georgi-cole/crystal-path-infinity/issues/35) добавя workflow **Crystal Path iOS TestFlight** на GitHub macOS runner. PR проверката компилира неподписан iPhone архив. След сливането на поправките в main стартираме workflow ръчно с upload_to_testflight и пълния SHA на проверения main commit. Преди качване той проверява същия SHA отново. Повторен опит за качване изисква нов run с нов номер на сборката.
+
+Сборката използва регистрирания bundle ID и само staging gateway за вход и StoreKit. Рекламите са изключени в този вариант. Apple получава сборката с **TestFlight Internal Only**. За публичната версия се подготвя отделна сборка с одобрения production сървър. Правилата за допускане на staging акаунти се проверяват от сървъра.
+
+Подписването изисква Apple Distribution сертификат с частния му ключ във формат P12, App Store Connect provisioning profile за Crystal Path и отделен App Store Connect ключ за качване. Записват се като CPI_IOS_DISTRIBUTION_P12_BASE64, CPI_IOS_DISTRIBUTION_P12_PASSWORD, CPI_IOS_PROFILE_BASE64, CPI_ASC_UPLOAD_KEY_BASE64, CPI_ASC_UPLOAD_KEY_ID и CPI_ASC_UPLOAD_ISSUER_ID в средата cpi-ios-testflight, ограничена до main. Ключът за проверка на покупки остава в Supabase staging. Workflow не публикува подписани артефакти в публичното GitHub хранилище.
 
 ### 9. Разгърни сървъра и периодичните задачи
 
