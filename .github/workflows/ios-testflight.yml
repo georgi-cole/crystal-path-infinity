@@ -11,6 +11,10 @@ on:
         description: Sign and upload an internal-only staging beta from main
         type: boolean
         default: false
+      rewarded_ads_test:
+        description: Enable rewarded ads against the staging gateway for AdMob test-mode devices
+        type: boolean
+        default: false
       source_sha:
         description: Full main commit SHA to upload after its required checks pass
         type: string
@@ -37,11 +41,12 @@ jobs:
       CPI_EXPECTED_SOURCE_SHA: ${{ inputs.source_sha }}
       CPI_APP_ENV: production
       CPI_NATIVE_PURCHASES: 'true'
-      CPI_NATIVE_ADS: 'false'
+      CPI_NATIVE_ADS: ${{ inputs.rewarded_ads_test && 'true' || 'false' }}
+      CPI_IOS_ADMOB_TEST_VERSION: ${{ vars.CPI_IOS_ADMOB_TEST_VERSION }}
       VITE_ACCOUNT_API_BASE_URL: https://crystal-path-staging-api.kolequant.workers.dev
       VITE_ACCOUNT_SERVICES_ENABLED: 'true'
       VITE_PURCHASES_ENABLED: 'true'
-      VITE_REWARDED_ADS_ENABLED: 'false'
+      VITE_REWARDED_ADS_ENABLED: ${{ inputs.rewarded_ads_test && 'true' || 'false' }}
       VITE_CLIENT_BUILD: ${{ github.run_number }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

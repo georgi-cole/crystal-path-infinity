@@ -297,6 +297,7 @@ export async function runRewardIntegration(adminPool, runtimePool) {
         idempotencyKey: randomUUID(),
         takeover: false,
       });
+      const row = latest.snapshot.currentRow;
       const score = latest.snapshot.lastClearedRow;
       const achieved = latest.snapshot.achievedAt;
       const tie = latest.snapshot.revivesToReachScore;
@@ -309,6 +310,8 @@ export async function runRewardIntegration(adminPool, runtimePool) {
       };
       const [restored, repeated] = await Promise.all([post('apply', apply), post('apply', apply)]);
       assert.deepEqual(repeated, restored, 'duplicate apply never adds SP or a life');
+      assert.equal(restored.snapshot.runId, apply.runId, 'continuation keeps the original run');
+      assert.equal(restored.snapshot.currentRow, row, 'continuation retries the same row');
       assert.equal(restored.snapshot.sp, sp);
       assert.equal(restored.snapshot.revivesApplied, ordinal);
       assert.equal(restored.snapshot.revivesGranted, ordinal);
