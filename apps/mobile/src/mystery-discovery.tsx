@@ -10,6 +10,7 @@ import { effectCopy } from './mystery.messages';
 import { mysteryDiscoverySummary } from './mystery-discovery-copy';
 import { discoveriesFromRun, discoveredKinds, readMysteryJournal } from './mystery-journal-model';
 import { MysteryLab } from './mystery-lab';
+import { MysteryPager } from './mystery-pager';
 import './mystery-discovery.css';
 
 const compactJournal =
@@ -19,41 +20,6 @@ function subscribeToJournalViewport(onChange: () => void) {
   const media = window.matchMedia(compactJournal);
   media.addEventListener('change', onChange);
   return () => media.removeEventListener('change', onChange);
-}
-
-function JournalPager({
-  label,
-  previous,
-  next,
-  position,
-  announcement,
-  onChange,
-}: {
-  label: string;
-  previous: string;
-  next: string;
-  position: string;
-  announcement?: string;
-  onChange: (offset: number) => void;
-}) {
-  return (
-    <div className="cpi-journal-pager" role="group" aria-label={label}>
-      <button type="button" aria-label={previous} onClick={() => onChange(-1)}>
-        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path d="m10 3-5 5 5 5" />
-        </svg>
-      </button>
-      <span role="status" aria-atomic="true">
-        {announcement && <span className="visually-hidden">{announcement} </span>}
-        {position}
-      </span>
-      <button type="button" aria-label={next} onClick={() => onChange(1)}>
-        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path d="m6 3 5 5-5 5" />
-        </svg>
-      </button>
-    </div>
-  );
 }
 
 function JournalCard({
@@ -73,7 +39,7 @@ function JournalCard({
     () => false,
   );
   const copy = effectCopy(locale, kind, version);
-  const summary = mysteryDiscoverySummary(kind, locale === 'bg');
+  const summary = mysteryDiscoverySummary(kind, locale === 'bg', version);
   const paragraphs = copy.detail.split('\n\n');
   const paged = compact && paragraphs.length > 1 && copy.detail.length > 170;
   const selected = Math.min(part, paragraphs.length - 1);
@@ -99,7 +65,8 @@ function JournalCard({
         <div className="cpi-journal-explanation-heading">
           <h3>{t('guide.howItWorks')}</h3>
           {paged && (
-            <JournalPager
+            <MysteryPager
+              className="cpi-journal-pager"
               label={t('guide.howItWorks')}
               previous={t('guide.previousPart')}
               next={t('guide.nextPart')}
@@ -186,7 +153,8 @@ export function MysteryJournal({
       ) : (
         <>
           {known.length > 1 && (
-            <JournalPager
+            <MysteryPager
+              className="cpi-journal-pager"
               label={t('guide.journalTab')}
               previous={t('guide.previousDiscovery')}
               next={t('guide.nextDiscovery')}

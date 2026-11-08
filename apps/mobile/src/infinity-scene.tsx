@@ -10,7 +10,7 @@ import { MysteryEffects, MysteryFeedbackView, PactPanel, EffectGlyph } from './m
 import { EffectConsumption, HintCounter } from './resource-feedback';
 import { MysteryRhythmBadge, DeathClockBadge } from './mystery-box';
 import { MysteryLab } from './mystery-lab';
-import { effectCopy, mysteryText } from './mystery.messages';
+import { effectCopy } from './mystery.messages';
 import './run-status.css';
 import { RunReserves } from './run-reserves';
 import { useTestStore, useThemeId } from './store-context';
@@ -18,14 +18,13 @@ import { ThemeScope } from './store-provider';
 import { WorldPathCompanion, WorldStepEffect } from './world-effects';
 import { companionStandingSide } from './world-companion';
 import { MysteryCache, WorldOutcomeHero } from './world-treasures';
-import { WorldNavGlyph } from './world-navigation';
 import type { ThemeId } from './store-catalog';
 import { isPetWorld, WORLD_KITS } from './world-kits';
 import type { ReactNode } from 'react';
 import { StageAtmosphere } from './stage-atmosphere';
 import { useSoundtrack } from './soundtrack';
 import { PrismBridge } from './prism-bridge';
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   createPracticeCursor,
   createRun,
@@ -62,7 +61,7 @@ import {
 import { presentRunOutcome } from './run-outcome';
 import { useLanguage } from './language-context';
 import type { PracticeSettings } from './practice-save';
-import { AudioSettingsControls } from './audio-settings-controls';
+import { RunPauseMenu } from './run-pause-menu';
 import { createPracticeRuntime, schedulePracticeTick } from './practice-runtime';
 import type { PracticePauseLease, PracticeRuntime } from './practice-runtime';
 import { presentInfinityScene } from './infinity-presentation';
@@ -122,48 +121,6 @@ export interface InfinitySceneViewProps {
   readonly cinematic?: SceneCinematic | null;
   readonly signals?: RunSignals;
   readonly hintCaptionRow?: string | null;
-}
-
-/** No game-core mutations or timers. All callbacks are externally owned events. */
-function PauseDetails({
-  progress,
-  reserve,
-  audio,
-}: {
-  progress: ReactNode;
-  reserve?: ReactNode;
-  audio: ReactNode;
-}) {
-  const { t } = useLanguage();
-  const id = useId();
-  const [open, setOpen] = useState<string | null>(null);
-  const panels = [
-    { key: 'progress', label: t('game.runDetails'), content: progress },
-    ...(reserve ? [{ key: 'reserve', label: t('vault.manage'), content: reserve }] : []),
-    { key: 'sound', label: t('settings.audioLegend'), content: audio },
-  ];
-  return (
-    <div className="cpi-pause-details">
-      <div className="cpi-pause-detail-buttons" role="group" aria-label={t('game.runDetails')}>
-        {panels.map((panel) => (
-          <button
-            key={panel.key}
-            type="button"
-            aria-expanded={open === panel.key}
-            aria-controls={`${id}-${panel.key}`}
-            onClick={() => setOpen((current) => (current === panel.key ? null : panel.key))}
-          >
-            {panel.label}
-          </button>
-        ))}
-      </div>
-      {panels.map((panel) => (
-        <div key={panel.key} id={`${id}-${panel.key}`} hidden={open !== panel.key}>
-          {panel.content}
-        </div>
-      ))}
-    </div>
-  );
 }
 
 export function InfinitySceneView({
@@ -237,6 +194,9 @@ export function InfinitySceneView({
     : null;
   const overlayVisible =
     !!error || (!cinematic?.fatal && (paused || confirmEnd || outcome.phase !== 'playing'));
+  const pauseVisible = paused && !error && !confirmEnd && outcome.phase === 'playing';
+  const worldDialogTheme =
+    worldOutcomeTheme ?? (pauseVisible && themeId !== 'obsidian' ? themeId : null);
   const catastrophic = state.death !== null && state.status !== 'playing';
   const pressure = presentRowPressure(state);
   const deathClock = getDeathClock(state);
@@ -358,6 +318,14 @@ export function InfinitySceneView({
                     : 'game.paused',
       )}
     </h2>
+  );
+
+  const pauseFoothold = pauseVisible && (
+    <div className="cpi-pause-foothold">
+      <span>{t(petWorld ? 'vault.rowsExplored' : 'game.rowsCleared')}</span>
+      <strong>{clearedRows}</strong>
+      <span className="visually-hidden">{t('game.pausedExplanation')}</span>
+    </div>
   );
 
   return (
@@ -619,22 +587,26 @@ export function InfinitySceneView({
         <div className="cpi-overlay cpi-crossing-overlay">
           <div
             className={
-              'cpi-overlay-card cpi-run-outcome' + (worldOutcomeTheme ? ' is-world-outcome' : '')
+              'cpi-overlay-card cpi-run-outcome' +
+              (worldOutcomeTheme ? ' is-world-outcome' : '') +
+              (pauseVisible ? ' cpi-pause-card' : '')
             }
             role="dialog"
             aria-modal="true"
             aria-labelledby="cpi-run-outcome-title"
           >
-            {worldOutcomeTheme ? (
-              <WorldOutcomeHero theme={worldOutcomeTheme} finished={outcome.phase === 'finished'}>
+            {worldDialogTheme ? (
+              <WorldOutcomeHero theme={worldDialogTheme} finished={outcome.phase === 'finished'}>
                 {dialogHeading}
+                {pauseFoothold}
               </WorldOutcomeHero>
             ) : (
               <header className="cpi-dialog-heading">
-                {paused && !confirmEnd && !error && themeId !== 'obsidian' && (
-                  <span className="cpi-dialog-kicker">{t(WORLD_KITS[themeId].title)}</span>
+                {pauseVisible && (
+                  <span className="cpi-dialog-kicker">{t('game.pauseClockHeld')}</span>
                 )}
                 {dialogHeading}
+                {pauseFoothold}
               </header>
             )}
             {error ? (
@@ -812,105 +784,20 @@ export function InfinitySceneView({
                 </div>
               </div>
             ) : (
-              <div className="cpi-pause-layout">
-                <p className="cpi-pause-summary">
-                  <span>{t(petWorld ? 'vault.petPausedDetail' : 'game.pausedExplanation')}</span>{' '}
-                  <strong>{t('game.pausedRows', { row: clearedRows })}</strong>
-                </p>
-                <div className="cpi-overlay-actions cpi-pause-actions">
-                  <button
-                    type="button"
-                    className="cpi-pause-resume"
-                    data-cpi-overlay-primary
-                    disabled={busy}
-                    onClick={onPause}
-                  >
-                    {themeId === 'obsidian' ? (
-                      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <path
-                          d="m8 5 11 7-11 7V5Z"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    ) : (
-                      <WorldNavGlyph theme={themeId} name="play" />
-                    )}
-                    {t('general.resume')}
-                  </button>
-                </div>
-                {(onMysteryJournal || onMysteryLab) && (
-                  <div className="cpi-overlay-actions cpi-pause-links">
-                    {onMysteryJournal && (
-                      <button
-                        type="button"
-                        className="cpi-pause-link"
-                        disabled={busy}
-                        onClick={onMysteryJournal}
-                      >
-                        {t('guide.journalTab')}
-                      </button>
-                    )}
-                    {onMysteryLab && (
-                      <button
-                        type="button"
-                        className="cpi-pause-link"
-                        disabled={busy}
-                        onClick={onMysteryLab}
-                      >
-                        {mysteryText(locale, 'lab')}{' '}
-                        <small>{locale === 'bg' ? 'Тест' : 'Test'}</small>
-                      </button>
-                    )}
-                  </div>
-                )}
-                <PauseDetails
-                  progress={
-                    <div className="cpi-run-metrics" aria-label={t('menu.progress')}>
-                      <span>
-                        {t('game.cleared')} <strong>{clearedRows}</strong>
-                      </span>
-                      <span>
-                        {t('game.used')}{' '}
-                        <strong>
-                          {number(outcome.appliedContinues)} / {getMaxRevives(state.rulesetVersion)}
-                        </strong>
-                      </span>
-                      <span>
-                        {t('game.granted')}{' '}
-                        <strong>
-                          {number(outcome.grantedContinues)} / {getMaxRevives(state.rulesetVersion)}
-                        </strong>
-                      </span>
-                      <span>
-                        {t('game.quota')} <strong>{number(outcome.grantsRemaining)}</strong>
-                      </span>
-                    </div>
-                  }
-                  reserve={resourcePanel}
-                  audio={
-                    <AudioSettingsControls
-                      settings={settings}
-                      onChange={onSettingsChange}
-                      hideLegend
-                    />
-                  }
-                />
-                <div className="cpi-overlay-actions cpi-pause-exits">
-                  <button type="button" disabled={busy} onClick={onExit}>
-                    {t('general.saveLeave')}
-                  </button>
-                  <button
-                    type="button"
-                    className="cpi-run-danger-action"
-                    disabled={busy}
-                    onClick={onRequestEnd}
-                  >
-                    {t('general.endRun')}
-                  </button>
-                </div>
-              </div>
+              <RunPauseMenu
+                outcome={outcome}
+                clearedRows={clearedRows}
+                maxContinues={getMaxRevives(state.rulesetVersion)}
+                resources={resourcePanel}
+                settings={settings}
+                onSettingsChange={onSettingsChange}
+                busy={busy}
+                onResume={onPause}
+                onDiscoveries={onMysteryJournal}
+                onMysteryLab={onMysteryLab}
+                onExit={onExit}
+                onEnd={onRequestEnd}
+              />
             )}
           </div>
         </div>

@@ -14,6 +14,7 @@ import {
   DIRECTOR_RULESET_VERSION,
   RELIC_RULESET_VERSION,
   DISCOVERY_RULESET_VERSION,
+  READING_RULESET_VERSION,
   usesRelicRules,
   usesMysteryDirectorRules,
   getDeathClock,
@@ -535,6 +536,22 @@ describe('mystery feedback, practice chamber and public contracts', () => {
       }),
     );
     expect(soulHtml).toMatch(/disabled="" data-pact-option="hint"/);
+  });
+
+  it.each([
+    ['fragility_5s', 'double the next tile damage'],
+    ['inversion_5s', 'every broken tile gives +5 SP'],
+  ] as const)('explains an active %s in the collapsed status strip', (kind, summary) => {
+    const effect = applyMysteryEffect(kind, 0).addedEffect!;
+    const html = renderToStaticMarkup(
+      createElement(MysteryEffects, {
+        effects: [effect],
+        activeTimeMs: 1000,
+        rulesetVersion: READING_RULESET_VERSION,
+      }),
+    );
+    expect(html.match(/<summary>(.*?)<\/summary>/)?.[1]).toContain(summary);
+    expect(html).not.toContain('open=""');
   });
 
   it('opens a choice with the equipped relic artwork for every world', () => {

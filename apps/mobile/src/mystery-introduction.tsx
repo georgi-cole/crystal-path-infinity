@@ -70,7 +70,7 @@ export function DiscoveryIntroduction({
   const tier = mysteryTier(intro.kind);
   const dangerous = !copy.positive;
   const dramatic = dangerous || tier === 'anomaly';
-  const summary = mysteryDiscoverySummary(intro.kind, bg) ?? copy.detail;
+  const summary = mysteryDiscoverySummary(intro.kind, bg, rulesetVersion) ?? copy.detail;
   const remaining = Math.max(0, intro.expiresAt - activeTimeMs);
   const timing = discoveryTiming(rulesetVersion);
   const reading = activeTimeMs < intro.startedAt + timing.holdMs;

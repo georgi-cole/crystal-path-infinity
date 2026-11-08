@@ -123,3 +123,9 @@ continuation choices put Restore SP or Get credits on the main line and the
 simulated ad or credit method below it. The no-charge label sits above the
 buttons. The same confirmation and debit flow applies to credit use after a
 test checkout. The button artwork follows the equipped world.
+
+## Тестови инструменти в паузата · 8 ноември 2026
+
+QA събира резервите и тестовата стая в отделен ред „Тестови инструменти“.
+Разходването, потвърждението и локалният портфейл остават същите. Player
+сборката показва общия списък на паузата без QA реда.

@@ -319,6 +319,19 @@ describe('CPI-015 HUD and result state contract', () => {
     expect(confirm).toContain(en['game.keepAttempt']);
   });
 
+  it('puts Resume first and adds the Test tools row only for the QA actions', () => {
+    const player = markup(initial(), { paused: true, onMysteryJournal: () => {} });
+    expect(player.indexOf(en['general.resume'] + '</button>')).toBeLessThan(
+      player.indexOf(en['guide.journalTab'] + '</span>'),
+    );
+    expect(player).toContain(en['game.backToPause']);
+    expect(player).not.toContain(en['game.pauseTestTools']);
+    expect(player).not.toContain('Mystery chamber');
+    const qa = markup(initial(), { paused: true, onMysteryLab: () => {} });
+    expect(qa).toContain(en['game.pauseTestTools']);
+    expect(qa).toMatch(/class="cpi-pause-test-tools" hidden=""><button[^>]*>.*Mystery chamber/);
+  });
+
   it('keeps signed native gates and app navigation unchanged', () => {
     const app = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
     expect(app).toContain("onViewRankings={() => closePractice('rankings')}");

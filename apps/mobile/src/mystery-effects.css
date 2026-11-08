@@ -84,8 +84,9 @@
 .cpi-force summary .cpi-effect-glyph {
   width: 1.9rem;
   height: 1.9rem;
+  flex: none;
 }
-.cpi-force summary > span:not(.cpi-force-track) {
+.cpi-force summary .cpi-force-copy {
   min-width: 0;
   flex: 1;
 }
@@ -97,8 +98,23 @@
 .cpi-force summary small {
   display: block;
   margin-top: 0.15rem;
-  font-size: 0.55rem;
-  color: #a49aaf;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: #d5cbdc;
+}
+.cpi-force-caret {
+  flex: none;
+  width: 0.85rem;
+  height: 0.85rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.75;
+}
+.cpi-force[open] .cpi-force-caret {
+  transform: rotate(180deg);
 }
 .cpi-force summary b {
   font-size: 0.75rem;

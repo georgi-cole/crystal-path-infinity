@@ -195,3 +195,9 @@ stitching and Purralune's moonlit trim. The app bundles the vector masks and
 colors them with each world's material palette. The result uses the entire
 existing companion frame inside a dedicated portrait slot. Choice offers
 reuse the matching bridge cache in its open state.
+
+### Pause artwork on 8 November 2026
+
+The pause header uses the equipped world's existing scenery and a contained
+companion portrait. A shared, low-contrast list keeps the game actions readable.
+Resume retains the world's engraved button artwork.
