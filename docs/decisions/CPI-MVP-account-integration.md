@@ -70,3 +70,5 @@ Pages accepts the account flag for publication from main. It checks the exact
 production gateway and Pages origin before building. Activation requires a
 separate production Supabase project, reviewed country policy, email delivery
 and a hosted signup and re-entry check. [Production setup](../RELEASE_SERVICES_SETUP_BG.md).
+
+[Worldwide signup rollout review](../operations/WEB_SIGNUP_ROLLOUT.md)
