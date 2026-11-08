@@ -287,10 +287,12 @@ describe('complete world presentation', () => {
     },
   );
   it.each(['chaos', 'jelly'] as const)(
-    '%s frames an honest result and leaves pause compact',
+    '%s frames a themed pause and keeps the result honest',
     (theme) => {
       const paused = markup({ paused: true }, theme);
-      expect(paused).not.toContain('cpi-world-outcome-hero');
+      expect(paused).toContain('cpi-world-outcome-hero world-' + theme);
+      expect(paused).toContain('cpi-pause-foothold');
+      expect(paused).not.toContain('cpi-result-score');
       const base = makeState();
       const dead = transitionRun(
         { ...base, sp: 10 },

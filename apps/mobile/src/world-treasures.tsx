@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import type { ReactNode } from 'react';
 import type { EffectKind } from '@crystal-path-infinity/game-core';
 import type { PresentedEffect } from './infinity-presentation';
 import type { ThemeId } from './store-catalog';
@@ -287,10 +288,18 @@ export function WorldAvatarAura({
   );
 }
 
-export function WorldOutcomeHero({ theme, finished }: { theme: World; finished: boolean }) {
+export function WorldOutcomeHero({
+  theme,
+  finished,
+  children,
+}: {
+  theme: World;
+  finished: boolean;
+  children: ReactNode;
+}) {
   const { t } = useLanguage();
   return (
-    <div className={`cpi-world-outcome-hero world-${theme}`}>
+    <header className={`cpi-world-outcome-hero world-${theme}`}>
       <img
         src={worldAsset(WORLD_ASSETS[theme].environment)}
         alt=""
@@ -298,14 +307,14 @@ export function WorldOutcomeHero({ theme, finished }: { theme: World; finished: 
         height="1536"
         aria-hidden="true"
       />
-      <span className="cpi-world-outcome-orbit" aria-hidden="true" />
+      <div className="cpi-world-outcome-label">
+        <span className="cpi-dialog-kicker">{t(WORLD_KITS[theme].title)}</span>
+        {children}
+      </div>
       <div className="cpi-world-outcome-companion" aria-hidden="true">
+        <span className="cpi-world-outcome-orbit" />
         <CompanionSprite theme={theme} reaction={finished ? 'happy' : 'calm'} />
       </div>
-      <div className="cpi-world-outcome-label">
-        <span>{t(WORLD_KITS[theme].title)}</span>
-        <strong>{t(WORLD_KITS[theme].journal)}</strong>
-      </div>
-    </div>
+    </header>
   );
 }

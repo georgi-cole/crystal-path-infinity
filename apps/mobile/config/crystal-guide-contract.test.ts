@@ -38,7 +38,7 @@ describe('automatic guide/rules synchronization', () => {
   it('teaches the progressive Death Clock used by the current practice rules', () => {
     let run = createRun(
       {
-        runId: 'guide-policy-check',
+        runId: 'practice-guide-policy-check',
         rulesetVersion: PRACTICE_RULESET_VERSION,
         observedAt: 0,
         routeRng: createPracticeCursor(1),

@@ -93,20 +93,24 @@ describe('CPI-012 deterministic native icon exports', () => {
     const generator = source('scripts/generate-native.mjs');
     const cap = source('capacitor.config.ts');
     const html = source('index.html');
-    expect(BRAND_BACKGROUND).toBe('#060a18');
+    const brandLaunch = source('src/brand-launch.css');
+    expect(BRAND_BACKGROUND).toBe('#000000');
     expect(template).toContain('<adaptive-icon');
     expect(template).toContain('<monochrome');
     expect(themed).toContain('android:viewportWidth="256"');
     expect(ios).toContain('image="CpiLaunchMark"');
     expect(ios).toContain('launchScreen="YES"');
+    expect(ios).toContain('red="0" green="0" blue="0"');
     expect(ios).not.toContain('systemBackgroundColor');
     expect(generator).toContain('windowSplashScreenAnimatedIcon');
     expect(generator).toContain('@drawable/cpi_splash_logo');
     expect(generator).toContain("syncNativeBrandAssets(appRoot, 'android')");
     expect(generator).toContain("syncNativeBrandAssets(appRoot, 'ios')");
     expect(generator).toContain('syncNativeBrandAssets(appRoot, platform, true)');
-    expect(cap).toContain("'#060a18'");
-    expect(html).toContain('background: #060a18;');
+    expect(cap).toContain("'#000000'");
+    expect(html).toContain('background: #000000;');
+    expect(html).toContain('content="#000000"');
+    expect(brandLaunch).toContain('background: #000000;');
     expect(generator).not.toMatch(/@drawable\/cpi_launch_placeholder|The Big Eye|story-icon/);
   });
 

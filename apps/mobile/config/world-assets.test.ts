@@ -4,6 +4,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { WORLD_ASSETS } from '../src/world-assets';
 import { WORLD_ORDER } from '../src/world-kits';
+import { ThemeArtwork } from '../src/theme-art';
 import { WorldStepEffect } from '../src/world-effects';
 import type { SceneCinematic } from '../src/scene-cinematics';
 
@@ -21,6 +22,11 @@ function image(path: string) {
 }
 
 describe('portable world assets', () => {
+  it.each(WORLD_ORDER)('%s world card carries both images without additional requests', (theme) => {
+    const html = renderToStaticMarkup(createElement(ThemeArtwork, { theme }));
+    expect(html.match(/src="data:image\/webp;base64,/g)).toHaveLength(2);
+  });
+
   it.each(WORLD_ORDER)(
     '%s ships a bounded portrait plate and three transparent reaction frames',
     (theme) => {

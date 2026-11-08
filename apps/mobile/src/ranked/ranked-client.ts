@@ -5,6 +5,7 @@ import {
   usesRiskRules,
   usesMysteryDirectorRules,
   usesDiscoveryRules,
+  usesExtendedDiscoveryReading,
   assertDiscovery,
   MYSTERY_TIERS,
   getRuleset,
@@ -360,6 +361,7 @@ export function parseRankedReply(value: unknown): RankedReply | null {
     !UUID.test(raw.runId) ||
     typeof raw.rulesetVersion !== 'string' ||
     !VERSION.test(raw.rulesetVersion) ||
+    usesExtendedDiscoveryReading(raw.rulesetVersion) ||
     !['playing', 'dead', 'finished'].includes(String(raw.status)) ||
     !decimal(raw.nextSequence, true) ||
     !decimal(raw.lastClearedRow) ||

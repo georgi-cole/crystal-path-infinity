@@ -12,15 +12,17 @@ const manifest = JSON.parse(readFileSync(new URL('./package.json', import.meta.u
 };
 
 export default defineConfig(({ mode }) => {
-  // Vitest uses its own test mode; application builds accept only named environments.
+  // Both web review profiles use staging identity and can never become a release candidate.
+  const preview = mode === 'qa' || mode === 'player-preview';
   const environment = requireEnvironment(
-    mode === 'test' ? 'development' : mode === 'qa' ? 'staging' : mode,
+    mode === 'test' ? 'development' : preview ? 'staging' : mode,
   );
   const release =
     mode === 'test' ? null : resolveUnsignedRelease(environment, manifest.version, process.env);
-  if (release) assertUnsignedPublicVariables(loadEnv(mode, appRoot, 'VITE_'));
-  if (mode === 'qa' && release)
-    throw new Error('QA tools cannot be included in an unsigned release candidate.');
+  if (preview && release)
+    throw new Error('Web review profiles cannot be included in an unsigned release candidate.');
+  if (release || mode === 'player-preview')
+    assertUnsignedPublicVariables(loadEnv(mode, appRoot, 'VITE_'));
   const buildInfo = release?.app ?? getBuildInfo(environment, manifest.version);
   return {
     root: appRoot,
@@ -34,6 +36,13 @@ export default defineConfig(({ mode }) => {
               type: 'asset',
               fileName: 'qa-info.json',
               source: JSON.stringify({ schemaVersion: 1, audience: 'qa', tools: true }) + '\n',
+            });
+          if (mode === 'player-preview')
+            this.emitFile({
+              type: 'asset',
+              fileName: 'player-preview-info.json',
+              source:
+                JSON.stringify({ schemaVersion: 1, tools: false, simulatedStore: true }) + '\n',
             });
           this.emitFile({
             type: 'asset',
@@ -55,7 +64,8 @@ export default defineConfig(({ mode }) => {
     test: { environment: 'node', include: ['config/**/*.test.ts'] },
     build: {
       target: 'es2022',
-      outDir: mode === 'qa' ? 'dist-qa' : 'dist',
+      outDir:
+        mode === 'qa' ? 'dist-qa' : mode === 'player-preview' ? 'dist-player-preview' : 'dist',
       rollupOptions: {
         input: {
           index: fileURLToPath(new URL('./index.html', import.meta.url)),

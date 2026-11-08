@@ -5,6 +5,7 @@ import type * as AppProfile from '../src/app-profile';
 vi.mock('../src/app-profile', async (importOriginal) => ({
   ...(await importOriginal<typeof AppProfile>()),
   QA_TOOLS_ENABLED: false,
+  SIMULATED_STORE_ENABLED: false,
 }));
 import { profilePracticeStorage } from '../src/app-profile';
 import { StoreVault } from '../src/store-vault';
@@ -40,8 +41,11 @@ describe('player presentation and QA isolation', () => {
       ),
     );
     expect(html).toContain('Purchases are unavailable right now');
+    const worlds = renderToStaticMarkup(createElement(StoreVault));
+    expect(worlds).toContain('class="is-primary">Explore</button>');
     for (const text of [
       'Test store',
+      'Preview store',
       'Test purchase',
       'Approve test purchase',
       'Reset test store',

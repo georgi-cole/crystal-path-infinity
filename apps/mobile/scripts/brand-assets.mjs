@@ -7,7 +7,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { deflateSync } from 'node:zlib';
 
-export const BRAND_BACKGROUND = '#060a18';
+export const BRAND_BACKGROUND = '#000000';
 
 /** Reject active/external SVG resources, without rejecting the standard XML namespace. */
 export function unsafeBrandSvg(svg) {

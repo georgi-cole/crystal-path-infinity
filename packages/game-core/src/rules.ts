@@ -15,12 +15,24 @@ export const CLASSIC_MYSTERY_RULESET_VERSION = 'infinity-v8-classic-mystery';
 export const CLASSIC_STORE_RULESET_VERSION = 'infinity-v9-classic-store';
 export const BUSINESS_RULESET_VERSION = 'infinity-v11-business-mystery';
 export const BUSINESS_STORE_RULESET_VERSION = 'infinity-v11-business-store';
+export const READING_RULESET_VERSION = 'infinity-v13-discovery-reading';
+export const READING_STORE_RULESET_VERSION = 'infinity-v13-store-reading';
 /** Production authority with the approved v11 balance; never a local QA grant route. */
 export const LIVE_RULESET_VERSION = 'infinity-v11-live';
+export function usesExtendedDiscoveryReading(version: string): boolean {
+  return (
+    version === READING_RULESET_VERSION ||
+    version === READING_STORE_RULESET_VERSION ||
+    parseTileExperiment(version)?.extendedReading === true
+  );
+}
+
 export function usesBusinessRules(version: string): boolean {
   return (
     version === BUSINESS_RULESET_VERSION ||
     version === BUSINESS_STORE_RULESET_VERSION ||
+    version === READING_RULESET_VERSION ||
+    version === READING_STORE_RULESET_VERSION ||
     version === LIVE_RULESET_VERSION ||
     parseTileExperiment(version)?.business === true
   );
@@ -28,6 +40,23 @@ export function usesBusinessRules(version: string): boolean {
 export const DISCOVERY_INTRO_MS = 4_000;
 export const CHOICE_GRACE_MS = 60_000;
 export const IDLE_WARNING_MS = 3_000;
+const LEGACY_DISCOVERY_TIMING = Object.freeze({
+  displayMs: DISCOVERY_INTRO_MS,
+  holdMs: DISCOVERY_INTRO_MS,
+  warningDelayMs: DISCOVERY_INTRO_MS + IDLE_WARNING_MS,
+});
+const EXTENDED_DISCOVERY_TIMING = Object.freeze({
+  displayMs: 10_000,
+  holdMs: 7_000,
+  warningDelayMs: 7_000,
+});
+
+export function discoveryTiming(version: string) {
+  return usesExtendedDiscoveryReading(version)
+    ? EXTENDED_DISCOVERY_TIMING
+    : LEGACY_DISCOVERY_TIMING;
+}
+
 export const DEATH_COUNTDOWN_MS = 10_000;
 export const STARTING_SP = 300;
 export const MAX_SP = 400;
@@ -167,6 +196,8 @@ export function usesClassicTiles(version: string): boolean {
     CLASSIC_STORE_RULESET_VERSION,
     BUSINESS_RULESET_VERSION,
     BUSINESS_STORE_RULESET_VERSION,
+    READING_RULESET_VERSION,
+    READING_STORE_RULESET_VERSION,
     LIVE_RULESET_VERSION,
   ].includes(version);
 }
@@ -182,6 +213,7 @@ export function usesStoreTestRules(version: string): boolean {
     version === STORE_TEST_RULESET_VERSION ||
     version === CLASSIC_STORE_RULESET_VERSION ||
     version === BUSINESS_STORE_RULESET_VERSION ||
+    version === READING_STORE_RULESET_VERSION ||
     version === LIVE_RULESET_VERSION ||
     parseTileExperiment(version)?.store === true
   );
@@ -282,6 +314,9 @@ export function getRuleset(
   if (version === CLASSIC_STORE_RULESET_VERSION) return CLASSIC_STORE_RULESET;
   if (version === BUSINESS_RULESET_VERSION) return BUSINESS_RULESET;
   if (version === BUSINESS_STORE_RULESET_VERSION) return BUSINESS_STORE_RULESET;
+  if (version === READING_RULESET_VERSION) return Object.freeze({ ...BUSINESS_RULESET, version });
+  if (version === READING_STORE_RULESET_VERSION)
+    return Object.freeze({ ...BUSINESS_STORE_RULESET, version });
   if (version === LIVE_RULESET_VERSION)
     return Object.freeze({ ...BUSINESS_STORE_RULESET, version });
   if (version === PACED_RULESET_VERSION) return PACED_RULESET;

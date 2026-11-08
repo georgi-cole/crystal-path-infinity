@@ -2,7 +2,6 @@ import { DiscoveryIntroduction } from './mystery-introduction';
 import { mysteryFeedbackFromEvents, runCuesFromEvents } from './mystery-feedback';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  BUSINESS_RULESET_VERSION,
   getDeathClock,
   mysteryTier,
   MYSTERY_TIERS,
@@ -26,6 +25,7 @@ import { EffectGlyph, MysteryEffects, MysteryFeedbackView, PactPanel } from './m
 import type { MysteryFeedback, RunCues } from './mystery-feedback';
 import { EffectConsumption, HintCounter } from './resource-feedback';
 import { MysteryTierLegend, MysteryRhythmBadge, DeathClockBadge } from './mystery-box';
+import { PRACTICE_RULESET_VERSION } from './practice-rules';
 
 export function MysteryLab({
   onClose,
@@ -39,7 +39,7 @@ export function MysteryLab({
   availableKinds?: readonly EffectKind[];
 }) {
   const { locale } = useLanguage();
-  const version = BUSINESS_RULESET_VERSION;
+  const version = PRACTICE_RULESET_VERSION;
   const [kind, setKind] = useState<EffectKind>(initialKind);
   const [startingSp, setStartingSp] = useState(100);
   const [spDraft, setSpDraft] = useState('100');
@@ -142,6 +142,9 @@ export function MysteryLab({
       });
   };
   const frozen = state.pact?.phase === 'offered';
+  const discoveryKind = state.discovery?.introduction?.kind;
+  const rhythm = state.mysteryDirector?.rhythm;
+  const deathClock = getDeathClock(state);
   const arrangeDemo = (layout: 'both-broken' | 'both-safe') => {
     const prepared = prepareMysteryLabStep(current.current, layout);
     current.current = prepared;
@@ -274,14 +277,18 @@ export function MysteryLab({
               </button>
             )}
           </div>
-          {!isPactKind(kind) && (
+          {!isPactKind(kind) && !discoveryKind && (
             <>
               <h2>{copy.title}</h2>
               <p>{copy.detail}</p>
             </>
           )}
           <MysteryEffects
-            effects={state.effects}
+            effects={
+              discoveryKind
+                ? state.effects.filter((effect) => effect.kind !== discoveryKind)
+                : state.effects
+            }
             activeTimeMs={state.activeTimeMs}
             rulesetVersion={version}
           />
@@ -289,6 +296,7 @@ export function MysteryLab({
             discovery={state.discovery}
             activeTimeMs={state.activeTimeMs}
             rulesetVersion={state.rulesetVersion}
+            reducedMotion={reducedMotion}
           />
           <PactPanel
             pact={state.pact}
@@ -300,14 +308,15 @@ export function MysteryLab({
             activeTimeMs={state.activeTimeMs}
             onChoose={(option) => issue({ type: 'pact', option, row: state.currentRow, life: 0 })}
           />
-          <MysteryRhythmBadge
-            rhythm={state.mysteryDirector?.rhythm}
-            activeTimeMs={state.activeTimeMs}
-          />
+          {rhythm?.kind !== discoveryKind && (
+            <MysteryRhythmBadge rhythm={rhythm} activeTimeMs={state.activeTimeMs} />
+          )}
           <DeathClockBadge
-            clock={getDeathClock(state)}
+            clock={deathClock}
             activeTimeMs={state.activeTimeMs}
-            offered={frozen || !!state.discovery?.introduction}
+            offered={
+              frozen || (!!discoveryKind && state.activeTimeMs < (deathClock?.warningAt ?? 0))
+            }
           />
           {isPactKind(kind) && !state.pact && <p>{copy.detail}</p>}
           {state.current.noSafeTile && (

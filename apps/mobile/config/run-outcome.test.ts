@@ -319,6 +319,19 @@ describe('CPI-015 HUD and result state contract', () => {
     expect(confirm).toContain(en['game.keepAttempt']);
   });
 
+  it('puts Resume first and adds the Test tools row only for the QA actions', () => {
+    const player = markup(initial(), { paused: true, onMysteryJournal: () => {} });
+    expect(player.indexOf(en['general.resume'] + '</button>')).toBeLessThan(
+      player.indexOf(en['guide.journalTab'] + '</span>'),
+    );
+    expect(player).toContain(en['game.backToPause']);
+    expect(player).not.toContain(en['game.pauseTestTools']);
+    expect(player).not.toContain('Mystery chamber');
+    const qa = markup(initial(), { paused: true, onMysteryLab: () => {} });
+    expect(qa).toContain(en['game.pauseTestTools']);
+    expect(qa).toMatch(/class="cpi-pause-test-tools" hidden=""><button[^>]*>.*Mystery chamber/);
+  });
+
   it('keeps signed native gates and app navigation unchanged', () => {
     const app = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
     expect(app).toContain("onViewRankings={() => closePractice('rankings')}");
@@ -328,7 +341,7 @@ describe('CPI-015 HUD and result state contract', () => {
     expect(scene).toContain('restartLock.current');
     const css = readFileSync(new URL('../src/run-outcome.css', import.meta.url), 'utf8');
     expect(css).toContain('grid-template-columns: repeat(2, minmax(0, 1fr))');
-    expect(css).toContain('max-height: 650px');
+    expect(css).toContain('max-height: calc(100dvh -');
     expect(css).toContain('prefers-reduced-motion');
     const controls = readFileSync(new URL('../src/main-menu.css', import.meta.url), 'utf8');
     expect(controls).toContain('min-height: 3rem');

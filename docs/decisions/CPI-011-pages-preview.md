@@ -19,3 +19,11 @@ source SHA so the public site can be compared to the PR head after publication.
 This is a guest web preview. It does not claim an iOS simulator launch or a
 production release, and it does not merge the PR. Current CI and deployment
 evidence are recorded in PR #83.
+
+## Production artifact after phone approval · 8 November 2026
+
+The owner approved the gameplay at `9311fd7` in PR #86. The Pages workflow
+publishes the production player build from `apps/mobile/dist-pages` on main.
+It also compiles QA into `apps/mobile/dist-qa` for checks. The phone tester
+link serves the separate QA output on its review host. Production publication
+checks reject preview markers, tester routes and simulated pricing.

@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   CLASSIC_STORE_RULESET_VERSION,
-  BUSINESS_STORE_RULESET_VERSION,
+  READING_STORE_RULESET_VERSION,
   createRun,
   createPracticeCursor,
   PRACTICE_RNG,
@@ -60,8 +60,8 @@ describe('local balance tuning', () => {
     recordPracticePersonalBest(storage, '15', first);
     writeBalanceTuning(storage, { mode: 'independent', high: 20, low: 1 });
     const second = nextPracticeRuleset(true);
-    expect(first).toBe(tileExperimentVersion(60, 1, true, true));
-    expect(second).toBe(tileExperimentVersion(20, 1, true, true));
+    expect(first).toBe(tileExperimentVersion(60, 1, true, 'extended-reading'));
+    expect(second).toBe(tileExperimentVersion(20, 1, true, 'extended-reading'));
     expect(readPracticeCheckpoint(storage)).toMatchObject({ status: 'ready', state: run });
     expect(readPracticePersonalBest(storage, first)).toBe('15');
     expect(readPracticePersonalBest(storage, second)).toBeNull();
@@ -88,6 +88,6 @@ describe('local balance tuning', () => {
     expect(renderToStaticMarkup(createElement(BalanceTuner))).toContain('45% / 1%');
     vi.stubEnv('MODE', 'production');
     expect(renderToStaticMarkup(createElement(BalanceTuner))).toBe('');
-    expect(nextPracticeRuleset(true)).toBe(BUSINESS_STORE_RULESET_VERSION);
+    expect(nextPracticeRuleset(true)).toBe(READING_STORE_RULESET_VERSION);
   });
 });

@@ -3,7 +3,7 @@ import './brand-tokens.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
-import { QA_TOOLS_ENABLED } from './app-profile';
+import { SIMULATED_STORE_ENABLED } from './app-profile';
 import { BrandLaunchGate } from './brand-launch';
 import { TestStoreProvider } from './store-provider';
 import './theme-worlds.css';
@@ -28,7 +28,7 @@ createRoot(root).render(
   <StrictMode>
     <LanguageProvider>
       <BrandLaunchGate>
-        {QA_TOOLS_ENABLED ? (
+        {SIMULATED_STORE_ENABLED ? (
           <TestStoreProvider>
             <App />
           </TestStoreProvider>

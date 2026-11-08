@@ -1,3 +1,4 @@
+import { usesBalanceRules } from '@crystal-path-infinity/game-core';
 import type { EffectKind } from '@crystal-path-infinity/game-core';
 
 const summaries: Partial<Record<EffectKind, readonly [string, string]>> = {
@@ -45,6 +46,8 @@ const summaries: Partial<Record<EffectKind, readonly [string, string]>> = {
     'За 5 секунди: следващата щета от плочка е двойна.',
     'For 5 seconds: double the next tile damage.',
   ],
+  regen_5s: ['За 5 секунди получаваш SP на пулсове.', 'Gain SP in pulses for 5 seconds.'],
+  drain_5s: ['За 5 секунди губиш SP на пулсове.', 'Lose SP in pulses for 5 seconds.'],
   regen_3rows: [
     'След всяка от следващите 3 стъпки получаваш 6 SP, ако си останал жив.',
     'For your next 3 steps, gain 6 SP after each step you survive.',
@@ -74,6 +77,20 @@ const summaries: Partial<Record<EffectKind, readonly [string, string]>> = {
     'For 30 seconds: a mystery box every 3 rows.',
   ],
 };
-export function mysteryDiscoverySummary(kind: EffectKind, bg: boolean): string | null {
+export function mysteryDiscoverySummary(
+  kind: EffectKind,
+  bg: boolean,
+  rulesetVersion: string,
+): string | null {
+  if (!usesBalanceRules(rulesetVersion)) {
+    if (kind === 'inversion_5s')
+      return bg
+        ? 'За 5 секунди всяка счупена плочка ти дава SP, вместо да ти взема.'
+        : 'For 5 seconds, every broken tile gives SP instead of taking SP.';
+    if (kind === 'lucky_5s')
+      return bg
+        ? 'За 5 секунди първата счупена плочка ти дава SP, вместо да ти взема.'
+        : 'For 5 seconds, the next broken tile gives SP instead of taking SP.';
+  }
   return summaries[kind]?.[bg ? 0 : 1] ?? null;
 }

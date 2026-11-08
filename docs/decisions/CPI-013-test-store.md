@@ -1,5 +1,11 @@
 # CPI-013 / CPI-005 — Test store, resource reserve and original worlds
 
+**Допълнение · 8 ноември 2026 · преди merge и Pages публикация:** Този PR подготвя отделен QA профил за `https://georgi-cole.github.io/crystal-path-infinity/tester/` (директно към магазина: `#store`). След успешна публикация основният адрес ще остане production/player build без QA менюта, test wallet или симулиран checkout; `/tester/` ще бъде самостоятелна QA компилация със същия основен код, видими референтни тестови цени и симулации без таксуване. Никакви тестови салда или отключвания не се пренасят към player профила. Връзката е публична и няма достъп с парола — използва се само за локална демонстрация в отделно браузърно хранилище. Няма акаунти, класации, реклами, доставчик на плащане или реални разписки. За реални StoreKit/Play sandbox покупки е необходим native TestFlight/Play тестов build.
+
+Картите Worlds получават изображенията си със самата сборка. `apps/mobile/src/assets/world-previews/` съдържа портрети 384×576 и спокойната поза 176×176 от първия кадър на оригиналните трикадрови спрайтове. Изходните изображения за играта остават в `apps/mobile/public/assets/worlds/`. За нова карта преоразмери съответните източници със запазени пропорции, запази WebP с прозрачността на героя и добави двойката в `world-preview-art.ts`.
+
+В компактния QA екран след загуба възстановяването на SP е отделен ред във всяко действие. Симулираната реклама е обозначена като тест, а „Без реклама“ изисква 1 кредит и потвърждение. При слотове 11–15 действието е само с кредит. Резервът за активен опит е в сгъваема секция на паузата.
+
 **Version note · 6 November 2026:** the implementation details below describe the original `infinity-store-test-v1` baseline. The combined v11 playtest uses [the current rules](../CURRENT_GAME_RULES.md), including uncapped active SP, fixed 5 SP base damage, 5–7-row mystery spacing and the current effects/death clock. Wallet prices, the 200 SP cumulative direct-reserve allowance, 10/15 continuation slots and Assisted separation remain applicable. Ads and purchases remain simulated. Commercial proposals are in [the business plan](../BUSINESS_PLAN.md).
 
 Owner-authorized implementation, 5 November 2026. Follows the catalog preview
@@ -103,6 +109,36 @@ Local test balances and cosmetic unlocks must never migrate into live purchases.
 Signed physical-device billing/ads and production ranked assisted standings are
 not represented as implemented or tested. The owner authorized updating the
 GitHub Pages guest preview on 6 November 2026. Its build asserts simulated payment
-mode and records that boundary in deployment-info.json. Publication is manual
-from the explicitly allowed test-store branch (or main); PR events cannot publish.
-This does not enable live services, submit a store listing or authorize live sales.
+mode and records that boundary in deployment-info.json. This PR changes the
+publication policy so that, after it merges, only `main` can publish; each Pages
+artifact will contain the player build at the root and the separate simulated QA
+build under `/tester/`. PRs and the former test-store branch cannot publish or
+replace the player preview. This does not enable live services, submit a store
+listing or authorize live sales.
+
+## Mobile continuation presentation on 8 November 2026
+
+The QA result screen shows the full companion beside the outcome title. The
+continuation choices put Restore SP or Get credits on the main line and the
+simulated ad or credit method below it. The no-charge label sits above the
+buttons. The same confirmation and debit flow applies to credit use after a
+test checkout. The button artwork follows the equipped world.
+
+## Тестови инструменти в паузата · 8 ноември 2026
+
+QA събира резервите и тестовата стая в отделен ред „Тестови инструменти“.
+Разходването, потвърждението и локалният портфейл остават същите. Player
+сборката показва общия списък на паузата без QA реда.
+
+## Player preview journey on 8 November 2026
+
+The temporary player-preview build exercises the same device-local simulator
+with a separate wallet key. New runs can simulate ads and buy and spend
+continuation credits. Opening the credit shelf from defeat keeps that run
+recoverable and puts the return action at the top. At the cap, the continuation
+panel disappears and the usual quota text appears.
+
+Explore opens the world showcase even when purchases are unavailable. In both
+web reviews, simulated checkout also allows a world to be unlocked and equipped.
+Player review omits reset, injected checkout failure and the pending test action.
+The simulator does not represent a signed native purchase or a live payment.
