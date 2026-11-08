@@ -418,6 +418,10 @@
   margin: -0.2rem auto -0.9rem;
   pointer-events: none;
 }
+.cpi-relic-source > .cpi-world-cache {
+  transform: scale(0.7);
+  transform-origin: 50% 92%;
+}
 .cpi-relic-source::before {
   content: '';
   position: absolute;

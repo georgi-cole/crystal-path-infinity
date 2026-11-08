@@ -6,7 +6,7 @@ import { applyTutorialAction, createTutorialSession } from './bridge-tutorial-mo
 import type { TutorialAction, TutorialStep } from './bridge-tutorial-model';
 import { useLanguage } from './language-context';
 import type { MessageKey } from './i18n/messages';
-import { GUIDE_CHAPTERS, GUIDE_PACING, GUIDE_RULES } from './crystal-guide-contract';
+import { GUIDE_CHAPTERS, GUIDE_RULES } from './crystal-guide-contract';
 import { PrismBridge } from './prism-bridge';
 import { presentInfinityScene } from './infinity-presentation';
 import { createSceneDirector } from './scene-cinematics';
@@ -128,41 +128,33 @@ export function BridgeTutorial({
       data-guide-rules={GUIDE_RULES.version}
     >
       <header className="cpi-guide-topline">
-        <span>{t('guide.eyebrow')}</span>
         <span className="cpi-guide-rehearsal">
           <i />
           {t('guide.rehearsal')}
         </span>
+        <ol className="cpi-guide-chapters" aria-label={t('guide.chapters')}>
+          {GUIDE_CHAPTERS.map((id, index) => (
+            <li
+              key={id}
+              className={
+                index === chapter ? 'is-current' : index < chapter || completed ? 'is-complete' : ''
+              }
+              aria-current={index === chapter ? 'step' : undefined}
+            >
+              <span className="cpi-guide-chapter-mark" aria-hidden="true">
+                {index < chapter || completed ? '\u2713' : number(index + 1)}
+              </span>
+              <span>{t(CHAPTER_LABELS[index])}</span>
+            </li>
+          ))}
+        </ol>
       </header>
-      <ol className="cpi-guide-chapters" aria-label={t('guide.chapters')}>
-        {GUIDE_CHAPTERS.map((id, index) => (
-          <li
-            key={id}
-            className={
-              index === chapter ? 'is-current' : index < chapter || completed ? 'is-complete' : ''
-            }
-            aria-current={index === chapter ? 'step' : undefined}
-          >
-            <span className="cpi-guide-chapter-mark" aria-hidden="true">
-              {index < chapter || completed ? '\u2713' : number(index + 1)}
-            </span>
-            <span>{t(CHAPTER_LABELS[index])}</span>
-          </li>
-        ))}
-      </ol>
       <div className="cpi-guide-layout">
         <div className="cpi-guide-story">
-          <span className="cpi-guide-index">
-            {number(chapter + 1).padStart(2, '0')} /{' '}
-            {number(GUIDE_CHAPTERS.length).padStart(2, '0')}
-          </span>
           <h1 id="cpi-tutorial-title" data-menu-heading data-tutorial-heading tabIndex={-1}>
             {t(COPY[step][0])}
           </h1>
           <p id="cpi-guide-instruction">{t(COPY[step][1])}</p>
-          {step === 'pressure' && GUIDE_PACING.bonus > 0 && (
-            <p className="cpi-guide-whisper">{t('guide.survivalWhisper')}</p>
-          )}
           <div className="cpi-guide-actions">
             {canChoose && (
               <button

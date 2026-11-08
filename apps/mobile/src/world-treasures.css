@@ -32,14 +32,23 @@
   outline-offset: 2px;
   border-radius: 12px;
 }
+.cpi-world-cache.is-open {
+  --open-lid: translate(-9px, -23px) rotate(-22deg);
+}
+.cpi-world-cache.world-jelly.is-open {
+  --open-lid: translateY(-24px) rotate(-8deg);
+}
 .cpi-world-cache.is-open .cpi-cache-lid {
+  transform: var(--open-lid);
+  opacity: 0.65;
   animation: cpi-cache-unseal 0.5s cubic-bezier(0.2, 0.7, 0.3, 1) both;
 }
-.cpi-world-cache.world-jelly.is-open .cpi-cache-lid {
-  animation-name: cpi-pearl-unseal;
-}
 .cpi-world-cache.is-open .cpi-cache-core {
-  animation: cpi-cache-ignite 0.8s ease-out both;
+  opacity: 0.8;
+  animation: cpi-cache-ignite 0.8s ease-out;
+}
+.cpi-world-cache.is-open.is-still :is(.cpi-cache-lid, .cpi-cache-core) {
+  animation: none;
 }
 .cpi-world-power {
   display: block;
@@ -260,23 +269,18 @@
   font-size: 1.05rem;
 }
 
-.cpi-run-outcome.is-world-outcome {
-  border-color: color-mix(in srgb, var(--world-accent) 40%, transparent);
-  border-radius: 1rem;
-  background: linear-gradient(150deg, var(--world-panel), #0b101b 60%);
-  padding: var(--cpi-dialog-pad, 1.15rem);
-}
 .cpi-world-outcome-hero {
-  height: clamp(3.65rem, 10dvh, 5.25rem);
+  --portrait-size: clamp(3.9rem, 22vw, 6rem);
   position: relative;
   isolation: isolate;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--portrait-size);
   align-items: center;
+  gap: 0.5rem;
+  margin: calc(-1 * var(--cpi-dialog-pad)) calc(-1 * var(--cpi-dialog-pad)) 0.5rem;
+  padding: 0.3rem var(--cpi-dialog-pad);
   overflow: hidden;
-  margin: calc(-1 * var(--cpi-dialog-pad, 1.15rem)) calc(-1 * var(--cpi-dialog-pad, 1.15rem))
-    0.55rem;
-  padding: 0.55rem var(--cpi-dialog-pad, 1.15rem);
-  border-bottom: 1px solid color-mix(in srgb, var(--world-accent) 25%, transparent);
+  border-bottom: 1px solid var(--dialog-edge);
 }
 .cpi-world-outcome-hero > img {
   position: absolute;
@@ -286,7 +290,7 @@
   height: 100%;
   object-fit: cover;
   object-position: 50% 35%;
-  opacity: 0.32;
+  opacity: 0.38;
   mask-image: linear-gradient(90deg, #000, #0002);
 }
 .cpi-world-outcome-hero::after {
@@ -294,79 +298,40 @@
   position: absolute;
   z-index: -1;
   inset: 0;
-  background: linear-gradient(90deg, #17171930, var(--world-panel));
+  background: linear-gradient(90deg, #101014b8, var(--dialog-material) 92%);
 }
-.cpi-world-outcome-label {
-  display: grid;
-  gap: 0.45rem;
-  max-width: calc(100% - 6rem);
-}
-.cpi-world-outcome-label > span {
-  font-size: 0.6rem;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: var(--world-accent);
-}
-.cpi-world-outcome-label > strong {
-  font: 500 1.3rem/1.15 var(--cpi-font-display);
-  color: var(--world-soft);
+.cpi-world-outcome-hero .cpi-world-outcome-label {
+  margin: 0;
 }
 .cpi-world-outcome-companion {
-  position: absolute;
-  width: 6.5rem;
-  right: 0.4rem;
-  bottom: -0.25rem;
+  position: relative;
+  isolation: isolate;
+  aspect-ratio: 1;
 }
 .cpi-world-outcome-orbit {
   position: absolute;
-  width: 6.6rem;
-  height: 6.6rem;
-  right: 0.4rem;
-  bottom: -0.6rem;
-  border: 1px solid color-mix(in srgb, var(--world-accent) 35%, transparent);
+  z-index: -1;
+  inset: 10%;
+  border: 1px solid var(--dialog-edge);
   border-radius: 50%;
-  box-shadow: inset 0 0 24px color-mix(in srgb, var(--world-accent) 12%, transparent);
+  background: radial-gradient(
+    ellipse,
+    color-mix(in srgb, var(--dialog-soft) 14%, transparent),
+    transparent 72%
+  );
 }
 .world-chaos .cpi-world-outcome-orbit {
   border-style: dashed;
-  border-width: 3px;
-}
-.cpi-run-outcome.is-world-outcome .cpi-dialog-heading .cpi-dialog-emblem {
-  display: none;
-}
-.cpi-run-outcome.is-world-outcome .cpi-dialog-heading {
-  margin-bottom: 0.4rem;
-}
-.cpi-run-outcome.is-world-outcome h2 {
-  font-size: 1.45rem;
-  margin: 0;
-}
-.cpi-run-outcome h2:focus {
-  outline: none;
 }
 .cpi-run-outcome.is-world-outcome .cpi-result-score {
-  padding: 0.45rem 0.65rem;
-  border-radius: 0.65rem;
-  border: 1px solid color-mix(in srgb, var(--world-accent) 24%, transparent);
-  background: #ffffff04;
+  padding: 0.35rem 0.65rem;
 }
 .cpi-run-outcome.is-world-outcome .cpi-result-score > strong {
   color: var(--world-soft);
 }
-.cpi-run-outcome.is-world-outcome .cpi-revive-offer {
-  border-radius: 0.65rem;
-  border-color: color-mix(in srgb, var(--world-accent) 25%, transparent);
-  background: #ffffff04;
-}
 .cpi-run-outcome.is-world-outcome .cpi-revive-offer > strong,
 .cpi-run-outcome.is-world-outcome .cpi-run-status-label {
   color: var(--world-accent);
-}
-.cpi-run-outcome.is-world-outcome .cpi-overlay-actions > button[data-cpi-overlay-primary] {
-  color: #101b21;
-  background: var(--world-accent);
-  border-color: transparent;
-  font-weight: 600;
 }
 
 @keyframes cpi-cache-heartbeat {
@@ -375,25 +340,17 @@
   }
 }
 @keyframes cpi-cache-unseal {
-  to {
-    transform: translate(-9px, -23px) rotate(-22deg);
-    opacity: 0.3;
-  }
-}
-@keyframes cpi-pearl-unseal {
-  to {
-    transform: translateY(-24px) rotate(-8deg);
-    opacity: 0.2;
+  from {
+    transform: none;
+    opacity: 1;
   }
 }
 @keyframes cpi-cache-ignite {
-  20%,
-  55% {
-    opacity: 1;
+  from {
+    opacity: 0.35;
   }
-  to {
-    opacity: 0;
-    transform: translateY(-15px);
+  45% {
+    opacity: 1;
   }
 }
 @keyframes cpi-cache-depart {
@@ -435,13 +392,5 @@
   .cpi-world-cache *,
   .cpi-world-reveal * {
     animation: none !important;
-  }
-}
-@media (max-height: 650px) {
-  .cpi-world-outcome-hero {
-    height: 4.7rem;
-  }
-  .cpi-world-outcome-companion {
-    width: 5rem;
   }
 }

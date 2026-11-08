@@ -9,6 +9,8 @@ import type {
 import { useLanguage } from './language-context';
 import { effectCopy } from './mystery.messages';
 import { mysteryChoiceCards } from './mystery-choice-model';
+import { useThemeId } from './store-context';
+import { MysteryCache } from './world-treasures';
 import relicClosed from './assets/mystery/relic-closed.webp?inline';
 import relicOpen from './assets/mystery/relic-open.webp?inline';
 import './mystery-hologram.css';
@@ -100,6 +102,7 @@ export function HolographicOffer({
   marketingHints?: number;
 }) {
   const { locale } = useLanguage();
+  const theme = useThemeId();
   const bg = locale === 'bg',
     tier = mysteryTier(pact.kind),
     copy = effectCopy(locale, pact.kind, rulesetVersion);
@@ -246,7 +249,11 @@ export function HolographicOffer({
         </p>
       )}
       <div className="cpi-relic-source" aria-hidden="true">
-        <MysteryCube tier={tier} opened />
+        {theme === 'obsidian' ? (
+          <MysteryCube tier={tier} opened />
+        ) : (
+          <MysteryCache theme={theme} open />
+        )}
       </div>
       <span
         className={'cpi-choice-clock' + (remaining === 0 ? ' is-active' : '')}

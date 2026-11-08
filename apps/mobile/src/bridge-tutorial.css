@@ -1,28 +1,43 @@
 /* A playable field guide, sharing the actual bridge and crystal materials. */
-html:has(.cpi-crystal-guide) {
-  scrollbar-width: thin;
-  scrollbar-color: #5a4656 #080708;
+.cpi-menu-shell:is(.cpi-menu-view--tutorial, .cpi-menu-view--journal) .cpi-menu-inner {
+  padding-block: max(0.4rem, env(safe-area-inset-top, 0px))
+    max(0.4rem, env(safe-area-inset-bottom, 0px));
+  padding-inline: max(0.7rem, env(safe-area-inset-left, 0px))
+    max(0.7rem, env(safe-area-inset-right, 0px));
+}
+.cpi-menu-shell:is(.cpi-menu-view--tutorial, .cpi-menu-view--journal) .cpi-menu-header {
+  min-height: 2.75rem;
+  padding-bottom: 0;
+}
+.cpi-guide-library {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  width: min(100%, 65rem);
+  margin-inline: auto;
 }
 .cpi-crystal-guide {
-  width: min(100%, 1080px);
-  margin: auto;
-  padding: 1.6rem 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.6rem;
   color: var(--cpi-text);
 }
 .cpi-guide-topline {
   display: flex;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.45rem;
   align-items: center;
+  border-bottom: 1px solid #af8aa52c;
   color: #bda2b9;
-  font-size: 0.55rem;
-  letter-spacing: 0.22em;
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 .cpi-guide-rehearsal {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
   color: #96b7ab;
 }
 .cpi-guide-rehearsal i {
@@ -33,18 +48,17 @@ html:has(.cpi-crystal-guide) {
   box-shadow: 0 0 8px #8effc763;
 }
 .cpi-guide-chapters {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  display: flex;
+  gap: clamp(0.35rem, 1.5vw, 0.85rem);
   padding: 0;
-  margin: 1.8rem 0 2.5rem;
+  margin: 0;
   list-style: none;
-  border-bottom: 1px solid #af8aa51c;
 }
 .cpi-guide-chapters li {
   display: flex;
-  gap: 0.6rem;
+  gap: 0.3rem;
   align-items: center;
-  padding: 0 0 0.8rem;
+  padding-bottom: 0.35rem;
   color: #65636c;
   font-size: 0.6rem;
   position: relative;
@@ -54,8 +68,8 @@ html:has(.cpi-crystal-guide) {
   place-items: center;
   font: 400 0.55rem var(--cpi-font-display);
   border: 1px solid #b8a4b526;
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 1.25rem;
+  height: 1.25rem;
   border-radius: 50%;
 }
 .cpi-guide-chapters .is-current {
@@ -82,47 +96,48 @@ html:has(.cpi-crystal-guide) {
   display: grid;
   grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
   align-items: center;
-  gap: clamp(1.5rem, 5vw, 5rem);
-}
-.cpi-guide-index {
-  font-size: 0.6rem;
-  letter-spacing: 0.18em;
-  color: #9d7f97;
+  gap: clamp(0.8rem, 3.5vw, 3rem);
+  flex: 1;
 }
 .cpi-guide-story h1 {
-  font: 550 clamp(1.75rem, 3.8vw, 3rem)/1.12 var(--cpi-font-display);
+  font: 550 clamp(1.35rem, 3.5vw, 2.5rem)/1.12 var(--cpi-font-display);
   letter-spacing: -0.045em;
-  margin: 1rem 0;
-  max-width: 10em;
+  margin: 0 0 0.38rem;
+  max-width: 17em;
 }
 .cpi-guide-story h1:focus {
   outline: none;
 }
 .cpi-guide-story > p {
   font-size: 0.85rem;
-  line-height: 1.75;
+  line-height: 1.5;
   max-width: 30em;
   margin: 0;
   color: #a9a3b0;
 }
-.cpi-guide-story > .cpi-guide-whisper {
-  font-size: 0.7rem;
-  color: #84a798;
-  margin-top: 1rem;
-}
 .cpi-guide-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.2rem 0.65rem;
+  margin-top: 0.6rem;
+}
+.cpi-guide-actions:has(> .cpi-guide-text-button) {
   display: grid;
-  gap: 0.5rem;
-  margin-top: 2rem;
-  max-width: 19rem;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+}
+.cpi-guide-actions > .cpi-guide-text-button {
+  justify-content: center;
+  text-align: center;
 }
 .cpi-guide-primary {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.4rem;
+  width: auto;
   min-height: 2.75rem;
-  padding: 0.9rem 1.1rem;
+  padding: 0.5rem 0.7rem;
   border: 1px solid #b5789c82;
   border-radius: 6px;
   background: linear-gradient(125deg, #3a2034, #130d14);
@@ -170,7 +185,7 @@ html:has(.cpi-crystal-guide) {
 .cpi-guide-stage {
   position: relative;
   isolation: isolate;
-  height: clamp(24rem, 58dvh, 34rem);
+  height: clamp(11rem, 58dvh, 32rem);
   overflow: hidden;
   border-radius: 0.8rem;
   border: 1px solid #b893a826;
@@ -204,14 +219,13 @@ html:has(.cpi-crystal-guide) {
   align-items: start;
   position: absolute;
   z-index: 3;
-  top: 1.3rem;
-  left: 1.4rem;
-  right: 1.4rem;
+  top: 0.55rem;
+  inset-inline: 0.7rem;
   pointer-events: none;
 }
 .cpi-guide-instruments > div {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.18rem;
   min-width: 5rem;
 }
 .cpi-guide-instruments > div > span {
@@ -248,7 +262,7 @@ html:has(.cpi-crystal-guide) {
 }
 .cpi-guide-stage-caption {
   position: absolute;
-  bottom: 1.2rem;
+  bottom: 0.45rem;
   left: 1rem;
   right: 1rem;
   text-align: center;
@@ -259,15 +273,19 @@ html:has(.cpi-crystal-guide) {
   pointer-events: none;
 }
 .cpi-guide-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-block: 1rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem;
+  width: min(100%, 33rem);
+  margin: 0.4rem auto 0.6rem;
+}
+.cpi-guide-library :is(.cpi-guide-tabs .cpi-menu-action, .cpi-guide-actions .cpi-menu-action) {
+  min-height: 2.75rem;
+  padding: 0.4rem 0.7rem;
 }
 .cpi-guide-tabs .cpi-menu-action {
-  width: auto;
-  min-height: 3rem;
-  padding: 0.65rem 1rem;
+  justify-content: center;
+  text-align: center;
 }
 .cpi-guide-tabs .cpi-menu-action-chevron {
   display: none;
@@ -275,8 +293,8 @@ html:has(.cpi-crystal-guide) {
 .cpi-guide-clock {
   position: absolute;
   z-index: 3;
-  top: 4.5rem;
-  inset-inline: 1.4rem;
+  top: 3rem;
+  inset-inline: 0.7rem;
   pointer-events: none;
 }
 .cpi-guide-stage.is-pursued {
@@ -326,10 +344,11 @@ html:has(.cpi-crystal-guide) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.6rem;
   border-top: 1px solid #b68ca51c;
-  margin-top: 2rem;
-  padding-top: 0.5rem;
+}
+.cpi-guide-footer > button {
+  flex: none;
 }
 .cpi-guide-footer > span {
   font-size: 0.57rem;
@@ -353,58 +372,63 @@ html:has(.cpi-crystal-guide) {
   }
 }
 @media (max-width: 700px) {
-  .cpi-crystal-guide {
-    padding: 1rem 0 0.5rem;
-  }
-  .cpi-guide-chapters {
-    margin: 1.2rem 0 1.5rem;
-  }
-  .cpi-guide-chapters li {
-    gap: 0.35rem;
-    justify-content: center;
-  }
   .cpi-guide-chapters li > span:last-child {
-    display: none;
-  }
-  .cpi-guide-topline {
-    font-size: 0.45rem;
-    letter-spacing: 0.14em;
-  }
-  .cpi-guide-layout {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-  .cpi-guide-story {
-    display: grid;
-    grid-template-columns: 1fr;
-  }
-  .cpi-guide-index {
-    font-size: 0.5rem;
-  }
-  .cpi-guide-story h1 {
-    max-width: 18em;
-    font-size: clamp(1.6rem, 7vw, 2.2rem);
-    margin: 0.7rem 0;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
   .cpi-guide-story > p {
-    font-size: 0.75rem;
-    line-height: 1.65;
-    max-width: 100%;
+    font-size: 0.8rem;
   }
-  .cpi-guide-actions {
-    max-width: none;
-    margin-top: 1rem;
+}
+@media (max-width: 700px) and (orientation: portrait) {
+  .cpi-guide-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(7.5rem, 1fr);
+    align-items: stretch;
+    gap: 0.55rem;
   }
   .cpi-guide-stage {
-    height: clamp(20rem, 48dvh, 29rem);
-    grid-row: 2;
+    height: auto;
+    max-height: 31rem;
   }
-  .cpi-guide-primary {
-    padding: 0.75rem 1rem;
-    font-size: 0.72rem;
+}
+@media (max-width: 700px) and (max-height: 540px) and (orientation: portrait) {
+  .cpi-guide-layout {
+    grid-template-rows: auto minmax(6rem, 1fr);
   }
-  .cpi-guide-footer {
-    margin-top: 1rem;
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  .cpi-crystal-guide {
+    gap: 0.4rem;
+  }
+  .cpi-guide-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0.7rem;
+  }
+  .cpi-guide-stage {
+    height: clamp(6.25rem, calc(100dvh - 14.5rem), 15rem);
+  }
+  .cpi-guide-story h1 {
+    font-size: 1.2rem;
+  }
+  .cpi-guide-actions {
+    margin-top: 0.45rem;
+  }
+  .cpi-menu-view--journal .cpi-guide-library:has(> .cpi-mystery-journal) {
+    display: grid;
+    grid-template-columns: minmax(7rem, 0.25fr) minmax(0, 1fr);
+    align-content: start;
+    align-items: start;
+    gap: 0.65rem;
+    padding-top: 0.4rem;
+  }
+  .cpi-guide-library:has(> .cpi-mystery-journal) > .cpi-guide-tabs {
+    grid-template-columns: 1fr;
+    margin: 0;
   }
 }
 @media (prefers-reduced-motion: reduce) {

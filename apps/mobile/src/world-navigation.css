@@ -234,13 +234,7 @@
   transform: rotate(-25deg);
 }
 .cpi-infinity-scene[data-world]:not([data-world='obsidian'])
-  :is(
-    .cpi-overlay-card,
-    .cpi-resource-panel,
-    .cpi-result-score,
-    .cpi-revive-offer,
-    .cpi-result-details
-  ) {
+  :is(.cpi-resource-panel, .cpi-result-score, .cpi-revive-offer, .cpi-result-details) {
   border-color: color-mix(in srgb, var(--world-accent) 30%, transparent);
   border-radius: var(--world-radius);
   background: linear-gradient(
@@ -249,63 +243,19 @@
     color-mix(in srgb, var(--world-panel) 35%, #070709) 65%
   );
 }
-.cpi-infinity-scene[data-world]:not([data-world='obsidian'])
-  .cpi-overlay-actions
-  button[data-cpi-overlay-primary] {
-  border-radius: var(--world-radius);
-}
-.cpi-infinity-scene[data-world]:not([data-world='obsidian'])
-  :is(
-    .cpi-resource-actions button,
-    .cpi-resource-confirm button,
-    .cpi-reward-actions button,
-    .cpi-overlay-actions button:not([data-cpi-overlay-primary])
-  ) {
-  border-radius: var(--world-radius);
-  border-color: color-mix(in srgb, var(--world-accent) 40%, transparent);
-  background: linear-gradient(135deg, #ffffff0b, transparent 45%), var(--world-panel);
-  color: color-mix(in srgb, var(--world-accent) 25%, #fff);
-  font-family: var(--cpi-font-body);
-  font-size: 0.83rem;
-  font-weight: 600;
-  letter-spacing: 0.025em;
-}
-.cpi-infinity-scene[data-world]:not([data-world='obsidian'])
-  :is(
-    .cpi-resource-actions button,
-    .cpi-resource-confirm button,
-    .cpi-reward-actions button,
-    .cpi-overlay-actions button:not([data-cpi-overlay-primary])
-  ):hover:not(:disabled) {
-  border-color: var(--world-soft);
-  background-color: color-mix(in srgb, var(--world-accent) 10%, var(--world-panel));
-}
-
 /* Guide controls follow the world; its isolated bridge example stays Obsidian. */
-.cpi-mystery-journal[data-world]:not([data-world='obsidian']) .cpi-journal-grid article {
-  border-radius: var(--world-radius);
-  background: color-mix(in srgb, var(--world-panel) 92%, transparent);
-}
-.cpi-mystery-journal[data-world]:not([data-world='obsidian']) button {
-  border-radius: var(--world-radius);
-  border-color: color-mix(in srgb, var(--world-accent) 40%, transparent);
-  background: var(--world-panel);
-  color: var(--world-accent);
-  font: 600 0.73rem var(--cpi-font-body);
-  letter-spacing: 0.025em;
-}
-.cpi-menu-shell[data-world]:not([data-world='obsidian']) :is(.cpi-guide-topline, .cpi-guide-index) {
+.cpi-menu-shell[data-world]:not([data-world='obsidian']) .cpi-guide-topline {
   color: color-mix(in srgb, var(--world-accent) 60%, #a9a3b0);
 }
 .cpi-menu-shell[data-world]:not([data-world='obsidian']) .cpi-guide-chapters .is-current {
   color: var(--world-accent);
 }
 .cpi-menu-shell[data-world]:not([data-world='obsidian'])
-  :is(.cpi-guide-chapters .is-complete, .cpi-guide-whisper, .cpi-guide-rehearsal) {
+  :is(.cpi-guide-chapters .is-complete, .cpi-guide-rehearsal) {
   color: var(--world-soft);
 }
 .cpi-menu-shell[data-world]:not([data-world='obsidian'])
-  :is(.cpi-guide-chapters, .cpi-guide-chapter-mark, .cpi-guide-footer) {
+  :is(.cpi-guide-topline, .cpi-guide-chapter-mark, .cpi-guide-footer) {
   border-color: color-mix(in srgb, var(--world-accent) 20%, transparent);
 }
 .cpi-menu-shell[data-world]:not([data-world='obsidian'])

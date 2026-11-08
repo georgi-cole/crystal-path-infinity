@@ -32,6 +32,8 @@ import {
 } from '../src/mystery-effects';
 import { parseRankedReply } from '../src/ranked/ranked-client';
 import { mysteryChoiceCards } from '../src/mystery-choice-model';
+import { THEME_IDS } from '../src/store-catalog';
+import { ThemeScope } from '../src/store-provider';
 import {
   readPracticeCheckpoint,
   readPracticePersonalBest,
@@ -533,6 +535,31 @@ describe('mystery feedback, practice chamber and public contracts', () => {
       }),
     );
     expect(soulHtml).toMatch(/disabled="" data-pact-option="hint"/);
+  });
+
+  it('opens a choice with the equipped relic artwork for every world', () => {
+    const state = createMysteryLabRun('half_life', 100, 91025, RELIC_RULESET_VERSION).state;
+    for (const theme of THEME_IDS) {
+      const html = renderToStaticMarkup(
+        createElement(ThemeScope, {
+          theme,
+          children: createElement(PactPanel, {
+            pact: state.pact,
+            hints: state.hints,
+            rulesetVersion: state.rulesetVersion,
+            revealed: false,
+            disabled: false,
+            onChoose: () => {},
+          }),
+        }),
+      );
+      if (theme === 'obsidian') {
+        expect(html).toContain('cpi-mystery-cube is-open');
+      } else {
+        expect(html).toContain('cpi-world-cache world-' + theme + ' is-open');
+        expect(html).not.toContain('cpi-mystery-cube');
+      }
+    }
   });
 
   it.each(PACT_KINDS)(

@@ -185,3 +185,13 @@ ranked eligibility, and both pet portraits can be explored without buying anythi
 
 
 Public names are **Boltmuffin, Squishphony, Rockmallow, Flipzel, Pawrachute and Purralune**, with owner-selected Bulgarian names in the current table above. Each character and world share a name. Internal IDs and historical generation prompts stay stable so existing test ownership, receipts and reproducible art are preserved.
+
+### Mobile run controls on 8 November 2026
+
+Seven original engravings in the mobile app's run-control SVG collection depict
+Obsidian facets, Boltmuffin's riveted copper, Squishphony's opal ripples,
+Rockmallow's jade leaf, Neo Striker's enamel stripes, Pawrachute's canvas
+stitching and Purralune's moonlit trim. The app bundles the vector masks and
+colors them with each world's material palette. The result uses the entire
+existing companion frame inside a dedicated portrait slot. Choice offers
+reuse the matching bridge cache in its open state.

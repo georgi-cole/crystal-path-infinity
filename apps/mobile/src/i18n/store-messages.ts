@@ -10,6 +10,8 @@ export const storeEn = {
   'vault.morePacks': 'More packs',
   'vault.fewerPacks': 'Show small packs',
   'vault.shopCredits': 'Get credits · skip the ad',
+  'vault.getCredits': 'Get credits',
+  'vault.skipAd': 'Skip the ad',
   'vault.keepHints': 'The remaining hints stay available on the bridge.',
   'vault.restartFree': 'Start again · free',
   'vault.returnToRun': 'Return to your crossing',
@@ -192,9 +194,8 @@ export const storeEn = {
   'vault.skipAdCredit': 'Skip ad · 1 credit',
   'vault.oneCredit': 'Use 1 credit',
   'vault.restoreSp': 'Restore {sp} SP',
-  'vault.continueCount': 'Continuation {next} of 15 · {credits} credits owned',
-  'vault.extra':
-    'The first ten chances are behind you. A credit opens one of five extra continuations.',
+  'vault.continueCount': 'Continue {next}/15 · {credits} credits',
+  'vault.extra': 'Continues 11–15 cost 1 credit each.',
   'vault.emptyCredits':
     'No continuation credits in reserve. Return to the store to add a test pack.',
   'vault.resourceUsed': 'Applied to this run.',
@@ -221,6 +222,8 @@ export const storeBg: Record<keyof typeof storeEn, string> = {
   'vault.morePacks': 'Още пакети',
   'vault.fewerPacks': 'Покажи малките пакети',
   'vault.shopCredits': 'Вземи кредити · без реклама',
+  'vault.getCredits': 'Вземи кредити',
+  'vault.skipAd': 'Без реклама',
   'vault.keepHints': 'Останалите подсказки са достъпни по пътя.',
   'vault.restartFree': 'Нов опит · безплатно',
   'vault.returnToRun': 'Към играта',
@@ -404,9 +407,8 @@ export const storeBg: Record<keyof typeof storeEn, string> = {
   'vault.skipAdCredit': 'Без реклама · 1 кредит',
   'vault.oneCredit': 'Използвай 1 кредит',
   'vault.restoreSp': 'Възстанови {sp} SP',
-  'vault.continueCount': 'Продължаване {next} от 15 · {credits} притежавани кредита',
-  'vault.extra':
-    'Първите десет шанса са зад теб. Кредит отключва едно от пет допълнителни продължавания.',
+  'vault.continueCount': 'Продължаване {next}/15 · {credits} кредита',
+  'vault.extra': 'Продължавания 11–15 струват по 1 кредит.',
   'vault.emptyCredits': 'Нямаш кредити в резерв. Добави тестов пакет от магазина.',
   'vault.resourceUsed': 'Приложено в този опит.',
   'vault.assistedResult':

@@ -115,3 +115,11 @@ artifact will contain the player build at the root and the separate simulated QA
 build under `/tester/`. PRs and the former test-store branch cannot publish or
 replace the player preview. This does not enable live services, submit a store
 listing or authorize live sales.
+
+## Mobile continuation presentation on 8 November 2026
+
+The QA result screen shows the full companion beside the outcome title. The
+continuation choices put Restore SP or Get credits on the main line and the
+simulated ad or credit method below it. The no-charge label sits above the
+buttons. The same confirmation and debit flow applies to credit use after a
+test checkout. The button artwork follows the equipped world.

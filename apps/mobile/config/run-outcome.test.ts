@@ -328,7 +328,7 @@ describe('CPI-015 HUD and result state contract', () => {
     expect(scene).toContain('restartLock.current');
     const css = readFileSync(new URL('../src/run-outcome.css', import.meta.url), 'utf8');
     expect(css).toContain('grid-template-columns: repeat(2, minmax(0, 1fr))');
-    expect(css).toContain('max-height: 650px');
+    expect(css).toContain('max-height: calc(100dvh -');
     expect(css).toContain('prefers-reduced-motion');
     const controls = readFileSync(new URL('../src/main-menu.css', import.meta.url), 'utf8');
     expect(controls).toContain('min-height: 3rem');

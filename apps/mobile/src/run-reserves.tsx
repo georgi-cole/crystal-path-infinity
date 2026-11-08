@@ -102,8 +102,8 @@ export function RunReserves({
                       void onUse('ad', 1);
                     }}
                   >
-                    <span>{t('vault.testAd')}</span>
                     <strong>{t('vault.restoreSp', { sp: number(sp) })}</strong>
+                    <span>{t('vault.testAd')}</span>
                   </button>
                 )}
                 {(snapshot.credits > 0 || (state.revivesApplied >= 10 && !onOpenStore)) && (
@@ -114,10 +114,10 @@ export function RunReserves({
                     disabled={busy || snapshot.credits < 1 || !!error}
                     onClick={() => request('credit', 1, t('vault.useCredit', { sp: number(sp) }))}
                   >
+                    <strong>{t('vault.restoreSp', { sp: number(sp) })}</strong>
                     <span>
                       {t(state.revivesApplied < 10 ? 'vault.skipAdCredit' : 'vault.oneCredit')}
                     </span>
-                    <strong>{t('vault.restoreSp', { sp: number(sp) })}</strong>
                   </button>
                 )}
                 {snapshot.credits === 0 && onOpenStore && (
@@ -127,12 +127,18 @@ export function RunReserves({
                     data-cpi-overlay-primary={state.revivesApplied >= 10 || undefined}
                     disabled={busy || !!error}
                     onClick={onOpenStore}
+                    aria-label={state.revivesApplied < 10 ? t('vault.shopCredits') : undefined}
                   >
-                    {t('vault.shopCredits')}
+                    <strong>{t('vault.getCredits')}</strong>
+                    <span>
+                      {state.revivesApplied < 10
+                        ? t('vault.skipAd')
+                        : t('vault.restoreSp', { sp: number(sp) })}
+                    </span>
                   </button>
                 )}
               </div>
-              {snapshot.credits === 0 && state.revivesApplied >= 10 && (
+              {snapshot.credits === 0 && state.revivesApplied >= 10 && !onOpenStore && (
                 <p>{t('vault.emptyCredits')}</p>
               )}
             </>
