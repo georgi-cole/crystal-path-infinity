@@ -7,6 +7,23 @@ const env = {
   CPI_GATEWAY_KEY: '7'.repeat(64),
   CPI_WORKER_KEY: '8'.repeat(64),
 };
+test('scheduled maintenance uses manual redirects and rejects redirect responses', async (t) => {
+  t.mock.method(globalThis, 'fetch', async (url, init) => {
+    assert.equal(url, env.CPI_EDGE_URL + '/_worker');
+    assert.equal(init.method, 'POST');
+    assert.equal(init.redirect, 'manual');
+    assert.equal(new Headers(init.headers).get('authorization'), 'Bearer ' + env.CPI_WORKER_KEY);
+    return Response.redirect('https://other.example/', 307);
+  });
+  let maintenance;
+  await worker.scheduled({}, env, {
+    waitUntil(pending) {
+      maintenance = pending;
+    },
+  });
+  assert.ok(maintenance);
+  await assert.rejects(maintenance, /Crystal Path maintenance needs attention/);
+});
 test('gateway signs trusted country/peer, preserves raw bodies, and discards forged context headers', async () => {
   const original = globalThis.fetch;
   let forwarded;
