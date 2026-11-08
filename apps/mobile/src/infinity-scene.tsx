@@ -1240,45 +1240,6 @@ function InfinityRun({
     }
   }
 
-  async function useResource(resource: TestResource, amount: number): Promise<boolean> {
-    const runtime = runtimeRef.current;
-    if (
-      !runtime ||
-      !store ||
-      !ready ||
-      commandLock.current ||
-      trial ||
-      directorRef.current?.isBusy()
-    )
-      return false;
-    const previous = runtime.getState();
-    if (!previous.storeTest || (previous.status === 'playing' && !paused)) return false;
-    commandLock.current = true;
-    setBusy(true);
-    setResourceMessage('');
-    try {
-      const result = await runtime.bind(
-        { type: 'test-resource', resource, amount, sequence: previous.storeTest.sequence + 1 },
-        store.commitResource,
-      )();
-      setState(result.state);
-      if (!result.accepted) {
-        setResourceMessage(`Action unavailable: ${result.reason}`);
-        return false;
-      }
-      setResourceMessage(t('vault.resourceUsed'));
-      return true;
-    } catch (cause) {
-      setResourceMessage(
-        cause instanceof Error ? cause.message : 'Test resource could not be saved.',
-      );
-      return false;
-    } finally {
-      commandLock.current = false;
-      setBusy(false);
-    }
-  }
-
   const handledExitRequest = useRef(0);
   useEffect(() => {
     if (exitRequest === 0 || handledExitRequest.current === exitRequest) return;
