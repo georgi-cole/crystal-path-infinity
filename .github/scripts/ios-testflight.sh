@@ -121,14 +121,13 @@ PY
 }
 
 compile_archive() {
-  local options=()
+  local options=("CURRENT_PROJECT_VERSION=$GITHUB_RUN_NUMBER" DEBUG_INFORMATION_FORMAT=dwarf-with-dsym)
   if [[ "$CPI_IOS_UPLOAD" != true ]]; then
-    options=(CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=)
+    options+=(CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=)
   fi
   xcodebuild archive -project "$project" -scheme App -configuration Release \
     -sdk iphoneos -destination 'generic/platform=iOS' -archivePath "$archive" \
-    -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile \
-    CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER" DEBUG_INFORMATION_FORMAT=dwarf-with-dsym "${options[@]}"
+    -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile "${options[@]}"
   local app="$archive/Products/Applications/App.app"
   python3 - "$app" "$bundle_id" "$GITHUB_RUN_NUMBER" <<'PY'
 import json
