@@ -4,9 +4,11 @@ import { useLanguage } from './language-context';
 export function AudioSettingsControls({
   settings,
   onChange,
+  hideLegend = false,
 }: {
   settings: PracticeSettings;
   onChange: (next: PracticeSettings) => void;
+  hideLegend?: boolean;
 }) {
   const { t } = useLanguage();
   const toggles: { key: keyof PracticeSettings; label: string }[] = [
@@ -17,7 +19,12 @@ export function AudioSettingsControls({
   ];
   return (
     <fieldset className="cpi-sound-options">
-      <legend>{t('settings.audioLegend')}</legend>
+      <legend className="visually-hidden">{t('settings.audioLegend')}</legend>
+      {!hideLegend && (
+        <div className="cpi-sound-heading" aria-hidden="true">
+          {t('settings.audioLegend')}
+        </div>
+      )}
       {toggles.map(({ key, label }) => (
         <label className="cpi-sound-toggle" key={key}>
           <input
@@ -48,7 +55,7 @@ export function AudioSettingsControls({
                 </>
               )}
             </svg>
-            {label}
+            <span className="cpi-setting-copy">{label}</span>
           </span>
         </label>
       ))}

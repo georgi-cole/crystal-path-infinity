@@ -33,13 +33,26 @@ aggregate only passes when App quality succeeded and both native jobs either
 succeeded for `smoke/full` or were explicitly skipped for `none`.
 
 Both native profiles require the same *real* launch and lifecycle observations:
-React and document readiness, native bridge startup, OS background/foreground,
-document pause/resume, native foreground clock boundary, successful bridge
-round-trip, screenshot, and zero unexpected runtime errors. Android also
+React and document readiness, native bridge startup, OS app inactive/active
+transitions, native clock boundaries on the same page, successful bridge
+round-trip after reactivation, screenshot, and zero unexpected runtime errors. Android also
 requires real ordered native Activity pause/resume, process identity across
 Home/resume, and no target ANR. The smoke profile reduces the **number of
 recreated processes**, not the assertions within one process. It never retries
 a failed cold start.
+
+On 8 November 2026 the lifecycle assertion was tied directly to CPI-007's native
+foreground snapshots. Capacitor's document pause/resume events remain observed,
+but no longer stand in for the native clock transition. On iOS, the Settings
+launch command is monitored alongside the actual inactive snapshot; the command
+can be stopped after that transition is proven if `simctl` remains blocked.
+Earlier workflow artifacts remain unchanged and keep the assertions they ran.
+
+## iOS scene-deactivation gate (8 November 2026)
+
+Required run [42475988431](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/42475988431), on head `a4aa719`, compiled the unsigned Simulator app and Android passed. iOS failed before JavaScript page startup: Settings launched, but the prebridge gate never logged its pause observation within the existing 30-second wait. No page or app lifecycle bridge result was recorded, so this is not a passing iOS run.
+
+The gate waited for `UIScene.didEnterBackgroundNotification`, while CPI-007's foreground clock uses `UIScene.willDeactivateNotification`. Align the startup gate to that same native deactivation boundary, keep navigation held until `didActivate`, and observe the gate while Settings launches. This tests the native state transition the clock actually uses; the failed run remains recorded unchanged.
 
 ## Nightly regression and manual escalation
 
@@ -159,3 +172,9 @@ It retains the same pinned Xcode 26.6 and iOS 26.5 (both installed on that image
 all budgets and assertions, the fresh owned SE and every required lifecycle step.
 This is the standard runner class for this public repository, not a paid larger
 runner. Native execution is still required to establish success.
+
+## iOS screenshot allowance wiring (8 November 2026)
+
+Required run [42478841638](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/42478841638), on head `8051bed`, observed the native prebridge interruption, same-page inactive/active clock snapshots, successful resume bridge checks and no unexpected runtime errors. It then failed the required screenshot because the smoke harness still used its generic 60-second control timeout, despite the separately documented 180-second screenshot budget. The screenshot remains mandatory. The harness now passes `iosProvisioningBudgetsMs.screenshot` to that capture; this is a timeout wiring correction, not a change to lifecycle acceptance. The historical run remains failed.
+
+On head `2394190`, required [run 42480817872](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/42480817872) passed the full native profile. Both iOS cold starts completed the required screenshot, native inactive/active observations and resumed bridge checks on the same page, with zero unexpected JavaScript or runtime errors. The evidence reports two cold-start attempts and `screenshotCaptured: true` on a fresh iPhone SE (3rd generation) simulator running iOS 26.5. This is simulator launch evidence, not physical-device acceptance.

@@ -11,9 +11,11 @@ import { savedPendingMessages } from '../ranked/saved-pending-messages';
 import { operationMessages } from '../operations/operations.messages';
 
 import { storeEn } from './store-messages';
+import { supportEn } from './support-messages';
 
 export const en = {
   ...storeEn,
+  ...supportEn,
   ...crystalGuideEn,
   ...accountControlMessages,
   ...nameReportMessages,
@@ -25,6 +27,10 @@ export const en = {
   'settings.accountAvailable':
     'Export or delete your account below. Identity verification is required.',
   'ranked.title': 'Verified run',
+  'ranked.assisted': 'Assisted run · separate score',
+  'ranked.reserveSp': 'Use {amount} SP',
+  'ranked.reserveHint': 'Use 1 hint',
+  'ranked.creditContinue': 'Continue · 1 credit',
   'ranked.unavailable': 'Verified play is unavailable. Guest practice remains available.',
   'ranked.start': 'Start verified run',
   'ranked.resume': 'Resume',
@@ -190,8 +196,8 @@ export const en = {
   'menu.main': 'Main menu',
   'menu.playDescription': 'Ranked mode · Account needed',
   'menu.practiceDescription': 'Offline play · No account',
-  'menu.learn': 'Read the crystal',
-  'menu.replay': 'Read the crystal again',
+  'menu.learn': 'How to play',
+  'menu.replay': 'How to play',
   'menu.tutorialDescription': 'A quiet rehearsal before the crossing',
   'menu.savedPractice': 'Saved crossing · Row {row}',
   'menu.practiceEyebrow': 'Offline · All ages',
@@ -228,14 +234,20 @@ export const en = {
     'When account services are available, profile setup will explain what becomes public. Your age response for analytics will be optional, and no date of birth is required for practice.',
   'menu.practiceUnsigned': 'Practice without signing in',
   'account.title': 'Account access',
-  'account.privacyFirst':
-    'Account access requires separate privacy eligibility. Optional age analytics never grants permission to register.',
-  'account.notReady':
-    'Account setup is not available yet. The reviewed privacy and guardian service must be connected first.',
+  'account.privacyFirst': 'Sign in with a code sent to your email. No password needed.',
+  'account.notReady': 'Sign-in is not available yet. You can play as a guest.',
   'account.parentalReview': 'Additional parent or guardian review is needed before email sign-in.',
   'account.offline': 'Account access requires a connection. Local practice remains available.',
-  'account.checkFirst': 'Check whether account access is available for your privacy context.',
-  'account.check': 'Check account access',
+  'account.checkFirst': 'A quick check before sign-in.',
+  'account.check': 'Continue',
+  'account.age': 'Your age',
+  'account.country': 'Country of residence',
+  'account.selectCountry': 'Choose country',
+  'account.agePrivacy': 'We do not save your exact age. You can always play as a guest.',
+  'accountPortal.description':
+    'Sign in to export your data or delete your account. Closing this page signs you out.',
+  'accountPortal.unavailable':
+    'Account services are not connected yet. For help, contact support below.',
   'account.checking': 'Checking account eligibility…',
   'account.email': 'Email address',
   'account.sendCode': 'Send one-time code',
@@ -243,6 +255,17 @@ export const en = {
   'account.verify': 'Verify code',
   'account.resend': 'Resend code',
   'account.cancel': 'Cancel account setup',
+  'account.signOut': 'Sign out',
+  'account.adPrivacy': 'Ad privacy',
+  'settings.privacyConnected':
+    'Your profile, purchases and verified runs use online services. Local practice stays on this device.',
+  'settings.accountToolsUnavailable': 'You are signed in. Account tools are unavailable right now.',
+  'commerce.restore': 'Restore purchases',
+  'commerce.retry': 'Try again',
+  'commerce.pending': 'Waiting for purchase confirmation. You have not received the items yet.',
+  'commerce.error': 'Could not confirm your purchase. Try restoring purchases.',
+  'commerce.busy': 'Connecting…',
+  'commerce.buy': 'Buy · {price}',
   'account.invalidEmail': 'Enter a valid email address.',
   'account.invalidCode': 'Enter the six-digit code from your email.',
   'account.expired': 'This code or permission expired. Restart the account access check.',
@@ -254,7 +277,7 @@ export const en = {
   'account.guestSafe': 'Practice stays available for all ages without an account or age response.',
   'menu.settingsEyebrow': 'Local preferences',
   'menu.settingsIntro': 'These controls are available offline and affect your practice session.',
-  'menu.openTutorial': 'Read the crystal',
+  'menu.openTutorial': 'How to play',
   'menu.tutorialDone': 'The bridge still has something to teach',
   'menu.tutorialSkipped': 'The first lesson is still waiting',
   'menu.tutorialAvailable': 'Five lessons before the dark',

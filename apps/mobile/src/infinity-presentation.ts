@@ -1,4 +1,9 @@
-import type { ActiveEffect, RunState, TileSide } from '@crystal-path-infinity/game-core';
+import type {
+  ActiveEffect,
+  RunState,
+  TileSide,
+  MysteryTier,
+} from '@crystal-path-infinity/game-core';
 
 /** Renderer-safe shape. In particular, future tiles never contain safeSide. */
 export interface PresentedRow {
@@ -12,6 +17,8 @@ export interface PresentedRow {
   readonly hint: TileSide | null;
   readonly chosen: TileSide | null;
   readonly wrong: boolean;
+  readonly noSafeTile?: true;
+  readonly mysteryTier?: MysteryTier;
 }
 export interface PresentedEffect {
   readonly kind: ActiveEffect['kind'];
@@ -19,6 +26,7 @@ export interface PresentedEffect {
   readonly positive: boolean;
   readonly remainingMs: number;
   readonly percent: number;
+  readonly remainingRows?: number;
 }
 export interface PresentedScene {
   readonly rows: readonly PresentedRow[];
@@ -31,14 +39,27 @@ export interface PresentedScene {
 }
 
 const effectLabels: Record<ActiveEffect['kind'], string> = {
+  coyote_10s: 'Run Coyote',
   shield_5s: 'Shield',
   regen_5s: 'Regeneration',
   lucky_5s: 'Lucky step',
   fragility_5s: 'Fragility',
   drain_5s: 'SP drain',
   inversion_5s: 'Inversion',
+  double_gain_21s: 'Double SP',
+  double_loss_21s: 'Double damage',
+  regen_3rows: 'Second breath',
+  bleed_3rows: 'The bleed',
 };
-const good = new Set<ActiveEffect['kind']>(['shield_5s', 'regen_5s', 'lucky_5s']);
+const good = new Set<ActiveEffect['kind']>([
+  'coyote_10s',
+  'shield_5s',
+  'regen_5s',
+  'lucky_5s',
+  'inversion_5s',
+  'double_gain_21s',
+  'regen_3rows',
+]);
 export const MAX_PRESENTED_ROWS = 5;
 
 /**
@@ -76,19 +97,31 @@ export function presentInfinityScene(state: RunState): PresentedScene {
       hint: phase === 'current' ? state.current.revealedSafeSide : null,
       chosen: decision?.side ?? null,
       wrong: decision?.wrong ?? false,
+      ...(phase === 'current' && state.current.noSafeTile ? { noSafeTile: true as const } : {}),
+      ...(phase === 'current' && state.current.mysteryTier
+        ? { mysteryTier: state.current.mysteryTier }
+        : {}),
     });
   }
   if (rows.length > MAX_PRESENTED_ROWS) throw new RangeError('Unbounded visual row window.');
   return {
     rows,
     effects: state.effects.map((effect) => {
-      const remainingMs = Math.max(0, effect.expiresAt - state.activeTimeMs);
+      const remainingMs =
+        effect.expiresAt === null ? 0 : Math.max(0, effect.expiresAt - state.activeTimeMs);
       return {
         kind: effect.kind,
         name: effectLabels[effect.kind],
         positive: good.has(effect.kind),
         remainingMs,
-        percent: Math.min(100, Math.round((remainingMs / 5000) * 100)),
+        percent:
+          effect.expiresAt === null
+            ? (effect.rowsLeft / 3) * 100
+            : Math.min(
+                100,
+                Math.round((remainingMs / (effect.expiresAt - effect.startedAt)) * 100),
+              ),
+        ...(effect.expiresAt === null ? { remainingRows: effect.rowsLeft } : {}),
       };
     }),
     currentRow: state.currentRow,

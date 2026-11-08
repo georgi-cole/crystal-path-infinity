@@ -123,7 +123,7 @@ export const de = {
     'Probiere das mittlere Rätsel aus oder überspringe es. Effekte können helfen oder schaden.',
   'tutorial.endTitle': 'So endet ein Lauf',
   'tutorial.endInstruction':
-    'Es gibt keine letzte Reihe. Du entscheidest, wann du aufhörst. Das tödliche Beispiel beginnt mit 10 SP.',
+    'Es gibt keine letzte Reihe. Du entscheidest, wann du aufhörst. Das tödliche Beispiel beginnt mit 5 SP.',
   'tutorial.fatalTitle': 'Tödliche Reihen zählen nicht',
   'tutorial.fatalInstruction':
     'Das Beispiel brachte SP in Reihe 4 auf null. Die letzte überquerte Reihe bleibt 3.',

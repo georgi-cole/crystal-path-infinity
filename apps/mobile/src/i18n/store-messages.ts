@@ -1,7 +1,18 @@
 export const storeEn = {
-  'vault.greet': 'Say hello to {name}',
-  'vault.tapCompanion': 'Tap to say hello',
-  'vault.worldCollectionCount': '{count} worlds',
+  'vault.playerPracticeIntro': 'Explore the endless bridge. Your progress stays on this device.',
+  'vault.continuationUnavailable':
+    'No continuation is available right now. Start a new crossing for free.',
+  'vault.unequip': 'Unequip',
+  'vault.purchasesUnavailable':
+    'Purchases are unavailable right now. You can still explore every world.',
+  'vault.unavailable': 'Unavailable',
+  'vault.recommended': 'A good place to start',
+  'vault.morePacks': 'More packs',
+  'vault.fewerPacks': 'Show small packs',
+  'vault.shopCredits': 'Get credits · skip the ad',
+  'vault.keepHints': 'The remaining hints stay available on the bridge.',
+  'vault.restartFree': 'Start again · free',
+  'vault.returnToRun': 'Return to your crossing',
   'vault.petPaused': 'A rooftop breather',
   'vault.petPausedDetail': 'The route is waiting. Your little friend is taking a breather.',
   'vault.petPractice':
@@ -108,7 +119,7 @@ export const storeEn = {
   'vault.try': 'Try in practice',
   'vault.unlock': 'Unlock world',
   'vault.owned': 'Owned',
-  'vault.equip': 'Equip theme',
+  'vault.equip': 'Equip',
   'vault.equipped': 'Equipped',
   'vault.default': 'Your original midnight crystal. Always yours.',
   'vault.breath': 'Another Breath',
@@ -188,12 +199,28 @@ export const storeEn = {
     'Assisted practice result. Kept separately from Classic; never submitted to ranked services.',
   'vault.spent': 'Reserve SP used',
   'vault.creditUsed': 'Credits used',
+
+  'vault.greet': 'Say hello to {name}',
+  'vault.tapCompanion': 'Tap to say hello',
+  'vault.worldCollectionCount': '{count} worlds',
 } as const;
 
 export const storeBg: Record<keyof typeof storeEn, string> = {
-  'vault.greet': 'Поздрави {name}',
-  'vault.tapCompanion': 'Докосни героя',
-  'vault.worldCollectionCount': '{count} свята',
+  'vault.playerPracticeIntro':
+    'Премини по безкрайния мост. Напредъкът ти се пази на това устройство.',
+  'vault.continuationUnavailable':
+    'В момента няма достъпно продължаване. Започни нов опит безплатно.',
+  'vault.unequip': 'Свали',
+  'vault.purchasesUnavailable':
+    'Покупките в момента не са достъпни. Можеш да разгледаш всеки свят.',
+  'vault.unavailable': 'Недостъпно',
+  'vault.recommended': 'Добро начало',
+  'vault.morePacks': 'Още пакети',
+  'vault.fewerPacks': 'Покажи малките пакети',
+  'vault.shopCredits': 'Вземи кредити · без реклама',
+  'vault.keepHints': 'Останалите подсказки са достъпни по пътя.',
+  'vault.restartFree': 'Нов опит · безплатно',
+  'vault.returnToRun': 'Към играта',
   'vault.petPaused': 'Почивка на покрива',
   'vault.petPausedDetail': 'Маршрутът ще почака. Малкият ти приятел си поема дъх.',
   'vault.petPractice':
@@ -263,7 +290,7 @@ export const storeBg: Record<keyof typeof storeEn, string> = {
   'vault.leagueRestTitle': 'Почивка',
   'vault.leagueFinishedTitle': 'Страхотно разиграване',
 
-  'vault.confirmUse': 'Потвърди използването',
+  'vault.confirmUse': 'Използвай',
   'vault.title': 'Друг вид бягство.',
   'vault.catalogTitle': 'Трезорът',
   'vault.intro': 'Избери своя свят. Запази още малко съдба в резерв.',
@@ -296,12 +323,12 @@ export const storeBg: Record<keyof typeof storeEn, string> = {
   'vault.chaosSound': 'Общата музика на Black Obsidian.',
   'vault.jellySound': 'Общата музика на Black Obsidian.',
   'vault.included': 'Герой · Среда · Менюта · Мистерии',
-  'vault.preview': 'Разгледай темата',
-  'vault.try': 'Пробвай в тренировка',
+  'vault.preview': 'Разгледай',
+  'vault.try': 'Пробвай',
   'vault.unlock': 'Отключи света',
   'vault.owned': 'Притежавана',
-  'vault.equip': 'Приложи темата',
-  'vault.equipped': 'Приложена',
+  'vault.equip': 'Използвай',
+  'vault.equipped': 'Избрана',
   'vault.default': 'Твоят оригинален среднощен кристал. Винаги твой.',
   'vault.breath': 'Още един дъх',
   'vault.encore': 'Още веднъж',
@@ -365,7 +392,7 @@ export const storeBg: Record<keyof typeof storeEn, string> = {
   'vault.trial': 'Проба на тема · Прогресът и ресурсите не се запазват',
   'vault.manage': 'Твоят резерв',
   'vault.refill': 'Зареди {amount} SP',
-  'vault.loadHint': 'Добави 1 резервна подсказка',
+  'vault.loadHint': '+1 подсказка',
   'vault.spendDetail':
     'Резервите и кредитите правят опита „С помощ“. Рекордът му се пази отделно от класическия.',
   'vault.spRemaining': '{amount} / 200 резервни SP използвани в този опит',
@@ -380,4 +407,8 @@ export const storeBg: Record<keyof typeof storeEn, string> = {
     'Тренировъчен резултат с помощ. Пази се отделно от класическия и не се изпраща в официални класации.',
   'vault.spent': 'Използвани резервни SP',
   'vault.creditUsed': 'Използвани кредити',
+
+  'vault.greet': 'Поздрави {name}',
+  'vault.tapCompanion': 'Докосни героя',
+  'vault.worldCollectionCount': '{count} свята',
 };

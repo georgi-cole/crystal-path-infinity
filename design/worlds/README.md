@@ -4,6 +4,27 @@ Six original cosmetic worlds form the CPI-013 collection. The
 crystal path is always the focal point. Artwork is judged in the playable scene,
 with hints, SP warnings, fractures and controls visible.
 
+## Current owner-approved presentation — 2026-11-06
+
+Design-only synchronization from `codex/store-test-mode` at `29774c6ac3311c8ba1a0cf979bfaff8bab914f62` keeps existing artwork/technical IDs and applies the current names, centered catalogue portraits and compact touch-reactive showcase. All six worlds have the approved EUR 2.99 reference price; resource prices are unchanged. The free Black Obsidian is always reachable through Unequip, without losing owned worlds.
+
+| ID | English name | Bulgarian name |
+| --- | --- | --- |
+| chaos | Boltmuffin | Меденко |
+| jelly | Squishphony | Жилибон |
+| wilds | Rockmallow | Скалинко |
+| league | Flipzel | Баткото |
+| puppy | Pawrachute | Шарокоп |
+| kitten | Purralune | Котерина |
+
+Explore shows artwork, one short description and a companion expression on touch. It does not construct a playable trial or offer music audition. Every world uses the original, unchanged Black Obsidian home/run/final `.m4a` tracks. Twelve unapproved synthetic loop/ending WAV sketches are retained in `audio-prototypes/`, outside runtime assets; the generator archives future sketches there. Short themed step, record and rescue effects remain. Historical audio concepts below are not paid music features. Earlier names in source-generation prompts remain aliases for reproducibility.
+
+Simulated checkout and test disclosures belong only to development/QA. Player staging/production shows unavailable purchases until real billing is connected. See [the player/QA decision](../../docs/decisions/PLAYER-QA-RELEASE-PREVIEW.md) for current behavior and verification boundaries.
+
+**Later owner review on 6 November:** guide tabs and support use the shared menu control styling; the outer tutorial controls/progress and final continuation panels inherit each world's materials. The owner subsequently requested one exception: the bridge demonstration inside Rules always uses Black Obsidian, including its SP/hint instruments, without the equipped world's scenery or companion. This local scope does not unequip the world; the outer guide page keeps its design. Discoveries is a tab in How to play and a pause action, with no separate home/settings/practice-hub button. Its explanations use short English/Bulgarian paragraphs and simple examples, with demonstrations only in QA. Only Unequip is needed to return to Obsidian; the extra global banner is removed. Original Crystal Path step/collapse MP3s now replace the synthetic step/rescue selection for every world. Box opening uses the existing owner-source `ui_wildcard_draw.mp3`; falling glass and shared background music are unchanged. Earlier short synthetic step/rescue files remain for reproduction, not as current playback promises.
+
+**Settings follow-up:** actual settings panels, language selection, disclosure rows, custom switch tracks/thumbs and keyboard focus now share world materials and corner shapes, including Obsidian. The visible sound heading sits inside its panel; long labels wrap beside fixed-size icons/switches. The pause sound group stays collapsed by default. Tutorial entry text is How to play / „Как се играе“; mobile store actions use concise labels such as „Използвай“ and „Свали“ without hiding price or ownership context.
+
 ## References and decisions
 
 - [Monument Valley 3: art and design, with John Lau](https://legacy-activation-v2.unity3d.com/vn/resources/monument-valley-3-blurring-art-and-design):
@@ -14,7 +35,7 @@ with hints, SP warnings, fractures and controls visible.
 - [Team Alto's official press kit](https://altosodyssey.com/press/): the developers
   combine distinct biomes, lighting/weather, fluid movement and original audio.
   Our application: pair each environment with coherent materials, restrained
-  ambient motion and a companion. All worlds currently share the owner-approved Black Obsidian soundtrack.
+  ambient motion and a companion, with the approved shared Black Obsidian soundtrack.
 - [Sky's art-development account](https://thatskyshop.com/blogs/designer-insight/the-art-of-sky-designer-insight):
   concept work and retained iterations communicate a world's identity. Our
   application: retain source masters, generation prompts and this design record
@@ -29,7 +50,7 @@ with hints, SP warnings, fractures and controls visible.
 | Material | Brushed copper frames, champagne crystal, mint light | Opal crystal, lilac facets, cyan edges |
 | Ambient motion | Very slow edge cogs, drifting steam, sparse sparks | Swaying edge tendrils, haze, sparse bubbles |
 | Companion | Boltmuffin, an asymmetric copper robot with a mint heart | Squishphony, an opalescent jelly with a cyan star |
-| Music | Shared owner-approved Black Obsidian scene tracks | Shared owner-approved Black Obsidian scene tracks |
+| Music | Shared Black Obsidian scene tracks | Shared Black Obsidian scene tracks |
 
 ## Focus and animation rules
 
@@ -94,9 +115,10 @@ resource disclosures remain present. Original Obsidian presentation is retained.
   Encode a companion with the equivalent paths, `-q 88 resize 1536 512`.
 - `apps/mobile/src/world-assets.ts` binds each world to its runtime artwork.
   `theme-art.tsx` supplies layers and reactions; `world-experience.tsx` composes
-  the same scenery and bridge for the store preview. Assets use Vite's base path
+  the touch-reactive portrait for the store preview. Assets use Vite's base path
   and work under the GitHub Pages project URL and native packages.
-- `apps/mobile/scripts/generate-theme-audio.mjs` reproduces short synthesized effect cues and archives unapproved music sketches outside runtime assets. Runtime music uses the existing owner-supplied Black Obsidian files. Local audio loads only
+- `apps/mobile/scripts/generate-theme-audio.mjs` reproduces short synthesized
+  effect WAVs and archives unapproved music sketches outside public assets. Local audio loads only
   for the selected world and has bounded ownership.
 
 Future world template: define the emotion and material language, create masters
@@ -106,9 +128,9 @@ scene on a phone. Add the asset budgets and recovery checks before publication.
 
 ## Acceptance
 
-Check 320/390px phone widths, desktop, all six worlds, their real practice trials,
+Check 320/390px phone widths, desktop, all six worlds, their portrait previews and unlocked runs,
 safe/wrong/hint feedback, motion reduction, mute, pause/resume and path contrast.
-The store must remain compact and disclose simulated payments. Full native CI
+The store must remain compact and disclose simulated payments in QA and unavailable real purchases in player builds. Full native CI
 still gates the PR; browser inspection does not prove physical-device frame rate
 or Apple/Google billing. Pricing remains a test reference while the owner judges
 the worlds' quality and value.
@@ -126,10 +148,10 @@ world from Pokémon, Halo or other franchises is bundled.
 
 | World | Recognizable signature | Environment and props | Sound and safety |
 | --- | --- | --- | --- |
-| Rockmallow | Rockmallow: one giant hollow jade geode ear, one blunt basalt ear, amber seed brow | Hollow seed-vaults, fossil reeds, rough basalt seed caches, jade power settings | Hollow reed pulses, offbeat chimes; a crystal seed glider |
-| Flipzel | Flipzel: a living orange/graphite folded pennant, silver running shoes | Aerial race fins, incomplete cyan lap ring, angled baton cases and enamel medals | Syncopated plucks and low racing pulses; a folded rescue banner |
-| Pawrachute | Pawrachute: wiry charcoal/ivory terrier, one floppy ear, copper eye patch, rescue backpack | Copper courier rooftops, teal utility tags, weathered satchel caches | Swung rooftop plucks and copper clicks; backpack parachute |
-| Purralune | Purralune: ink-black kitten, one white paw, ivory brow slash, indigo cape | Narrow slate rooftops, amber window cuts, moonstone weather vanes and folding moon vaults | Sparse minor glass notes and midnight bass; cape opens into a glider |
+| Rockmallow | Rockmallow: one giant hollow jade geode ear, one blunt basalt ear, amber seed brow | Hollow seed-vaults, fossil reeds, rough basalt seed caches, jade power settings | Crystal seed glider; short mineral effects |
+| Flipzel | Flipzel: a living orange/graphite folded pennant, silver running shoes | Aerial race fins, incomplete cyan lap ring, angled baton cases and enamel medals | Folded rescue banner; short race effects |
+| Pawrachute | Pawrachute: wiry charcoal/ivory terrier, one floppy ear, copper eye patch, rescue backpack | Copper courier rooftops, teal utility tags, weathered satchel caches | Backpack parachute; short copper effects |
+| Purralune | Purralune: ink-black kitten, one white paw, ivory brow slash, indigo cape | Narrow slate rooftops, amber window cuts, moonstone weather vanes and folding moon vaults | Cape opens into a glider; short glass effects |
 
 Puppy and kitten are separate purchases and environments. Their safety is never
 an entitlement or a consumable. Zero SP, a wrong pane, a mystery and an idle
@@ -154,81 +176,12 @@ The whole six-world runtime art collection is approximately 2.1 MB, bounded to
 500 KB per plate + companion pair and 3 MB overall. Source PNGs are never shipped
 in the web/native bundle. Only the selected world and visible catalogue cards
 load art; category filters and two-card pagination bound catalogue scrolling.
-Short themed step, record and gentle rescue effects remain. Unapproved loop and ending music sketches are retained in `audio-prototypes/` outside the application bundle. They are not used as world soundtracks.
+All four new sound sets retain short step, record and gentle rescue WAVs.
+The deterministic synth script keeps the earlier loop/ending sketches in the archive.
 
-Payments remain simulated and local. Continuation packs are 3/5/10/25; SP reserve
+QA payments remain simulated and local. Continuation packs are 3/5/10/25; SP reserve
 packs are 100/500/1000/2500/5000/10000. Theme ownership changes no game rule or
-ranked eligibility, and both pet worlds can be tried without buying anything.
+ranked eligibility, and both pet portraits can be explored without buying anything.
 
 
-Public names are deliberately short and child-friendly: **Boltmuffin, Squishphony, Rockmallow, Flipzel, Pawrachute and Purralune**. Each character and world share a name. Internal IDs and historical generation prompts stay stable so existing test ownership, receipts and reproducible art are preserved.
-
-
-## Meaningful name system
-
-Names combine a familiar word with a character trait, material or sensory
-promise. Sound alone is not the brief. Bulgarian uses the owner-selected names below throughout the store,
-home identity, introductions, descriptions, journals and safe endings.
-English names are maintained separately. Character and
-world share the name, while technical IDs and existing receipts stay stable.
-
-| Name | Wordplay | Character promise |
-| --- | --- | --- |
-| Rockmallow | rock + marshmallow | A strong geode keeper with a warm, soft heart |
-| Flipzel | flip + pretzel | Quick turns, springy jumps and folded ribbon forms |
-| Pawrachute | paw + parachute | A rooftop puppy whose rescue backpack always gets him home |
-| Purralune | purr + lune (moon) | A moonlit rooftop kitten with an unfolding flight cape |
-| Boltmuffin | bolt + muffin | A small mechanical troublemaker with a sweet side |
-| Squishphony | squish + symphony | Soft luminous jelly and buoyancy |
-
-Exact-name searches and official-store searches are first-pass creative
-screening, not a claim of trademark exclusivity. Historical generation prompts
-retain their source aliases for reproduction; `generation-v2.json` records the
-current public names and wordplay. No unrelated personal search results are
-retained in the repository.
-
-
-## Approved Bulgarian names
-
-| World ID | Character | Bulgarian name |
-| --- | --- | --- |
-| jelly | Jelly companion | Жилибон |
-| kitten | Kitten | Котерина |
-| puppy | Puppy | Шарокоп |
-| wilds | Stone creature | Скалинко |
-| league | Athlete | Баткото |
-| chaos | Copper robot | Меденко |
-
-These spellings are supplied by the owner. Display names follow the selected UI language; technical IDs, asset paths, ownership and receipts stay stable. Historical image-generation prompts retain their original aliases. Purchases remain simulated test-only.
-
-
-## Catalogue readability and pricing review — 2026-11-06
-
-Catalogue companions are centered horizontally in both two-card and single-world layouts. A restrained center veil and soft silhouette shadow separate them from edge scenery; the playable bridge scene retains its existing focus treatment. Checked at 390px: both card centers and the single-world center align with their artwork container, with no horizontal overflow. Development build/type checking and changed CSS formatting passed.
-
-Six worlds provide enough choice for the first collection. The next art pass should distinguish shape, material, lighting and dominant hue rather than add more similar worlds. Proposed directions (not regenerated artwork): wilds jade/bone and rounded mineral forms; sport electric cyan/navy with racing arcs and stripes; puppy terracotta/cream daylight and worn courier materials; kitten ink/silver moonlight and narrow rooftops; robot copper/mint mechanical circles; jelly rose/opal translucent curves. The path stays dominant and functional warnings retain their meanings.
-
-Observed public retail examples, checked 2026-11-06; USD and EUR are separate storefront prices, not currency conversions or evidence of actual sales:
-
-| Comparator | Listed price | Purchased content | Source |
-| --- | --- | --- | --- |
-| Crossy Road, US iOS | $0.99 for listed chicken characters | Character unlock | https://apps.apple.com/us/app/crossy-road/id924373886 |
-| Monument Valley, US iOS | $3.99 base game; $1.99 Forgotten Shores | Full game; expansion with eight additional chapters | https://apps.apple.com/us/app/monument-valley/id728293409 |
-| Minecraft, EU PlayStation | €2.99 texture packs; €5.99 mythology mash-ups | Texture replacement; mash-up adds a designed world, textures, themed UI and soundtrack | https://www.playstation.com/en-mt/games/minecraft/ and https://store.playstation.com/en-us/product/UP4433-CUSA00744_00-KMP0000000000006/ |
-| Sky, official indexed web catalogue | $2.99 Feline Friend; $14.99 Impish Wings; $19.99 Cat Costume Pack | Cosmetic accessory, wings or costume pack, rather than an entire new game | https://store.thatskygame.com/ |
-
-Working recommendation: consider €2.99 per current world at launch, €3.99 for a visibly more distinctive finished premium world, and retain €4.99 as a possible future flagship price rather than the default for all six. This is product judgment, not a measured optimum. Our worlds bundle companion reactions/rescue, background, UI and props, but do not add a new gameplay mode or authored level campaign. Established games' higher cosmetic prices do not establish equivalent willingness to pay for a new title. The owner approved €2.99 per world as the accessible launch price. All six theme products now use this reference price in the simulated checkout; resource prices are unchanged. Purchases remain simulated.
-
-
-## Compact world showcase — owner direction
-
-Explore opens a touchable companion portrait with world artwork, one short world-specific description, a compact inclusion summary and an Unlock world / EUR 2.99 action. Touch changes the companion's expression. There is no audio audition button. All worlds use the same owner-approved Black Obsidian soundtrack, with separate home, active-run and final tracks.
-
-The shop no longer exposes Try in practice or constructs a trial GameOwner. The showcase has no playable bridge, staged run, scripted jump/box reveal, starting-screen gallery or safety promotion. Actual free rescue and normal unlocked gameplay remain intact. Cards omit repeated Original world and feature labels; reserve balances appear on the resource/collection tabs. Test-mode disclosures remain visible. Historical trial runtime helpers are not a purchase entry point.
-
-
-## Approved shared soundtrack
-
-Owner direction: use the existing Black Obsidian music for every world. `soundtrack.ts` supplies `home-ambient.m4a` on the home screen, `gameplay-tension.m4a` during an active run and the existing 47-second `run-ended-deathrow.m4a` excerpt on the final screen. Existing playback offsets, looping, mute and OS background/resume behavior remain. The original media files are unchanged. Themes do not provide exclusive music and the shop offers no listening control.
-
-The earlier programmatically synthesized music was not owner-approved. Its six loop sketches and six 2.1-second ending cues are archived outside public/native assets in `audio-prototypes/`; generation writes music sketches there as well. Short themed sound effects, including gentle pet rescue, are distinct from the shared soundtrack and remain. Historical art-direction sound ideas in the table above describe abandoned sketches, not current paid features.
+Public names are **Boltmuffin, Squishphony, Rockmallow, Flipzel, Pawrachute and Purralune**, with owner-selected Bulgarian names in the current table above. Each character and world share a name. Internal IDs and historical generation prompts stay stable so existing test ownership, receipts and reproducible art are preserved.

@@ -14,17 +14,92 @@ export type EffectKind =
   | 'lose_hint'
   | 'fragility_5s'
   | 'drain_5s'
-  | 'inversion_5s';
+  | 'inversion_5s'
+  | 'double_gain_21s'
+  | 'double_loss_21s'
+  | 'coyote_10s'
+  | 'mystery_silence_30s'
+  | 'mystery_surge_30s'
+  | RowEffectKind
+  | PactKind;
 
-export type TimedEffectKind = Extract<EffectKind, `${string}_5s`>;
+export type PactKind =
+  | 'blood_oath'
+  | 'false_oracle'
+  | 'hungry_vault'
+  | 'borrowed_time'
+  | 'soul_exchange'
+  | 'half_life'
+  | 'marketing';
+export type PactOption =
+  'accept' | 'decline' | 'cashout' | 'settle' | 'sp' | 'hint' | 'sell_one' | 'sell_all';
 
-export interface ActiveEffect {
+export type MysteryTier = 'standard' | 'choice' | 'major' | 'anomaly';
+export interface MysteryDiscovery {
+  readonly known: readonly EffectKind[];
+  readonly introduction: {
+    readonly kind: EffectKind;
+    readonly startedAt: number;
+    readonly expiresAt: number;
+  } | null;
+}
+export interface MysteryRhythm {
+  readonly kind: 'mystery_silence_30s' | 'mystery_surge_30s';
+  readonly startedAt: number;
+  readonly expiresAt: number;
+}
+export interface MysteryDirector {
+  readonly nextRow: Decimal;
+  readonly lastStepAt: number;
+  readonly pressure?: {
+    readonly anchorAt: number;
+    readonly anchorSp: number;
+    readonly paid: number;
+  };
+  /** PRIVATE cooldown ledger; one most recent entry per result. */
+  readonly history: readonly {
+    readonly kind: EffectKind;
+    readonly row: Decimal;
+    readonly at: number;
+  }[];
+  readonly rhythm: MysteryRhythm | null;
+}
+
+/** A bounded, row-based contract. No hidden roll or future safe side is stored here. */
+export interface MysteryPact {
+  readonly kind: PactKind;
+  readonly phase: 'offered' | 'active';
+  readonly rowsLeft: number;
+  readonly bank: number;
+  /** A deliberately fallible prediction, never a confirmed hint. */
+  readonly omen: TileSide | null;
+  /** v5+ decision grace begins once, survives saves and is not reset by rendering. */
+  readonly offeredAt?: number;
+}
+
+export type TimedEffectKind = Extract<
+  EffectKind,
+  `${string}_5s` | `${string}_10s` | `${string}_21s`
+>;
+export type RowEffectKind = 'regen_3rows' | 'bleed_3rows';
+
+export interface TimedActiveEffect {
   readonly kind: TimedEffectKind;
   readonly startedAt: number;
   readonly expiresAt: number;
   /** Per-instance active-time schedule; null for effects without periodic SP changes. */
   readonly nextTickAt: number | null;
 }
+
+export interface RowActiveEffect {
+  readonly kind: RowEffectKind;
+  readonly startedAt: number;
+  readonly expiresAt: null;
+  readonly nextTickAt: null;
+  readonly rowsLeft: number;
+}
+
+export type ActiveEffect = TimedActiveEffect | RowActiveEffect;
 
 export interface RandomCursor {
   readonly algorithm: string;
@@ -42,8 +117,15 @@ export interface RandomSource {
 export interface BridgeRow {
   /** Zero-based absolute index, matching the inspected source's convention. */
   readonly index: Decimal;
+  /** Legacy safe side; v4 prefers a surviving tile, falling back to low risk if neither survives.
+   * Use hintSafeSide/isBrokenTile for outcome decisions. */
   readonly safeSide: TileSide;
   readonly hasMystery: boolean;
+  /** PRIVATE v4 draws. Neither assignment nor unchosen outcomes belong in rendered/network rows. */
+  readonly risk?: {
+    readonly lowRiskSide: TileSide;
+    readonly broken: Readonly<Record<TileSide, boolean>>;
+  };
 }
 
 export interface RowStreamState {
@@ -63,17 +145,19 @@ export interface CurrentRowState {
   readonly revealedSafeSide: TileSide | null;
   readonly mysteryOutcome: EffectKind | null;
   readonly lastChoice: { readonly side: TileSide; readonly wrong: boolean } | null;
+  /** A hint inspected this row and found no surviving tile. No hint charge was taken. */
+  readonly noSafeTile?: true;
+  readonly mysteryTier?: MysteryTier;
 }
 
 export interface RowResolution extends CurrentRowState {
   readonly index: Decimal;
 }
 
-export type DeathCause = 'wrong_tile' | 'mystery' | 'drain' | 'idle';
+export type DeathCause = 'wrong_tile' | 'mystery' | 'drain' | 'death_clock' | 'idle';
 export interface RunPacing {
   readonly rowEnteredAt: number;
   readonly nextSurvivalBonusAt: number;
-  /** V3: successful hint holds row pressure for one bounded scan, once per row. */
   readonly hintScanStartedAt?: number;
 }
 export interface DeathSnapshot {
@@ -108,6 +192,10 @@ export interface StoreTestRun {
   readonly creditContinues: number;
   readonly adContinues: number;
   readonly sequence: number;
+  /** Remaining purchased hints; present only on the business ruleset. */
+  readonly paidHints?: number;
+  /** Purchased-hint SP already counted in reserveSpent. */
+  readonly convertedHintSp?: number;
 }
 export interface RunResult {
   readonly storeTest?: StoreTestRun;
@@ -145,6 +233,10 @@ export interface RunState {
   /** Required by infinity-v2/v3; absent on historical infinity-v1 checkpoints. */
   readonly pacing?: RunPacing;
   readonly effects: readonly ActiveEffect[];
+  /** Absent in legacy v1 checkpoints. Only the versioned pact ruleset can use this. */
+  readonly pact?: MysteryPact | null;
+  readonly mysteryDirector?: MysteryDirector;
+  readonly discovery?: MysteryDiscovery;
   readonly buffer: BufferPolicy;
   /** Zero-based index of rows[0], independent of bounded array positions. */
   readonly bufferOffset: Decimal;
@@ -165,6 +257,8 @@ export interface RunState {
 }
 
 export interface CreateRunOptions {
+  /** Trusted practice/profile discoveries. Never accepted from a ranked action. */
+  readonly discoveredMysteries?: readonly EffectKind[];
   readonly runId: string;
   readonly routeRng: RandomCursor;
   readonly mysteryRng: RandomCursor;
@@ -191,6 +285,12 @@ export type RunCommand =
     }
   | { readonly type: 'hint'; readonly row: Decimal; readonly life: number }
   | { readonly type: 'mystery'; readonly row: Decimal; readonly life: number }
+  | {
+      readonly type: 'pact';
+      readonly row: Decimal;
+      readonly life: number;
+      readonly option: PactOption;
+    }
   | { readonly type: 'tick' }
   | {
       readonly type: 'test-resource';
@@ -226,6 +326,9 @@ export type RejectionReason =
   | 'already-revealed'
   | 'no-mystery'
   | 'mystery-consumed'
+  | 'pact-decision-required'
+  | 'invalid-pact-choice'
+  | 'oracle-blocks-hints'
   | 'died-before-command'
   | 'wrong-death'
   | 'wrong-revive-ordinal'
@@ -248,8 +351,20 @@ interface EventTime {
 
 export type RunEvent = EventTime &
   (
-    | { readonly type: 'effects-ticked'; readonly delta: number; readonly sp: number }
-    | { readonly type: 'effects-expired'; readonly kinds: readonly TimedEffectKind[] }
+    | {
+        readonly type: 'effects-ticked';
+        readonly delta: number;
+        readonly appliedDelta?: number;
+        readonly sp: number;
+      }
+    | { readonly type: 'effects-expired'; readonly kinds: readonly ActiveEffect['kind'][] }
+    | {
+        readonly type: 'row-effect-ticked';
+        readonly kind: RowEffectKind;
+        readonly delta: number;
+        readonly sp: number;
+        readonly rowsLeft: number;
+      }
     | {
         readonly type: 'survival-bonus';
         readonly amount: number;
@@ -263,6 +378,18 @@ export type RunEvent = EventTime &
         readonly amount: number;
       }
     | { readonly type: 'hint-used'; readonly row: Decimal; readonly safeSide: TileSide }
+    | { readonly type: 'hint-unavailable'; readonly row: Decimal }
+    | { readonly type: 'death-clock-ticked'; readonly delta: number; readonly sp: number }
+    | {
+        readonly type: 'pact-resolved';
+        readonly kind: PactKind;
+        readonly option: PactOption | 'step';
+        readonly outcome:
+          'accepted' | 'declined' | 'won' | 'lost' | 'banked' | 'paid' | 'traded' | 'expired';
+        readonly spDelta: number;
+        readonly hintDelta: number;
+        readonly bank: number;
+      }
     | {
         readonly type: 'mystery-resolved';
         readonly row: Decimal;
@@ -277,6 +404,7 @@ export type RunEvent = EventTime &
         readonly wrong: boolean;
         readonly spDelta: number;
         readonly consumedKind: TimedEffectKind | null;
+        readonly protectedBy?: 'coyote_10s';
       }
     | { readonly type: 'row-cleared'; readonly row: Decimal; readonly revivesToReachScore: number }
     | { readonly type: 'death'; readonly death: DeathSnapshot }

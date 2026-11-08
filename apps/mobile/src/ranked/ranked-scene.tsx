@@ -1,3 +1,4 @@
+import { DiscoveryIntroduction } from '../mystery-introduction';
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { useLanguage } from '../language-context';
 import type { RankedClient, RankedClientState } from './ranked-client';
@@ -7,6 +8,13 @@ import { SavedPendingView } from './saved-pending-view';
 import type { SavedPendingClient } from './saved-pending-client';
 import './ranked-scene.css';
 import { operationMessageKeys } from '../operations/operation-failure';
+import type { EffectKind } from '@crystal-path-infinity/game-core';
+import { MysteryEffects, PactPanel, EffectGlyph } from '../mystery-effects';
+import { effectCopy } from '../mystery.messages';
+import { HintCounter } from '../resource-feedback';
+import { DeathClockBadge, MysteryRhythmBadge, MysteryCube } from '../mystery-box';
+import { useCommerce } from '../commerce/commerce-context';
+import { canUseCreditFromReward, leaveVerifiedRun } from './ranked-leave';
 
 const EMPTY: RankedClientState = {
   phase: 'unavailable',
@@ -15,14 +23,6 @@ const EMPTY: RankedClientState = {
   canRetry: false,
   rejected: false,
 };
-const effectKeys = {
-  shield_5s: 'game.effectShield',
-  regen_5s: 'game.effectRegen',
-  lucky_5s: 'game.effectLucky',
-  fragility_5s: 'game.effectFragile',
-  drain_5s: 'game.effectDrain',
-  inversion_5s: 'game.effectInversion',
-} as const;
 
 /** Only an approved, account-scoped client can enable this view. No guest state enters it. */
 export function RankedScene({
@@ -41,7 +41,8 @@ export function RankedScene({
   rewardFlow?: RewardFlow | null;
   savedPendingClient?: SavedPendingClient | null;
 }) {
-  const { t, number } = useLanguage();
+  const { t, number, locale } = useLanguage();
+  const commerce = useCommerce();
   const [observed, setObserved] = useState<{
     client: RankedClient;
     state: RankedClientState;
@@ -62,6 +63,17 @@ export function RankedScene({
   const rewardBlocked = rewardBound && rewardState?.inputBlocked === true;
   const playing = ready && run?.status === 'playing' && !run.paused && !confirm && !rewardBlocked;
   const busy = state.phase === 'pending';
+  const resourceWindow = !!run?.economy && (run.paused || run.status === 'dead');
+  useEffect(() => {
+    if (resourceWindow) void commerce.flow?.refreshWallet();
+  }, [resourceWindow, commerce.flow]);
+  async function spend(resource: 'sp' | 'hints' | 'credit', amount: number) {
+    if (!client?.spendResource || !run || client.snapshot().run?.runId !== run.runId) return;
+    if (await client.spendResource(resource, amount)) {
+      if (resource === 'credit' && rewardFlow?.runId === run.runId) await rewardFlow.recover();
+    }
+    await commerce.flow?.refreshWallet();
+  }
 
   useEffect(() => {
     if (!client) return;
@@ -157,17 +169,16 @@ export function RankedScene({
     setInterrupted(false);
   };
   const leave = async () => {
-    if (rewardFlow?.snapshot().fullscreen) return;
-    if (run && client?.snapshot().run?.runId !== run.runId) return;
+    if (!client || !run) {
+      onLeave();
+      return;
+    }
     if (
-      client &&
-      run?.status === 'dead' &&
-      rewardBound &&
-      (rewardState?.phase === 'earned_pending' || rewardState?.phase === 'granted')
-    ) {
-      await client.archivePending(run.runId);
-    } else await client?.command({ type: 'pause' });
-    onLeave();
+      await leaveVerifiedRun(client, run.runId, () =>
+        rewardFlow?.runId === run.runId ? rewardFlow.snapshot() : null,
+      )
+    )
+      onLeave();
   };
   const action = (type: 'choose' | 'hint' | 'mystery', side?: 'left' | 'right') => {
     if (
@@ -297,13 +308,117 @@ export function RankedScene({
       {run && (
         <>
           <div className="cpi-ranked-resources">
+            {run.economy?.assisted && <p>{t('ranked.assisted')}</p>}
             <p>{t('ranked.confirmed', { row: number(run.lastClearedRow) })}</p>
             <p>{t('ranked.sp', { sp: number(run.sp) })}</p>
-            <p>{t('ranked.hints', { count: number(run.hints) })}</p>
+            <p>
+              {t('ranked.hints', { count: number(run.hints) })}{' '}
+              <HintCounter count={run.hints} cue={{ id: `ranked:${run.hints}`, delta: 0 }} />
+            </p>
           </div>
+          {resourceWindow && client?.spendResource && commerce.snapshot.wallet && (
+            <div className="cpi-ranked-actions">
+              {run.status === 'playing' && (
+                <>
+                  <button
+                    type="button"
+                    disabled={
+                      !ready ||
+                      busy ||
+                      commerce.snapshot.phase !== 'ready' ||
+                      !commerce.snapshot.wallet.sp ||
+                      run.economy.reserveSpent >= 200 ||
+                      !!run.discovery?.introduction ||
+                      run.pact?.phase === 'offered'
+                    }
+                    onClick={() =>
+                      void spend(
+                        'sp',
+                        Math.min(20, commerce.snapshot.wallet!.sp, 200 - run.economy!.reserveSpent),
+                      )
+                    }
+                  >
+                    {t('ranked.reserveSp', {
+                      amount: Math.min(
+                        20,
+                        commerce.snapshot.wallet.sp,
+                        200 - run.economy.reserveSpent,
+                      ),
+                    })}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={
+                      !ready ||
+                      busy ||
+                      commerce.snapshot.phase !== 'ready' ||
+                      !commerce.snapshot.wallet.hints ||
+                      !!run.discovery?.introduction ||
+                      run.pact?.phase === 'offered'
+                    }
+                    onClick={() => void spend('hints', 1)}
+                  >
+                    {t('ranked.reserveHint')}
+                  </button>
+                </>
+              )}
+              {run.status === 'dead' && (
+                <button
+                  type="button"
+                  disabled={
+                    !ready ||
+                    busy ||
+                    commerce.snapshot.phase !== 'ready' ||
+                    !commerce.snapshot.wallet.credits ||
+                    run.rewardPending ||
+                    run.revivesGranted !== run.revivesApplied ||
+                    !canUseCreditFromReward(rewardState)
+                  }
+                  onClick={() => void spend('credit', 1)}
+                >
+                  {t('ranked.creditContinue')}
+                </button>
+              )}
+            </div>
+          )}
           {run.status === 'playing' && (
             <>
               <h3 className="cpi-ranked-row">{t('ranked.row', { row: number(run.currentRow) })}</h3>
+              <MysteryRhythmBadge rhythm={run.mysteryRhythm} activeTimeMs={run.activeTimeMs} />
+              <DeathClockBadge
+                clock={run.deathClock}
+                activeTimeMs={run.activeTimeMs}
+                offered={run.pact?.phase === 'offered' || !!run.discovery?.introduction}
+              />
+              <DiscoveryIntroduction
+                discovery={run.discovery}
+                activeTimeMs={run.activeTimeMs}
+                rulesetVersion={run.rulesetVersion}
+              />
+              <PactPanel
+                sp={run.sp}
+                rulesetVersion={run.rulesetVersion}
+                activeTimeMs={run.activeTimeMs}
+                pact={run.pact}
+                hints={run.hints}
+                revealed={run.current.revealedSafeSide !== null || !!run.current.noSafeTile}
+                disabled={!playing}
+                onChoose={(option) => {
+                  if (
+                    !playing ||
+                    !client ||
+                    client.snapshot().run?.runId !== run.runId ||
+                    (rewardFlow?.runId === run.runId && rewardFlow.snapshot().inputBlocked)
+                  )
+                    return;
+                  void client.command({
+                    type: 'pact',
+                    row: run.currentRow,
+                    life: run.revivesApplied,
+                    option,
+                  });
+                }}
+              />
               <div className="cpi-ranked-bridge" dir="ltr">
                 {(['left', 'right'] as const).map((side) => (
                   <button
@@ -313,7 +428,7 @@ export function RankedScene({
                       'cpi-ranked-pane' +
                       (run.current.revealedSafeSide === side ? ' cpi-ranked-pane-revealed' : '')
                     }
-                    disabled={!playing}
+                    disabled={!playing || run.pact?.phase === 'offered'}
                     onClick={() => action('choose', side)}
                     aria-label={t(side === 'left' ? 'game.leftTile' : 'game.rightTile', {
                       row: number(run.currentRow),
@@ -335,10 +450,24 @@ export function RankedScene({
                   })}
                 </p>
               )}
+              {run.current.noSafeTile && (
+                <p role="status">
+                  {locale === 'bg'
+                    ? 'И двете плочки са счупени. Подсказката е запазена.'
+                    : 'Both tiles are broken. Your hint was kept.'}
+                </p>
+              )}
               <div className="cpi-ranked-actions">
                 <button
                   type="button"
-                  disabled={!playing || run.hints === 0 || run.current.revealedSafeSide !== null}
+                  disabled={
+                    !playing ||
+                    run.hints === 0 ||
+                    run.current.revealedSafeSide !== null ||
+                    run.current.noSafeTile ||
+                    run.pact?.phase === 'offered' ||
+                    (run.pact?.kind === 'false_oracle' && run.pact.phase === 'active')
+                  }
                   onClick={() => action('hint')}
                 >
                   {t('ranked.hint')}
@@ -346,10 +475,19 @@ export function RankedScene({
                 {run.current.hasMystery && (
                   <button
                     type="button"
-                    disabled={!playing || run.current.mysteryOutcome !== null}
+                    disabled={
+                      !playing ||
+                      run.pact?.phase === 'offered' ||
+                      run.current.mysteryOutcome !== null
+                    }
                     onClick={() => action('mystery')}
                   >
                     {t('ranked.mystery')}
+                    {run.current.mysteryTier && (
+                      <span style={{ display: 'inline-block', width: '2rem', height: '2rem' }}>
+                        <MysteryCube tier={run.current.mysteryTier} />
+                      </span>
+                    )}
                   </button>
                 )}
               </div>
@@ -369,15 +507,21 @@ export function RankedScene({
               )}
             </>
           )}
-          {run.effects.length > 0 && (
-            <div className="cpi-ranked-effects">
-              <h3>{t('ranked.effects')}</h3>
-              <ul>
-                {run.effects.map((effect) => (
-                  <li key={effect.kind}>{t(effectKeys[effect.kind as keyof typeof effectKeys])}</li>
-                ))}
-              </ul>
-            </div>
+          <MysteryEffects
+            effects={run.effects}
+            activeTimeMs={run.activeTimeMs}
+            rulesetVersion={run.rulesetVersion}
+          />
+          {run.current.mysteryOutcome && !run.pact && (
+            <details className="cpi-force">
+              <summary>
+                <EffectGlyph kind={run.current.mysteryOutcome as EffectKind} />
+                <strong>
+                  {effectCopy(locale, run.current.mysteryOutcome as EffectKind).title}
+                </strong>
+              </summary>
+              <p>{effectCopy(locale, run.current.mysteryOutcome as EffectKind).detail}</p>
+            </details>
           )}
           {run.status === 'dead' && !confirm && (
             <RewardOffer

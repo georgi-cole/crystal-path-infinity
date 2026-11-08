@@ -401,6 +401,29 @@
   --pack-light: #c2f7e3;
   --pack-panel: #19372e;
 }
+.cpi-vault-more-packs {
+  display: block;
+  margin: 0.75rem auto;
+  padding: 0.6rem 1rem;
+  border: 1px solid #8c789c55;
+  border-radius: 0.5rem;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.cpi-vault-footer .cpi-vault-return {
+  display: block;
+  margin: 0 auto 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid #b4e0d770;
+  border-radius: 0.5rem;
+  color: #d0eee5;
+  background: #18342a;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: none;
+}
 .cpi-vault-pack.is-hints {
   --pack-accent: #b59bdd;
   --pack-light: #ead4ff;

@@ -7,7 +7,7 @@ import {
   readEdgeConfiguration,
 } from '../src/supabase-edge.ts';
 import { createEdgeSqlPool } from '../src/supabase-database.ts';
-import type { EdgeDatabaseOptions } from '../src/supabase-database.ts';
+import { createProjectSqlPool, type EdgeDatabaseOptions } from '../src/supabase-database.ts';
 
 const projectUrl = `https://${DEVELOPMENT_PROJECT}.supabase.co`;
 const config = { projectUrl, publishableKey: 'public-key', origins: ['capacitor://localhost'] };
@@ -283,6 +283,17 @@ describe('edge Postgres adapter', () => {
     f.query.mockResolvedValue({ rows: [{ role: 'postgres' }] });
     await expect(createEdgeSqlPool(url, f.make).connect()).rejects.toThrow('Database unavailable');
     expect(f.end).toHaveBeenCalledTimes(2);
+  });
+  it('uses the configured database CA while keeping TLS verification on', async () => {
+    const f = fixture();
+    const project = 'abcdefghijklmnopqrst';
+    const target = `postgresql://cpi_runtime.${project}:synthetic@aws-0-eu-west-1.pooler.supabase.com:5432/postgres`;
+    const pool = createProjectSqlPool(project, target, f.make, 'cpi_runtime', 'database-ca');
+    const connection = await pool.connect();
+    expect(f.make).toHaveBeenCalledWith(
+      expect.objectContaining({ ssl: { rejectUnauthorized: true, ca: 'database-ca' } }),
+    );
+    connection.release();
   });
   it('bounds concurrent connections and recovers capacity after release', async () => {
     const f = fixture();

@@ -1,12 +1,15 @@
+import { createMysteryLabRun } from '../src/mystery-lab-model';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import {
   createPracticeCursor,
   createRun,
+  tileExperimentVersion,
   getCurrentRow,
   PRACTICE_RNG,
   SCAN_RULESET_VERSION,
+  DISCOVERY_RULESET_VERSION,
   transitionRun,
   presentRowPressure,
 } from '@crystal-path-infinity/game-core';
@@ -168,6 +171,88 @@ describe('CPI-008 standalone scene', () => {
   });
 });
 
+describe('mystery status alongside current bridge visuals', () => {
+  it('keeps an active pact, timed effects, pressure and reward readable together', () => {
+    const offered = createMysteryLabRun('blood_oath', 320, 91025, DISCOVERY_RULESET_VERSION).state;
+    const bound = transitionRun(
+      offered,
+      { type: 'pact', option: 'accept', row: offered.currentRow, life: offered.revivesApplied },
+      { rng: PRACTICE_RNG, activeTimeMs: 0, achievedAt: 0 },
+    ).state;
+    const pressured = transitionRun(
+      bound,
+      { type: 'tick' },
+      { rng: PRACTICE_RNG, activeTimeMs: 4500, achievedAt: 4500 },
+    ).state;
+    const html = markup({
+      state: {
+        ...pressured,
+        effects: [
+          ...createMysteryLabRun('double_gain_21s', 320, 91025, DISCOVERY_RULESET_VERSION).state
+            .effects,
+          ...createMysteryLabRun('regen_3rows', 320, 91025, DISCOVERY_RULESET_VERSION).state
+            .effects,
+        ],
+      },
+      mysteryFeedback: {
+        id: 'oath',
+        kind: 'blood_oath',
+        spDelta: 35,
+        hintDelta: 0,
+        action: 'accepted',
+      },
+    });
+    const status = html.slice(html.indexOf('<aside'), html.indexOf('</aside>'));
+    expect(status).toContain('role="timer"');
+    expect(status).toContain('cpi-active-pact');
+    expect(status).toContain('cpi-mystery-feedback');
+    expect(status).toContain('Double SP');
+    expect(status).toContain('Second breath');
+    expect(status).not.toContain('is-bound');
+    expect(status).not.toContain('<details open');
+    expect(html).toContain('cpi-glass-pane');
+    expect(html).not.toMatch(/No SP limit|SP has no upper limit|\/ 400/);
+  });
+  it('keeps cash out and debt settlement available without opening pact details', () => {
+    for (const kind of ['hungry_vault', 'borrowed_time'] as const) {
+      let state = createMysteryLabRun(kind, 100, 91025, DISCOVERY_RULESET_VERSION).state;
+      state = transitionRun(
+        state,
+        { type: 'pact', option: 'accept', row: state.currentRow, life: state.revivesApplied },
+        { rng: PRACTICE_RNG, activeTimeMs: 0, achievedAt: 0 },
+      ).state;
+      state = {
+        ...state,
+        pact: { ...state.pact!, rowsLeft: 2, bank: kind === 'hungry_vault' ? 15 : 0 },
+      };
+      const html = markup({ state });
+      expect(html).toContain(
+        'data-pact-option="' + (kind === 'hungry_vault' ? 'cashout' : 'settle') + '"',
+      );
+      expect(html.indexOf('data-pact-option')).toBeGreaterThan(html.indexOf('</details>'));
+    }
+  });
+});
+
+it('keeps the hint signal for two known broken tiles on the newer bridge', () => {
+  const state = makeState();
+  const html = markup({ state: { ...state, current: { ...state.current, noSafeTile: true } } });
+  expect(html.match(/cpi-bridge-pane is-cracked/g)).toHaveLength(2);
+});
+it('keeps Twisted fate visually beneficial during the newer reveal animation', () => {
+  const html = markup({
+    cinematic: {
+      id: 1,
+      phase: 'reveal',
+      rows: null,
+      feedback: null,
+      mystery: { kind: 'inversion_5s', spDelta: 0, hintDelta: 0 },
+      fatal: false,
+    },
+  });
+  expect(html).toContain('cpi-mystery-release');
+  expect(html).not.toContain('cpi-mystery-release is-hostile');
+});
 describe('complete world presentation', () => {
   it.each(['chaos', 'jelly'] as const)(
     '%s carries the real mystery and effect into matching props',
@@ -227,4 +312,25 @@ describe('complete world presentation', () => {
       expect(html).not.toContain(en['game.bestNew']);
     },
   );
+});
+
+it('keeps trial and assisted labels visible when test odds are active', () => {
+  const state = createRun(
+    {
+      runId: 'practice-mode-labels',
+      rulesetVersion: tileExperimentVersion(60, 1, true),
+      observedAt: 0,
+      routeRng: createPracticeCursor(10),
+      mysteryRng: createPracticeCursor(11),
+    },
+    PRACTICE_RNG,
+  );
+  const assisted = transitionRun(
+    state,
+    { type: 'test-resource', resource: 'hints', amount: 1, sequence: 1 },
+    { activeTimeMs: 0, achievedAt: 0, rng: PRACTICE_RNG },
+  ).state;
+  expect(markup({ state: assisted })).toContain(en['vault.assisted']);
+  expect(markup({ state: assisted })).toContain('60% / 1%');
+  expect(markup({ state, trial: true })).toContain(en['vault.trial']);
 });

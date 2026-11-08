@@ -1,19 +1,22 @@
 import { useState } from 'react';
-import { getReviveSp, MAX_SP, RESERVE_SP_PER_RUN } from '@crystal-path-infinity/game-core';
+import { getReviveSp, getRuleset, RESERVE_SP_PER_RUN } from '@crystal-path-infinity/game-core';
 import type { RunState, TestResource } from '@crystal-path-infinity/game-core';
 import { useLanguage } from './language-context';
 import { useTestStore } from './store-context';
+import { QA_TOOLS_ENABLED } from './app-profile';
 
 export function RunReserves({
   state,
   busy,
   onUse,
   message,
+  onOpenStore,
 }: {
   state: RunState;
   busy: boolean;
   onUse: (resource: TestResource, amount: number) => Promise<boolean>;
   message: string;
+  onOpenStore?: () => void;
 }) {
   const { t, number } = useLanguage();
   const { snapshot, error } = useTestStore();
@@ -23,10 +26,15 @@ export function RunReserves({
     label: string;
   } | null>(null);
   const economy = state.storeTest;
-  if (!economy || state.status === 'finished') return null;
+  if (!QA_TOOLS_ENABLED || !economy || state.status === 'finished') return null;
   const refill = Math.max(
     0,
-    Math.min(100, MAX_SP - state.sp, RESERVE_SP_PER_RUN - economy.reserveSpent, snapshot.sp),
+    Math.min(
+      100,
+      (getRuleset(state.rulesetVersion).maxSp ?? Number.MAX_SAFE_INTEGER) - state.sp,
+      RESERVE_SP_PER_RUN - economy.reserveSpent,
+      snapshot.sp,
+    ),
   );
   const dead = state.status === 'dead';
   const sp = dead ? getReviveSp(state.revivesApplied + 1, state.rulesetVersion) : 0;
@@ -84,6 +92,11 @@ export function RunReserves({
                     onClick={() => request('credit', 1, t('vault.useCredit', { sp: number(sp) }))}
                   >
                     {t('vault.useCredit', { sp: number(sp) })}
+                  </button>
+                )}
+                {snapshot.credits === 0 && onOpenStore && (
+                  <button type="button" disabled={busy || !!error} onClick={onOpenStore}>
+                    {t('vault.shopCredits')}
                   </button>
                 )}
                 {state.revivesApplied < 10 && (

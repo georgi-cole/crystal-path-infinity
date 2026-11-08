@@ -1,0 +1,237 @@
+/* In-flow status rows keep urgent information and reward feedback apart. */
+.cpi-run-status {
+  position: relative;
+  z-index: 10;
+  display: grid;
+  gap: 0.4rem;
+  width: 100%;
+  margin-top: 0.55rem;
+  color: #c8c0d4;
+}
+.cpi-status-clock-slot {
+  min-height: 1.6rem;
+}
+.cpi-status-forces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: start;
+}
+.cpi-status-forces:empty {
+  display: none;
+}
+.cpi-status-forces .cpi-mystery-effects {
+  display: contents;
+}
+.cpi-status-forces .cpi-force {
+  flex: 1 1 8rem;
+  background: #101017d9;
+}
+.cpi-status-forces .cpi-force summary {
+  min-height: 2.65rem;
+  gap: 0.3rem;
+  padding-inline: 0.45rem;
+}
+.cpi-status-forces .cpi-force summary .cpi-effect-glyph {
+  width: 1.4rem;
+  height: 1.4rem;
+}
+.cpi-status-forces .cpi-force summary b {
+  font-size: 0.65rem;
+  white-space: nowrap;
+}
+.cpi-infinity-scene .cps-board {
+  min-height: clamp(16rem, 44dvh, 32rem);
+}
+.cpi-run-status.is-choosing {
+  display: none;
+}
+.cpi-infinity-scene .cps-board:has(> .cpi-relic-choice) {
+  min-height: 26rem;
+}
+.cpi-infinity-scene .cps-board > .cpi-relic-choice {
+  top: max(0.5rem, calc(69.3% - 23rem));
+  bottom: auto;
+}
+.cpi-infinity-scene .cpi-relic-details {
+  top: auto;
+  bottom: 2rem;
+  max-height: 8rem;
+}
+.cpi-infinity-scene .cps-board > .cpi-discovery-intro {
+  top: 0.5rem;
+  bottom: auto;
+}
+.cpi-active-pact {
+  display: flex;
+  flex-wrap: wrap;
+  flex: 1 1 13rem;
+  align-items: center;
+  gap: 0.25rem 0.6rem;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid #b78aa449;
+  border-radius: 6px;
+  background: #17121bda;
+  color: #d6abc9;
+  min-width: 0;
+}
+.cpi-active-pact details {
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+.cpi-active-pact summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.25rem;
+  cursor: pointer;
+  list-style: none;
+}
+.cpi-active-pact summary::-webkit-details-marker {
+  display: none;
+}
+.cpi-active-pact .cpi-effect-glyph {
+  width: 1.65rem;
+  height: 1.65rem;
+}
+.cpi-active-pact strong {
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.cpi-active-pact b {
+  margin-inline-start: auto;
+  font-size: 0.7rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.cpi-pact-info {
+  color: #92869c;
+  font-size: 0.75rem;
+}
+.cpi-active-pact p {
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: #d0c6d6;
+  margin: 0.3rem 0 0.6rem;
+}
+.cpi-active-pact button {
+  min-height: 2.25rem;
+  border: 1px solid #b78aa455;
+  border-radius: 4px;
+  padding: 0.3rem 0.6rem;
+  background: #b78aa417;
+  color: #f0d7e8;
+  font: inherit;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+.cpi-active-pact button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.cpi-pact-inline-value {
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+.cpi-status-feedback-slot {
+  min-height: 2.25rem;
+}
+.cpi-run-status .cpi-mystery-feedback {
+  position: relative;
+  inset: auto;
+  transform: none;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 2.25rem;
+  gap: 0.5rem;
+  padding: 0.35rem 0.6rem;
+  box-shadow: none;
+  animation: cpi-status-arrive 0.25s ease-out both;
+}
+.cpi-run-status .cpi-mystery-feedback .cpi-effect-glyph {
+  width: 1.45rem;
+  height: 1.45rem;
+}
+.cpi-run-status .cpi-mystery-feedback strong {
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+.cpi-run-status .cpi-mystery-feedback p {
+  display: none;
+}
+.cpi-run-status .cpi-mystery-deltas {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+.cpi-run-status .cpi-mystery-deltas b {
+  font-size: 0.8rem;
+}
+.cpi-status-bonus {
+  color: #b4ead5;
+  font-size: 0.8rem;
+}
+.cpi-run-status .cpi-rhythm-badge {
+  flex: 1 1 13rem;
+  margin: 0;
+  box-sizing: border-box;
+  min-height: 2.65rem;
+}
+.cpi-idle-pressure {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 1.6rem;
+  gap: 0.5rem;
+  font-size: 0.65rem;
+  font-variant-numeric: tabular-nums;
+  color: #f0a7ba;
+}
+.cpi-idle-pressure i {
+  position: absolute;
+  inset: auto 0 0;
+  height: 2px;
+  background: #f07496;
+  transform-origin: left;
+}
+.cpi-status-clock-slot .cpi-pressure-clock {
+  width: 100%;
+  height: 1.6rem;
+  animation: none;
+}
+.cpi-status-clock-slot .cpi-pressure-clock > svg,
+.cpi-status-clock-slot .cpi-pressure-order {
+  display: none;
+}
+.cpi-status-clock-slot .cpi-pressure-time {
+  position: static;
+  flex-direction: row-reverse;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+.cpi-status-clock-slot .cpi-pressure-time small {
+  font-size: 0.65rem;
+  letter-spacing: normal;
+}
+@keyframes cpi-status-arrive {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cpi-run-status .cpi-mystery-feedback {
+    animation: none;
+  }
+}
+.cpi-reduced-motion .cpi-run-status .cpi-mystery-feedback {
+  animation: none;
+}
+
+.cpi-effect-glyph > .cpi-world-power {
+  width: 100%;
+  height: 100%;
+  display: block;
+}

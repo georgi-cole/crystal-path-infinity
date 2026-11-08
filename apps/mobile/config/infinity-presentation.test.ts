@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { createPracticeCursor, createRun, PRACTICE_RNG } from '@crystal-path-infinity/game-core';
+import {
+  createPracticeCursor,
+  createRun,
+  PRACTICE_RNG,
+  RISK_RULESET_VERSION,
+  transitionRun,
+} from '@crystal-path-infinity/game-core';
 import type { RunState } from '@crystal-path-infinity/game-core';
 import { MAX_PRESENTED_ROWS, presentInfinityScene } from '../src/infinity-presentation';
 
@@ -16,6 +22,40 @@ function initial() {
   );
 }
 describe('CPI-008 absolute-index scene projection', () => {
+  it('renders identical hidden-risk rows before a hint, exposing no risk assignment or unchosen outcome', () => {
+    const state = createRun(
+      {
+        runId: 'risk-projection',
+        rulesetVersion: RISK_RULESET_VERSION,
+        routeRng: createPracticeCursor(33),
+        mysteryRng: createPracticeCursor(44),
+        observedAt: 0,
+      },
+      PRACTICE_RNG,
+    );
+    const changed: RunState = {
+      ...state,
+      rows: state.rows.map((row) => ({
+        ...row,
+        safeSide: 'right',
+        risk: { lowRiskSide: 'right', broken: { left: true, right: true } },
+      })),
+    };
+    expect(presentInfinityScene(changed)).toEqual(presentInfinityScene(state));
+    expect(JSON.stringify(presentInfinityScene(state))).not.toMatch(
+      /lowRisk|broken|"risk"|safeSide/,
+    );
+    const warned = transitionRun(
+      changed,
+      { type: 'hint', row: '1', life: 0 },
+      { activeTimeMs: 0, achievedAt: 0, rng: PRACTICE_RNG },
+    ).state;
+    const rows = presentInfinityScene(warned).rows;
+    expect(rows[0].noSafeTile).toBe(true);
+    expect(rows.slice(1).every((row) => row.noSafeTile === undefined && row.hint === null)).toBe(
+      true,
+    );
+  });
   it('does not expose future safe-side or RNG, and limits the visual DOM window', () => {
     const state = initial();
     const projected = presentInfinityScene(state);

@@ -12,6 +12,7 @@ export interface MvpServerHandlers {
   readonly moderation?: ServerHandler;
   readonly rewards?: ServerHandler;
   readonly operations?: ServerHandler;
+  readonly commerce?: ServerHandler;
   /** Requires the separately approved jurisdiction/guardian/OTP/session issuer. */
   readonly approvedAccountIssuer?: ServerHandler;
 }
@@ -54,6 +55,14 @@ const routes: Readonly<Record<string, Route>> = {
   '/session/exchange': { handler: 'approvedAccountIssuer', metric: null },
   '/session/refresh': { handler: 'approvedAccountIssuer', metric: null },
   '/session/revoke': { handler: 'approvedAccountIssuer', metric: null },
+  '/reauth/request': { handler: 'approvedAccountIssuer', metric: null },
+  '/reauth/verify': { handler: 'approvedAccountIssuer', metric: null },
+  '/reauth/proof': { handler: 'approvedAccountIssuer', metric: null },
+  '/commerce/catalog': { handler: 'commerce', metric: null },
+  '/commerce/wallet': { handler: 'commerce', metric: null },
+  '/commerce/begin': { handler: 'commerce', metric: null },
+  '/commerce/verify': { handler: 'commerce', metric: null },
+  '/commerce/equip': { handler: 'commerce', metric: null },
 };
 function unavailable(code: string, status: number) {
   return new Response(JSON.stringify({ code }), {

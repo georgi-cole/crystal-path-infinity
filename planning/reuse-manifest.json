@@ -426,7 +426,9 @@
       "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
       "reviewed_in": "CPI-011",
       "target_stage": "CPI-016",
-      "targets": ["apps/mobile/src/game-settings.css"],
+      "targets": [
+        "apps/mobile/src/game-settings.css"
+      ],
       "rights": "Proprietary owner source inspected by file path; no complete component or raw visual asset copied.",
       "optimization": "Use only relevant standalone behavior or CSS primitives, removing seasonal, Redux, masked-image and unsupported native dependencies."
     },
@@ -438,7 +440,10 @@
       "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
       "reviewed_in": "CPI-011",
       "target_stage": "CPI-016",
-      "targets": ["apps/mobile/src/main-menu.tsx", "apps/mobile/src/locale-settings.tsx"],
+      "targets": [
+        "apps/mobile/src/main-menu.tsx",
+        "apps/mobile/src/locale-settings.tsx"
+      ],
       "rights": "Proprietary owner source inspected under Georgi's direction; no complete component copied.",
       "optimization": "Keep concise control rows and semantic disclosures without importing the source runtime or unsupported services."
     },
@@ -683,6 +688,20 @@
       "notes": "Original Big Eye HomeHub/GameButton/IntroHub visual asset, now local and offline in Crystal Path; not its season or Redux logic.",
       "rights": "Owner-proprietary SVG transferred at Georgi's request; commercial third-party license clearance must be verified before store release.",
       "optimization": "Compact standalone SVG, no dynamic image hosting or imported season runtime; CSS handles hover and pressed feedback."
+    },
+    {
+      "path": "public/assets/sounds/ui/ui_wildcard_draw.mp3",
+      "decision": "reuse_under_owner_direction_pending_commercial_provenance_review",
+      "notes": "Owner requested an existing asset for mystery-box opening on 6 November 2026. Neutral wildcard draw cue, copied unchanged from the owner repository. The original safe-step and death cues now apply to every world; falling glass is unchanged. Current source and pinned baseline have the identical Git blob 9684c72a4f3cd33f6b1c4f3040eb173d23dd39ff.",
+      "source_url": "https://github.com/georgi-cole/bbmobilenew-source/blob/6ace929a60410e728928aa51eaf80ba9b5cf2262/public/assets/sounds/ui/ui_wildcard_draw.mp3",
+      "adapted_in": "CPI-013",
+      "targets": [
+        "apps/mobile/public/assets/sounds/ui/ui_wildcard_draw.mp3"
+      ],
+      "source_commit": "6ace929a60410e728928aa51eaf80ba9b5cf2262",
+      "rights": "Proprietary owner source; owner-directed copy; pending third-party commercial licensing and provenance verification.",
+      "optimization": "Original offline MP3 bytes retained.",
+      "sha256": "6db963414fbeefa4031d2099d5bc758ca1e3c22b8e171b949eb0f0335c175f53"
     }
   ],
   "do_not_copy": [

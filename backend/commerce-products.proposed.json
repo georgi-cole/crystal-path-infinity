@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-07",
+  "status": "proposed-not-created-in-stores",
+  "products": [
+    {
+      "key": "credits.3",
+      "proposedSku": "com.georgicole.crystalpath.infinity.credits.3",
+      "kind": "credit",
+      "quantity": 3,
+      "referenceEur": 0.99
+    },
+    {
+      "key": "credits.5",
+      "proposedSku": "com.georgicole.crystalpath.infinity.credits.5",
+      "kind": "credit",
+      "quantity": 5,
+      "referenceEur": 1.49
+    },
+    {
+      "key": "credits.10",
+      "proposedSku": "com.georgicole.crystalpath.infinity.credits.10",
+      "kind": "credit",
+      "quantity": 10,
+      "referenceEur": 2.49
+    },
+    {
+      "key": "credits.25",
+      "proposedSku": "com.georgicole.crystalpath.infinity.credits.25",
+      "kind": "credit",
+      "quantity": 25,
+      "referenceEur": 4.99
+    },
+    {
+      "key": "sp.100",
+      "proposedSku": "com.georgicole.crystalpath.infinity.sp.100",
+      "kind": "sp",
+      "quantity": 100,
+      "referenceEur": 0.49
+    },
+    {
+      "key": "sp.500",
+      "proposedSku": "com.georgicole.crystalpath.infinity.sp.500",
+      "kind": "sp",
+      "quantity": 500,
+      "referenceEur": 1.49
+    },
+    {
+      "key": "sp.1000",
+      "proposedSku": "com.georgicole.crystalpath.infinity.sp.1000",
+      "kind": "sp",
+      "quantity": 1000,
+      "referenceEur": 2.49
+    },
+    {
+      "key": "sp.2500",
+      "proposedSku": "com.georgicole.crystalpath.infinity.sp.2500",
+      "kind": "sp",
+      "quantity": 2500,
+      "referenceEur": 4.99
+    },
+    {
+      "key": "sp.5000",
+      "proposedSku": "com.georgicole.crystalpath.infinity.sp.5000",
+      "kind": "sp",
+      "quantity": 5000,
+      "referenceEur": 8.99
+    },
+    {
+      "key": "sp.10000",
+      "proposedSku": "com.georgicole.crystalpath.infinity.sp.10000",
+      "kind": "sp",
+      "quantity": 10000,
+      "referenceEur": 14.99
+    },
+    {
+      "key": "hints.3",
+      "proposedSku": "com.georgicole.crystalpath.infinity.hints.3",
+      "kind": "hints",
+      "quantity": 3,
+      "referenceEur": 0.99
+    },
+    {
+      "key": "hints.10",
+      "proposedSku": "com.georgicole.crystalpath.infinity.hints.10",
+      "kind": "hints",
+      "quantity": 10,
+      "referenceEur": 2.49
+    },
+    {
+      "key": "theme.chaos",
+      "proposedSku": "com.georgicole.crystalpath.infinity.theme.chaos",
+      "kind": "theme",
+      "quantity": 1,
+      "theme": "chaos",
+      "referenceEur": 2.99
+    },
+    {
+      "key": "theme.jelly",
+      "proposedSku": "com.georgicole.crystalpath.infinity.theme.jelly",
+      "kind": "theme",
+      "quantity": 1,
+      "theme": "jelly",
+      "referenceEur": 2.99
+    },
+    {
+      "key": "theme.wilds",
+      "proposedSku": "com.georgicole.crystalpath.infinity.theme.wilds",
+      "kind": "theme",
+      "quantity": 1,
+      "theme": "wilds",
+      "referenceEur": 2.99
+    },
+    {
+      "key": "theme.league",
+      "proposedSku": "com.georgicole.crystalpath.infinity.theme.league",
+      "kind": "theme",
+      "quantity": 1,
+      "theme": "league",
+      "referenceEur": 2.99
+    },
+    {
+      "key": "theme.puppy",
+      "proposedSku": "com.georgicole.crystalpath.infinity.theme.puppy",
+      "kind": "theme",
+      "quantity": 1,
+      "theme": "puppy",
+      "referenceEur": 2.99
+    },
+    {
+      "key": "theme.kitten",
+      "proposedSku": "com.georgicole.crystalpath.infinity.theme.kitten",
+      "kind": "theme",
+      "quantity": 1,
+      "theme": "kitten",
+      "referenceEur": 2.99
+    }
+  ]
+}

@@ -11,7 +11,7 @@ describe('CPI-018 trusted OTP gateway boundary', () => {
     expect(createOtpGateway('https://example.com/auth/v1')).toBeNull();
     expect(createOtpGateway('https://x:y@example.com/v1/account')).toBeNull();
     const html = renderToStaticMarkup(createElement(AccountEntry, { online: true }));
-    expect(html).toContain('Account setup is not available');
+    expect(html).toContain('Sign-in is not available');
     expect(html).not.toContain('type="email"');
     expect(html).not.toContain('type="password"');
   });

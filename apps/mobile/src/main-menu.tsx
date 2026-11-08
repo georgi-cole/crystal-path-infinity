@@ -1,8 +1,11 @@
+import { BalanceTuner } from './balance-tuner';
+import { MysteryJournal } from './mystery-discovery';
 import type { ReactNode } from 'react';
 import { StageAtmosphere } from './stage-atmosphere';
 import { PrismBridge } from './prism-bridge';
 import { AudioSettingsControls } from './audio-settings-controls';
 import { AccountEntry } from './account/account-entry';
+import type { AccountEntryBinding } from './account/account-entry';
 import { ProfileEditor } from './account/profile-editor';
 import type { ProfileClient } from './account/profile-client';
 import { LeaderboardView } from './leaderboard/leaderboard-view';
@@ -18,6 +21,7 @@ import { LanguageSettings, PrivacyAccountSupport } from './locale-settings';
 import { useLanguage } from './language-context';
 import { BridgeTutorial } from './bridge-tutorial';
 import { useThemeId } from './store-context';
+import type { ThemeId } from './store-catalog';
 import { StoreVault } from './store-vault';
 import { WorldHomeIdentity, WorldNavGlyph } from './world-navigation';
 import { isPetWorld } from './world-kits';
@@ -25,6 +29,7 @@ import type { TutorialProgress } from './tutorial-progress';
 import type { PracticeLoad, PracticeSettings } from './practice-save';
 import { canResumePractice, rankedServiceState } from './menu-navigation';
 import type { MenuView } from './menu-navigation';
+import { QA_TOOLS_ENABLED } from './app-profile';
 import './main-menu.css';
 import './intro-hub-premium.css';
 import './game-settings.css';
@@ -95,18 +100,21 @@ export function MenuAction({
   description,
   icon,
   variant = 'secondary',
+  current = false,
   onClick,
 }: {
   label: string;
   description?: string;
   icon?: GlyphName;
   variant?: 'primary' | 'secondary' | 'quiet';
+  current?: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       className={'cpi-menu-action cpi-menu-action--' + variant}
       type="button"
+      aria-current={current ? 'page' : undefined}
       onClick={onClick}
     >
       {icon && (
@@ -197,6 +205,11 @@ function StatusPill({
 }
 
 export interface MainMenuProps {
+  accountEntry?: AccountEntryBinding;
+  onSignOut?: () => Promise<boolean>;
+  onAdPrivacyOptions?: () => Promise<void>;
+  storeEntry?: 'worlds' | 'essentials';
+  onTryTheme?: (theme: ThemeId) => void;
   view: MenuView;
   saved: PracticeLoad;
   best: string | null;
@@ -257,6 +270,7 @@ function MenuHeader({
         utilities
       )}
       <div className="cpi-menu-status" aria-label={t('menu.status')}>
+        {QA_TOOLS_ENABLED && <StatusPill>QA</StatusPill>}
         <StatusPill>
           {t(accountConnected ? 'general.accountConnected' : 'general.guest')}
         </StatusPill>
@@ -330,7 +344,7 @@ function MenuHome({
         <MenuAction
           label={t('general.practice')}
           icon="practice"
-          onClick={() => onOpen('practice')}
+          onClick={QA_TOOLS_ENABLED ? () => onOpen('practice') : canResume ? onResume : onNew}
         />
         <MenuAction
           label={tutorialProgress === 'completed' ? t('menu.replay') : t('menu.learn')}
@@ -427,6 +441,11 @@ export function ConfirmNewPractice({
 }
 
 export function MainMenu({
+  accountEntry,
+  onSignOut,
+  onAdPrivacyOptions,
+  onTryTheme,
+  storeEntry = 'worlds',
   view,
   saved,
   best,
@@ -500,7 +519,15 @@ export function MainMenu({
           </>
         ) : view === 'practice' ? (
           <MenuPanel title={t('general.practice')} eyebrow={t('menu.practiceEyebrow')}>
-            <p>{t(isPetWorld(themeId) ? 'vault.petPractice' : 'menu.practiceIntro')}</p>
+            <p>
+              {t(
+                QA_TOOLS_ENABLED
+                  ? isPetWorld(themeId)
+                    ? 'vault.petPractice'
+                    : 'menu.practiceIntro'
+                  : 'vault.playerPracticeIntro',
+              )}
+            </p>
             <MenuAction
               label={tutorialProgress === 'completed' ? t('menu.replay') : t('menu.learn')}
               description={t('menu.tutorialExercise')}
@@ -523,20 +550,45 @@ export function MainMenu({
               icon="practice"
               onClick={onNew}
             />
+            {QA_TOOLS_ENABLED && import.meta.env.MODE !== 'production' && <BalanceTuner />}
             <p className="cpi-menu-fine-print">{t('menu.practiceLocal')}</p>
           </MenuPanel>
-        ) : view === 'tutorial' ? (
-          <BridgeTutorial
-            onComplete={() => onTutorialProgress('completed')}
-            onSkip={() => {
-              onTutorialProgress('skipped');
-              onOpen('practice');
-            }}
-            onStartPractice={() => onOpen('practice')}
-            reducedMotion={settings.reducedMotion}
-          />
+        ) : view === 'tutorial' || view === 'journal' ? (
+          <div className="cpi-guide-library">
+            <nav className="cpi-guide-tabs" aria-label={t('guide.reference')}>
+              <MenuAction
+                label={t('guide.learnTab')}
+                variant={view === 'tutorial' ? 'primary' : 'quiet'}
+                current={view === 'tutorial'}
+                onClick={() => onOpen('tutorial')}
+              />
+              <MenuAction
+                label={t('guide.journalTab')}
+                variant={view === 'journal' ? 'primary' : 'quiet'}
+                current={view === 'journal'}
+                onClick={() => onOpen('journal')}
+              />
+            </nav>
+            {view === 'journal' ? (
+              <MysteryJournal reducedMotion={settings.reducedMotion} />
+            ) : (
+              <BridgeTutorial
+                onComplete={() => onTutorialProgress('completed')}
+                onSkip={() => {
+                  onTutorialProgress('skipped');
+                  onOpen('home');
+                }}
+                onStartPractice={onNew}
+                reducedMotion={settings.reducedMotion}
+              />
+            )}
+          </div>
         ) : view === 'store' ? (
-          <StoreVault />
+          <StoreVault
+            onTryTheme={onTryTheme}
+            initialFilter={storeEntry}
+            onReturnToRun={canResumePractice(saved) ? onResume : undefined}
+          />
         ) : view === 'play' ? (
           <MenuPanel title={t('general.play')} eyebrow={t('menu.playEyebrow')}>
             {rankedClient ? (
@@ -561,7 +613,7 @@ export function MainMenu({
                   description={t('menu.practiceNow')}
                   icon="practice"
                   variant="primary"
-                  onClick={() => onOpen('practice')}
+                  onClick={canResumePractice(saved) ? onResume : onNew}
                 />
               </>
             )}
@@ -603,7 +655,7 @@ export function MainMenu({
             <MenuAction
               label={t('menu.practiceOffline')}
               icon="practice"
-              onClick={() => onOpen('practice')}
+              onClick={canResumePractice(saved) ? onResume : onNew}
             />
           </MenuPanel>
         ) : view === 'profile' ? (
@@ -614,14 +666,22 @@ export function MainMenu({
                   <strong>{t('menu.asGuest')}</strong>
                   <span>{t('menu.noAccount')}</span>
                 </div>
-                <AccountEntry online={online} />
+                <AccountEntry online={online} binding={accountEntry} />
               </>
             )}
             <ProfileEditor client={profileClient} online={online} />
+            {accountConnected && onSignOut && (
+              <MenuAction
+                label={t('account.signOut')}
+                icon="profile"
+                variant="quiet"
+                onClick={() => void onSignOut()}
+              />
+            )}
             <MenuAction
               label={t('menu.practiceUnsigned')}
               icon="practice"
-              onClick={() => onOpen('practice')}
+              onClick={canResumePractice(saved) ? onResume : onNew}
             />
           </MenuPanel>
         ) : (
@@ -642,6 +702,16 @@ export function MainMenu({
               <span aria-hidden="true">›</span>
             </button>
             <PrivacyAccountSupport
+              accountConnected={accountConnected}
+              privacyActions={
+                onAdPrivacyOptions ? (
+                  <MenuAction
+                    label={t('account.adPrivacy')}
+                    variant="quiet"
+                    onClick={() => void onAdPrivacyOptions().catch(() => {})}
+                  />
+                ) : undefined
+              }
               accountAvailable={accountConnected && accountControlsClient !== null}
               accountActions={
                 accountConnected && accountControlsClient ? (
@@ -656,15 +726,19 @@ export function MainMenu({
             {warning}
           </p>
         )}
-        {view !== 'home' && view !== 'settings' && view !== 'tutorial' && view !== 'store' && (
-          <footer className="cpi-menu-footer">
-            <span>Crystal Path: Infinity</span>
-            <span>
-              <span className="cpi-status-dot" aria-hidden="true" /> {t('menu.footerOffline')}
-            </span>
-            {buildLabel && <span>{buildLabel}</span>}
-          </footer>
-        )}
+        {view !== 'home' &&
+          view !== 'settings' &&
+          view !== 'tutorial' &&
+          view !== 'journal' &&
+          view !== 'store' && (
+            <footer className="cpi-menu-footer">
+              <span>Crystal Path: Infinity</span>
+              <span>
+                <span className="cpi-status-dot" aria-hidden="true" /> {t('menu.footerOffline')}
+              </span>
+              {buildLabel && <span>{buildLabel}</span>}
+            </footer>
+          )}
       </div>
     </main>
   );

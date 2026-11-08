@@ -11,6 +11,7 @@ type Fetcher = typeof fetch;
 export function createOtpGateway(
   configuredBase: string | undefined,
   fetcher: Fetcher = fetch,
+  client: { platform: 'android' | 'ios' | 'web'; build: number } = { platform: 'web', build: 1 },
 ): OtpGateway | null {
   if (!configuredBase) return null;
   let base: URL;
@@ -63,7 +64,13 @@ export function createOtpGateway(
     }
   }
   return {
-    eligibility: () => post('eligibility', { schemaVersion: 1 }),
+    eligibility: (screen) =>
+      post(
+        'eligibility',
+        screen
+          ? { schemaVersion: 2, ...screen, platform: client.platform, clientBuild: client.build }
+          : { schemaVersion: 1 },
+      ),
     requestCode: (email, permit) =>
       post('otp/request', { schemaVersion: 1, email, eligibilityPermit: permit }),
     verifyCode: (email, code, permit) =>

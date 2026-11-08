@@ -27,6 +27,7 @@ function messageOf(value: unknown): string {
 // change native lifecycle behavior. The driver also retains native error logs.
 export function createStartupDiagnostics(options: DiagnosticOptions) {
   let sequence = 0;
+  let nativeActive: boolean | undefined;
   let active = true;
   let reactReady = false;
   const cleanup: (() => void)[] = [];
@@ -80,6 +81,7 @@ export function createStartupDiagnostics(options: DiagnosticOptions) {
       if (lifecycle && lifecycle.pageId !== options.sessionId) {
         throw new Error('Native lifecycle snapshot belongs to another page');
       }
+      if (lifecycle) nativeActive = lifecycle.isActive;
       // Keep the local path private; the evidence records only call success.
       emit('bridge-ready', {
         reason,
@@ -109,8 +111,12 @@ export function createStartupDiagnostics(options: DiagnosticOptions) {
   });
   listen(options.documentEvents, 'visibilitychange', () => emit('visibility'));
   listen(options.documentEvents, nativeLifecycleEvent, (event) => {
-    if ('detail' in event)
-      emit('native-state', { lifecycle: event.detail as NativeLifecycleSnapshot });
+    if (!('detail' in event)) return;
+    const lifecycle = event.detail as NativeLifecycleSnapshot;
+    emit('native-state', { lifecycle });
+    const resumed = nativeActive === false && lifecycle.isActive;
+    nativeActive = lifecycle.isActive;
+    if (resumed) void checkBridge('resume');
   });
   emit('page-start');
   if (options.documentState().readyState === 'loading') {

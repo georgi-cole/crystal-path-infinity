@@ -38,6 +38,13 @@ These local results used a working tree based on `edf5151e10ddb70ae0db6af67ecbcc
 
 PGlite integration is additional local evidence. Required CI still runs against disposable PostgreSQL; neither constitutes production-scale latency, cost, device, provider or privacy approval evidence. Record CI URLs, artifact digests and the accepted source SHA in the eventual go/no-go record.
 
+## Android Internal Testing evidence · 2026-11-07
+
+- Source `bf7f804ec8e974eec75813b831030015fb4134e7`, package `com.georgicole.crystalpath.infinity`, version `0.1.0`, build `1`, min SDK 24 and target SDK 36. The signed AAB contains the Google Play Billing permission and points to the separate Crystal Path staging API. Ads are disabled for this build.
+- `npm run build:production`, Android generation and `--check`, Gradle `:app:bundleRelease`, `jarsigner` verification and `bundletool validate` passed. This build uses the registered Play package with a staging API URL. The signed AAB SHA-256 is `770D60F45538B08D35095189C6F926A2C1B7C7DA665364CD9804C63C5C93BB69`.
+- Google Play showed `Active` and `Available to internal testers` for `0.1.0 (1) - Billing internal`. The internal tester list and account-wide License testing list were verified. All 18 Android one-time products showed one active purchase option. [Tester opt-in](https://play.google.com/apps/internaltest/4701734144458822899).
+- The upload key is separate from Play App Signing. Its private keystore is stored outside the repository, with the password protected for the current Windows user. Google Play reported a non-blocking missing deobfuscation file warning. Installation, actual test checkout and server fulfilment on a phone are pending. The public go/no-go decision remains open.
+
 ## Gates that remain open
 
 | Backlog gate | Evidence still required | Current state |
@@ -47,7 +54,7 @@ PGlite integration is additional local evidence. Required CI still runs against 
 | CPI-028 pending reward operations | Named support owner, actual delayed-callback incident exercise and reviewed retention/reconciliation procedure preserving earned rights | Source safeguards exist; operational acceptance open |
 | CPI-034 physical-device QA | Exact-build Android/iPhone matrix, weak Android, narrow safe areas, VoiceOver/TalkBack, larger text, reduced motion, lock/call interruption and weak-signal recovery | Not run in this task |
 | CPI-034 endless/revive evidence | Physical sessions beyond 350→351, long-soak memory/frame/network/storage measurements; ten real rewarded revives, 5→6 200/150 SP boundary, no-fill/error and restart cases | Synthetic mechanics tested; physical/ad/balance evidence open |
-| CPI-035 signed betas | Verified new store records and ownership, secret-store signing setup, actual unique store version history, signed package, matching symbols/mappings and external-device install from normal beta channels | Only unsigned preparation source; no signing or distribution |
+| CPI-035 signed betas | Matching symbols/mappings where applicable, external-device install from normal beta channels and signed iOS TestFlight evidence | Android `0.1.0 (1)` signed and available in Internal Testing. External-device installation and iOS beta pending |
 | CPI-036 store package | Real build captures, accurate BG/EN copy, chosen target audience/category/rating, exact SDK/network privacy disclosures, verified support/privacy/deletion URLs and reviewer access | No forms submitted, screenshots fabricated or URLs invented |
 | CPI-037 live operations | Named support/security paths and owners, numeric alarms, real backup restore/forward-fix exercise, outage/late-SSV/ruleset drill and incident coverage | Source controls/runbook only; no monitor deployed |
 | CPI-038 public go/no-go | Accepted P0 issues, reviewed beta and balance data, numerical rollout stop/continue criteria, checked signed production build, named release owner and explicit approval | NO GO |

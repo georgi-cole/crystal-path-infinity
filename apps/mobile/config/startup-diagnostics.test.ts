@@ -107,4 +107,31 @@ describe('development startup observers', () => {
     f.documentEvents.dispatchEvent(new Event('resume'));
     expect(f.nativeRoundTrip).toHaveBeenCalledTimes(2);
   });
+  it('rechecks the native bridge when the native lifecycle returns to active', async () => {
+    const snapshot = (isActive: boolean) => ({
+      pageId: 'test-page',
+      bridgeId: 'test-bridge',
+      sequence: isActive ? 3 : 2,
+      isActive,
+      nativeTimeMs: isActive ? 300 : 200,
+      foregroundTimeMs: 120,
+    });
+    const f = fixture(() =>
+      Promise.resolve({ path: 'private-native-path', lifecycle: snapshot(true) }),
+    );
+    await vi.waitFor(() => expect(f.nativeRoundTrip).toHaveBeenCalledOnce());
+    f.documentEvents.dispatchEvent(
+      new CustomEvent('cpi-native-state', { detail: snapshot(false) }),
+    );
+    f.documentEvents.dispatchEvent(new CustomEvent('cpi-native-state', { detail: snapshot(true) }));
+    await vi.waitFor(() => expect(f.nativeRoundTrip).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() =>
+      expect(
+        f.events.some(
+          (event) => event.event === 'bridge-ready' && event.details?.reason === 'resume',
+        ),
+      ).toBe(true),
+    );
+    f.observer.dispose();
+  });
 });

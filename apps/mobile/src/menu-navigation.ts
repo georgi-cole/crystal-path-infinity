@@ -6,6 +6,7 @@ export const MENU_VIEWS = [
   'play',
   'practice',
   'tutorial',
+  'journal',
   'rankings',
   'profile',
   'settings',
@@ -15,9 +16,10 @@ export const MENU_VIEWS = [
 export type MenuView = (typeof MENU_VIEWS)[number];
 export type RankedService = 'unconfigured' | 'offline' | 'maintenance' | 'ready';
 
-export function viewFromHash(hash: string): MenuView {
+export function viewFromHash(hash: string, practiceHub = true): MenuView {
   const value = hash.startsWith('#') ? hash.slice(1) : hash;
-  if (value === 'practice-run' || value === 'new-practice') return 'practice';
+  if (value === 'practice-run' || value === 'new-practice' || value === 'practice')
+    return practiceHub ? 'practice' : 'home';
   return MENU_VIEWS.find((view) => view === value) ?? 'home';
 }
 

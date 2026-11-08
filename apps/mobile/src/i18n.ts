@@ -103,3 +103,19 @@ export function localizeInteger(input: string | number | null, locale: LocaleCod
 export function languageDirection(locale: LocaleCode): 'ltr' | 'rtl' {
   return locale === 'ar' ? 'rtl' : 'ltr';
 }
+
+/** Rows remain lossless integers; SP can also contain an exact half-point. */
+export function localizeNumber(input: string | number | null, locale: LocaleCode): string {
+  if (
+    typeof input === 'number' &&
+    input >= 0 &&
+    !Number.isInteger(input) &&
+    Number.isSafeInteger(input * 2)
+  ) {
+    const intlTag = LOCALES.find((item) => item.code === locale)?.intl ?? 'en';
+    return new Intl.NumberFormat(intlTag, { useGrouping: true, maximumFractionDigits: 1 }).format(
+      input,
+    );
+  }
+  return localizeInteger(input, locale);
+}

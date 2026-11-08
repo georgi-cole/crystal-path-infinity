@@ -1,9 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
   getCurrentRow,
-  HINT_SCAN_MS,
-  PACED_RULESET_VERSION,
-  SCAN_RULESET_VERSION,
+  offerPact,
+  PACT_RULESET_VERSION,
+  BALANCE_RULESET_VERSION,
+  RISK_RULESET_VERSION,
+  DIRECTOR_RULESET_VERSION,
+  RELIC_RULESET_VERSION,
+  DISCOVERY_RULESET_VERSION,
+  discoverMystery,
+  applyMysteryEffect,
 } from '@crystal-path-infinity/game-core';
 import type { RunState } from '@crystal-path-infinity/game-core';
 import { RankedAuthority, RankedError, rankedSnapshot, RANKED_RNG } from '../src/ranked.ts';
@@ -153,68 +159,168 @@ function setup(options: { heartbeatWindowMs?: number; rulesetVersion?: string } 
 }
 
 describe('ranked authority trust boundary', () => {
-  it('holds a selected v3 hint scan on server time and whitelists its checkpoint field', async () => {
-    const f = setup({ rulesetVersion: SCAN_RULESET_VERSION });
-    let response = await f.execute(await f.start(), { type: 'resume' });
-    f.advance(5000);
-    response = await f.execute(response, {
-      type: 'hint',
-      row: response.snapshot.currentRow,
-      life: 0,
-    });
-    expect(response.snapshot.pacing?.hintScanStartedAt).toBe(5000);
-    f.advance(HINT_SCAN_MS + 2999);
-    response = await f.execute(response, { type: 'heartbeat' });
-    expect(response.snapshot.status).toBe('playing');
-    const stored = f.record(response);
-    const hidden = {
+  it.each([DIRECTOR_RULESET_VERSION, RELIC_RULESET_VERSION, DISCOVERY_RULESET_VERSION])(
+    'owns the progressive death clock in %s and exposes no private director ledger',
+    async (version) => {
+      const f = setup({ rulesetVersion: version });
+      let reply = await f.start();
+      reply = await f.execute(reply, { type: 'resume' });
+      expect(reply.snapshot.deathClock).toEqual({ warningAt: 3000, expiresAt: 13000 });
+      f.advance(4000);
+      reply = await f.execute(reply, { type: 'heartbeat' });
+      f.advance(4000);
+      reply = await f.execute(reply, { type: 'heartbeat' });
+      expect(reply.snapshot.sp).toBe(240);
+      expect(JSON.stringify(reply)).not.toMatch(
+        /mysteryDirector|lastStepAt|anchorSp|"pressure"|mysteryRng|lowRiskSide/,
+      );
+      f.advance(4000);
+      reply = await f.execute(reply, { type: 'heartbeat' });
+      f.advance(1000);
+      reply = await f.execute(reply, { type: 'heartbeat' });
+      expect(reply.snapshot.status).toBe('dead');
+      expect(reply.snapshot.sp).toBe(0);
+      expect(reply.snapshot.death?.cause).toBe('death_clock');
+      expect(reply.snapshot.deathClock).toBeNull();
+      expect(reply.snapshot.lastClearedRow).toBe('0');
+    },
+  );
+  it('owns the four-second introduction and activates its effect before the next step', async () => {
+    const f = setup({ rulesetVersion: DISCOVERY_RULESET_VERSION });
+    let reply = await f.start();
+    reply = await f.execute(reply, { type: 'resume' });
+    const stored = f.record(reply);
+    f.repository.account().runs.set(stored.state.runId, {
       ...stored,
-      state: { ...stored.state, pacing: { ...stored.state.pacing!, secret: 'never-public' } },
-    };
-    expect(rankedSnapshot(hidden).pacing).toEqual(response.snapshot.pacing);
-    expect(JSON.stringify(rankedSnapshot(hidden))).not.toContain('never-public');
-    f.advance(1);
-    response = await f.execute(response, { type: 'heartbeat' });
-    expect(response.snapshot.death?.cause).toBe('idle');
-    expect(response.snapshot.activeTimeMs).toBe(8000 + HINT_SCAN_MS);
+      state: discoverMystery(
+        {
+          ...stored.state,
+          current: { ...stored.state.current, mysteryOutcome: 'inversion_5s' },
+          effects: [applyMysteryEffect('inversion_5s', 0).addedEffect!],
+          rows: stored.state.rows.map((row) => ({
+            ...row,
+            safeSide: 'left',
+            risk: { lowRiskSide: 'left', broken: { left: true, right: true } },
+          })),
+        },
+        'inversion_5s',
+      ),
+    });
+    f.advance(2000);
+    reply = await f.execute(reply, { type: 'heartbeat' });
+    expect(reply.snapshot.discovery!.introduction?.expiresAt).toBe(4000);
+    expect(reply.snapshot.effects[0].expiresAt! - reply.snapshot.activeTimeMs).toBe(5000);
+    expect(reply.snapshot.sp).toBe(300);
+    reply = await f.choose(reply);
+    expect(reply.snapshot.sp).toBe(305);
+    expect(reply.snapshot.discovery!.introduction).toBeNull();
+    expect(reply.snapshot.discovery!.known).toEqual(['inversion_5s']);
+    expect(JSON.stringify(reply)).not.toMatch(/mysteryDirector|mysteryRng|lowRiskSide|anchorSp/);
   });
-  it('enforces an explicitly selected v2 row deadline on server time and publishes only pacing fields', async () => {
-    const f = setup({ rulesetVersion: PACED_RULESET_VERSION });
-    let response = await f.execute(await f.start(), { type: 'resume' });
-    expect(response.snapshot.pacing).toEqual({ rowEnteredAt: 0, nextSurvivalBonusAt: 60_000 });
-    f.advance(8_000);
-    response = await f.execute(response, { type: 'heartbeat' });
-    expect(response.snapshot.sp).toBe(0);
-    expect(response.snapshot.death).toMatchObject({ cause: 'idle', fatalRow: '1' });
-    expect(response.snapshot.activeTimeMs).toBe(8_000);
-    expect(response.snapshot.lastClearedRow).toBe('0');
-    expect(JSON.stringify(response.snapshot)).not.toMatch(
-      /"(?:safeSide|rows|mysteryRng|stream|secret)":/,
+
+  it('keeps v4 risks private, persists a free no-safe hint and applies Coyote on the server', async () => {
+    const f = setup({ rulesetVersion: RISK_RULESET_VERSION });
+    let reply = await f.start();
+    reply = await f.execute(reply, { type: 'resume' });
+    const stored = f.record(reply);
+    f.repository.account().runs.set(stored.state.runId, {
+      ...stored,
+      state: {
+        ...stored.state,
+        effects: [applyMysteryEffect('coyote_10s', 0).addedEffect!],
+        rows: stored.state.rows.map((row) => ({
+          ...row,
+          safeSide: 'left',
+          risk: { lowRiskSide: 'left', broken: { left: true, right: true } },
+        })),
+      },
+    });
+    reply = await f.execute(reply, { type: 'hint', row: '1', life: 0 });
+    expect(reply.snapshot.current.noSafeTile).toBe(true);
+    expect(reply.snapshot.hints).toBe(2);
+    expect(JSON.stringify(reply)).not.toMatch(
+      /lowRiskSide|"risk"|"broken"|"safeSide"|mysteryRng|"stream"/,
     );
+    const advanced = await f.choose(reply);
+    expect(advanced.snapshot.sp).toBe(300);
+    expect(advanced.snapshot.effects[0]).toMatchObject({ kind: 'coyote_10s', expiresAt: 10000 });
+    expect(advanced.snapshot.history[0].noSafeTile).toBe(true);
   });
-  it('awards a v2 survival minute once, only after continued server-confirmed row crossings', async () => {
-    const f = setup({ rulesetVersion: PACED_RULESET_VERSION });
-    let response = await f.execute(await f.start(), { type: 'resume' });
-    for (let i = 0; i < 10; i++) {
-      f.advance(5_900);
-      response = await f.choose(response);
-    }
-    expect(response.snapshot.activeTimeMs).toBe(60_000);
-    expect(response.snapshot.sp).toBe(305);
-    expect(response.snapshot.lastClearedRow).toBe('10');
-    expect(response.snapshot.pacing).toEqual({
-      rowEnteredAt: 60_000,
-      nextSurvivalBonusAt: 120_000,
-    });
-    response = await f.execute(response, { type: 'heartbeat' });
-    expect(response.snapshot.sp).toBe(305);
-    const stored = f.record(response);
-    const hidden = {
+  it('projects uncapped v3 resources and row effects without losing their remaining charges', async () => {
+    const f = setup({ rulesetVersion: BALANCE_RULESET_VERSION });
+    let reply = await f.start();
+    reply = await f.execute(reply, { type: 'resume' });
+    const stored = f.record(reply);
+    f.repository.account().runs.set(stored.state.runId, {
       ...stored,
-      state: { ...stored.state, pacing: { ...stored.state.pacing!, secret: 'never-public' } },
+      state: {
+        ...stored.state,
+        sp: 5000,
+        effects: [
+          applyMysteryEffect('regen_3rows', 0).addedEffect!,
+          applyMysteryEffect('double_gain_21s', 0).addedEffect!,
+        ],
+      },
+    });
+    const advanced = await f.choose(reply);
+    expect(advanced.snapshot.rulesetVersion).toBe(BALANCE_RULESET_VERSION);
+    expect(advanced.snapshot.sp).toBe(5012);
+    expect(advanced.snapshot.effects[0]).toMatchObject({
+      kind: 'regen_3rows',
+      expiresAt: null,
+      rowsLeft: 2,
+    });
+    expect(advanced.snapshot.effects[1]).toMatchObject({
+      kind: 'double_gain_21s',
+      expiresAt: 21_000,
+    });
+    expect(JSON.stringify(advanced)).not.toMatch(/mysteryRng|routeRng|"safeSide"|"stream"/);
+  });
+  it('projects and executes a versioned pact server-side with idempotent payment', async () => {
+    const f = setup({ rulesetVersion: PACT_RULESET_VERSION });
+    let current = await f.start();
+    expect(current.snapshot.pact).toBeNull();
+    current = await f.execute(current, { type: 'resume' });
+    const record = f.record(current);
+    f.repository.account().runs.set(record.state.runId, {
+      ...record,
+      state: {
+        ...record.state,
+        pact: offerPact('blood_oath'),
+        current: { ...record.state.current, mysteryOutcome: 'blood_oath' },
+      },
+    });
+    const request = f.request(current, { type: 'pact', row: '1', life: 0, option: 'accept' });
+    const accepted = await f.authority.execute(A, request);
+    expect(accepted.accepted).toBe(true);
+    expect(accepted.snapshot.sp).toBe(335);
+    expect(accepted.snapshot.pact).toMatchObject({
+      kind: 'blood_oath',
+      phase: 'active',
+      rowsLeft: 3,
+    });
+    expect(await f.authority.execute(A, request)).toEqual(accepted);
+    expect(JSON.stringify(accepted)).not.toMatch(/mysteryRng|routeRng|"safeSide"|"rows"|"stream"/);
+    const forged = {
+      ...f.request(accepted, { type: 'pact', row: '1', life: 0, option: 'settle' }),
+      command: { type: 'pact', row: '1', life: 0, option: 'settle', sp: 400 },
     };
-    expect(rankedSnapshot(hidden).pacing).toEqual(response.snapshot.pacing);
-    expect(JSON.stringify(rankedSnapshot(hidden))).not.toContain('never-public');
+    await expect(f.authority.execute(A, forged)).rejects.toMatchObject({ code: 'invalid-request' });
+    expect(f.record(accepted).state.sp).toBe(335);
+  });
+
+  it('keeps legacy ranked snapshots unchanged and rejects arbitrary pact options', async () => {
+    const f = setup();
+    const current = await f.start();
+    expect(current.snapshot.rulesetVersion).toBe('infinity-v1');
+    expect(current.snapshot).not.toHaveProperty('pact');
+    const request = f.request(current, { type: 'pact', row: '1', life: 0, option: 'accept' });
+    await expect(
+      f.authority.execute(A, {
+        ...request,
+        command: { ...request.command, option: 'invent-a-prize' },
+      }),
+    ).rejects.toMatchObject({ code: 'invalid-request' });
   });
   it('gates new starts and recovery before writes, but retrieves committed receipts after a policy change', async () => {
     const f = setup();

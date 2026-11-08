@@ -123,7 +123,7 @@ export const es = {
     'Prueba el misterio central o evítalo. Los efectos pueden ayudar, perjudicar o cambiar las pistas.',
   'tutorial.endTitle': 'Cómo termina una partida',
   'tutorial.endInstruction':
-    'No hay última fila. Tú decides cuándo terminar. El ejemplo mortal empieza con 10 SP.',
+    'No hay última fila. Tú decides cuándo terminar. El ejemplo mortal empieza con 5 SP.',
   'tutorial.fatalTitle': 'Una fila mortal no cuenta',
   'tutorial.fatalInstruction':
     'El ejemplo redujo los SP a cero en la fila 4. La última fila superada sigue siendo la 3.',

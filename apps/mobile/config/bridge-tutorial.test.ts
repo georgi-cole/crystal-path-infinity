@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   getRowBandDamage,
-  presentRowPressure,
+  getDeathClock,
   assertRunState,
   PRACTICE_RNG,
 } from '@crystal-path-infinity/game-core';
@@ -20,6 +20,9 @@ import {
 import { MainMenu } from '../src/main-menu';
 import { DEFAULT_PRACTICE_SETTINGS } from '../src/practice-save';
 import { en } from '../src/i18n/messages';
+import { ThemeScope } from '../src/store-provider';
+import { WORLD_ASSETS } from '../src/world-assets';
+import { WORLD_ORDER } from '../src/world-kits';
 
 const noop = () => {};
 const actions: readonly TutorialAction[] = [
@@ -33,6 +36,25 @@ function through(count: number): TutorialSession {
   return actions.slice(0, count).reduce(applyTutorialAction, createTutorialSession());
 }
 describe('CPI-014 crystal rehearsal', () => {
+  it.each(WORLD_ORDER)('keeps the example Obsidian even while %s is equipped', (theme) => {
+    const html = renderToStaticMarkup(
+      createElement(ThemeScope, {
+        theme,
+        children: createElement(BridgeTutorial, {
+          onComplete: noop,
+          onSkip: noop,
+          onStartPractice: noop,
+        }),
+      }),
+    );
+    expect(html).not.toContain(WORLD_ASSETS[theme].environment);
+    expect(html).not.toContain(WORLD_ASSETS[theme].companion);
+    expect(html).not.toContain('cpi-theme-companion');
+    expect(html).not.toContain('cpi-world-pane-inlay');
+    expect(html).toContain('data-world="obsidian"');
+    expect(html).toContain('cpi-guide-primary cpi-menu-action cpi-menu-action--primary');
+    expect(html).toContain('cpi-prism-bridge');
+  });
   it('teaches a safe choice and survived fracture using live practice resources and damage', () => {
     const first = createTutorialSession();
     expect(first.run.rulesetVersion).toBe(GUIDE_RULES.version);
@@ -45,7 +67,9 @@ describe('CPI-014 crystal rehearsal', () => {
     const wrong = through(2);
     expect(wrong.step).toBe('hint');
     expect(wrong.run.lastClearedRow).toBe('2');
-    expect(wrong.run.sp).toBe(first.run.sp - getRowBandDamage(safe.run.currentRow));
+    expect(wrong.run.sp).toBe(
+      first.run.sp - getRowBandDamage(safe.run.currentRow, safe.run.rulesetVersion),
+    );
     expect(wrong.lastTransition?.events).toContainEqual(
       expect.objectContaining({ type: 'choice-resolved', wrong: true }),
     );
@@ -64,14 +88,14 @@ describe('CPI-014 crystal rehearsal', () => {
     const pursued = through(4);
     expect(pursued.step).toBe('pressure');
     expect(pursued.run.activeTimeMs).toBe(GUIDE_PACING.grace);
-    expect(presentRowPressure(pursued.run)).toMatchObject({
-      active: true,
-      remainingMs: GUIDE_PACING.countdown,
+    expect(getDeathClock(pursued.run)).toMatchObject({
+      warningAt: GUIDE_PACING.grace,
+      expiresAt: GUIDE_PACING.grace + GUIDE_PACING.countdown,
     });
     const escaped = through(5);
     expect(escaped.step).toBe('mystery');
     expect(escaped.run.status).toBe('playing');
-    expect(presentRowPressure(escaped.run)?.active).toBe(false);
+    expect(getDeathClock(escaped.run)!.warningAt).toBeGreaterThan(escaped.run.activeTimeMs);
     expect(escaped.run.lastClearedRow).toBe('4');
     assertRunState(escaped.run, PRACTICE_RNG);
   });
@@ -124,6 +148,8 @@ describe('CPI-014 crystal rehearsal', () => {
     expect(html).toContain(en['guide.footingBody']);
     expect(html).toContain('aria-current="step"');
     expect(html).toContain(en['guide.skip']);
+    expect(html).toContain('↗');
+    expect(html).not.toMatch(/â†|âœ|\uFFFD/);
     expect(html).toContain('aria-live="polite"');
     expect(html).not.toMatch(
       /Left glass|Right glass|>Locked<|>\?<|cpi-tutorial-pane|no finish line|grant quota/i,

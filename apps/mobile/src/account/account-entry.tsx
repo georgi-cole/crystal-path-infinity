@@ -4,32 +4,59 @@ import { createOtpGateway } from './otp-gateway';
 import type { AccountFlowProblem } from './otp-flow';
 import { useLanguage } from '../language-context';
 import './account-entry.css';
+import { QA_TOOLS_ENABLED } from '../app-profile';
+import type { OtpGateway } from './otp-flow';
+import type { AccountSessionOwner } from './session-owner';
+import { ACCOUNT_COUNTRIES } from './country-codes';
+
+export interface AccountEntryBinding {
+  readonly gateway: OtpGateway;
+  readonly session: AccountSessionOwner;
+}
 
 /**
  * Account intake stays unavailable until a trusted policy/guardian service is
  * deployed and the environment explicitly points at its HTTPS endpoint.
- * This is NOT a login screen and verified OTP does not grant ranked access.
+ * A verified one-time ticket is exchanged by the separate credential owner.
  */
-export function AccountEntry({ online }: { online: boolean }) {
-  const { t } = useLanguage();
+export function AccountEntry({
+  online,
+  binding,
+}: {
+  online: boolean;
+  binding?: AccountEntryBinding;
+}) {
+  const { t, locale } = useLanguage();
+  const countryNames = useMemo(() => new Intl.DisplayNames([locale], { type: 'region' }), [locale]);
   const configuredOrigin: unknown = import.meta.env.VITE_ACCOUNT_API_BASE_URL;
   const gateway = useMemo(
-    () => createOtpGateway(typeof configuredOrigin === 'string' ? configuredOrigin : undefined),
-    [configuredOrigin],
+    () =>
+      binding?.gateway ??
+      (QA_TOOLS_ENABLED
+        ? createOtpGateway(typeof configuredOrigin === 'string' ? configuredOrigin : undefined)
+        : null),
+    [configuredOrigin, binding],
   );
   const flow = useMemo(() => (gateway ? new AccountOtpFlow(gateway) : null), [gateway]);
   const [state, setState] = useState(() => flow?.snapshot() ?? null);
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
+  const [connecting, setConnecting] = useState(false);
+  const [sessionFailed, setSessionFailed] = useState(false);
+  const [age, setAge] = useState('');
+  const [country, setCountry] = useState('');
   const mounted = useRef(true);
+  const ownsConnection = useRef(false);
 
   useEffect(() => {
     mounted.current = true;
     return () => {
       mounted.current = false;
       flow?.cancel();
+      if (ownsConnection.current && binding?.session.snapshot().phase === 'connecting')
+        void binding.session.signOut();
     };
-  }, [flow]);
+  }, [flow, binding]);
 
   useEffect(() => {
     flow?.cancel();
@@ -51,7 +78,7 @@ export function AccountEntry({ online }: { online: boolean }) {
   }
   async function evaluate() {
     if (!flow) return;
-    const pending = flow.checkEligibility(online);
+    const pending = flow.checkEligibility(online, { age: Number(age), country });
     sync();
     await pending;
     sync();
@@ -68,13 +95,43 @@ export function AccountEntry({ online }: { online: boolean }) {
     const pending = flow.verifyCode(code, online);
     sync();
     await pending;
+    if (!mounted.current) return;
     setCode('');
+    setAge('');
+    setCountry('');
     sync();
+    if (binding && flow.snapshot().step === 'verified_pending_session') {
+      const ticket = flow.takeVerifiedTicket();
+      if (!ticket) {
+        setSessionFailed(true);
+        return;
+      }
+      setConnecting(true);
+      ownsConnection.current = true;
+      const active = await binding.session.exchangeVerifiedTicket(ticket);
+      ownsConnection.current = false;
+      if (mounted.current) {
+        setConnecting(false);
+        setSessionFailed(!active);
+      }
+    }
+  }
+  async function restore() {
+    if (!binding || connecting) return;
+    setConnecting(true);
+    const active = await binding.session.restore();
+    if (mounted.current) {
+      setConnecting(false);
+      setSessionFailed(!active);
+    }
   }
   function cancel() {
+    if (binding?.session.snapshot().phase === 'connecting') void binding.session.signOut();
     flow?.cancel();
     setEmail('');
     setCode('');
+    setSessionFailed(false);
+    setConnecting(false);
     sync();
   }
   const problem = state?.problem as AccountFlowProblem;
@@ -107,9 +164,43 @@ export function AccountEntry({ online }: { online: boolean }) {
                     ? t('account.offline')
                     : t('account.checkFirst')}
               </p>
-              <button type="button" onClick={() => void evaluate()} disabled={!online}>
-                {t('account.check')}
-              </button>
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void evaluate();
+                }}
+              >
+                <label htmlFor="cpi-account-age">{t('account.age')}</label>
+                <input
+                  id="cpi-account-age"
+                  type="number"
+                  inputMode="numeric"
+                  min="0"
+                  max="120"
+                  required
+                  value={age}
+                  onChange={(event) => setAge(event.target.value)}
+                  autoComplete="off"
+                />
+                <label htmlFor="cpi-account-country">{t('account.country')}</label>
+                <select
+                  id="cpi-account-country"
+                  required
+                  value={country}
+                  onChange={(event) => setCountry(event.target.value)}
+                >
+                  <option value="">{t('account.selectCountry')}</option>
+                  {ACCOUNT_COUNTRIES.map((code) => (
+                    <option key={code} value={code}>
+                      {countryNames.of(code) ?? code}
+                    </option>
+                  ))}
+                </select>
+                <p>{t('account.agePrivacy')}</p>
+                <button type="submit" disabled={!online}>
+                  {t('account.check')}
+                </button>
+              </form>
             </>
           )}
           {state?.step === 'checking' && <p role="status">{t('account.checking')}</p>}
@@ -170,8 +261,20 @@ export function AccountEntry({ online }: { online: boolean }) {
             </form>
           )}
           {state?.step === 'verified_pending_session' && (
-            <p role="status">{t('account.notSignedIn')}</p>
+            <p role="status">
+              {binding && connecting
+                ? locale === 'bg'
+                  ? 'Свързване…'
+                  : 'Signing in…'
+                : t('account.notSignedIn')}
+            </p>
           )}
+          {binding && (state?.step === 'guest' || state?.step === 'unavailable') && (
+            <button type="button" disabled={!online || connecting} onClick={() => void restore()}>
+              {locale === 'bg' ? 'Възстанови входа' : 'Restore sign-in'}
+            </button>
+          )}
+          {sessionFailed && <p role="alert">{t('account.retry')}</p>}
           {problem && <p role="alert">{errors[problem]}</p>}
           {state?.step !== 'guest' && (
             <button type="button" onClick={cancel}>

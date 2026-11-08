@@ -98,3 +98,9 @@ live reward/SSV test, signing or store release was performed here.
 Direct links: [DEV SQL Editor](https://supabase.com/dashboard/project/jbyguybxhezjhdbenevh/sql),
 [DEV Auth](https://supabase.com/dashboard/project/jbyguybxhezjhdbenevh/auth/providers),
 [locked Edge host](https://supabase.com/dashboard/project/jbyguybxhezjhdbenevh/functions/cpi-api/details).
+
+## 7 November 2026 — archive and pause
+
+At the owner's request, the shared DEV project `jbyguybxhezjhdbenevh` was paused after a read-only export of its data. The export covers 75 tables across `auth`, `cpi_private`, `public`, `realtime`, `storage`, `supabase_migrations` and `vault`, including 11 Auth users and 9 migration history entries. Storage had zero objects. The export was saved under `%LOCALAPPDATA%/Kolequant/CrystalPath/Backups` with Windows current-user encryption. The archive was decrypted on the same account and each table's row count was checked. This is a data export. A full project restore uses the Supabase pause backup, which the dashboard offers under **Download backups**. A full restore drill is pending.
+
+The freed slot now hosts [Crystal Path Infinity Staging](https://supabase.com/dashboard/project/yfntwewvfsvljxcztoyp), project `yfntwewvfsvljxcztoyp`, on GeorgiCole Free in Ireland. Supabase reported the project Healthy. Application migrations and live services were not deployed in this operation. The Big Eye production project was outside the operation. Its QA backend used the now-paused DEV.

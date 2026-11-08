@@ -12,6 +12,7 @@ import {
   PRACTICE_RNG,
   SCAN_RULESET_VERSION,
   STORE_TEST_RULESET_VERSION,
+  CLASSIC_STORE_RULESET_VERSION,
   transitionRun,
 } from '@crystal-path-infinity/game-core';
 import type { RunState, TestResource } from '@crystal-path-infinity/game-core';
@@ -414,4 +415,22 @@ describe('test-store presentation and assets', () => {
       expect(html).not.toContain('data-companion-action="fall"');
     },
   );
+});
+
+it('persists the combined mystery/Store run without mixing older assisted records', () => {
+  const storage = new Storage(),
+    store = createTestStore(storage);
+  const run = initial(CLASSIC_STORE_RULESET_VERSION);
+  store.saveRun(run);
+  store.recordAssistedBest('90');
+  store.recordAssistedBest('12', CLASSIC_STORE_RULESET_VERSION);
+  const restored = createTestStore(storage);
+  expect(restored.snapshot().checkpoint).toEqual(run);
+  expect(restored.assistedBest()).toBe('90');
+  expect(restored.assistedBest(CLASSIC_STORE_RULESET_VERSION)).toBe('12');
+  expect(selectTestPractice(restored.snapshot(), { status: 'empty' })).toMatchObject({
+    status: 'ready',
+    state: { rulesetVersion: CLASSIC_STORE_RULESET_VERSION, discovery: { known: [] } },
+  });
+  expect(restored.recordAssistedBest('11', CLASSIC_STORE_RULESET_VERSION)).toBe(false);
 });

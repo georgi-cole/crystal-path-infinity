@@ -34,6 +34,7 @@ export const deathLabels: Record<DeathCause, string> = {
   mystery: en['game.deathMystery'],
   drain: en['game.deathDrain'],
   idle: en['game.deathIdle'],
+  death_clock: en['game.deathIdle'],
 };
 
 export function formatActiveDuration(activeTimeMs: number): string {

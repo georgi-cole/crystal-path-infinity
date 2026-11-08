@@ -124,10 +124,11 @@ html:has(.cpi-crystal-guide) {
   min-height: 2.75rem;
   padding: 0.9rem 1.1rem;
   border: 1px solid #b5789c82;
-  border-radius: 0.45rem;
+  border-radius: 6px;
   background: linear-gradient(125deg, #3a2034, #130d14);
   color: #f2dcec;
-  font: 550 0.78rem var(--cpi-font-body);
+  font: 600 0.83rem var(--cpi-font-body);
+  letter-spacing: 0.025em;
   cursor: pointer;
   transition:
     border-color 0.2s,
@@ -257,29 +258,26 @@ html:has(.cpi-crystal-guide) {
   text-transform: uppercase;
   pointer-events: none;
 }
-.cpi-guide-pursuit {
+.cpi-guide-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-block: 1rem;
+}
+.cpi-guide-tabs .cpi-menu-action {
+  width: auto;
+  min-height: 3rem;
+  padding: 0.65rem 1rem;
+}
+.cpi-guide-tabs .cpi-menu-action-chevron {
+  display: none;
+}
+.cpi-guide-clock {
   position: absolute;
-  top: 22%;
-  right: 8%;
-  display: grid;
-  justify-items: center;
-  gap: 0.35rem;
-  color: #e788a1;
+  z-index: 3;
+  top: 4.5rem;
+  inset-inline: 1.4rem;
   pointer-events: none;
-  animation: cpi-guide-heartbeat 1.2s ease-in-out infinite;
-}
-.cpi-guide-pursuit svg {
-  width: 3rem;
-  height: 3rem;
-  stroke: currentColor;
-  stroke-width: 1;
-}
-.cpi-guide-pursuit span {
-  font-size: 0.32rem;
-  letter-spacing: 0.14em;
-  max-width: 5rem;
-  text-align: center;
-  line-height: 1.7;
 }
 .cpi-guide-stage.is-pursued {
   border-color: #e685a24d;
@@ -419,4 +417,105 @@ html:has(.cpi-crystal-guide) {
 .cpi-reduced-motion .cpi-crystal-guide * {
   animation: none !important;
   transition: none !important;
+}
+
+/* The guided bridge uses the same glass, metal and typography as the live scene. */
+.cpi-tutorial {
+  width: min(100%, 42rem);
+  margin: 2.5rem auto;
+  padding: clamp(1.1rem, 4vw, 2rem);
+  border: 1px solid var(--cpi-line);
+  border-radius: 8px;
+  background: linear-gradient(140deg, #202024d9, #101013e6);
+  gap: 1.1rem;
+}
+.cpi-tutorial h1 {
+  font: 400 clamp(2.5rem, 5vw, 3.75rem)/1.1 var(--cpi-font-display);
+}
+.cpi-tutorial-instruction {
+  color: #bdb8c5;
+  line-height: 1.8;
+  font-size: 0.85rem;
+}
+.cpi-tutorial-proof {
+  color: #b8cabd;
+  font-size: 0.65rem;
+  font-weight: 400;
+}
+.cpi-tutorial-stats span {
+  background: none;
+  border: 0;
+  padding: 0.3rem 0;
+  font-size: 0.7rem;
+}
+.cpi-tutorial-stats {
+  justify-content: space-between;
+  border-bottom: 1px solid var(--cpi-line);
+  padding-bottom: 0.5rem;
+}
+.cpi-tutorial-bridge {
+  border: 0;
+  padding: 1rem 0;
+  border-radius: 0;
+  background: radial-gradient(ellipse at 50% 40%, #ad78a319, transparent 65%);
+}
+.cpi-tutorial-pane {
+  border: 1px solid #b1c6cc88;
+  border-radius: 2px;
+  background: linear-gradient(140deg, #d6b8df26, #23232966);
+  box-shadow:
+    inset 0 1px 0 #e9e8d24d,
+    0 6px 0 #27232b;
+  min-height: 7rem;
+}
+.cpi-tutorial-pane:disabled {
+  border-style: solid;
+}
+.cpi-tutorial-pane-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+.cpi-tutorial-pane-note {
+  font-size: 0.65rem;
+  font-weight: 400;
+  color: #c5d1d2;
+}
+.cpi-tutorial-pane.is-revealed {
+  border-color: #cae2c0;
+  background: linear-gradient(135deg, #96c6a444, #1a403599);
+  box-shadow:
+    inset 0 1px 0 #ecffe180,
+    0 6px 0 #2c4d3b;
+}
+.cpi-tutorial-mystery {
+  border-radius: 4px;
+  border-color: #cd87e09c;
+  background: #ad64dd26;
+  color: #eed4ff;
+  font-weight: 400;
+}
+.cpi-tutorial-actions button,
+.cpi-tutorial-skip {
+  border-radius: 4px;
+  background: #b6cbd00a;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+.cpi-tutorial-actions .cpi-tutorial-primary {
+  color: #1a0b18;
+  border-color: #e688c2;
+  background: linear-gradient(115deg, #f5a1ce, #a8558f);
+}
+.cpi-tutorial-facts {
+  background: #cf72b20a;
+  border-left: 1px solid #c671a566;
+  border-radius: 2px;
+}
+@media (max-width: 600px) {
+  .cpi-tutorial {
+    margin-block: 1.5rem;
+  }
+  .cpi-tutorial-stats {
+    gap: 0.5rem;
+  }
 }

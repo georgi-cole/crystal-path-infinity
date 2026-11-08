@@ -22,7 +22,7 @@ import {
   upgradePracticePacing,
 } from '../src/practice-save';
 import type { PracticeStorage } from '../src/practice-save';
-import { PRACTICE_RULESET_VERSION } from '../src/practice-rules';
+import { SCAN_RULESET_VERSION } from '@crystal-path-infinity/game-core';
 
 class MemoryStorage implements PracticeStorage {
   readonly map = new Map<string, string>();
@@ -87,7 +87,7 @@ describe('CPI-009 atomic local practice snapshots', () => {
       { activeTimeMs: 5000, achievedAt: 5000, rng: PRACTICE_RNG },
     ).state;
     const next = upgradePracticePacing(old);
-    expect(next.rulesetVersion).toBe(PRACTICE_RULESET_VERSION);
+    expect(next.rulesetVersion).toBe(SCAN_RULESET_VERSION);
     expect(next.pacing).toEqual(old.pacing);
     expect(presentRowPressure(next)).toEqual(presentRowPressure(old));
     expect(next.pacing?.hintScanStartedAt).toBeUndefined();
@@ -109,7 +109,7 @@ describe('CPI-009 atomic local practice snapshots', () => {
       },
     ).state;
     const next = upgradePracticePacing(old);
-    expect(next.rulesetVersion).toBe(PRACTICE_RULESET_VERSION);
+    expect(next.rulesetVersion).toBe(SCAN_RULESET_VERSION);
     expect(next.pacing).toEqual({ rowEnteredAt: 123_456, nextSurvivalBonusAt: 180_000 });
     expect(presentRowPressure(next)?.active).toBe(false);
     expect(next.rows).toEqual(old.rows);

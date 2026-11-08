@@ -21,7 +21,7 @@
   gap: 0.5rem;
 }
 
-.cpi-account-entry input {
+.cpi-account-entry :is(input, select) {
   width: 100%;
   min-width: 0;
   box-sizing: border-box;

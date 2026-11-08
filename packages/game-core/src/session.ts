@@ -5,6 +5,7 @@ import type {
   RunCommand,
   RunState,
   TileSide,
+  PactOption,
   TransitionContext,
   TransitionResult,
 } from './types.ts';
@@ -14,6 +15,7 @@ export type SessionCommand =
   | { readonly type: 'choose'; readonly side: TileSide }
   | { readonly type: 'hint' }
   | { readonly type: 'mystery' }
+  | { readonly type: 'pact'; readonly option: PactOption }
   | Exclude<RunCommand, { readonly row: string }>;
 
 export type BeforeRunCommit = (result: TransitionResult, previous: RunState) => void;
@@ -66,7 +68,10 @@ export function createRunSession(initialState: RunState, rng: RandomSource): Run
       const status = state.status;
       const endEpoch = controlEpoch;
       const command: RunCommand =
-        input.type === 'choose' || input.type === 'hint' || input.type === 'mystery'
+        input.type === 'choose' ||
+        input.type === 'hint' ||
+        input.type === 'mystery' ||
+        input.type === 'pact'
           ? { ...input, row, life }
           : { ...input };
       let consumed = false;

@@ -1,6 +1,9 @@
 /** Short field notes. Mechanical numbers come from the live rehearsal, not prose. */
 export const crystalGuideEn = {
-  'guide.eyebrow': 'READ THE CRYSTAL',
+  'guide.reference': 'How to play and your discoveries',
+  'guide.learnTab': 'How to play',
+  'guide.journalTab': 'Discoveries',
+  'guide.eyebrow': 'HOW TO PLAY',
   'guide.rehearsal': 'REHEARSAL',
   'guide.chapters': 'Before you cross',
   'guide.footing': 'Footing',
@@ -10,7 +13,7 @@ export const crystalGuideEn = {
   'guide.temptation': 'Temptation',
   'guide.footingTitle': 'Crystal clear? Not quite.',
   'guide.footingBody':
-    'Two panes. One will hold. Try the left crystal. For this first step, you can trust it.',
+    'Two panes. Either might hold. Try the left crystal. For this first step, you can trust it.',
   'guide.fractureTitle': 'Confidence has a breaking point.',
   'guide.fractureBody':
     'Left again. This time, watch it fracture. Your SP is your lifeline; some mistakes leave a little less of it.',
@@ -22,9 +25,8 @@ export const crystalGuideEn = {
     'Follow the light on the left. A hint shows the way; taking the step is still up to you.',
   'guide.pursuitTitle': 'Death hates to be kept waiting.',
   'guide.pursuitBody':
-    'Stay too long in one place and the Death Clock finds you. Keep moving before the crystal gives way.',
-  'guide.survivalWhisper':
-    'Stay alive a little longer. Sometimes, a little light finds its way back.',
+    'The Death Clock gives you a moment to react, then drains SP faster and faster. A new hint or reward gives you time to read. Move before your light runs out.',
+  'guide.survivalWhisper': 'Take a step to stop the drain.',
   'guide.temptationTitle': 'Curiosity has a price.',
   'guide.temptationBody':
     'Something is waiting between the crystals. A gift, a curse, a change of fortune. Open it — or leave it wondering.',
@@ -57,7 +59,10 @@ export const crystalGuideEn = {
 } as const;
 
 export const crystalGuideBg = {
-  'guide.eyebrow': 'РАЗЧЕТИ КРИСТАЛА',
+  'guide.reference': 'Как се играе и твоите находки',
+  'guide.learnTab': 'Как се играе',
+  'guide.journalTab': 'Открития',
+  'guide.eyebrow': 'КАК СЕ ИГРАЕ',
   'guide.rehearsal': 'РЕПЕТИЦИЯ',
   'guide.chapters': 'Преди да прекрачиш',
   'guide.footing': 'Опора',
@@ -67,7 +72,7 @@ export const crystalGuideBg = {
   'guide.temptation': 'Изкушение',
   'guide.footingTitle': 'Кристално ясно? Не съвсем.',
   'guide.footingBody':
-    'Две плочки. Едната ще издържи. Опитай левия кристал. За тази първа стъпка можеш да му се довериш.',
+    'Две плочки. Всяка може да издържи. Опитай левия кристал. За тази първа стъпка можеш да му се довериш.',
   'guide.fractureTitle': 'И увереността се пропуква.',
   'guide.fractureBody':
     'Пак наляво. Този път виж как се пропуква. SP те държат жив; някои грешки отнемат част от тях.',
@@ -79,8 +84,8 @@ export const crystalGuideBg = {
     'Последвай светлината вляво. Подсказката сочи пътя; стъпката все още е твоя.',
   'guide.pursuitTitle': 'Смъртта не обича да чака.',
   'guide.pursuitBody':
-    'Застоиш ли се на едно място, Death Clock те намира. Продължи напред, преди кристалът да поддаде.',
-  'guide.survivalWhisper': 'Остани жив още малко. Понякога светлината намира път обратно.',
+    'Death Clock ти дава миг за реакция, после SP изтичат все по-бързо. Нова подсказка или награда ти дава време за прочитане. Стъпи, преди светлината ти да угасне.',
+  'guide.survivalWhisper': 'Направи стъпка, за да спреш загубата на SP.',
   'guide.temptationTitle': 'Любопитството има цена.',
   'guide.temptationBody':
     'Нещо те чака между кристалите. Подарък, проклятие, обрат на съдбата. Отвори го — или го остави да се чуди.',

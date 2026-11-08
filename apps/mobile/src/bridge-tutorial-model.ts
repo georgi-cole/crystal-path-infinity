@@ -58,10 +58,19 @@ export function createTutorialSession(): TutorialSession {
           ...row,
           safeSide: index === 1 ? 'right' : 'left',
           hasMystery: index === 4,
+          risk: {
+            lowRiskSide: index === 1 ? 'right' : 'left',
+            broken: { left: index === 1, right: index !== 1 },
+          },
         }
       : row,
   );
-  return { step: 'safe', run: { ...run, rows }, lastTransition: null, mysteryChoice: 'pending' };
+  return {
+    step: 'safe',
+    run: { ...run, rows, mysteryDirector: { ...run.mysteryDirector!, nextRow: '5' } },
+    lastTransition: null,
+    mysteryChoice: 'pending',
+  };
 }
 
 function advance(run: RunState, command: RunCommand, time = run.activeTimeMs): TransitionResult {

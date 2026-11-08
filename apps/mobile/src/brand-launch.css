@@ -1,0 +1,96 @@
+.cpi-launch-app {
+  min-height: 100dvh;
+}
+.cpi-brand-launch {
+  --launch-mark: 1;
+  --launch-brand: 1;
+  --launch-exit: 0;
+  position: fixed;
+  inset: 0;
+  z-index: 16000;
+  overflow: hidden;
+  pointer-events: none;
+  color: #eeeef2;
+}
+.cpi-brand-backdrop {
+  position: absolute;
+  inset: 0;
+  background: #060a18;
+  opacity: calc(1 - var(--launch-exit));
+}
+.cpi-brand-backdrop::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 42%, #a6afca09, transparent 48%);
+}
+.cpi-brand-dna {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  justify-items: center;
+  gap: 24px;
+  opacity: var(--launch-mark);
+}
+.cpi-brand-dna img {
+  object-fit: contain;
+  width: 64px;
+  height: 128px;
+}
+.cpi-brand-dna span {
+  font: 500 11px var(--cpi-font-display);
+  letter-spacing: 0.4em;
+  padding-inline-start: 0.4em;
+  color: #c7c7d0;
+  opacity: var(--launch-brand);
+}
+.cpi-brand-code {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  width: min(600px, calc(100vw - 40px));
+  height: auto;
+  transform: translate(-50%, -50%);
+  overflow: visible;
+}
+.cpi-brand-code text {
+  font:
+    500 10px ui-monospace,
+    monospace;
+  letter-spacing: 1.4px;
+  fill: #b5c9d6;
+}
+.cpi-brand-code text:nth-child(3n) {
+  fill: #80b6a8;
+}
+.cpi-brand-code text:nth-child(4n) {
+  fill: #b8a4c8;
+}
+.cpi-brand-title {
+  position: fixed;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  opacity: 0;
+  will-change: transform, opacity;
+  white-space: nowrap;
+}
+.cpi-brand-title-fallback {
+  width: max-content;
+  font: 700 clamp(2.5rem, 7.5vw, 6.5rem)/1.05 var(--cpi-font-display);
+  letter-spacing: 0.09em;
+  background: linear-gradient(180deg, #fff 13%, #c7c7ce 45%, #f1f0f3 52%, #85858e 100%);
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.cpi-brand-launch[data-reduced='true'] .cpi-brand-code,
+.cpi-brand-launch[data-reduced='true'] .cpi-brand-title {
+  display: none;
+}
+@media print {
+  .cpi-brand-launch {
+    display: none !important;
+  }
+}

@@ -141,6 +141,8 @@ runtime or revenue evidence.
 
 ## Proposed alert defaults and ownership
 
+**6 November 2026 follow-up:** Georgi provided `support@kolequant.com`; the player app now exposes an explicit email draft in Settings → Help and support. This supersedes the public-email part of the original unconfigured-contact note below. Inbox delivery, a published support page, the private security route and on-call destinations still need their own acceptance. No message or diagnostics are sent automatically.
+
 The acknowledged-action p50 ≤150 ms / p95 ≤250 ms targets and ≥200-action sample
 come from [CPI-002's proposed device/deployed-server gates](../spikes/CPI-002-results.md).
 They have not been demonstrated on launch-region phones. The following remaining

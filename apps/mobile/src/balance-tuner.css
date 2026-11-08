@@ -1,0 +1,79 @@
+.cpi-balance-tuner {
+  margin: 1rem 0;
+  padding: 0.85rem 1rem;
+  border: 1px solid #88759d50;
+  border-radius: 8px;
+  background: #131118;
+  color: #d9d0e2;
+}
+.cpi-balance-tuner summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 2rem;
+  align-items: center;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.cpi-balance-tuner summary span {
+  color: #b4e0d7;
+  font-size: 0.75rem;
+}
+.cpi-balance-tuner p,
+.cpi-balance-tuner small {
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: #aaa1b7;
+}
+.cpi-balance-tuner label {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.65rem;
+  font-size: 0.75rem;
+}
+.cpi-balance-tuner :is(select, input, button) {
+  box-sizing: border-box;
+  min-height: 44px;
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 5px;
+  border: 1px solid #8c789c55;
+  color: #e9e1ef;
+  background: #1b1721;
+  font: inherit;
+}
+.cpi-balance-tuner :is(select, input, button, summary):focus-visible {
+  outline: 2px solid #b8e8de;
+  outline-offset: 3px;
+}
+.cpi-balance-custom {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+.cpi-balance-custom button {
+  grid-column: 1/-1;
+  cursor: pointer;
+}
+.cpi-balance-custom button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.cpi-balance-next strong {
+  color: #b4e0d7;
+  font-weight: 500;
+}
+.cpi-balance-focus {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.cpi-balance-focus button {
+  flex: 1 1 9rem;
+  cursor: pointer;
+}
+.cpi-balance-focus button[aria-pressed='true'] {
+  border-color: #b4e0d7;
+  background: #20302d;
+}

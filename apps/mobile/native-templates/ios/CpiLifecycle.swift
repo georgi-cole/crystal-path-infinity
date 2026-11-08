@@ -91,20 +91,20 @@ class CpiWebView: WKWebView {
     private let gateId = UUID().uuidString
     private var held: URLRequest?
     private var released = false
-    private var observedBackground = false
+    private var observedInactive = false
     private var observers: [NSObjectProtocol] = []
 
     override init(frame: CGRect, configuration: WKWebViewConfiguration) {
         super.init(frame: frame, configuration: configuration)
-        observers.append(NotificationCenter.default.addObserver(forName: UIScene.didEnterBackgroundNotification, object: nil, queue: .main) { [weak self] notification in
+        observers.append(NotificationCenter.default.addObserver(forName: UIScene.willDeactivateNotification, object: nil, queue: .main) { [weak self] notification in
             guard let self = self, self.held != nil,
                   let scene = notification.object as? UIWindowScene,
                   scene === self.window?.windowScene else { return }
-            self.observedBackground = true
+            self.observedInactive = true
             CAPLog.print("CPI_NATIVE_GATE {\"stage\":\"paused\",\"gateId\":\"\(self.gateId)\"}")
         })
         observers.append(NotificationCenter.default.addObserver(forName: UIScene.didActivateNotification, object: nil, queue: .main) { [weak self] notification in
-            guard let self = self, self.observedBackground, let request = self.held,
+            guard let self = self, self.observedInactive, let request = self.held,
                   let scene = notification.object as? UIWindowScene,
                   scene === self.window?.windowScene else { return }
             self.held = nil

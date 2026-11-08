@@ -1,9 +1,12 @@
+import { practiceStorage, QA_TOOLS_ENABLED } from './app-profile';
+import { rememberMysteries } from './mystery-journal-model';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { STORE_TEST_RULESET_VERSION } from '@crystal-path-infinity/game-core';
+import { usesStoreTestRules, parseTileExperiment } from '@crystal-path-infinity/game-core';
 import { useTestStore } from './store-context';
 import { selectTestPractice } from './test-store';
 import type { ThemeId } from './store-catalog';
 import type { RunState } from '@crystal-path-infinity/game-core';
+import { PRACTICE_RULESET_VERSION } from './practice-rules';
 import { Capacitor } from '@capacitor/core';
 import {
   clearPracticeCheckpoint,
@@ -33,9 +36,13 @@ import type { RankedClient } from './ranked/ranked-client';
 import type { AccountControlsClient } from './account/account-controls-model';
 import type { RewardFlow } from './rewards/reward-flow';
 import type { SavedPendingClient } from './ranked/saved-pending-client';
+import type { AccountEntryBinding } from './account/account-entry';
 
 /** Supplied only by an approved account host; shipped builds inject nothing. */
 export interface ApprovedAccountServices {
+  accountEntry?: AccountEntryBinding;
+  signOut?: () => Promise<boolean>;
+  adPrivacyOptions?: () => Promise<void>;
   session?: Pick<AccountSessionOwner, 'accountScope' | 'subscribeAccountScope'>;
   profileClient?: ProfileClient | null;
   leaderboardClient?: LeaderboardClient | null;
@@ -54,7 +61,21 @@ const showBuildDetails = build.environment !== 'production';
 function loadLocalPractice(): PracticeLoad {
   if (typeof window === 'undefined') return { status: 'empty' };
   try {
-    return readPracticeCheckpoint(window.localStorage);
+    const loaded = readPracticeCheckpoint(practiceStorage());
+    if (
+      !QA_TOOLS_ENABLED &&
+      loaded.status === 'ready' &&
+      (loaded.state.storeTest || parseTileExperiment(loaded.state.rulesetVersion))
+    )
+      return { status: 'empty' };
+    if (loaded.status === 'ready') {
+      try {
+        rememberMysteries(practiceStorage(), loaded.state);
+      } catch {
+        /* Journal writes never invalidate the saved run. */
+      }
+    }
+    return loaded;
   } catch {
     return {
       status: 'corrupt',
@@ -91,7 +112,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
   const [tutorialProgress, setTutorialProgress] = useState<TutorialProgress>(() => {
     if (typeof window === 'undefined') return 'unseen';
     try {
-      return readTutorialProgress(window.localStorage);
+      return readTutorialProgress(practiceStorage());
     } catch {
       return 'unseen';
     }
@@ -100,9 +121,10 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
   const [bootError, setBootError] = useState('');
   const [bootAttempt, setBootAttempt] = useState(0);
   const [view, setView] = useState<MenuView>(() =>
-    typeof window === 'undefined' ? 'home' : viewFromHash(window.location.hash),
+    typeof window === 'undefined' ? 'home' : viewFromHash(window.location.hash, QA_TOOLS_ENABLED),
   );
   const [confirmNew, setConfirmNew] = useState(false);
+  const [storeEntry, setStoreEntry] = useState<'worlds' | 'essentials'>('worlds');
   const confirmingRef = useRef(false);
   const backExitInFlight = useRef(false);
   const [exitRequest, setExitRequest] = useState(0);
@@ -166,13 +188,18 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
         : loadLocalPractice();
       let preferences = DEFAULT_PRACTICE_SETTINGS;
       try {
-        preferences = readPracticeSettings(window.localStorage).settings;
+        preferences = readPracticeSettings(practiceStorage()).settings;
       } catch {
         // Offline play does not require a writable settings store.
       }
       let personalBest: string | null = null;
       try {
-        personalBest = readPracticePersonalBest(window.localStorage);
+        personalBest = readPracticePersonalBest(
+          practiceStorage(),
+          checkpoint.status === 'ready'
+            ? checkpoint.state.rulesetVersion
+            : PRACTICE_RULESET_VERSION,
+        );
       } catch {
         // Personal best is optional local metadata, not ranked authority.
       }
@@ -211,7 +238,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
         confirmingRef.current = false;
         setConfirmNew(false);
       }
-      setView(viewFromHash(window.location.hash));
+      setView(viewFromHash(window.location.hash, QA_TOOLS_ENABLED));
     };
     window.addEventListener('online', onConnection);
     window.addEventListener('offline', onConnection);
@@ -240,6 +267,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
 
   const navigate = (next: MenuView) => {
     if (gameRef.current || confirmingRef.current || view === next) return;
+    if (next === 'store') setStoreEntry('worlds');
     window.history.pushState({ cpiNavigation: true }, '', viewHash(next));
     setView(next);
     setStorageWarning(null);
@@ -292,7 +320,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
   const changeSettings = useCallback((next: PracticeSettings) => {
     setSettings(next);
     try {
-      writePracticeSettings(window.localStorage, next);
+      writePracticeSettings(practiceStorage(), next);
       setStorageWarning(null);
     } catch {
       setStorageWarning('Settings could not be saved on this device.');
@@ -303,7 +331,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
     const next = tutorialProgress === 'completed' ? 'completed' : progress;
     setTutorialProgress(next);
     try {
-      writeTutorialProgress(window.localStorage, next);
+      writeTutorialProgress(practiceStorage(), next);
     } catch {
       setStorageWarning('Tutorial progress could not be saved on this device.');
     }
@@ -311,8 +339,9 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
   const onCheckpoint = useCallback(
     (state: RunState) => {
       try {
-        if (state.rulesetVersion === STORE_TEST_RULESET_VERSION && store) store.saveRun(state);
-        else writePracticeCheckpoint(window.localStorage, state);
+        if (usesStoreTestRules(state.rulesetVersion) && store) store.saveRun(state);
+        else writePracticeCheckpoint(practiceStorage(), state);
+        rememberMysteries(practiceStorage(), state);
         setStorageWarning(null);
       } catch {
         setStorageWarning(
@@ -346,7 +375,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
     }
     try {
       store?.clearRun();
-      clearPracticeCheckpoint(window.localStorage);
+      clearPracticeCheckpoint(practiceStorage());
       setSaved({ status: 'empty' });
       setStorageWarning(null);
     } catch {
@@ -369,18 +398,24 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
     window.history.pushState({ cpiModal: true }, '', '#new-practice');
   };
 
-  const closePractice = (destination: MenuView = view) => {
+  const closePractice = (destination: MenuView = 'home') => {
     gameRef.current = null;
     setGame(null);
     backExitInFlight.current = false;
     const testRun = store?.snapshot().checkpoint;
-    setSaved(
-      testRun
-        ? { status: 'ready', state: testRun, revision: store?.snapshot().revision ?? 1 }
-        : loadLocalPractice(),
-    );
+    const checkpoint: PracticeLoad = testRun
+      ? { status: 'ready', state: testRun, revision: store?.snapshot().revision ?? 1 }
+      : loadLocalPractice();
+    setSaved(checkpoint);
     try {
-      setBest(readPracticePersonalBest(window.localStorage));
+      setBest(
+        readPracticePersonalBest(
+          practiceStorage(),
+          checkpoint.status === 'ready'
+            ? checkpoint.state.rulesetVersion
+            : PRACTICE_RULESET_VERSION,
+        ),
+      );
     } catch {
       setBest(null);
     }
@@ -445,6 +480,10 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
           key={game.token}
           initialState={game.initial}
           onExit={() => closePractice()}
+          onStore={() => {
+            setStoreEntry('essentials');
+            closePractice('store');
+          }}
           onViewRankings={() => closePractice('rankings')}
           onExitCancelled={cancelGameExit}
           exitRequest={exitRequest}
@@ -469,7 +508,23 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
     <>
       <div inert={confirmNew}>
         <MainMenu
+          accountEntry={services?.accountEntry}
+          onSignOut={services?.signOut}
+          onAdPrivacyOptions={services?.adPrivacyOptions}
+          onTryTheme={(theme) => {
+            if (gameRef.current) return;
+            const next: GameOwner = {
+              initial: null,
+              token: ++gameSequence.current,
+              trialTheme: theme,
+            };
+            gameRef.current = next;
+            setGame(next);
+            setExitRequest(0);
+            window.history.pushState({ cpiNavigation: true }, '', '#practice-run');
+          }}
           view={view}
+          storeEntry={storeEntry}
           saved={visibleSaved}
           best={best}
           online={online}

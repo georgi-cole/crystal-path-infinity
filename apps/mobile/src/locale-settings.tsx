@@ -3,6 +3,7 @@ import { useLanguage } from './language-context';
 import type { LocaleChoice } from './i18n';
 import type { ReactNode } from 'react';
 import './locale-settings.css';
+import { SUPPORT_EMAIL, SUPPORT_MAILTO } from './support-contact';
 
 /**
  * Real, persisted language selection plus truthful permanent privacy/account
@@ -49,8 +50,15 @@ export function LanguageSettings() {
 
 export function PrivacyAccountSupport({
   accountAvailable = false,
+  accountConnected = false,
   accountActions,
-}: { accountAvailable?: boolean; accountActions?: ReactNode } = {}) {
+  privacyActions,
+}: {
+  accountAvailable?: boolean;
+  accountConnected?: boolean;
+  accountActions?: ReactNode;
+  privacyActions?: ReactNode;
+} = {}) {
   const { t } = useLanguage();
   return (
     <div className="cpi-settings-destinations">
@@ -63,8 +71,9 @@ export function PrivacyAccountSupport({
           <span id="cpi-privacy-heading">{t('settings.privacyTitle')}</span>
         </summary>
         <div className="cpi-settings-expanded">
-          <p>{t('settings.privacyInfo')}</p>
+          <p>{t(accountConnected ? 'settings.privacyConnected' : 'settings.privacyInfo')}</p>
           <p className="cpi-menu-fine-print">{t('settings.privacyUnavailable')}</p>
+          {privacyActions}
         </div>
       </details>
       <details className="cpi-settings-section cpi-settings-disclosure">
@@ -76,7 +85,15 @@ export function PrivacyAccountSupport({
           <span id="cpi-account-heading">{t('settings.accountTitle')}</span>
         </summary>
         <div className="cpi-settings-expanded">
-          <p>{t(accountAvailable ? 'settings.accountAvailable' : 'settings.accountUnavailable')}</p>
+          <p>
+            {t(
+              accountAvailable
+                ? 'settings.accountAvailable'
+                : accountConnected
+                  ? 'settings.accountToolsUnavailable'
+                  : 'settings.accountUnavailable',
+            )}
+          </p>
           {accountActions}
         </div>
       </details>
@@ -88,7 +105,18 @@ export function PrivacyAccountSupport({
           <span id="cpi-support-heading">{t('settings.supportTitle')}</span>
         </summary>
         <div className="cpi-settings-expanded">
-          <p>{t('settings.supportUnavailable')}</p>
+          <p>{t('support.intro')}</p>
+          <p>{t('support.message')}</p>
+          <a
+            className="cpi-menu-action cpi-menu-action--secondary cpi-support-contact"
+            href={SUPPORT_MAILTO}
+          >
+            <span className="cpi-menu-action-title">{t('support.contact')}</span>{' '}
+            <span aria-hidden="true">↗</span>
+          </a>
+          <span className="cpi-support-address">{SUPPORT_EMAIL}</span>
+          <p className="cpi-menu-fine-print">{t('support.compose')}</p>
+          <p className="cpi-menu-fine-print">{t('support.private')}</p>
         </div>
       </details>
     </div>

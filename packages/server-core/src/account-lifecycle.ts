@@ -31,6 +31,8 @@ export interface AccountLifecycleOptions {
   readonly rateLimit: (request: Request, subject: string | null) => Promise<boolean>;
   readonly now?: () => number;
   readonly revocationTimeoutMs?: number;
+  /** Enabled only by the new host with the separately migrated private purchase/account tables. */
+  readonly includeCommerce?: boolean;
 }
 export interface AccountDeletionStatus {
   readonly requestId: string;
@@ -330,7 +332,7 @@ export function createAccountLifecycleHandler(options: AccountLifecycleOptions) 
       if (
         !object(cursor) ||
         Object.keys(cursor).length < 4 ||
-        Object.keys(cursor).length > 7 ||
+        Object.keys(cursor).length > 11 ||
         Object.keys(cursor).some(
           (key) =>
             ![
@@ -341,12 +343,16 @@ export function createAccountLifecycleHandler(options: AccountLifecycleOptions) 
               'report',
               'reward',
               'adAuthorization',
+              'purchase',
+              'spend',
+              'session',
+              'assistedResult',
             ].includes(key),
         ) ||
         (cursor.report !== undefined &&
           cursor.report !== null &&
           (typeof cursor.report !== 'string' || !uuid.test(cursor.report))) ||
-        !['reward', 'adAuthorization'].every(
+        !['reward', 'adAuthorization', 'purchase', 'spend', 'session', 'assistedResult'].every(
           (key) =>
             cursor[key] === undefined ||
             cursor[key] === null ||
@@ -419,16 +425,60 @@ export function createAccountLifecycleHandler(options: AccountLifecycleOptions) 
           const authorizations = ownAdAuthorizationExport(
             authorizationRows.rows[0]?.ad_authorization_export,
           );
+          let commerce: Record<string, unknown> | null = null;
+          if (options.includeCommerce) {
+            const row = (
+              await connection.query(
+                'select cpi_private.export_own_commerce($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid) as commerce',
+                [
+                  actor.subject,
+                  cursor.purchase ?? null,
+                  cursor.spend ?? null,
+                  cursor.session ?? null,
+                  cursor.assistedResult ?? null,
+                ],
+              )
+            ).rows[0];
+            const parsed = json(row?.commerce);
+            if (
+              !object(parsed) ||
+              !object(parsed.next) ||
+              !['purchases', 'spends', 'sessions', 'assistedResults'].every(
+                (key) => Array.isArray(parsed[key]) && (parsed[key] as unknown[]).length <= 100,
+              ) ||
+              !['purchase', 'spend', 'session', 'assistedResult'].every(
+                (key) =>
+                  parsed.next &&
+                  object(parsed.next) &&
+                  (parsed.next[key] === null ||
+                    (typeof parsed.next[key] === 'string' && uuid.test(parsed.next[key]))),
+              )
+            )
+              throw new Error('Invalid commerce export');
+            commerce = parsed;
+          }
           return {
             ...data,
             reports: reports.reports,
             rewards: rewards.rewards,
             adAuthorizations: authorizations.adAuthorizations,
+            ...(commerce
+              ? {
+                  commerce: {
+                    wallet: commerce.wallet,
+                    purchases: commerce.purchases,
+                    spends: commerce.spends,
+                    sessions: commerce.sessions,
+                    assistedResults: commerce.assistedResults,
+                  },
+                }
+              : {}),
             next: {
               ...data.next,
               report: reports.next,
               reward: rewards.next,
               adAuthorization: authorizations.next,
+              ...(commerce ? (commerce.next as object) : {}),
             },
           };
         }

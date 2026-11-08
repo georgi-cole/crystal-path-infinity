@@ -33,6 +33,29 @@ function fixture(decision: unknown = eligible()) {
 }
 
 describe('CPI-018 privacy-gated OTP pre-account flow', () => {
+  it('hands a verified ticket to the credential owner once without putting it in a UI snapshot', async () => {
+    const ticket = 'verified-once-0123456789abcdef';
+    const gateway: OtpGateway = {
+      eligibility: () => Promise.resolve(eligible()),
+      requestCode: () => Promise.resolve({ status: 'accepted', expiresAt: epoch + 120000 }),
+      verifyCode: () =>
+        Promise.resolve({
+          status: 'verified',
+          verifiedTicket: ticket,
+          refreshToken: 'must-not-render',
+        }),
+    };
+    const flow = new AccountOtpFlow(gateway, () => epoch);
+    await flow.checkEligibility(true);
+    await flow.requestCode('example@example.org', true);
+    await flow.verifyCode('123456', true);
+    expect(JSON.stringify(flow.snapshot())).not.toContain(ticket);
+    expect(JSON.stringify(flow.snapshot())).not.toContain('must-not-render');
+    expect(flow.takeVerifiedTicket()).toBe(ticket);
+    expect(flow.takeVerifiedTicket()).toBeNull();
+    flow.cancel();
+    expect(flow.takeVerifiedTicket()).toBeNull();
+  });
   it('refuses unknown, expired, invented or overlong grants', () => {
     for (const response of [
       null,

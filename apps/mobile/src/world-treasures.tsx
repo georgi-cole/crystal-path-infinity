@@ -139,7 +139,15 @@ export function MysteryCache({ theme, open = false }: { theme: World; open?: boo
 }
 
 const hostile = (kind: EffectKind) =>
-  ['fragility_5s', 'drain_5s', 'inversion_5s', 'lose_hint', 'hurt_10', 'hurt_15'].includes(kind);
+  [
+    'fragility_5s',
+    'drain_5s',
+    'bleed_3rows',
+    'double_loss_21s',
+    'lose_hint',
+    'hurt_10',
+    'hurt_15',
+  ].includes(kind);
 
 /** Shared semantics, but each world manufactures its own collectible power object. */
 export function WorldPowerGlyph({ theme, kind }: { theme: World; kind: EffectKind }) {

@@ -166,7 +166,12 @@ export function createTimedRunSession(
     const epoch = pauseEpoch;
     const type = command.type;
     const scopedToPause = !('deathId' in command);
-    const gameplay = type === 'choose' || type === 'hint' || type === 'mystery' || type === 'tick';
+    const gameplay =
+      type === 'choose' ||
+      type === 'hint' ||
+      type === 'mystery' ||
+      type === 'pact' ||
+      type === 'tick';
     return () => {
       if (disposed) return unchanged('session-disposed');
       if (session.getState().status === 'finished') return unchanged('finished');

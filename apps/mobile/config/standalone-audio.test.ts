@@ -3,6 +3,7 @@ import { createStandaloneAudio, CRYSTAL_AUDIO } from '../src/standalone-audio';
 import type { AudioMedia } from '../src/standalone-audio';
 import { DEFAULT_PRACTICE_SETTINGS } from '../src/practice-save';
 import type { RunEvent, RunState } from '@crystal-path-infinity/game-core';
+import { THEME_IDS } from '../src/store-catalog';
 
 function fixture() {
   const media = new Map<string, AudioMedia & { played: number; stopped: number }>();
@@ -71,6 +72,59 @@ const death = (id: string): RunEvent => ({
 });
 
 describe('CPI-010 standalone audio ownership', () => {
+  it.each(THEME_IDS)(
+    'uses the original Crystal Path step and collapse cues in %s',
+    async (theme) => {
+      const f = fixture();
+      const audio = createStandaloneAudio(
+        f.ports,
+        { ...DEFAULT_PRACTICE_SETTINGS, music: false },
+        theme,
+      );
+      audio.setActive(true);
+      await audio.unlock();
+      const options = { foreground: true, personalBest: false };
+      audio.playEvents([choose('1', false)], state, options);
+      expect(f.media.get(CRYSTAL_AUDIO.safe)?.played).toBe(1);
+      audio.playEvents([choose('2', true)], state, options);
+      expect(f.media.get(CRYSTAL_AUDIO.glass)?.played).toBe(1);
+      audio.playEvents([death('original-collapse')], state, options);
+      expect(f.media.get(CRYSTAL_AUDIO.death)?.played).toBe(1);
+      audio.dispose();
+    },
+  );
+  it('plays one neutral box opening per found box and respects foreground and mute', async () => {
+    const f = fixture();
+    const audio = createStandaloneAudio(f.ports, { ...DEFAULT_PRACTICE_SETTINGS, music: false });
+    audio.setActive(true);
+    await audio.unlock();
+    const options = { foreground: true, personalBest: false };
+    const box: RunEvent = {
+      type: 'mystery-resolved',
+      row: '5',
+      kind: 'gain_hint',
+      spDelta: 0,
+      hintDelta: 1,
+      activeTimeMs: 0,
+      observedAt: 0,
+    };
+    audio.playEvents([box], state, options);
+    audio.playEvents([box], state, options);
+    expect(f.media.get(CRYSTAL_AUDIO.box)?.played).toBe(1);
+    expect(f.media.get(CRYSTAL_AUDIO.safe)?.played).toBe(0);
+    audio.setForeground(false);
+    expect(f.media.get(CRYSTAL_AUDIO.box)?.paused).toBe(true);
+    audio.playEvents([{ ...box, row: '10' }], state, options);
+    expect(f.media.get(CRYSTAL_AUDIO.box)?.played).toBe(1);
+    audio.setForeground(true);
+    audio.playEvents([{ ...box, row: '10', kind: 'lose_hint', hintDelta: -1 }], state, options);
+    expect(f.media.get(CRYSTAL_AUDIO.box)?.played).toBe(2);
+    audio.setSettings({ ...DEFAULT_PRACTICE_SETTINGS, music: false, soundEffects: false });
+    expect(f.media.get(CRYSTAL_AUDIO.box)?.paused).toBe(true);
+    audio.playEvents([{ ...box, row: '15' }], state, options);
+    expect(f.media.get(CRYSTAL_AUDIO.box)?.played).toBe(2);
+    audio.dispose();
+  });
   it('sounds the urgent Death Clock even at full SP and stops after a row reset or death', async () => {
     const f = fixture();
     const audio = createStandaloneAudio(f.ports, { ...DEFAULT_PRACTICE_SETTINGS, music: false });

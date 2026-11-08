@@ -1,8 +1,9 @@
-/* Adapted Big Eye's flat settings rows and disclosures to the standalone controls. */
+/* Shared world materials, readable labels and contained settings panels. */
 .cpi-settings-menu {
   position: relative;
   z-index: 1;
   width: min(100%, 31rem);
+  min-width: 0;
   margin: 1.6rem auto 2rem;
 }
 .cpi-settings-title {
@@ -12,7 +13,7 @@
   margin-bottom: 1.3rem;
 }
 .cpi-settings-title > svg {
-  color: #df95bf;
+  color: var(--world-accent, #d9b4cf);
   width: 1.25rem;
   height: 1.25rem;
 }
@@ -24,37 +25,49 @@
   letter-spacing: -0.025em;
 }
 .cpi-settings-menu .cpi-sound-options {
-  margin: 0 0 0.8rem;
-  padding: 0 0.85rem;
-  border: 1px solid #ffffff17;
-  border-radius: 8px;
-  background: linear-gradient(145deg, #ffffff09, transparent 45%), #0c0b0e;
+  min-width: 0;
+  margin: 0 0 0.9rem;
+  padding: 0.85rem 1rem 0.1rem;
+  border: 1px solid color-mix(in srgb, var(--world-accent, #d9b4cf) 25%, transparent);
+  border-radius: var(--world-radius, 6px);
+  background: linear-gradient(135deg, #ffffff09, transparent 45%), var(--world-panel, #151317);
+  box-shadow: inset 0 1px #ffffff0b;
 }
-.cpi-settings-menu .cpi-sound-options legend {
-  font-size: 0.55rem;
-  letter-spacing: 0.1em;
-  padding: 0 0.4rem;
-  color: #c697b5;
+.cpi-settings-menu .cpi-sound-heading {
+  padding: 0 0 0.45rem;
+  font: 600 0.75rem/1.5 var(--cpi-font-body);
+  letter-spacing: 0.01em;
+  color: var(--world-accent, #d9b4cf);
+  overflow-wrap: anywhere;
 }
 .cpi-settings-menu .cpi-sound-toggle {
-  min-height: 3.05rem;
-  font-size: 0.75rem;
-  padding-block: 0.6rem;
+  min-height: 3.15rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  padding-block: 0.75rem;
 }
 .cpi-setting-label {
   display: inline-flex;
   align-items: center;
   gap: 0.7rem;
-  color: #d0c7d6;
+  min-width: 0;
+  flex: 1;
+  color: #e5dfe8;
+  line-height: 1.5;
+}
+.cpi-setting-copy {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .cpi-setting-label svg {
   width: 1rem;
   height: 1rem;
-  stroke: #a394af;
+  stroke: var(--world-soft, #a4d5cc);
   stroke-width: 1.25;
   flex-shrink: 0;
 }
 .cpi-settings-menu .cpi-settings-section {
+  min-width: 0;
   margin: 0;
   border: 0;
   border-radius: 0;
@@ -64,22 +77,22 @@
 }
 .cpi-settings-menu > .cpi-settings-section {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
-  column-gap: 0.7rem;
+  gap: 0.65rem;
   min-height: 3.4rem;
-  padding: 0.5rem 0.85rem;
-  border: 1px solid #ffffff17;
-  border-radius: 8px;
-  background: #0c0b0e;
-  margin-bottom: 0.8rem;
+  padding: 0.85rem 1rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--world-accent, #d9b4cf) 25%, transparent);
+  border-radius: var(--world-radius, 6px);
+  background: linear-gradient(135deg, #ffffff09, transparent 45%), var(--world-panel, #151317);
+  margin-bottom: 0.9rem;
 }
 .cpi-settings-menu #cpi-language-heading {
   font-size: 0.75rem;
-  font-weight: 400;
-  line-height: 1.4;
+  font-weight: 600;
+  line-height: 1.5;
   margin: 0;
-  color: #d0c7d6;
+  color: var(--world-accent, #d9b4cf);
 }
 .cpi-settings-menu :is(.cpi-language-label, #cpi-language-preview) {
   position: absolute;
@@ -92,24 +105,27 @@
   white-space: nowrap;
 }
 .cpi-settings-menu .cpi-language-select {
-  min-height: 2.6rem;
-  padding: 0.4rem 0.55rem;
-  color: #bcb1c7;
-  background: #151219;
-  border: 1px solid #b69ac133;
-  border-radius: 5px;
-  font: 0.68rem var(--cpi-font-body);
+  min-height: 2.75rem;
+  max-width: 100%;
+  padding: 0.6rem 0.7rem;
+  color: #eee8f0;
+  background: color-mix(in srgb, var(--world-panel, #151317) 65%, #050506);
+  border: 1px solid color-mix(in srgb, var(--world-accent, #d9b4cf) 35%, transparent);
+  border-radius: var(--world-radius, 6px);
+  font: 500 0.8125rem/1.4 var(--cpi-font-body);
   text-overflow: ellipsis;
+  color-scheme: dark;
 }
 .cpi-settings-menu .cpi-settings-destinations {
   gap: 0;
-  padding: 0 0.85rem;
-  border: 1px solid #ffffff17;
-  border-radius: 8px;
-  background: linear-gradient(145deg, #ffffff07, transparent 45%), #0c0b0e;
+  min-width: 0;
+  padding: 0 1rem;
+  border: 1px solid color-mix(in srgb, var(--world-accent, #d9b4cf) 25%, transparent);
+  border-radius: var(--world-radius, 6px);
+  background: linear-gradient(135deg, #ffffff09, transparent 45%), var(--world-panel, #151317);
 }
 .cpi-settings-disclosure + .cpi-settings-disclosure {
-  border-top: 1px solid #ffffff0d !important;
+  border-top: 1px solid color-mix(in srgb, var(--world-accent, #d9b4cf) 12%, transparent) !important;
 }
 .cpi-settings-disclosure summary,
 .cpi-settings-link {
@@ -117,12 +133,22 @@
   align-items: center;
   gap: 0.7rem;
   width: 100%;
-  min-height: 3.2rem;
+  min-height: 3.3rem;
+  min-width: 0;
+  padding-block: 0.8rem;
   text-align: start;
-  color: #d0c7d6;
-  font: 0.75rem var(--cpi-font-body);
+  color: #e5dfe8;
+  font: 500 0.8125rem/1.5 var(--cpi-font-body);
   cursor: pointer;
   list-style: none;
+}
+.cpi-settings-disclosure summary > span,
+.cpi-settings-link > span:not(:last-child) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.cpi-settings-link > svg {
+  flex-shrink: 0;
 }
 .cpi-settings-disclosure summary::-webkit-details-marker {
   display: none;
@@ -130,29 +156,31 @@
 .cpi-settings-disclosure summary > svg {
   width: 1rem;
   height: 1rem;
-  stroke: #a394af;
+  stroke: var(--world-soft, #a4d5cc);
   stroke-width: 1.25;
   flex-shrink: 0;
 }
 .cpi-settings-disclosure summary::after {
   content: '›';
   font-size: 1.3rem;
-  color: #ac839e;
+  color: var(--world-soft, #a4d5cc);
   margin-inline-start: auto;
+  flex-shrink: 0;
   transition: rotate 0.2s;
 }
 .cpi-settings-disclosure[open] summary::after {
   rotate: 90deg;
 }
 .cpi-settings-expanded {
-  padding: 0.2rem 0 1rem 1.7rem;
+  min-width: 0;
+  padding: 0.2rem 0 1rem;
   display: grid;
   gap: 0.65rem;
 }
 .cpi-settings-expanded p {
   margin: 0;
-  color: #a79aae;
-  font-size: 0.68rem;
+  color: #beb6c3;
+  font-size: 0.8125rem;
   line-height: 1.7;
 }
 .cpi-settings-expanded .cpi-account-controls {
@@ -165,20 +193,25 @@
   font-size: 0.8rem;
 }
 .cpi-settings-link {
-  margin: 0 0 0.8rem;
-  padding: 0.5rem 0.85rem;
-  border: 1px solid #ffffff17;
-  border-radius: 8px;
-  background: #0c0b0e;
+  margin: 0 0 0.9rem;
+  padding: 0.7rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--world-accent, #d9b4cf) 25%, transparent);
+  border-radius: var(--world-radius, 6px);
+  background: linear-gradient(135deg, #ffffff09, transparent 45%), var(--world-panel, #151317);
 }
 .cpi-settings-link > span:last-child {
   margin-inline-start: auto;
-  color: #ac839e;
+  flex-shrink: 0;
+  color: var(--world-soft, #a4d5cc);
   font-size: 1.3rem;
 }
 .cpi-settings-link:hover,
 .cpi-settings-disclosure summary:hover {
-  color: #f2d0e8;
+  color: var(--world-accent, #d9b4cf);
+}
+.cpi-settings-menu :is(summary, button, select):focus-visible {
+  outline: 2px solid var(--world-soft, #a4d5cc);
+  outline-offset: 4px;
 }
 .cpi-settings-menu .cpi-menu-warning {
   grid-column: 1/-1;

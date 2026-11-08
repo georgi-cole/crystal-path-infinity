@@ -1,6 +1,7 @@
 import {
   assertRunState,
   PRACTICE_RNG,
+  usesStoreTestRules,
   STORE_TEST_RULESET_VERSION,
 } from '@crystal-path-infinity/game-core';
 import type { RunState, TransitionResult } from '@crystal-path-infinity/game-core';
@@ -21,6 +22,7 @@ export interface TestStoreSnapshot {
   readonly lastReceipt: string | null;
   readonly checkpoint: RunState | null;
   readonly assistedBest: string | null;
+  readonly assistedBestByRules?: Readonly<Record<string, string>>;
 }
 export const EMPTY_TEST_STORE: TestStoreSnapshot = Object.freeze({
   version: 1,
@@ -44,7 +46,7 @@ export function selectTestPractice(
 ): PracticeLoad {
   if (snapshot.checkpoint)
     return { status: 'ready', state: snapshot.checkpoint, revision: snapshot.revision };
-  return fallback.status === 'ready' && fallback.state.rulesetVersion === STORE_TEST_RULESET_VERSION
+  return fallback.status === 'ready' && usesStoreTestRules(fallback.state.rulesetVersion)
     ? { status: 'empty' }
     : fallback;
 }
@@ -72,6 +74,20 @@ function validate(value: TestStoreSnapshot): void {
         !/^(0|[1-9][0-9]{0,999})$/.test(value.assistedBest)))
   )
     throw new Error('Test wallet is damaged. Reset test data to start again.');
+  if (
+    value.assistedBestByRules !== undefined &&
+    (value.assistedBestByRules === null ||
+      typeof value.assistedBestByRules !== 'object' ||
+      Array.isArray(value.assistedBestByRules) ||
+      Object.keys(value.assistedBestByRules).length > 256 ||
+      Object.entries(value.assistedBestByRules).some(
+        ([version, row]) =>
+          !usesStoreTestRules(version) ||
+          typeof row !== 'string' ||
+          !/^(0|[1-9][0-9]{0,999})$/.test(row),
+      ))
+  )
+    throw new Error('Invalid versioned test result.');
   if (value.pending !== null) {
     if (
       !value.pending ||
@@ -85,7 +101,7 @@ function validate(value: TestStoreSnapshot): void {
   if (value.checkpoint !== null) {
     assertRunState(value.checkpoint, PRACTICE_RNG);
     if (
-      value.checkpoint.rulesetVersion !== STORE_TEST_RULESET_VERSION ||
+      !usesStoreTestRules(value.checkpoint.rulesetVersion) ||
       !value.checkpoint.runId.startsWith('practice-')
     )
       throw new Error('Test wallet cannot hold a ranked or historical run.');
@@ -190,8 +206,7 @@ export function createTestStore(storage: PracticeStorage) {
     },
     saveRun(state: RunState) {
       assertRunState(state, PRACTICE_RNG);
-      if (state.rulesetVersion !== STORE_TEST_RULESET_VERSION)
-        throw new Error('Not a test economy run.');
+      if (!usesStoreTestRules(state.rulesetVersion)) throw new Error('Not a test economy run.');
       commit((current) => {
         const old = current.checkpoint;
         if (
@@ -235,14 +250,25 @@ export function createTestStore(storage: PracticeStorage) {
         };
       });
     },
-    recordAssistedBest(row: string) {
+    assistedBest(version = STORE_TEST_RULESET_VERSION): string | null {
+      return version === STORE_TEST_RULESET_VERSION
+        ? snapshot.assistedBest
+        : (snapshot.assistedBestByRules?.[version] ?? null);
+    },
+    recordAssistedBest(row: string, version = STORE_TEST_RULESET_VERSION) {
+      if (!usesStoreTestRules(version)) throw new Error('Not a test ruleset.');
       if (!/^(0|[1-9][0-9]{0,999})$/.test(row)) throw new Error('Invalid result.');
       let improved = false;
       commit((current) => {
-        if (current.assistedBest !== null && BigInt(current.assistedBest) >= BigInt(row))
-          return current;
+        const previous =
+          version === STORE_TEST_RULESET_VERSION
+            ? current.assistedBest
+            : (current.assistedBestByRules?.[version] ?? null);
+        if (previous !== null && BigInt(previous) >= BigInt(row)) return current;
         improved = true;
-        return { ...current, assistedBest: row };
+        return version === STORE_TEST_RULESET_VERSION
+          ? { ...current, assistedBest: row }
+          : { ...current, assistedBestByRules: { ...current.assistedBestByRules, [version]: row } };
       });
       return improved;
     },

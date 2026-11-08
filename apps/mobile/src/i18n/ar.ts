@@ -111,7 +111,7 @@ export const ar = {
   'tutorial.mysteryInstruction': 'جرّب خانة الغموض الوسطى أو تخطّها. قد تساعد التأثيرات أو تضر.',
   'tutorial.endTitle': 'كيف تنتهي المحاولة',
   'tutorial.endInstruction':
-    'لا يوجد صف أخير. أنت تختار متى تنهي المحاولة. يبدأ مثال الموت مع 10 SP.',
+    'لا يوجد صف أخير. أنت تختار متى تنهي المحاولة. يبدأ مثال الموت مع 5 SP.',
   'tutorial.fatalTitle': 'الصف المميت لا يُحسب',
   'tutorial.fatalInstruction': 'في المثال وصلت SP إلى الصفر في الصف 4. آخر صف تم عبوره يظل 3.',
   'tutorial.completeTitle': 'أصبحت تعرف الجسر',

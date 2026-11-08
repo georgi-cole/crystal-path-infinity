@@ -29,14 +29,14 @@ describe('CPI-011 Midnight Prism identity', () => {
     const html = read('index.html');
     const tokens = read('src/brand-tokens.css');
     expect(app).toContain('brand/prism-mark.svg');
-    expect(scene).toContain('cpi-death-clock');
+    expect(scene).toContain('cpi-run-status');
     expect(html).toContain('%BASE_URL%brand/app-icon-preview.svg');
     for (const token of ['--cpi-night', '--cpi-ice', '--cpi-iris', '--cpi-focus', '--cpi-risk']) {
       expect(tokens).toContain(token);
     }
     expect(scene).toContain('aria-label={INFINITY_SCENE_SKIN.title}');
     expect(scene).toContain('presented.currentRow');
-    expect(scene).toContain('{state.sp}');
+    expect(scene).toContain('value={state.sp}');
     expect(scene).not.toMatch(/The Big Eye|season feed|LOH|POS/);
     expect(app).toContain('<MainMenu');
     expect(menu).toContain('HubUtilityControls');

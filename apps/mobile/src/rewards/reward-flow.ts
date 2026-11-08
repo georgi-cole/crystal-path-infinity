@@ -81,6 +81,7 @@ export function permitMatchesAdapter(
 export type RewardFlowPhase =
   | 'unavailable'
   | 'offer'
+  | 'limit'
   | 'loading'
   | 'showing'
   | 'earned_pending'
@@ -249,11 +250,14 @@ export class RewardFlow {
         (phase === 'earned_pending' || phase === 'unavailable' || this.problem !== null),
       canEnd:
         valid &&
-        phase === 'offer' &&
-        value?.intent === null &&
+        !!value &&
+        (value.status === 'offer' || value.status === 'limit') &&
+        value.intent === null &&
         value.grant === null &&
         !this.busy &&
-        !this.fullscreen,
+        !this.fullscreen &&
+        !this.arbiter.owner &&
+        !this.statusFlight,
       problem: this.online ? this.problem : 'offline',
     });
   }
@@ -354,9 +358,11 @@ export class RewardFlow {
           ? 'earned_pending'
           : view.status === 'granted'
             ? 'granted'
-            : view.status === 'finished'
-              ? 'final'
-              : 'reviving';
+            : view.status === 'limit'
+              ? 'limit'
+              : view.status === 'finished'
+                ? 'final'
+                : 'reviving';
     if (view.status !== 'pending') this.cancelPoll();
   }
   async recover(): Promise<void> {

@@ -160,22 +160,81 @@ function healthy(platform: 'android' | 'ios' = 'android') {
       message('CPI_APP_READY ' + JSON.stringify(build)),
       message(diagnostic(4, 'react-ready')),
       message(diagnostic(5, 'bridge-check-start', { reason: 'startup' })),
-      message(diagnostic(6, 'bridge-ready', { reason: 'startup', durationMs: 8 })),
+      message(
+        diagnostic(6, 'bridge-ready', {
+          reason: 'startup',
+          durationMs: 8,
+          lifecycle: {
+            pageId: 'page-one',
+            bridgeId: 'bridge-one',
+            sequence: 1,
+            isActive: true,
+            nativeTimeMs: 100,
+            foregroundTimeMs: 100,
+          },
+        }),
+      ),
     ].join('\n') + '\n';
   const boundary = lifecycleBoundary(analyzeNativeLog(before, build));
   const after =
     [
       '1793555764.000000 2070 2070 D Capacitor: App paused',
-      message(diagnostic(7, 'pause')),
+      message(
+        diagnostic(7, 'native-state', {
+          lifecycle: {
+            pageId: 'page-one',
+            bridgeId: 'bridge-one',
+            sequence: 2,
+            isActive: false,
+            nativeTimeMs: 200,
+            foregroundTimeMs: 100,
+          },
+        }),
+      ),
       '1793555766.000000 2070 2070 D Capacitor: App resumed',
-      message(diagnostic(8, 'resume')),
+      message(
+        diagnostic(8, 'native-state', {
+          lifecycle: {
+            pageId: 'page-one',
+            bridgeId: 'bridge-one',
+            sequence: 3,
+            isActive: true,
+            nativeTimeMs: 60_200,
+            foregroundTimeMs: 100,
+          },
+        }),
+      ),
       message(diagnostic(9, 'bridge-check-start', { reason: 'resume' })),
-      message(diagnostic(10, 'bridge-ready', { reason: 'resume', durationMs: 9 })),
+      message(
+        diagnostic(10, 'bridge-ready', {
+          reason: 'resume',
+          durationMs: 9,
+          lifecycle: {
+            pageId: 'page-one',
+            bridgeId: 'bridge-one',
+            sequence: 4,
+            isActive: true,
+            nativeTimeMs: 60_210,
+            foregroundTimeMs: 110,
+          },
+        }),
+      ),
     ].join('\n') + '\n';
   return { before, after, log: before + after, boundary };
 }
 
 describe('native launch evidence gates', () => {
+  it('gates the iOS first page on real scene deactivation and activation', () => {
+    const source = readFileSync(
+      new URL('../native-templates/ios/CpiLifecycle.swift', import.meta.url),
+      'utf8',
+    );
+    const gate = source.slice(source.indexOf('class CpiWebView:'));
+    expect(gate).toContain('UIScene.willDeactivateNotification');
+    expect(gate).toContain('UIScene.didActivateNotification');
+    expect(gate).toContain('observedInactive');
+    expect(gate).not.toContain('UIScene.didEnterBackgroundNotification');
+  });
   it.each(['android', 'ios'] as const)(
     'accepts complete %s startup and a scoped lifecycle sequence',
     (platform) => {
@@ -232,7 +291,7 @@ describe('native launch evidence gates', () => {
     const fixture = healthy();
     const analysis = analyzeNativeLog(fixture.log, build);
     expect(nativeLaunchProblems(analysis, 'android', lifecycleBoundary(analysis))).toContain(
-      'No document pause event after the background action',
+      'No native inactive boundary after the Settings action',
     );
   });
   it('rejects a replacement page session as resuming the same page', () => {
@@ -240,7 +299,7 @@ describe('native launch evidence gates', () => {
     const log = fixture.before + fixture.after.replaceAll('page-one', 'page-two');
     expect(
       nativeLaunchProblems(analyzeNativeLog(log, build), 'android', fixture.boundary),
-    ).toContain('No document resume event after the observed pause');
+    ).toContain('No native active boundary after resume');
   });
   it.each(['android', 'ios'] as const)(
     'rejects a %s page reload after a successful resume',
@@ -532,7 +591,20 @@ describe('iOS cold-start launch-service preflight', () => {
     expect(actualLaunch).toBeGreaterThan(firstGameAttempt);
     expect(iosHarness).toContain("'iOS native prebridge navigation gate'");
     expect(iosHarness).toContain("'iOS React, page-load, and native bridge readiness'");
-    expect(iosHarness).toContain("'iOS bridge round-trip after app background/resume'");
+    expect(iosHarness).toContain("'iOS bridge round-trip after native app resume'");
+    expect(iosHarness).toContain('openSettingsUntilObservation');
+    expect(iosHarness).toContain('iOS native scene deactivation before page creation');
     expect(iosHarness).toContain('assertHealthyLaunch()');
+  });
+
+  it('uses the documented bounded allowance for the required iOS screenshot', () => {
+    const source = readFileSync(new URL('../scripts/smoke-native.mjs', import.meta.url), 'utf8');
+    const iosHarness = source.slice(source.indexOf('async function ios()'));
+    const screenshotCapture = iosHarness.slice(
+      iosHarness.indexOf("const screenshot = join(evidenceRoot, 'ios-launch.png')"),
+      iosHarness.indexOf('assertPng(screenshot)'),
+    );
+
+    expect(screenshotCapture).toContain('provisioningBudgetsMs.screenshot');
   });
 });

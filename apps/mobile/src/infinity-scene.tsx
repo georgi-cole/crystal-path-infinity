@@ -1,3 +1,17 @@
+import { nextPracticeRuleset } from './balance-tuning';
+import { QA_TOOLS_ENABLED, practiceStorage } from './app-profile';
+import { shouldFinishPracticeOnExit } from './practice-exit';
+import { DiscoveryIntroduction } from './mystery-introduction';
+import { MysteryJournal } from './mystery-discovery';
+import { readMysteryJournal } from './mystery-journal-model';
+import { mysteryFeedbackFromEvents, runCuesFromEvents } from './mystery-feedback';
+import type { MysteryFeedback, RunCues } from './mystery-feedback';
+import { MysteryEffects, MysteryFeedbackView, PactPanel, EffectGlyph } from './mystery-effects';
+import { EffectConsumption, HintCounter } from './resource-feedback';
+import { MysteryRhythmBadge, DeathClockBadge } from './mystery-box';
+import { MysteryLab } from './mystery-lab';
+import { effectCopy, mysteryText } from './mystery.messages';
+import './run-status.css';
 import { RunReserves } from './run-reserves';
 import { useTestStore, useThemeId } from './store-context';
 import { ThemeScope } from './store-provider';
@@ -14,12 +28,16 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   createPracticeCursor,
   createRun,
-  MAX_SP,
+  getRuleset,
+  parseTileExperiment,
+  STARTING_SP,
+  getDeathClock,
+  isPactKind,
   getMaxRevives,
-  STORE_TEST_RULESET_VERSION,
   PRACTICE_RNG,
   presentRowPressure,
   HINT_SCAN_MS,
+  marketingSale,
 } from '@crystal-path-infinity/game-core';
 import type {
   RunEvent,
@@ -29,6 +47,7 @@ import type {
   TileSide,
   TimedSessionResult,
   EffectKind,
+  PactOption,
 } from '@crystal-path-infinity/game-core';
 import { getGameplayLifecycle } from './gameplay-lifecycle';
 import { createStandaloneAudio } from './standalone-audio';
@@ -39,7 +58,7 @@ import {
   recordPracticePersonalBest,
   upgradePracticePacing,
 } from './practice-save';
-import { formatActiveDuration, presentRunOutcome } from './run-outcome';
+import { presentRunOutcome } from './run-outcome';
 import { useLanguage } from './language-context';
 import type { PracticeSettings } from './practice-save';
 import { AudioSettingsControls } from './audio-settings-controls';
@@ -48,34 +67,17 @@ import type { PracticePauseLease, PracticeRuntime } from './practice-runtime';
 import { presentInfinityScene } from './infinity-presentation';
 import { createSceneDirector } from './scene-cinematics';
 import type { SceneCinematic, SceneFeedback } from './scene-cinematics';
-import { EffectGlyph } from './effect-glyph';
 import { AnimatedResult } from './animated-result';
 import { DeathClock, SpCounter } from './scene-instruments';
 import { collectRunSignals, EMPTY_RUN_SIGNALS, liveSignal } from './run-signals';
 import type { RunSignals } from './run-signals';
-import { PRACTICE_RULESET_VERSION } from './practice-rules';
 import { createHintCaptionGate } from './hint-caption';
-import type { MessageKey } from './i18n/messages';
 import './infinity-scene.css';
 import './infinity-hud-premium.css';
 import './run-outcome.css';
 import './scene-cinematics.css';
 import './row-pressure.css';
 
-const EFFECT_MESSAGE: Record<EffectKind, MessageKey> = {
-  shield_5s: 'game.effectShield',
-  regen_5s: 'game.effectRegen',
-  lucky_5s: 'game.effectLucky',
-  fragility_5s: 'game.effectFragile',
-  drain_5s: 'game.effectDrain',
-  inversion_5s: 'game.effectInversion',
-  heal_10: 'game.effectHeal',
-  heal_20: 'game.effectHeal',
-  hurt_10: 'game.effectHurt',
-  hurt_15: 'game.effectHurt',
-  gain_hint: 'game.effectHintGain',
-  lose_hint: 'game.effectHintLoss',
-};
 const DEFAULT_VISUAL_SKIN = {
   id: 'infinity-glass-v1',
   shell: 'cps-shell--premium',
@@ -98,6 +100,11 @@ export interface InfinitySceneViewProps {
   readonly onChoose: (side: TileSide) => void;
   readonly onHint: () => void;
   readonly onMystery: () => void;
+  readonly onPact?: (option: PactOption) => void;
+  readonly mysteryFeedback?: MysteryFeedback | null;
+  readonly resourceCues?: RunCues;
+  readonly onMysteryLab?: () => void;
+  readonly onMysteryJournal?: () => void;
   readonly onPause: () => void;
   readonly onEnd: () => void;
   readonly onRequestEnd: () => void;
@@ -129,6 +136,11 @@ export function InfinitySceneView({
   onChoose,
   onHint,
   onMystery,
+  onPact,
+  mysteryFeedback = null,
+  resourceCues = {},
+  onMysteryLab,
+  onMysteryJournal,
   onPause,
   onEnd,
   onRequestEnd,
@@ -146,7 +158,7 @@ export function InfinitySceneView({
   signals = EMPTY_RUN_SIGNALS,
   hintCaptionRow = null,
 }: InfinitySceneViewProps) {
-  const { t, number } = useLanguage();
+  const { t, number, locale } = useLanguage();
   const themeId = useThemeId();
   const petWorld = isPetWorld(themeId);
   const presented = presentInfinityScene(state);
@@ -168,7 +180,7 @@ export function InfinitySceneView({
           ? petWorld
             ? 'vault.petWrong'
             : 'game.deathWrong'
-          : deathCause === 'idle'
+          : deathCause === 'idle' || deathCause === 'death_clock'
             ? petWorld
               ? 'vault.petIdle'
               : 'game.deathIdle'
@@ -185,6 +197,13 @@ export function InfinitySceneView({
     !!error || (!cinematic?.fatal && (paused || confirmEnd || outcome.phase !== 'playing'));
   const catastrophic = state.death !== null && state.status !== 'playing';
   const pressure = presentRowPressure(state);
+  const deathClock = getDeathClock(state);
+  const pactOffered = state.pact?.phase === 'offered';
+  const clockActive = deathClock !== null && state.activeTimeMs >= deathClock.warningAt;
+  const oracleActive = state.pact?.kind === 'false_oracle' && state.pact.phase === 'active';
+  const maxSp = getRuleset(state.rulesetVersion).maxSp;
+  const criticalSp = maxSp === null ? 10 : 60;
+  const warningSp = maxSp === null ? 30 : 140;
   const bonus = liveSignal(signals.bonus, state, 2400);
   const hintScan =
     liveSignal(signals.hint, state, HINT_SCAN_MS) ??
@@ -199,10 +218,12 @@ export function InfinitySceneView({
         }
       : null);
   const emergency =
-    state.status === 'playing' && ((state.sp > 0 && state.sp < 15) || pressure?.urgent);
+    state.status === 'playing' &&
+    ((state.sp > 0 && state.sp < 15) || pressure?.urgent || clockActive);
   const hostileReveal = cinematic?.mystery
     ? cinematic.mystery.spDelta < 0 ||
-      ['fragility_5s', 'drain_5s', 'inversion_5s', 'lose_hint'].includes(cinematic.mystery.kind)
+      cinematic.mystery.hintDelta < 0 ||
+      !effectCopy(locale, cinematic.mystery.kind, state.rulesetVersion).positive
     : false;
   const current = presented.rows.find((row) => row.phase === 'current');
   const cinematicBlocks = !!cinematic && (cinematic.phase !== 'reveal' || cinematic.fatal);
@@ -210,12 +231,28 @@ export function InfinitySceneView({
     ready &&
     !busy &&
     !cinematicBlocks &&
+    !pactOffered &&
     !paused &&
     !confirmEnd &&
     !error &&
     outcome.phase === 'playing';
-  const spClass = state.sp <= 60 ? 'is-danger' : state.sp <= 140 ? 'is-warn' : 'is-safe';
-  const spPct = Math.max(0, Math.min(100, (state.sp / MAX_SP) * 100));
+  const spClass =
+    state.sp <= criticalSp ? 'is-danger' : state.sp <= warningSp ? 'is-warn' : 'is-safe';
+  const spPct = Math.max(
+    0,
+    Math.min(100, (state.sp / (maxSp ?? Math.max(STARTING_SP, state.sp))) * 100),
+  );
+  const experiment =
+    import.meta.env.MODE !== 'production' ? parseTileExperiment(state.rulesetVersion) : null;
+  const modeLabel = trial
+    ? t('vault.trial')
+    : state.storeTest?.assisted
+      ? t('vault.assisted')
+      : experiment
+        ? locale === 'bg'
+          ? 'Тест'
+          : 'Playtest'
+        : t('vault.classic');
   const notice =
     cinematic?.phase === 'impact'
       ? t(cinematic.feedback?.kind === 'wrong' ? 'game.impactWrong' : 'game.impactSafe')
@@ -238,13 +275,14 @@ export function InfinitySceneView({
 
   return (
     <main
-      className={`cps-shell ${INFINITY_SCENE_SKIN.shell} cpi-infinity-scene${catastrophic ? ' is-catastrophe' : ''}${emergency ? ' is-emergency' : ''}${paused ? ' is-paused' : ''}${pressure?.active ? ' has-death-clock' : ''}${settings.reducedMotion ? ' cpi-reduced-motion' : ''}`}
+      className={`cps-shell ${INFINITY_SCENE_SKIN.shell} cpi-infinity-scene${catastrophic ? ' is-catastrophe' : ''}${emergency ? ' is-emergency' : ''}${paused ? ' is-paused' : ''}${pressure?.active || clockActive ? ' is-death-clock' : ''}${settings.reducedMotion ? ' cpi-reduced-motion' : ''}`}
       data-world={themeId}
       data-testid="infinity-scene"
       aria-label={INFINITY_SCENE_SKIN.title}
     >
       <p className="cpi-run-mode">
-        {t(trial ? 'vault.trial' : state.storeTest?.assisted ? 'vault.assisted' : 'vault.classic')}
+        {modeLabel}
+        {experiment && ` · ${experiment.highBreakPercent}% / ${experiment.lowBreakPercent}%`}
       </p>
       <StageAtmosphere emergency={emergency || catastrophic} />
       <div className="cps-content" inert={overlayVisible}>
@@ -268,16 +306,24 @@ export function InfinitySceneView({
               <span className="cps-sp-label">{t('game.stabilityShort')}</span>
               <span className={`cps-sp-value ${spClass}`}>
                 <SpCounter value={state.sp} bonus={bonus} reduced={settings.reducedMotion} />
-                <small> / {MAX_SP}</small>
+                {maxSp !== null && <small> / {maxSp}</small>}
               </span>
             </div>
             <div
-              className={`cps-sp-bar-main cpi-energy-meter ${state.sp <= 60 ? 'is-low' : ''}`}
-              role="meter"
-              aria-label={t('game.spAccessible')}
-              aria-valuemin={0}
-              aria-valuemax={MAX_SP}
-              aria-valuenow={state.sp}
+              className={`cps-sp-bar-main cpi-energy-meter ${state.sp <= criticalSp ? 'is-low' : ''}`}
+              role={maxSp === null ? 'img' : 'meter'}
+              aria-label={
+                state.sp <= warningSp
+                  ? t(state.sp <= criticalSp ? 'game.spCritical' : 'game.spLow', {
+                      sp: number(state.sp),
+                    })
+                  : maxSp === null
+                    ? `${number(state.sp)} SP`
+                    : t('game.spAccessible')
+              }
+              aria-valuemin={maxSp === null ? undefined : 0}
+              aria-valuemax={maxSp ?? undefined}
+              aria-valuenow={maxSp === null ? undefined : state.sp}
             >
               <div className={`cps-sp-bar-fill ${spClass}`} style={{ width: `${spPct}%` }} />
               <div className="cpi-energy-segments" aria-hidden="true">
@@ -298,15 +344,15 @@ export function InfinitySceneView({
               className="cps-hint-btn cpi-hud-control cpi-hint-control"
               onClick={onHint}
               disabled={
-                !interactive || state.hints === 0 || state.current.revealedSafeSide !== null
+                !interactive ||
+                oracleActive ||
+                !!state.discovery?.introduction ||
+                state.hints === 0 ||
+                state.current.revealedSafeSide !== null
               }
               aria-label={t('game.hintButton', { count: number(state.hints) })}
             >
-              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M12 2.8 14.5 9.5 21.2 12 14.5 14.5 12 21.2 9.5 14.5 2.8 12 9.5 9.5Z" />
-                <path d="M12 8v8M8 12h8" />
-              </svg>
-              <span className="cps-hint-count">{state.hints}</span>
+              <HintCounter count={state.hints} cue={resourceCues.hints} />
             </button>
             <button
               type="button"
@@ -328,91 +374,84 @@ export function InfinitySceneView({
             </button>
           </div>
         </header>
-        <section className="cps-board" aria-label={t('game.bridge')} dir="ltr">
-          <div className="cpi-stage-instruments">
-            <div
-              className={'cpi-death-clock' + (bonus ? ' is-rewarding' : '')}
-              aria-label={t('game.timeAlive')}
-            >
-              <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
-                <path d="M6 3h20M6 29h20M9 4v5l14 14v5M23 4v5L9 23v5M12 6h8M12 26h8" />
-              </svg>
-              <div>
-                <span>{t('game.timeAlive')}</span>
-                <time>{formatActiveDuration(state.activeTimeMs)}</time>
-              </div>
-              <i aria-hidden="true" />
-              {bonus && (
-                <span key={bonus.id} className="cpi-survival-bonus" role="status">
-                  <strong>+{bonus.amount} SP</strong>
-                  <small>{t(state.sp === MAX_SP ? 'game.maxSp' : 'game.survivalBonus')}</small>
-                </span>
-              )}
-            </div>
-            {presented.effects.length > 0 && (
-              <div className="cps-effects" aria-label={t('game.effects')}>
-                {presented.effects.map((effect, i) => (
-                  <span
-                    key={effect.kind + ':' + (state.effects[i]?.startedAt ?? i)}
-                    className={`cps-effect ${effect.positive ? 'is-pos' : 'is-neg'}`}
-                  >
-                    <span className="cpi-effect-symbol">
-                      <EffectGlyph kind={effect.kind} />
-                      <svg className="cpi-effect-orbit" viewBox="0 0 48 48" aria-hidden="true">
-                        <circle
-                          cx="24"
-                          cy="24"
-                          r="22"
-                          pathLength="100"
-                          strokeDasharray={`${effect.percent} 100`}
-                        />
-                      </svg>
-                    </span>
-                    <span className="cpi-effect-copy">
-                      <span className="cps-effect-name">{t(EFFECT_MESSAGE[effect.kind])}</span>
-                      <span className="cps-effect-timer">
-                        {(effect.remainingMs / 1000).toFixed(1)}s
-                      </span>
-                    </span>
-                  </span>
-                ))}
-              </div>
+        <aside
+          className={'cpi-run-status' + (pactOffered ? ' is-choosing' : '')}
+          aria-label={t('game.effects')}
+        >
+          <div className="cpi-status-clock-slot">
+            {clockActive && (
+              <DeathClockBadge clock={deathClock} activeTimeMs={state.activeTimeMs} />
             )}
-          </div>
-          <div className="cpi-right-instruments">
             {pressure?.active && <DeathClock pressure={pressure} />}
-            {state.sp <= 140 && state.status === 'playing' && (
-              <div
-                className={'cpi-sp-danger-copy ' + (state.sp <= 60 ? 'is-critical' : 'is-low')}
-                role="status"
-                aria-label={t(state.sp <= 60 ? 'game.spCritical' : 'game.spLow', {
-                  sp: number(state.sp),
-                })}
-              >
-                <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
-                  <path d="m16 3 14 25H2L16 3Z" />
-                  <path d="M16 11v8m0 4v1" />
-                </svg>
-                <span>
-                  {t(
-                    emergency
-                      ? 'game.emergency'
-                      : state.sp <= 60
-                        ? 'game.criticalLabel'
-                        : 'game.lowLabel',
-                  )}
-                  <strong>
-                    {number(state.sp)} <small>SP</small>
-                  </strong>
-                </span>
-              </div>
+          </div>
+          <div className="cpi-status-forces">
+            <MysteryEffects
+              effects={state.effects}
+              activeTimeMs={state.activeTimeMs}
+              rulesetVersion={state.rulesetVersion}
+            />
+            {state.pact?.phase === 'active' && (
+              <PactPanel
+                pact={state.pact}
+                hints={state.hints}
+                marketingHints={marketingSale(state).count}
+                revealed={state.current.revealedSafeSide !== null}
+                disabled={!interactive}
+                onChoose={(option) => onPact?.(option)}
+                sp={state.sp}
+                rulesetVersion={state.rulesetVersion}
+                activeTimeMs={state.activeTimeMs}
+              />
+            )}
+            <MysteryRhythmBadge
+              rhythm={state.mysteryDirector?.rhythm}
+              activeTimeMs={state.activeTimeMs}
+            />
+          </div>
+          <div className="cpi-status-feedback-slot">
+            {!overlayVisible && (
+              <MysteryFeedbackView
+                rulesetVersion={state.rulesetVersion}
+                feedback={
+                  mysteryFeedback &&
+                  !(isPactKind(mysteryFeedback.kind) && mysteryFeedback.action === null)
+                    ? mysteryFeedback
+                    : null
+                }
+              />
+            )}
+            {bonus && (
+              <span className="cpi-status-bonus" role="status">
+                +{bonus.amount} SP
+              </span>
             )}
           </div>
+        </aside>
+        <section className="cps-board" aria-label={t('game.bridge')} dir="ltr">
+          <DiscoveryIntroduction
+            discovery={state.discovery}
+            activeTimeMs={state.activeTimeMs}
+            rulesetVersion={state.rulesetVersion}
+          />
+          {pactOffered && (
+            <PactPanel
+              pact={state.pact}
+              hints={state.hints}
+              marketingHints={marketingSale(state).count}
+              revealed={state.current.revealedSafeSide !== null}
+              disabled={!ready || busy || paused || !!error}
+              onChoose={(option) => onPact?.(option)}
+              sp={state.sp}
+              rulesetVersion={state.rulesetVersion}
+              activeTimeMs={state.activeTimeMs}
+            />
+          )}
           <PrismBridge
             rows={cinematic?.rows ?? presented.rows}
             feedback={cinematic?.feedback ?? feedback}
             interactive={interactive}
             onChoose={onChoose}
+            omen={oracleActive ? state.pact?.omen : null}
             onMystery={onMystery}
             reducedMotion={settings.reducedMotion}
             phase={cinematic?.phase}
@@ -441,7 +480,7 @@ export function InfinitySceneView({
               }
             />
           )}
-          {cinematic?.mystery && (
+          {cinematic?.mystery && !state.discovery?.introduction && !pactOffered && (
             <div
               key={cinematic.id}
               className={
@@ -460,17 +499,6 @@ export function InfinitySceneView({
               <span className="cpi-released-symbol">
                 <EffectGlyph kind={cinematic.mystery.kind} />
               </span>
-              <div className="cpi-mystery-readout">
-                <span>{t(hostileReveal ? 'game.mysteryCritical' : 'game.mysterySignal')}</span>
-                <strong>{t(EFFECT_MESSAGE[cinematic.mystery.kind])}</strong>
-                <b>
-                  {cinematic.mystery.spDelta !== 0
-                    ? `${cinematic.mystery.spDelta > 0 ? '+' : ''}${cinematic.mystery.spDelta} SP`
-                    : cinematic.mystery.hintDelta !== 0
-                      ? `${cinematic.mystery.hintDelta > 0 ? '+' : ''}${cinematic.mystery.hintDelta}`
-                      : '05.0s'}
-                </b>
-              </div>
             </div>
           )}
           {cinematic?.feedback && cinematic.phase !== 'contact' && cinematic.phase !== 'travel' && (
@@ -504,6 +532,7 @@ export function InfinitySceneView({
           <span className="visually-hidden">{t('game.crossingNote')}</span>
         </p>
       </div>
+      <EffectConsumption cue={resourceCues.consumption} hidden={overlayVisible} />
       {overlayVisible && (
         <div className="cpi-overlay">
           <div
@@ -689,7 +718,7 @@ export function InfinitySceneView({
                     row: fatalRow ?? t('general.none'),
                   })}
                 </p>
-                {outcome.offer ? (
+                {outcome.offer && (QA_TOOLS_ENABLED || resourcePanel) ? (
                   <div className="cpi-revive-offer">
                     <strong>
                       {t(petWorld ? 'vault.petContinueTitle' : 'game.bargainTitle', {
@@ -699,6 +728,8 @@ export function InfinitySceneView({
                     <span>{t(petWorld ? 'vault.petContinueBody' : 'game.bargainBody')}</span>
                     {!resourcePanel && <span>{t('game.bargainSleeping')}</span>}
                   </div>
+                ) : outcome.offer ? (
+                  <p>{t('vault.continuationUnavailable')}</p>
                 ) : outcome.phase === 'grant-ready' ? (
                   <p role="status">{t('game.grantReady')}</p>
                 ) : (
@@ -710,9 +741,9 @@ export function InfinitySceneView({
                     type="button"
                     data-cpi-overlay-primary
                     disabled={busy}
-                    onClick={onRequestEnd}
+                    onClick={outcome.phase === 'dead' ? onRestart : onRequestEnd}
                   >
-                    {t('general.endRun')}
+                    {t(outcome.phase === 'dead' ? 'vault.restartFree' : 'general.endRun')}
                   </button>
                   <button type="button" disabled={busy} onClick={onExit}>
                     {t(outcome.forfeitsGrant ? 'general.saveLeave' : 'game.returnMenu')}
@@ -747,8 +778,26 @@ export function InfinitySceneView({
                   </div>
                 </details>
                 {resourcePanel}
-                <AudioSettingsControls settings={settings} onChange={onSettingsChange} />
+                <details className="cpi-run-ledger">
+                  <summary>{t('settings.audioLegend')}</summary>
+                  <AudioSettingsControls
+                    settings={settings}
+                    onChange={onSettingsChange}
+                    hideLegend
+                  />
+                </details>
                 <div className="cpi-overlay-actions">
+                  {onMysteryJournal && (
+                    <button type="button" disabled={busy} onClick={onMysteryJournal}>
+                      {t('guide.journalTab')}
+                    </button>
+                  )}
+                  {onMysteryLab && (
+                    <button type="button" disabled={busy} onClick={onMysteryLab}>
+                      {mysteryText(locale, 'lab')} · {locale === 'bg' ? 'Тест' : 'Test'}
+                    </button>
+                  )}
+
                   <button type="button" data-cpi-overlay-primary disabled={busy} onClick={onPause}>
                     {t('general.resume')}
                   </button>
@@ -769,6 +818,12 @@ export function InfinitySceneView({
 }
 
 function makeInitialRun(testEconomy = false): RunState {
+  let discoveredMysteries: EffectKind[] = [];
+  try {
+    discoveredMysteries = readMysteryJournal(practiceStorage());
+  } catch {
+    /* Optional discoveries. */
+  }
   const seed = new Uint32Array(2);
   crypto.getRandomValues(seed);
   const route = (BigInt(seed[0]) << 32n) | BigInt(seed[1]);
@@ -776,7 +831,8 @@ function makeInitialRun(testEconomy = false): RunState {
   return createRun(
     {
       runId: 'practice-' + route.toString(16),
-      rulesetVersion: testEconomy ? STORE_TEST_RULESET_VERSION : PRACTICE_RULESET_VERSION,
+      rulesetVersion: nextPracticeRuleset(testEconomy),
+      discoveredMysteries,
       routeRng: createPracticeCursor(route),
       mysteryRng: createPracticeCursor(mystery),
       observedAt: Date.now(),
@@ -789,6 +845,7 @@ function makeInitialRun(testEconomy = false): RunState {
 interface InfinityRunProps {
   trial?: boolean;
   onExit: () => void;
+  onStore?: () => void;
   onViewRankings: () => void;
   onExitCancelled: () => void;
   exitRequest: number;
@@ -801,6 +858,7 @@ interface InfinityRunProps {
 function InfinityRun({
   trial = false,
   onExit,
+  onStore,
   onViewRankings,
   onExitCancelled,
   exitRequest,
@@ -825,10 +883,14 @@ function InfinityRun({
   const [paused, setPaused] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<SceneFeedback | null>(null);
+  const [mysteryFeedback, setMysteryFeedback] = useState<MysteryFeedback | null>(null);
+  const [resourceCues, setResourceCues] = useState<RunCues>({});
+  const [labOpen, setLabOpen] = useState(false);
+  const [journalOpen, setJournalOpen] = useState(false);
   const [cinematic, setCinematic] = useState<SceneCinematic | null>(null);
   const [signals, setSignals] = useState<RunSignals>(EMPTY_RUN_SIGNALS);
   const [hintCaptionRow, setHintCaptionRow] = useState<string | null>(null);
-  const [hintCaptionGate] = useState(() => createHintCaptionGate(() => window.localStorage));
+  const [hintCaptionGate] = useState(() => createHintCaptionGate(() => practiceStorage()));
   const [confirmEnd, setConfirmEnd] = useState(false);
   useSoundtrack(
     state.status === 'playing' ? 'run' : cinematic?.fatal ? null : 'ended',
@@ -892,12 +954,16 @@ function InfinityRun({
           try {
             earnedNewBest =
               result.state.storeTest?.assisted && store
-                ? store.recordAssistedBest(result.state.lastClearedRow)
-                : recordPracticePersonalBest(window.localStorage, result.state.lastClearedRow);
+                ? store.recordAssistedBest(result.state.lastClearedRow, result.state.rulesetVersion)
+                : recordPracticePersonalBest(
+                    practiceStorage(),
+                    result.state.lastClearedRow,
+                    result.state.rulesetVersion,
+                  );
             setPersonalBest(
               result.state.storeTest?.assisted && store
-                ? store.snapshot().assistedBest
-                : readPracticePersonalBest(window.localStorage),
+                ? store.assistedBest(result.state.rulesetVersion)
+                : readPracticePersonalBest(practiceStorage(), result.state.rulesetVersion),
             );
             setNewPersonalBest(earnedNewBest);
           } catch {
@@ -919,6 +985,16 @@ function InfinityRun({
           lastCommittedActiveMs.current = result.state.activeTimeMs;
         }
         setState(result.state);
+        const mysteryNotice = mysteryFeedbackFromEvents(result.events, result.state);
+        if (mysteryNotice)
+          setMysteryFeedback(
+            result.state.discovery?.introduction && mysteryNotice.action === null
+              ? null
+              : mysteryNotice,
+          );
+        const cues = runCuesFromEvents(result.events, result.state);
+        if (cues.consumption || cues.hints)
+          setResourceCues((previous) => ({ ...previous, ...cues }));
         const choice = result.events.find(
           (event): event is Extract<RunEvent, { type: 'choice-resolved' }> =>
             event.type === 'choice-resolved',
@@ -1083,48 +1159,47 @@ function InfinityRun({
       setError(reason instanceof Error ? reason.message : 'Clock is unavailable.');
     }
   }
-  const exit = useCallback(async () => {
-    if (exitLock.current) return;
-    if (commandLock.current) {
-      onExitCancelled();
-      return;
-    }
-    exitLock.current = true;
-    try {
-      const runtime = runtimeRef.current;
-      if (
-        (runtime?.getState().status ?? state.status) === 'playing' &&
-        !paused &&
-        !window.confirm(t('app.saveLeaveConfirm'))
-      ) {
+  const exit = useCallback(
+    async (destination: 'home' | 'store' = 'home') => {
+      if (exitLock.current) return;
+      if (commandLock.current) {
         onExitCancelled();
         return;
       }
-      if (runtime) {
-        try {
-          const latest = runtime.getState();
-          if (
-            latest.status === 'dead' &&
-            !latest.storeTest &&
-            latest.pendingReward === null &&
-            !latest.reviveReceipts.some((receipt) => receipt.status === 'granted')
-          ) {
-            // Leaving a declined death finalizes its result instead of advertising a dead Resume.
-            await runtime.bind({ type: 'end', forfeitGrantedReward: false })();
-          }
-          if (!paused) await runtime.hold('recovery');
-          onCheckpoint(runtime.getState());
-        } catch (cause) {
-          setError(cause instanceof Error ? cause.message : 'Unable to pause and save.');
+      exitLock.current = true;
+      try {
+        const runtime = runtimeRef.current;
+        if (
+          (runtime?.getState().status ?? state.status) === 'playing' &&
+          !paused &&
+          !window.confirm(t('app.saveLeaveConfirm'))
+        ) {
           onExitCancelled();
           return;
         }
+        if (runtime) {
+          try {
+            const latest = runtime.getState();
+            if (shouldFinishPracticeOnExit(latest, destination)) {
+              // Leaving a declined death finalizes its result instead of advertising a dead Resume.
+              await runtime.bind({ type: 'end', forfeitGrantedReward: false })();
+            }
+            if (!paused) await runtime.hold('recovery');
+            onCheckpoint(runtime.getState());
+          } catch (cause) {
+            setError(cause instanceof Error ? cause.message : 'Unable to pause and save.');
+            onExitCancelled();
+            return;
+          }
+        }
+        if (destination === 'store' && onStore) onStore();
+        else onExit();
+      } finally {
+        exitLock.current = false;
       }
-      onExit();
-    } finally {
-      exitLock.current = false;
-    }
-  }, [state.status, paused, onCheckpoint, onExit, onExitCancelled, t]);
+    },
+    [state.status, paused, onCheckpoint, onExit, onStore, onExitCancelled, t],
+  );
 
   async function useResource(resource: TestResource, amount: number): Promise<boolean> {
     const runtime = runtimeRef.current;
@@ -1171,17 +1246,51 @@ function InfinityRun({
     handledExitRequest.current = exitRequest;
     void exit();
   }, [exitRequest, exit]);
+  if (journalOpen)
+    return (
+      <MysteryJournal
+        state={state}
+        reducedMotion={settings.reducedMotion}
+        onClose={() => setJournalOpen(false)}
+      />
+    );
+  if (QA_TOOLS_ENABLED && labOpen)
+    return <MysteryLab onClose={() => setLabOpen(false)} reducedMotion={settings.reducedMotion} />;
   return (
     <InfinitySceneView
       trial={trial}
       resourcePanel={
         store && state.storeTest && !trial ? (
-          <RunReserves state={state} busy={busy} onUse={useResource} message={resourceMessage} />
+          <RunReserves
+            state={state}
+            busy={busy}
+            onUse={useResource}
+            message={resourceMessage}
+            onOpenStore={
+              onStore
+                ? () => {
+                    void exit('store');
+                  }
+                : undefined
+            }
+          />
         ) : undefined
       }
       state={state}
       feedback={feedback}
       cinematic={cinematic}
+      mysteryFeedback={mysteryFeedback}
+      resourceCues={resourceCues}
+      onMysteryLab={
+        QA_TOOLS_ENABLED && import.meta.env.MODE !== 'production'
+          ? () => setLabOpen(true)
+          : undefined
+      }
+      onMysteryJournal={() => setJournalOpen(true)}
+      onPact={(option) => {
+        unlockAudio();
+        void issue({ type: 'pact', option });
+      }}
       signals={signals}
       hintCaptionRow={hintCaptionRow}
       ready={ready}
@@ -1228,7 +1337,13 @@ function InfinityRun({
       onExit={() => {
         void exit();
       }}
-      onRestart={onRestart}
+      onRestart={() => {
+        if (runtimeRef.current?.getState().status === 'dead') {
+          void issue({ type: 'end', forfeitGrantedReward: false }).then(() => {
+            if (runtimeRef.current?.getState().status === 'finished') onRestart();
+          });
+        } else onRestart();
+      }}
       onRetry={() => {
         void retry();
       }}
@@ -1242,6 +1357,7 @@ function InfinityRun({
 export function InfinityPractice({
   trialTheme,
   onExit,
+  onStore,
   onViewRankings,
   onExitCancelled,
   exitRequest = 0,
@@ -1252,6 +1368,7 @@ export function InfinityPractice({
 }: {
   trialTheme?: ThemeId;
   onExit: () => void;
+  onStore?: () => void;
   onViewRankings: () => void;
   onExitCancelled?: () => void;
   exitRequest?: number;
@@ -1276,6 +1393,7 @@ export function InfinityPractice({
         settings={settings}
         onSettingsChange={onSettingsChange}
         onExit={onExit}
+        onStore={onStore}
         onViewRankings={onViewRankings}
         onExitCancelled={onExitCancelled ?? (() => {})}
         exitRequest={exitRequest}

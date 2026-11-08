@@ -27,6 +27,13 @@ verify_jwt = true
 entrypoint = "./functions/cpi-api/index.ts"
 import_map = "./functions/cpi-api/deno.json"
 
+[functions.cpi-live]
+# The separate issuer verifies its own revocable tokens; Google/Apple callbacks verify provider signatures.
+# Disabled by default until an isolated project, migrations, mail and reviewed policy are configured.
+verify_jwt = false
+entrypoint = "./functions/cpi-live/index.ts"
+import_map = "./functions/cpi-live/deno.json"
+
 # Do not guess the hosted project's PostgreSQL version here. Once the
 # development project is verified, match [db].major_version to its actual
 # SHOW server_version; result before starting a local stack.

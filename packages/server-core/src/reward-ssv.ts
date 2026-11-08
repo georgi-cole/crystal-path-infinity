@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import { createHash, createPublicKey, verify } from 'node:crypto';
 import type { KeyObject } from 'node:crypto';
 
@@ -28,6 +29,12 @@ export interface VerifiedGoogleReward {
 }
 export interface GoogleRewardKeys {
   get(keyId: string): Promise<KeyObject>;
+}
+
+function isGoogleRewardKey(key: KeyObject) {
+  const curve = key.asymmetricKeyDetails?.namedCurve;
+  // Node and the hosted Edge Runtime use different names for the same P-256 curve.
+  return key.asymmetricKeyType === 'ec' && (curve === 'prime256v1' || curve === 'p256');
 }
 
 /** Fixed Google HTTPS key origin, bounded refreshes and no stale keys after 20 hours. */
@@ -100,8 +107,7 @@ export function createGoogleRewardKeys(
         )
           fail('ssv-keys-unavailable');
         const key = createPublicKey(entry.pem);
-        if (key.asymmetricKeyType !== 'ec' || key.asymmetricKeyDetails?.namedCurve !== 'prime256v1')
-          fail('ssv-keys-unavailable');
+        if (!isGoogleRewardKey(key)) fail('ssv-keys-unavailable');
         next.set(id, key);
       }
       keys = next;
@@ -173,8 +179,7 @@ export async function verifyGoogleReward(
   let valid = false;
   try {
     valid =
-      key.asymmetricKeyType === 'ec' &&
-      key.asymmetricKeyDetails?.namedCurve === 'prime256v1' &&
+      isGoogleRewardKey(key) &&
       verify('sha256', Buffer.from(signed, 'utf8'), { key, dsaEncoding: 'der' }, signature);
   } catch {
     fail('invalid-ssv-signature');

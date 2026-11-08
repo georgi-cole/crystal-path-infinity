@@ -11,8 +11,12 @@ export interface EligibilityPermit {
 }
 export type EligibilityDecision = EligibilityPermit | { status: 'parental_review' | 'unavailable' };
 
+export interface AccountAgeScreen {
+  readonly age: number;
+  readonly country: string;
+}
 export interface OtpGateway {
-  eligibility(): Promise<unknown>;
+  eligibility(screen?: AccountAgeScreen): Promise<unknown>;
   requestCode(email: string, permit: string): Promise<unknown>;
   verifyCode(email: string, code: string, permit: string): Promise<unknown>;
 }
@@ -101,6 +105,7 @@ function problemOf(error: unknown): AccountFlowProblem {
  * Cancellation invalidates late responses; it cannot unsend an already issued email.
  */
 export class AccountOtpFlow {
+  private verifiedTicket: string | null = null;
   private revision = 0;
   private permit: EligibilityPermit | null = null;
   private email: string | null = null;
@@ -121,6 +126,12 @@ export class AccountOtpFlow {
   snapshot(): AccountFlowSnapshot {
     return { ...this.snapshotValue };
   }
+  /** Hand a verified server ticket to the credential owner once, never to a rendered snapshot. */
+  takeVerifiedTicket(): string | null {
+    const ticket = this.verifiedTicket;
+    this.verifiedTicket = null;
+    return ticket;
+  }
 
   private update(step: AccountFlowStep, problem: AccountFlowProblem = null): void {
     this.snapshotValue = {
@@ -132,6 +143,7 @@ export class AccountOtpFlow {
   }
 
   cancel(): void {
+    this.verifiedTicket = null;
     this.revision++;
     this.permit = null;
     this.email = null;
@@ -145,7 +157,7 @@ export class AccountOtpFlow {
     this.update('offline');
   }
 
-  async checkEligibility(online: boolean): Promise<void> {
+  async checkEligibility(online: boolean, screen?: AccountAgeScreen): Promise<void> {
     this.cancel();
     if (!online) {
       this.update('offline');
@@ -154,7 +166,7 @@ export class AccountOtpFlow {
     const current = this.revision;
     this.update('checking');
     try {
-      const decision = validateEligibility(await this.gateway.eligibility(), this.now());
+      const decision = validateEligibility(await this.gateway.eligibility(screen), this.now());
       if (current !== this.revision) return;
       if (decision.status === 'eligible') {
         this.permit = decision;
@@ -236,6 +248,11 @@ export class AccountOtpFlow {
       const response: unknown = await this.gateway.verifyCode(this.email, code, this.permit.permit);
       if (current !== this.revision) return;
       if (isRecord(response) && response.status === 'verified') {
+        this.verifiedTicket =
+          typeof response.verifiedTicket === 'string' &&
+          /^[A-Za-z0-9._~-]{24,1024}$/.test(response.verifiedTicket)
+            ? response.verifiedTicket
+            : null;
         // Not authenticated! Session issuance, secure rotation, revocation,
         // and ranked account attachment belong to the next CPI-018 slice.
         this.email = null;

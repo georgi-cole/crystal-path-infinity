@@ -399,21 +399,27 @@ export function nativeLaunchProblems(
     if (sessionId !== boundary.sessionId)
       problems.push('Page session changed before lifecycle verification');
     const subsequent = events.filter((event) => event.sequence > boundary.sequenceBeforeBackground);
-    const pause = subsequent.find((event) => event.event === 'pause');
-    const resume = subsequent.find(
-      (event) => event.event === 'resume' && pause && event.sequence > pause.sequence,
+    const inactive = subsequent.find(
+      (event) => event.event === 'native-state' && event.details?.lifecycle?.isActive === false,
+    );
+    const resumed = subsequent.find(
+      (event) =>
+        event.event === 'native-state' &&
+        event.details?.lifecycle?.isActive === true &&
+        inactive &&
+        event.sequence > inactive.sequence,
     );
     const resumedBridge = subsequent.find(
       (event) =>
         event.event === 'bridge-ready' &&
         event.details?.reason === 'resume' &&
         event.hasTriggerEvent &&
-        resume &&
-        event.sequence > resume.sequence,
+        resumed &&
+        event.sequence > resumed.sequence,
     );
-    if (!pause) problems.push('No document pause event after the background action');
-    if (!resume) problems.push('No document resume event after the observed pause');
-    if (!resumedBridge) problems.push('No successful native bridge round-trip after resume');
+    if (!inactive) problems.push('No native inactive boundary after the Settings action');
+    if (!resumed) problems.push('No native active boundary after resume');
+    if (!resumedBridge) problems.push('No successful native bridge round-trip after native resume');
     if (platform === 'android') {
       const nativePause = analysis.nativeEvents.find(
         (event) => event.line > boundary.lineBeforeBackground && event.event === 'App paused',

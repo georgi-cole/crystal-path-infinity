@@ -1,3 +1,4 @@
+import { MysteryCube } from './mystery-box';
 import {
   useEffect,
   useId,
@@ -292,6 +293,7 @@ function paneState(row: PresentedRow | undefined, side: TileSide, feedback?: Sce
   if (feedback?.row === row.index && feedback.side === side)
     return feedback.kind === 'safe' ? ' is-safe' : ' is-wrong';
   if (row.hint === side) return ' is-hinted';
+  if (row.noSafeTile) return ' is-cracked';
   if (row.chosen === side) return row.wrong ? ' is-cracked' : ' is-cleared';
   return '';
 }
@@ -321,6 +323,7 @@ export function PrismBridge({
   showStepCaptions = true,
   allowChoices = true,
   allowedSide,
+  omen,
 }: {
   rows?: readonly PresentedRow[];
   feedback?: SceneFeedback | null;
@@ -338,9 +341,10 @@ export function PrismBridge({
   showStepCaptions?: boolean;
   allowChoices?: boolean;
   allowedSide?: TileSide;
+  omen?: TileSide | null;
 }) {
   const id = useId().replace(/:/g, ''),
-    { t, number } = useLanguage();
+    { t, number, locale } = useLanguage();
   const themeId = useThemeId();
   const theme = THEMES[themeId];
   const COLORS = theme.colors;
@@ -727,7 +731,9 @@ export function PrismBridge({
               key={side}
               type="button"
               className={
-                'cpi-bridge-pane' + paneState(row, side, phase === 'contact' ? null : feedback)
+                'cpi-bridge-pane' +
+                (omen === side && row.phase === 'current' ? ' has-omen' : '') +
+                paneState(row, side, phase === 'contact' ? null : feedback)
               }
               aria-label={t(side === 'left' ? 'game.leftTile' : 'game.rightTile', {
                 row: number(row.label),
@@ -745,6 +751,9 @@ export function PrismBridge({
                 row.phase !== 'current'
               }
             >
+              {row.phase === 'current' && omen === side && (
+                <span className="cpi-omen-hint">◈ 70%</span>
+              )}
               {row.phase === 'current' &&
                 !phase &&
                 ((row.hint === side && showHintCaption) ||
@@ -767,7 +776,8 @@ export function PrismBridge({
             (row.phase !== 'current' || row.mysteryAvailable) && (
               <button
                 type="button"
-                className="cpi-bridge-mystery"
+                className={'cpi-bridge-mystery' + (row.mysteryTier ? ' is-tiered' : '')}
+                data-tier={row.mysteryTier}
                 style={{
                   top: `${(projectBridgePoint(0, 0.8 + row.distance * 1.15).y / HEIGHT) * 100}%`,
                 }}
@@ -785,19 +795,19 @@ export function PrismBridge({
                   <MysteryCache theme={themeId} />
                 ) : (
                   <>
-                    <span className="cpi-holo-projector" aria-hidden="true" />
-                    <svg
-                      className="cpi-holo-mystery"
-                      viewBox="0 0 64 76"
-                      fill="none"
-                      aria-hidden="true"
-                    >
-                      <path className="cpi-holo-shell" d="m32 6 23 13v27L32 60 9 46V19L32 6Z" />
-                      <path d="m9 19 23 14 23-14M32 33v27M21 13l23 14v13M20 40l24-14" />
-                      <path className="cpi-holo-core" d="m32 22 8 10-8 11-8-11 8-10Z" />
-                      <path d="M16 65h32M23 70h18" />
-                    </svg>
-                    <span className="cpi-holo-scan" aria-hidden="true" />
+                    <MysteryCube tier={row.mysteryTier ?? 'standard'} />
+                    <span className="cpi-box-tier-label">
+                      {locale === 'bg'
+                        ? {
+                            standard: 'ИСКРА',
+                            choice: 'СДЕЛКА',
+                            major: 'РИТУАЛ',
+                            anomaly: '50/50',
+                          }[row.mysteryTier ?? 'standard']
+                        : { standard: 'SPARK', choice: 'TRADE', major: 'RITUAL', anomaly: '50/50' }[
+                            row.mysteryTier ?? 'standard'
+                          ]}
+                    </span>
                   </>
                 )}
               </button>

@@ -2,7 +2,8 @@ export const rewardMessages = {
   'rewards.title': 'Continue this run',
   'rewards.offer': 'Continuation {ordinal} sets SP to {sp}.',
   'rewards.set': 'The promised SP replaces your current SP; it is not added.',
-  'rewards.quota': 'Confirmed continuations: {granted}/10. Applied: {applied}/10.',
+  'rewards.quota': 'Continuations used: {applied}.',
+  'rewards.limit': 'No ad continues left. Use a credit or finish this run.',
   'rewards.watch': 'Watch an ad',
   'rewards.end': 'End run',
   'rewards.loading': 'Preparing your chosen ad...',
@@ -22,5 +23,5 @@ export const rewardMessages = {
   'rewards.offline':
     'Connect to verify or restore your continuation. Your run remains recoverable.',
   'rewards.retry': 'Retry verification',
-  'rewards.leave': 'Return and keep this run recoverable',
+  'rewards.leave': 'Return to menu',
 } as const;

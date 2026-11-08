@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import { createHash, createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { OperationsPolicyError } from './operations-policy.ts';
 import {
@@ -6,6 +7,12 @@ import {
   createRun,
   getCurrentRow,
   RULESET_VERSION,
+  supportsPacts,
+  isTimedEffect,
+  PACT_OPTIONS,
+  usesMysteryDirectorRules,
+  usesDiscoveryRules,
+  getDeathClock,
   transitionRun,
 } from '@crystal-path-infinity/game-core';
 import type {
@@ -14,6 +21,7 @@ import type {
   RunCommand,
   RunState,
   TileSide,
+  PactOption,
 } from '@crystal-path-infinity/game-core';
 
 /** Populated by verified server authentication, never from a request body. */
@@ -38,6 +46,12 @@ export type RankedCommand =
       readonly side: TileSide;
     }
   | { readonly type: 'hint' | 'mystery'; readonly row: string; readonly life: number }
+  | {
+      readonly type: 'pact';
+      readonly row: string;
+      readonly life: number;
+      readonly option: PactOption;
+    }
   | { readonly type: 'heartbeat' }
   | { readonly type: 'pause' }
   | { readonly type: 'resume' }
@@ -62,6 +76,13 @@ export interface StoredRankedRun {
 }
 
 export interface RankedSnapshot {
+  readonly economy?: {
+    readonly assisted: boolean;
+    readonly reserveSpent: number;
+    readonly hintsSpent: number;
+    readonly creditContinues: number;
+    readonly adContinues: number;
+  };
   readonly runId: string;
   readonly rulesetVersion: string;
   readonly status: RunState['status'];
@@ -78,6 +99,10 @@ export interface RankedSnapshot {
   readonly current: RunState['current'] & { readonly hasMystery: boolean };
   readonly history: RunState['resolutions'];
   readonly effects: RunState['effects'];
+  readonly pact?: RunState['pact'];
+  readonly mysteryRhythm?: NonNullable<RunState['mysteryDirector']>['rhythm'];
+  readonly deathClock?: ReturnType<typeof getDeathClock>;
+  readonly discovery?: RunState['discovery'];
   readonly death: Pick<NonNullable<RunState['death']>, 'id' | 'fatalRow' | 'cause'> | null;
   readonly revivesGranted: number;
   readonly revivesApplied: number;
@@ -229,19 +254,32 @@ function parseCommand(value: unknown): RankedCommand {
     object(value, ['type']);
     return { type };
   }
-  if (type !== 'choose' && type !== 'hint' && type !== 'mystery') fail('invalid-request');
+  if (type !== 'choose' && type !== 'hint' && type !== 'mystery' && type !== 'pact')
+    fail('invalid-request');
   const input = object(
     value,
-    type === 'choose' ? ['type', 'row', 'life', 'side'] : ['type', 'row', 'life'],
+    type === 'choose'
+      ? ['type', 'row', 'life', 'side']
+      : type === 'pact'
+        ? ['type', 'row', 'life', 'option']
+        : ['type', 'row', 'life'],
   );
   const row = integer(input.row, true);
   const life = input.life;
-  if (typeof life !== 'number' || !Number.isInteger(life) || life < 0 || life > 10) {
+  if (typeof life !== 'number' || !Number.isInteger(life) || life < 0 || life > 15) {
     fail('invalid-request');
   }
   if (type === 'choose') {
     if (input.side !== 'left' && input.side !== 'right') fail('invalid-request');
     return { type, row, life, side: input.side };
+  }
+  if (type === 'pact') {
+    if (
+      typeof input.option !== 'string' ||
+      !(PACT_OPTIONS as readonly string[]).includes(input.option)
+    )
+      fail('invalid-request');
+    return { type, row, life, option: input.option as PactOption };
   }
   return { type, row, life };
 }
@@ -251,12 +289,25 @@ export function rankedSnapshot(record: StoredRankedRun): RankedSnapshot {
   const row = getCurrentRow(state);
   const visible = (current: RunState['current']) => ({
     revealedSafeSide: current.revealedSafeSide,
+    ...(current.noSafeTile ? { noSafeTile: true as const } : {}),
+    ...(current.mysteryTier ? { mysteryTier: current.mysteryTier } : {}),
     mysteryOutcome: current.mysteryOutcome,
     lastChoice: current.lastChoice
       ? { side: current.lastChoice.side, wrong: current.lastChoice.wrong }
       : null,
   });
   return structuredClone({
+    ...(state.storeTest
+      ? {
+          economy: {
+            assisted: state.storeTest.assisted,
+            reserveSpent: state.storeTest.reserveSpent,
+            hintsSpent: state.storeTest.hintsSpent,
+            creditContinues: state.storeTest.creditContinues,
+            adContinues: state.storeTest.adContinues,
+          },
+        }
+      : {}),
     runId: state.runId,
     rulesetVersion: state.rulesetVersion,
     status: state.status,
@@ -289,12 +340,42 @@ export function rankedSnapshot(record: StoredRankedRun): RankedSnapshot {
       index: resolution.index,
       ...visible(resolution),
     })),
-    effects: state.effects.map((effect) => ({
-      kind: effect.kind,
-      startedAt: effect.startedAt,
-      expiresAt: effect.expiresAt,
-      nextTickAt: effect.nextTickAt,
-    })),
+    effects: state.effects.map((effect) =>
+      isTimedEffect(effect)
+        ? {
+            kind: effect.kind,
+            startedAt: effect.startedAt,
+            expiresAt: effect.expiresAt,
+            nextTickAt: effect.nextTickAt,
+          }
+        : {
+            kind: effect.kind,
+            startedAt: effect.startedAt,
+            expiresAt: null,
+            nextTickAt: null,
+            rowsLeft: effect.rowsLeft,
+          },
+    ),
+    ...(usesDiscoveryRules(state.rulesetVersion) ? { discovery: state.discovery } : {}),
+    ...(usesMysteryDirectorRules(state.rulesetVersion)
+      ? { mysteryRhythm: state.mysteryDirector!.rhythm, deathClock: getDeathClock(state) }
+      : {}),
+    ...(supportsPacts(state.rulesetVersion)
+      ? {
+          pact: state.pact
+            ? {
+                kind: state.pact.kind,
+                phase: state.pact.phase,
+                rowsLeft: state.pact.rowsLeft,
+                bank: state.pact.bank,
+                omen: state.pact.omen,
+                ...(usesMysteryDirectorRules(state.rulesetVersion)
+                  ? { offeredAt: state.pact.offeredAt }
+                  : {}),
+              }
+            : null,
+        }
+      : {}),
     death: state.death
       ? { id: state.death.id, fatalRow: state.death.fatalRow, cause: state.death.cause }
       : null,

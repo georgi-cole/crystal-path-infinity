@@ -1,10 +1,50 @@
 import { storeBg } from './store-messages';
+import { supportBg } from './support-messages';
 import type { MessageKey } from './messages';
 import { crystalGuideBg } from './crystal-guide-messages';
 
 /** Bulgarian preview copy — reviewed by the product owner before public release. */
 export const bg = {
+  'rewards.limit': 'Рекламните продължавания свършиха. Използвай кредит или приключи опита.',
+  'rewards.quota': 'Използвани продължавания: {applied}.',
+  'rewards.leave': 'Към менюто',
+  'accountControls.confirm':
+    'Да изтрием ли акаунта, резултатите и предметите? Това е необратимо. Покупките не могат да се прехвърлят в нов акаунт. Можеш да продължиш като гост.',
+  'account.privacyFirst': 'Влез с код, изпратен на имейла ти. Без парола.',
+  'account.notReady': 'Входът още не е достъпен. Можеш да играеш като гост.',
+  'accountControls.reauth':
+    'Преди изтегляне на данни или изтриване ще ти изпратим нов код по имейл.',
+  'ranked.assisted': 'Опит с помощ · отделен резултат',
+  'ranked.reserveSp': 'Използвай {amount} SP',
+  'ranked.reserveHint': 'Използвай 1 подсказка',
+  'ranked.creditContinue': 'Продължи · 1 кредит',
+  'accountControls.codeSent': 'Въведи новия код, изпратен на имейла на акаунта.',
+  'accountControls.cancelCode': 'Отказ',
+  'accountControls.done': 'Готово',
+  'account.checkFirst': 'Кратка проверка преди вход.',
+  'account.check': 'Продължи',
+  'account.age': 'Възраст',
+  'account.country': 'Държава на пребиваване',
+  'account.selectCountry': 'Избери държава',
+  'account.agePrivacy': 'Не запазваме точната ти възраст. Винаги можеш да играеш като гост.',
+  'accountPortal.description':
+    'Влез, за да изтеглиш данните си или да изтриеш акаунта. При затваряне на страницата излизаш от профила.',
+  'accountPortal.unavailable':
+    'Услугите за акаунти още не са свързани. За помощ използвай имейла по-долу.',
+  'account.signOut': 'Изход',
+  'account.adPrivacy': 'Реклами и поверителност',
+  'settings.privacyConnected':
+    'Профилът, покупките и проверените опити използват онлайн услуги. Локалните опити остават на това устройство.',
+  'settings.accountToolsUnavailable':
+    'Влезли сте в профила си. Инструментите за акаунта в момента са недостъпни.',
+  'commerce.restore': 'Възстанови покупки',
+  'commerce.retry': 'Опитай пак',
+  'commerce.pending': 'Чакаме потвърждение на покупката. Предметите още не са добавени.',
+  'commerce.error': 'Покупката не е потвърдена. Опитай да възстановиш покупките.',
+  'commerce.busy': 'Свързване…',
+  'commerce.buy': 'Купи · {price}',
   ...storeBg,
+  ...supportBg,
   ...crystalGuideBg,
   'game.stabilityShort': 'Стабилност',
   'game.runDetails': 'Детайли за опита',
@@ -58,8 +98,8 @@ export const bg = {
   'menu.main': 'Главно меню',
   'menu.playDescription': 'Официален режим · Нужен е акаунт',
   'menu.practiceDescription': 'Безкрайна офлайн игра · Без акаунт',
-  'menu.learn': 'Разчети кристала',
-  'menu.replay': 'Разчети кристала отново',
+  'menu.learn': 'Как се играе',
+  'menu.replay': 'Как се играе',
   'menu.tutorialDescription': 'Пет кратки упражнения · Без записан резултат',
   'menu.savedPractice': 'Запазено преминаване · Ред {row}',
   'menu.practiceEyebrow': 'Офлайн · За всички възрасти',
@@ -97,7 +137,7 @@ export const bg = {
   'menu.practiceUnsigned': 'Тренирай без регистрация',
   'menu.settingsEyebrow': 'Лични предпочитания',
   'menu.settingsIntro': 'Тези настройки работят офлайн и важат за тренировките.',
-  'menu.openTutorial': 'Разчети кристала',
+  'menu.openTutorial': 'Как се играе',
   'menu.tutorialDone': 'Мостът още има на какво да те научи',
   'menu.tutorialSkipped': 'Първият урок още те чака',
   'menu.tutorialAvailable': 'Пет урока преди тъмното',

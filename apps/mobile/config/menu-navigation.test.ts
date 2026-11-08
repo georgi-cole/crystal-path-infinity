@@ -128,11 +128,11 @@ describe('CPI-013 standalone menu and route model', () => {
     expect(html).toContain(en['vault.wilds']);
     expect(html).toContain(en['vault.league']);
     expect(html.match(/<article class="cpi-vault-world /g)).toHaveLength(2);
-    expect(html).toContain('6 worlds');
     expect(html).toContain(en['vault.nextWorlds']);
     expect(html).toContain(en['vault.test']);
     expect(html).toContain(en['vault.testDetail']);
     expect(html).not.toContain('class="cpi-vault-wallet"');
+    expect(html).toContain(en['vault.essentials']);
     expect(html).not.toContain(en['store.noAds']);
     expect(html).toContain('aria-pressed="true"');
   });
@@ -164,6 +164,10 @@ describe('CPI-013 standalone menu and route model', () => {
     expect(render('tutorial')).toContain(en['guide.footingTitle']);
     expect(viewFromHash('#practice-run')).toBe('practice');
     expect(viewFromHash('#new-practice')).toBe('practice');
+    for (const hash of ['#practice', '#practice-run', '#new-practice']) {
+      expect(viewFromHash(hash, false)).toBe('home');
+      expect(viewFromHash(hash, true)).toBe('practice');
+    }
     expect(viewFromHash('#unknown-route')).toBe('home');
     expect(viewFromHash('javascript:alert(1)')).toBe('home');
     expect(historyFlag(null, 'cpiNavigation')).toBe(false);

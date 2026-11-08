@@ -1,6 +1,6 @@
 import type { ThemeId } from './store-catalog';
 import type { RunEvent, RunState } from '@crystal-path-infinity/game-core';
-import { presentRowPressure } from '@crystal-path-infinity/game-core';
+import { presentRowPressure, getDeathClock } from '@crystal-path-infinity/game-core';
 import type { PracticeSettings } from './practice-save';
 
 export const CRYSTAL_AUDIO = Object.freeze({
@@ -8,6 +8,7 @@ export const CRYSTAL_AUDIO = Object.freeze({
   death: import.meta.env.BASE_URL + 'assets/sounds/minigames/minigame_gb_death.mp3',
   record: import.meta.env.BASE_URL + 'assets/sounds/minigames/minigame_gb_winner.mp3',
   newTurn: import.meta.env.BASE_URL + 'assets/sounds/minigames/minigame_gb_new_turn.mp3',
+  box: import.meta.env.BASE_URL + 'assets/sounds/ui/ui_wildcard_draw.mp3',
   // Original offline interim music, NOT the Big Eye glass_bridge.mp3.
   music: import.meta.env.BASE_URL + 'assets/music/crystal-ambient-interim.wav',
   glass: import.meta.env.BASE_URL + 'assets/sounds/crystal-glass-fall.wav',
@@ -55,22 +56,15 @@ export function createStandaloneAudio(
   music.volume = 0.28;
   music.preload = 'auto';
   const sfx = {
-    safe: ports.createMedia(
-      theme === 'obsidian'
-        ? CRYSTAL_AUDIO.safe
-        : import.meta.env.BASE_URL + `assets/themes/${theme}-step.wav`,
-    ),
-    death: ports.createMedia(
-      theme === 'obsidian'
-        ? CRYSTAL_AUDIO.death
-        : import.meta.env.BASE_URL + `assets/themes/${theme}-rescue.wav`,
-    ),
+    safe: ports.createMedia(CRYSTAL_AUDIO.safe),
+    death: ports.createMedia(CRYSTAL_AUDIO.death),
     record: ports.createMedia(
       theme === 'obsidian'
         ? CRYSTAL_AUDIO.record
         : import.meta.env.BASE_URL + `assets/themes/${theme}-record.wav`,
     ),
     newTurn: ports.createMedia(CRYSTAL_AUDIO.newTurn),
+    box: ports.createMedia(CRYSTAL_AUDIO.box),
     glass: ports.createMedia(CRYSTAL_AUDIO.glass),
   };
   const alarm = ports.createMedia(CRYSTAL_AUDIO.alarm);
@@ -94,6 +88,7 @@ export function createStandaloneAudio(
   let terminalTail: 'death' | 'record' | null = null;
   let lastStep = '';
   let lastDeath = '';
+  let lastMystery = '';
   let ended = false;
   let emergency = false;
   let alarmPlaying = false;
@@ -272,7 +267,9 @@ export function createStandaloneAudio(
       if (disposed || !foreground || !options.foreground) return;
       emergency =
         state.status === 'playing' &&
-        ((state.sp > 0 && state.sp < 15) || presentRowPressure(state)?.urgent === true);
+        ((state.sp > 0 && state.sp < 15) ||
+          presentRowPressure(state)?.urgent === true ||
+          (getDeathClock(state) !== null && state.activeTimeMs >= getDeathClock(state)!.warningAt));
       syncAlarm();
       const hasTerminal = events.some((event) => event.type === 'run-ended');
       if (!active && !hasTerminal) return;
@@ -298,9 +295,12 @@ export function createStandaloneAudio(
             cue('safe');
             pulse('step');
           }
-        } else if (event.type === 'mystery-resolved' && event.spDelta < 0) {
-          cue('safe', 0.72);
-          pulse('damage');
+        } else if (event.type === 'mystery-resolved') {
+          const key = state.runId + ':' + state.revivesApplied + ':' + event.row;
+          if (lastMystery === key) continue;
+          lastMystery = key;
+          cue('box');
+          if (event.spDelta < 0) pulse('damage');
         } else if (event.type === 'revive-applied') {
           lastStep = '';
           terminalTail = null;

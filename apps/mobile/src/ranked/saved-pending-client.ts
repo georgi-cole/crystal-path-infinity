@@ -97,7 +97,7 @@ export function parseSavedPendingPage(
       typeof raw.revivesGranted !== 'number' ||
       !Number.isInteger(raw.revivesGranted) ||
       raw.revivesGranted < 0 ||
-      raw.revivesGranted > 10 ||
+      raw.revivesGranted > (raw.rulesetVersion === 'infinity-v11-live' ? 15 : 10) ||
       typeof raw.revivesApplied !== 'number' ||
       !Number.isInteger(raw.revivesApplied) ||
       raw.revivesApplied < 0 ||

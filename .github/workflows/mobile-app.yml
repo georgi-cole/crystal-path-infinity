@@ -5,6 +5,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      native_services:
+        description: Compile and launch AdMob + native purchases using Google demonstration inventory
+        type: boolean
+        default: false
   # Scheduled regressions run the full multi-launch Android and iOS profile.
   # Keep required PR checks independent: a scheduled failure never becomes a PR skip.
   schedule:
@@ -12,6 +17,10 @@ on:
 
 permissions:
   contents: read
+
+env:
+  CPI_NATIVE_ADS: ${{ inputs.native_services == true && 'true' || 'false' }}
+  CPI_NATIVE_PURCHASES: ${{ inputs.native_services == true && 'true' || 'false' }}
 
 concurrency:
   group: mobile-app-${{ github.workflow }}-${{ github.ref }}
@@ -63,6 +72,9 @@ jobs:
         run: |
           npm exec --yes --package=deno@2.9.6 -- deno task --config supabase/functions/cpi-api/deno.json check
           npm exec --yes --package=deno@2.9.6 -- deno task --config supabase/functions/cpi-api/deno.json test
+          npm exec --yes --package=deno@2.9.6 -- deno task --config supabase/functions/cpi-live/deno.json check
+          npm exec --yes --package=deno@2.9.6 -- deno task --config supabase/functions/cpi-live/deno.json test
+          node --experimental-strip-types --test backend/tests/gateway.test.mjs
       - name: Test unsigned packaging safeguards and artifact verification
         run: |
           node --experimental-strip-types --test .github/scripts/unsigned-beta.test.mjs
@@ -134,7 +146,7 @@ jobs:
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging android/app/build/outputs/apk/debug/app-debug.apk > artifacts/android-apk-badging.txt
           python3 - <<'PY'
           from pathlib import Path
-          import json, re, zipfile, xml.etree.ElementTree as ET
+          import json, os, re, zipfile, xml.etree.ElementTree as ET
           expected = json.loads(Path('dist/build-info.json').read_text())
           badging = Path('artifacts/android-apk-badging.txt').read_text()
           assert f"package: name='{expected['appId']}' versionCode='1' versionName='{expected['version']}'" in badging
@@ -143,7 +155,15 @@ jobs:
           # AndroidX may add its app-scoped signature safeguard for receivers.
           # It grants no user/device access; no other permission is accepted.
           permissions = set(re.findall(r"uses-permission(?:-sdk-\d+)?: name='([^']+)'", badging))
-          assert system in permissions and permissions <= {system, internal}, permissions
+          allowed = {system, internal}
+          if os.environ.get('CPI_NATIVE_ADS') == 'true':
+              # GMA 25.4.0's ads-api -> WorkManager 2.7.0 adds these two
+              # normal permissions. Confirmed in the merged-manifest blame
+              # report; the baseline still accepts INTERNET only.
+              allowed.update({'android.permission.ACCESS_NETWORK_STATE', 'android.permission.WAKE_LOCK', 'android.permission.FOREGROUND_SERVICE'})
+          if os.environ.get('CPI_NATIVE_PURCHASES') == 'true':
+              allowed.add('com.android.vending.BILLING')
+          assert system in permissions and permissions <= allowed, permissions
           manifests = list(Path('android/app/build/intermediates/merged_manifests').glob('debug/**/AndroidManifest.xml'))
           assert manifests, 'Merged manifest missing'
           ns = '{http://schemas.android.com/apk/res/android}'
@@ -254,10 +274,10 @@ jobs:
     name: Development iOS build and simulator launch
     needs: web
     if: ${{ needs.web.outputs.native_mode == 'smoke' || needs.web.outputs.native_mode == 'full' }}
-    # Tahoe hosts saturated before CPI installation and during OS capture.
-    # Pin the supported 14 GB Sequoia/Xcode pair; retain async log draining
-    # and every required recreated-process/bridge/lifecycle assertion.
-    runs-on: macos-15-intel
+    # Use the 14 GB standard host and the current supported Xcode/iOS pair.
+    # OS control commands run asynchronously so attached native logs drain
+    # throughout every real foreground/background transition.
+    runs-on: macos-26-intel
     timeout-minutes: 45
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
@@ -292,16 +312,19 @@ jobs:
           xcodebuild -resolvePackageDependencies -project ios/App/App.xcodeproj -scheme App "${resolution_flags[@]}" 2>&1 | tee artifacts/ios-dependencies.log
           python3 - <<'PY'
           from pathlib import Path
-          import json
+          import json, os
           lock = json.loads(Path('ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved').read_text())
           pins = {pin['identity']: pin['state'].get('version') for pin in lock['pins']}
-          assert pins == {'capacitor-swift-pm': '8.5.3'}, pins
-          print('Resolved SPM graph: Capacitor 8.5.3 only')
+          expected = {'capacitor-swift-pm': '8.5.3'}
+          if os.environ.get('CPI_NATIVE_ADS') == 'true':
+              expected.update({'swift-package-manager-google-mobile-ads': '13.11.0', 'swift-package-manager-google-user-messaging-platform': '3.1.0'})
+          assert pins == expected, pins
+          print('Resolved SPM graph matches pinned integrations')
           PY
           xcodebuild build -project ios/App/App.xcodeproj -scheme App -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build/ios -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY= 2>&1 | tee artifacts/ios-build.log
           python3 - <<'PY'
           from pathlib import Path
-          import json, plistlib
+          import json, os, plistlib
           app = Path('build/ios/Build/Products/Debug-iphonesimulator/App.app')
           info = plistlib.loads((app / 'Info.plist').read_bytes())
           expected = json.loads(Path('dist/build-info.json').read_text())
@@ -311,7 +334,12 @@ jobs:
           assert info['UIDeviceFamily'] == [1]
           assert info['UISupportedInterfaceOrientations'] == ['UIInterfaceOrientationPortrait']
           assert 'NSAppTransportSecurity' not in info
-          assert not any(key.endswith('UsageDescription') or key.startswith('GAD') for key in info)
+          assert not any(key.endswith('UsageDescription') for key in info)
+          if os.environ.get('CPI_NATIVE_ADS') == 'true':
+              assert info['GADApplicationIdentifier'] == 'ca-app-pub-3940256099942544~1458002511'
+              assert info['GADDelayAppMeasurementInit'] is True
+          else:
+              assert not any(key.startswith('GAD') for key in info)
           assert json.loads((app / 'public/build-info.json').read_text()) == expected
           privacy = plistlib.loads((app / 'PrivacyInfo.xcprivacy').read_bytes())
           assert privacy['NSPrivacyAccessedAPITypes'] == [{'NSPrivacyAccessedAPIType': 'NSPrivacyAccessedAPICategorySystemBootTime', 'NSPrivacyAccessedAPITypeReasons': ['35F9.1']}]
@@ -458,6 +486,19 @@ jobs:
           node --experimental-strip-types backend/tests/edge-integration.mjs
       - name: Validate independent backend environments and public-variable guard
         run: node --test backend/tests/environments.test.mjs
+      - name: Test private commerce delivery and concurrent purchase replay
+        env:
+          CPI_RUNTIME_DB_PASSWORD: cpi-runtime-disposable-ci-only
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261107000100_native_commerce.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261107000200_account_issuer.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261107000300_commerce_operations.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261107000400_live_economy.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261107000500_commerce_export.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261107000600_reward_launch_reviews.sql
+          psql -X -v ON_ERROR_STOP=1 -f backend/live-runtime-role.sql
+          node --experimental-strip-types backend/tests/commerce-integration.mjs
+          node --experimental-strip-types backend/tests/live-services-integration.mjs
 
   required:
     name: App required checks
