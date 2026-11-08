@@ -25,9 +25,14 @@ const metadataPath = join(__dirname, 'dist', 'build-info.json');
 const copiesAssets = process.argv
   .slice(2)
   .some((argument) => ['add', 'copy', 'sync', 'build', 'run'].includes(argument));
-if (copiesAssets && existsSync(join(__dirname, 'dist', 'qa-info.json')))
+if (
+  copiesAssets &&
+  ['qa-info.json', 'player-preview-info.json'].some((marker) =>
+    existsSync(join(__dirname, 'dist', marker)),
+  )
+)
   throw new Error(
-    'QA web assets cannot be copied into a player native build. Rebuild player assets first.',
+    'Simulated web preview assets cannot be copied into a player native build. Rebuild player assets first.',
   );
 
 const releaseMetadataPath = join(__dirname, 'dist', 'release-info.json');

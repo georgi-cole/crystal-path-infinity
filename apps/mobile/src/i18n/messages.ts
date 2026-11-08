@@ -188,7 +188,6 @@ export const en = {
   'game.pauseClockHeld': 'Clock paused',
   'game.pauseTestTools': 'Test tools',
   'game.backToPause': 'Back to pause',
-  'game.backToTestTools': 'Back to tools',
   'game.stepLeft': 'Trust the left',
   'game.stepRight': 'Trust the right',
   'game.bridgeGuidance': 'Choose what holds',

@@ -3,7 +3,7 @@ import { getReviveSp, getRuleset, RESERVE_SP_PER_RUN } from '@crystal-path-infin
 import type { RunState, TestResource } from '@crystal-path-infinity/game-core';
 import { useLanguage } from './language-context';
 import { useTestStore } from './store-context';
-import { QA_TOOLS_ENABLED } from './app-profile';
+import { PLAYER_PREVIEW_ENABLED, SIMULATED_STORE_ENABLED } from './app-profile';
 
 export function RunReserves({
   state,
@@ -26,7 +26,8 @@ export function RunReserves({
     label: string;
   } | null>(null);
   const economy = state.storeTest;
-  if (!QA_TOOLS_ENABLED || !economy || state.status === 'finished') return null;
+  if (!SIMULATED_STORE_ENABLED || !economy || state.status === 'finished') return null;
+  const dead = state.status === 'dead';
   const refill = Math.max(
     0,
     Math.min(
@@ -36,7 +37,6 @@ export function RunReserves({
       snapshot.sp,
     ),
   );
-  const dead = state.status === 'dead';
   const sp = dead ? getReviveSp(state.revivesApplied + 1, state.rulesetVersion) : 0;
   const request = (resource: TestResource, amount: number, label: string) =>
     setConfirmation({ resource, amount, label });
@@ -53,7 +53,7 @@ export function RunReserves({
               credits: number(snapshot.credits),
             })}
           </span>
-          <small>{t('vault.test')}</small>
+          <small>{t(PLAYER_PREVIEW_ENABLED ? 'vault.previewStore' : 'vault.test')}</small>
         </div>
       ) : (
         <>
@@ -62,7 +62,7 @@ export function RunReserves({
             <span>{t('vault.creditAmount', { count: number(snapshot.credits) })}</span>
             <span>{t('vault.hintAmount', { count: number(snapshot.hints) })}</span>
           </div>
-          <small>{t('vault.test')}</small>
+          <small>{t(PLAYER_PREVIEW_ENABLED ? 'vault.previewStore' : 'vault.test')}</small>
         </>
       )}
       {confirmation ? (

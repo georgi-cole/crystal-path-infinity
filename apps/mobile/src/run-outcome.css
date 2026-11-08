@@ -234,6 +234,19 @@
   display: grid;
   gap: 0.55rem;
 }
+.cpi-run-outcome .cpi-result-navigation > button[data-cpi-overlay-primary] {
+  grid-column: auto;
+  border-color: color-mix(in srgb, var(--dialog-edge) 65%, transparent);
+  background: linear-gradient(145deg, #ffffff0a, transparent), var(--dialog-material);
+  box-shadow: none;
+  color: #e5dfeb;
+}
+.cpi-run-outcome .cpi-result-navigation > button[data-cpi-overlay-primary]::before {
+  content: none;
+}
+.cpi-run-outcome .cpi-result-navigation > button:hover:not(:disabled) {
+  border-color: var(--dialog-accent);
+}
 .cpi-run-outcome .cpi-pause-actions {
   margin-top: 0.1rem;
 }
@@ -376,9 +389,6 @@
 .cpi-pause-test-tools:not([hidden]) {
   display: grid;
   padding-top: 0.45rem;
-}
-.cpi-pause-test-tools > .cpi-pause-row + .cpi-pause-row {
-  border-top: 1px solid #ffffff12;
 }
 .cpi-run-outcome .cpi-resource-panel {
   padding: 0.55rem 0.65rem;

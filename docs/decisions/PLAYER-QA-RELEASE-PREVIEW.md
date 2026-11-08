@@ -159,3 +159,11 @@ The original relic opens in its own world when it offers a choice. The guide use
 The pause header shows the world scene, the full companion and the crossed-row count. Resume leads a single list of Discoveries, Run details and Sound and feedback. Each settings view has a Back to pause action. QA adds a Test tools row that contains the simulated reserves and Mystery chamber. The separate player preview is a production-mode web build with guest practice and live services disabled. It reads the player storage namespace.
 
 Mystery choice details take the place of the options while reading. Each page keeps Back to choices and the timer visible. Returning restores focus to Details and keeps the same offer. Active effects show a brief explanation in the collapsed status strip. The first-discovery hold and repeat-effect timing retain their rules.
+
+### Gameplay parity in the phone reviews on 8 November 2026
+
+The temporary player review now uses the dedicated web-only player-preview mode. It has the same continuation, reserve, world showcase, checkout and equip journeys as QA. The player review labels its store and checkout as simulated. It uses the player browser namespace for its simulated wallet and never loads the QA wallet. Existing saved runs keep their rules. New runs in this review use the same local store rules as QA.
+
+The player review omits the mystery lab, demonstration buttons, balance tuning, reset and forced pending or failure controls. Reserves are a regular pause action in both reviews. The Test tools section in QA contains the mystery chamber. The release mode still reads configured commerce and reward services. Both simulated web modes are barred from native asset copying and unsigned release preparation.
+
+The death dialog shows matching Start again and Return to menu buttons. A legal continuation takes priority in its own panel. At the continuation cap, the result shows the usual quota message. The credit shelf reached from defeat puts Return to your crossing first and retains the same run during checkout. Worlds can always be explored in the showcase. The shared journal uses an expanded emblem, its own title row, a readable explanation and a bottom entry selector.

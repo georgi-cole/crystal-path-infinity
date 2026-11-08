@@ -29,7 +29,9 @@ await build({ root: app, mode: 'production', base });
 const manifest = JSON.parse(readFileSync(join(app, 'package.json'), 'utf8'));
 const built = JSON.parse(readFileSync(join(output, 'build-info.json'), 'utf8'));
 assertBuiltEnvironment(built, 'production', manifest.version);
-assert.equal(existsSync(join(output, 'qa-info.json')), false, 'Player root must not enable QA.');
+for (const marker of ['qa-info.json', 'player-preview-info.json']) {
+  assert.equal(existsSync(join(output, marker)), false, 'Player root must not enable simulation.');
+}
 const html = readFileSync(join(output, 'index.html'), 'utf8');
 assert.match(html, /id="root"/);
 const assets = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map((match) => match[1]);

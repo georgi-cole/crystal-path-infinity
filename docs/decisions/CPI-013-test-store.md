@@ -129,3 +129,16 @@ test checkout. The button artwork follows the equipped world.
 QA събира резервите и тестовата стая в отделен ред „Тестови инструменти“.
 Разходването, потвърждението и локалният портфейл остават същите. Player
 сборката показва общия списък на паузата без QA реда.
+
+## Player preview journey on 8 November 2026
+
+The temporary player-preview build exercises the same device-local simulator
+with a separate wallet key. New runs can simulate ads and buy and spend
+continuation credits. Opening the credit shelf from defeat keeps that run
+recoverable and puts the return action at the top. At the cap, the continuation
+panel disappears and the usual quota text appears.
+
+Explore opens the world showcase even when purchases are unavailable. In both
+web reviews, simulated checkout also allows a world to be unlocked and equipped.
+Player review omits reset, injected checkout failure and the pending test action.
+The simulator does not represent a signed native purchase or a live payment.

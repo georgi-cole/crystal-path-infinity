@@ -1,5 +1,6 @@
 import { practiceStorage, QA_TOOLS_ENABLED } from './app-profile';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import type { ReactNode } from 'react';
 import { useThemeId } from './store-context';
 import { mysteryTier } from '@crystal-path-infinity/game-core';
 import { PRACTICE_RULESET_VERSION } from './practice-rules';
@@ -14,53 +15,51 @@ import { MysteryPager } from './mystery-pager';
 import './mystery-discovery.css';
 
 const compactJournal =
-  '(max-width: 420px) and (max-height: 620px), (orientation: landscape) and (max-height: 500px)';
+  '(max-width: 430px) and (max-height: 740px), (orientation: landscape) and (max-height: 500px)';
 
 function subscribeToJournalViewport(onChange: () => void) {
-  const media = window.matchMedia(compactJournal);
-  media.addEventListener('change', onChange);
-  return () => media.removeEventListener('change', onChange);
+  window.addEventListener('resize', onChange);
+  return () => window.removeEventListener('resize', onChange);
+}
+
+function journalPageLimit() {
+  if (window.matchMedia(compactJournal).matches) return 170;
+  return window.matchMedia('(max-width: 430px)').matches ? 400 : Infinity;
 }
 
 function JournalCard({
   kind,
   version,
+  navigation,
   onTry,
 }: {
   kind: EffectKind;
   version: string;
+  navigation: ReactNode;
   onTry: () => void;
 }) {
   const { locale, t, number } = useLanguage();
   const [part, setPart] = useState(0);
-  const compact = useSyncExternalStore(
+  const pageLimit = useSyncExternalStore(
     subscribeToJournalViewport,
-    () => window.matchMedia(compactJournal).matches,
-    () => false,
+    journalPageLimit,
+    () => Infinity,
   );
   const copy = effectCopy(locale, kind, version);
   const summary = mysteryDiscoverySummary(kind, locale === 'bg', version);
   const paragraphs = copy.detail.split('\n\n');
-  const paged = compact && paragraphs.length > 1 && copy.detail.length > 170;
+  const paged = paragraphs.length > 1 && copy.detail.length > pageLimit;
   const selected = Math.min(part, paragraphs.length - 1);
   const visible = paged ? [paragraphs[selected]] : paragraphs;
   return (
     <article className="cpi-journal-card" data-tier={mysteryTier(kind)}>
-      <header>
-        <EffectGlyph kind={kind} />
+      <header className="cpi-journal-hero">
+        <div className="cpi-journal-emblem" aria-hidden="true">
+          <EffectGlyph kind={kind} />
+        </div>
         <h2>{copy.title}</h2>
-        {QA_TOOLS_ENABLED && (
-          <button
-            type="button"
-            className="cpi-journal-demo"
-            onClick={onTry}
-            aria-label={t('guide.tryDiscovery', { title: copy.title })}
-          >
-            {t('guide.tryIt')} <span aria-hidden="true">{'\u2197'}</span>
-          </button>
-        )}
+        {summary && <p className="cpi-journal-summary">{summary}</p>}
       </header>
-      {summary && <p className="cpi-journal-summary">{summary}</p>}
       <div className="cpi-journal-explanation">
         <div className="cpi-journal-explanation-heading">
           <h3>{t('guide.howItWorks')}</h3>
@@ -84,6 +83,19 @@ function JournalCard({
           <p key={paragraph}>{paragraph}</p>
         ))}
       </div>
+      <footer className="cpi-journal-card-footer">
+        {navigation}
+        {QA_TOOLS_ENABLED && (
+          <button
+            type="button"
+            className="cpi-journal-demo"
+            onClick={onTry}
+            aria-label={t('guide.tryDiscovery', { title: copy.title })}
+          >
+            {t('guide.tryIt')} <span aria-hidden="true">{'\u2197'}</span>
+          </button>
+        )}
+      </footer>
     </article>
   );
 }
@@ -151,28 +163,32 @@ export function MysteryJournal({
           <p>{t('guide.journalIntro')}</p>
         </div>
       ) : (
-        <>
-          {known.length > 1 && (
-            <MysteryPager
-              className="cpi-journal-pager"
-              label={t('guide.journalTab')}
-              previous={t('guide.previousDiscovery')}
-              next={t('guide.nextDiscovery')}
-              announcement={effectCopy(locale, activeKind, version).title}
-              position={t('guide.discoveryPosition', {
-                page: number(page + 1),
-                total: number(known.length),
-              })}
-              onChange={changePage}
-            />
-          )}
-          <JournalCard
-            key={activeKind}
-            kind={activeKind}
-            version={version}
-            onTry={() => setDemo(activeKind)}
-          />
-        </>
+        <JournalCard
+          key={activeKind}
+          kind={activeKind}
+          version={version}
+          navigation={
+            known.length > 1 ? (
+              <MysteryPager
+                className="cpi-journal-pager cpi-journal-entry-pager"
+                label={t('guide.journalTab')}
+                previous={t('guide.previousDiscovery')}
+                next={t('guide.nextDiscovery')}
+                announcement={effectCopy(locale, activeKind, version).title}
+                position={t('guide.discoveryPosition', {
+                  page: number(page + 1),
+                  total: number(known.length),
+                })}
+                onChange={changePage}
+              />
+            ) : (
+              <span className="cpi-journal-count">
+                {t('guide.discoveryPosition', { page: number(1), total: number(1) })}
+              </span>
+            )
+          }
+          onTry={() => setDemo(activeKind)}
+        />
       )}
     </section>
   );

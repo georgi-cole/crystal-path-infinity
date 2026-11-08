@@ -421,13 +421,12 @@
   .cpi-menu-view--journal .cpi-guide-library:has(> .cpi-mystery-journal) {
     display: grid;
     grid-template-columns: minmax(7rem, 0.25fr) minmax(0, 1fr);
-    align-content: start;
-    align-items: start;
     gap: 0.65rem;
     padding-top: 0.4rem;
   }
   .cpi-guide-library:has(> .cpi-mystery-journal) > .cpi-guide-tabs {
     grid-template-columns: 1fr;
+    align-self: start;
     margin: 0;
   }
 }

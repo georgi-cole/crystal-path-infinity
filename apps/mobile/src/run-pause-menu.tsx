@@ -11,6 +11,7 @@ const rowArt = {
     'M3 4h5a4 4 0 0 1 4 3 4 4 0 0 1 4-3h5v14h-5a4 4 0 0 0-4 2 4 4 0 0 0-4-2H3Zm9 3v13M6 8h3m6 0h3',
   progress: 'M5 4h14v16H5Zm3 12v-3m4 3V8m4 8v-5',
   sound: 'M3 9h4l5-4v14l-5-4H3Zm13-1a6 6 0 0 1 0 8m2-10a8 8 0 0 1 0 12',
+  reserves: 'M4 8h16v12H4Zm0 0 8-4 8 4m-8 3v6m-3-3h6',
   test: 'm12 3 8 5v8l-8 5-8-5V8Zm0 0v9m8-4-8 4-8-4m8 4v9',
 };
 
@@ -67,27 +68,18 @@ export function RunPauseMenu({
   const [section, setSection] = useState<Section | null>(null);
   const back = useRef<HTMLButtonElement>(null);
   const source = useRef<HTMLButtonElement>(null);
-  const reserves = useRef<HTMLButtonElement>(null);
-  const previousSection = useRef<Section | null>(null);
   const id = useId();
-  const hasTestTools = Boolean(resources || onMysteryLab);
   const sections = [
     { id: 'progress', label: t('game.runDetails') },
     { id: 'sound', label: t('settings.audioLegend') },
-    ...(hasTestTools ? [{ id: 'test', label: t('game.pauseTestTools') } as const] : []),
+    ...(resources ? [{ id: 'reserves', label: t('vault.manage') } as const] : []),
+    ...(onMysteryLab ? [{ id: 'test', label: t('game.pauseTestTools') } as const] : []),
   ] as const;
   const active = sections.find((item) => item.id === section);
-  const backToMenu = () => setSection(section === 'reserves' ? 'test' : null);
+  const backToMenu = () => setSection(null);
 
   useLayoutEffect(() => {
-    const target =
-      section === 'test' && previousSection.current === 'reserves'
-        ? reserves
-        : section
-          ? back
-          : source;
-    target.current?.focus({ preventScroll: true });
-    previousSection.current = section;
+    (section ? back : source).current?.focus({ preventScroll: true });
   }, [section]);
 
   return (
@@ -158,12 +150,12 @@ export function RunPauseMenu({
         hidden={section === null}
       >
         <header>
-          <h3 id={id + '-title'}>{section === 'reserves' ? t('vault.manage') : active?.label}</h3>
+          <h3 id={id + '-title'}>{active?.label}</h3>
           <button ref={back} className="cpi-pause-back" type="button" onClick={backToMenu}>
             <svg viewBox="0 0 16 16" aria-hidden="true">
               <path d="m10 3-5 5 5 5" />
             </svg>
-            {t(section === 'reserves' ? 'game.backToTestTools' : 'game.backToPause')}
+            {t('game.backToPause')}
           </button>
         </header>
         <dl className="cpi-pause-metrics" hidden={section !== 'progress'}>
@@ -191,23 +183,11 @@ export function RunPauseMenu({
         <div hidden={section !== 'sound'}>
           <AudioSettingsControls settings={settings} onChange={onSettingsChange} hideLegend />
         </div>
-        {hasTestTools && (
+        {onMysteryLab && (
           <div className="cpi-pause-test-tools" hidden={section !== 'test'}>
-            {resources && (
-              <PauseRow
-                ref={reserves}
-                art="progress"
-                onClick={() => setSection('reserves')}
-                disabled={busy}
-              >
-                {t('vault.manage')}
-              </PauseRow>
-            )}
-            {onMysteryLab && (
-              <PauseRow art="test" onClick={onMysteryLab} disabled={busy}>
-                {mysteryText(locale, 'lab')}
-              </PauseRow>
-            )}
+            <PauseRow art="test" onClick={onMysteryLab} disabled={busy}>
+              {mysteryText(locale, 'lab')}
+            </PauseRow>
           </div>
         )}
         {resources && <div hidden={section !== 'reserves'}>{resources}</div>}

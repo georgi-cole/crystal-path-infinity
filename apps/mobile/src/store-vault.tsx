@@ -10,7 +10,7 @@ import { ThemeArtwork } from './theme-art';
 import { StorePackArt } from './store-pack-art';
 import { WorldShowcase } from './world-experience';
 import './store-vault.css';
-import { QA_TOOLS_ENABLED } from './app-profile';
+import { PLAYER_PREVIEW_ENABLED, QA_TOOLS_ENABLED, SIMULATED_STORE_ENABLED } from './app-profile';
 import { useCommerce } from './commerce/commerce-context';
 
 function StoreDialog({
@@ -54,7 +54,7 @@ function StoreDialog({
     document.addEventListener('keydown', keyboard);
     return () => {
       document.removeEventListener('keydown', keyboard);
-      previous?.focus();
+      previous?.focus({ preventScroll: true });
     };
   }, []);
   return (
@@ -100,20 +100,24 @@ export function StoreVault({
   const { t, number, locale } = useLanguage();
   const { store, snapshot: testSnapshot, error } = useTestStore();
   const { flow: liveStore, snapshot: live } = useCommerce();
-  const snapshot = QA_TOOLS_ENABLED ? testSnapshot : { ...testSnapshot, ...live.wallet };
+  const snapshot = SIMULATED_STORE_ENABLED ? testSnapshot : { ...testSnapshot, ...live.wallet };
   useEffect(() => {
-    if (!QA_TOOLS_ENABLED && live.phase === 'idle') void liveStore?.load();
+    if (!SIMULATED_STORE_ENABLED && live.phase === 'idle') void liveStore?.load();
   }, [liveStore, live.phase]);
   const liveBusy = ['loading', 'purchasing', 'recovering'].includes(live.phase);
-  const canEquip = QA_TOOLS_ENABLED
+  const canEquip = SIMULATED_STORE_ENABLED
     ? !!store && !error && !snapshot.pending
     : !!live.wallet && !liveBusy;
   const liveProduct = (product: StoreProduct) =>
     live.products.find((item) => item.key === product.id.replace(/^test\./, ''));
+  const hasLivePurchase = (product: StoreProduct) =>
+    !!liveStore && !!live.wallet && !!liveProduct(product);
   const canBuy = (product: StoreProduct) =>
-    QA_TOOLS_ENABLED
+    SIMULATED_STORE_ENABLED
       ? !!store && !error && !snapshot.pending
-      : !!liveStore && !!live.wallet && !liveBusy && !!liveProduct(product);
+      : !liveBusy && hasLivePurchase(product);
+  const showWorldAction = (product: StoreProduct, owned: boolean) =>
+    SIMULATED_STORE_ENABLED || (owned ? !!live.wallet : hasLivePurchase(product));
   const assistedBest =
     store?.assistedBest(snapshot.checkpoint?.rulesetVersion ?? READING_STORE_RULESET_VERSION) ??
     null;
@@ -125,16 +129,25 @@ export function StoreVault({
   const [dialog, setDialog] = useState<Dialog>(null);
   const [notice, setNotice] = useState('');
   const modal = dialog !== null;
+  const returningToRun = Boolean(onReturnToRun && initialFilter === 'essentials');
+  const storeStatus = t(PLAYER_PREVIEW_ENABLED ? 'vault.previewStore' : 'vault.test');
   const price = (product: StoreProduct) =>
-    QA_TOOLS_ENABLED
+    SIMULATED_STORE_ENABLED
       ? new Intl.NumberFormat(locale, { style: 'currency', currency: 'EUR' }).format(product.price)
       : (liveProduct(product)?.displayPrice ?? '');
   const buyLabel = (product: StoreProduct) =>
     price(product)
-      ? t(QA_TOOLS_ENABLED ? 'vault.testBuyPrice' : 'commerce.buy', { price: price(product) })
+      ? t(
+          PLAYER_PREVIEW_ENABLED
+            ? 'vault.previewBuyPrice'
+            : QA_TOOLS_ENABLED
+              ? 'vault.testBuyPrice'
+              : 'commerce.buy',
+          { price: price(product) },
+        )
       : t('vault.unavailable');
   function equip(theme: ThemeId) {
-    if (QA_TOOLS_ENABLED) act(() => store?.equip(theme));
+    if (SIMULATED_STORE_ENABLED) act(() => store?.equip(theme));
     else void liveStore?.equip(theme);
   }
   const amount = (product: StoreProduct) =>
@@ -155,11 +168,11 @@ export function StoreVault({
     }
   }
   function buy(product: StoreProduct) {
-    if (!QA_TOOLS_ENABLED) {
+    if (!SIMULATED_STORE_ENABLED) {
       if (canBuy(product)) void liveStore?.buy(product.id.replace(/^test\./, ''));
       return;
     }
-    if (!QA_TOOLS_ENABLED || !store) return;
+    if (!store) return;
     act(() => {
       const id = createTestReceiptId();
       store.beginPurchase(product.id, id);
@@ -183,6 +196,9 @@ export function StoreVault({
   const checkout =
     dialog?.kind === 'checkout' && snapshot.pending?.id === dialog.id ? snapshot.pending : null;
   const checkoutProduct = checkout ? storeProduct(checkout.productId) : null;
+  const exploredProduct =
+    dialog?.kind === 'theme' ? STORE_PRODUCTS.find((item) => item.theme === dialog.theme) : null;
+  const exploredOwned = dialog?.kind === 'theme' && snapshot.owned.includes(dialog.theme);
   return (
     <section className={'cpi-store-vault is-' + filter} aria-labelledby="cpi-store-title">
       <div inert={modal}>
@@ -200,14 +216,23 @@ export function StoreVault({
           {filter === 'worlds' && (
             <p>{t('vault.worldCollectionCount', { count: number(WORLD_ORDER.length) })}</p>
           )}
-          {QA_TOOLS_ENABLED && (
+          {SIMULATED_STORE_ENABLED && (
             <span className="cpi-store-status">
               <i />
-              {t('vault.test')}
+              {storeStatus}
             </span>
           )}
         </header>
-        {QA_TOOLS_ENABLED || live.wallet ? (
+        {returningToRun && (
+          <button
+            className="cpi-vault-return cpi-vault-return--top"
+            type="button"
+            onClick={onReturnToRun}
+          >
+            {t('vault.returnToRun')}
+          </button>
+        )}
+        {SIMULATED_STORE_ENABLED || live.wallet ? (
           filter !== 'worlds' && (
             <aside className="cpi-vault-wallet" aria-label={t('vault.manage')}>
               <div>
@@ -231,7 +256,7 @@ export function StoreVault({
             {t('vault.purchasesUnavailable')}
           </p>
         )}
-        {!QA_TOOLS_ENABLED &&
+        {!SIMULATED_STORE_ENABLED &&
           liveStore &&
           (liveBusy || live.phase === 'pending' || live.phase === 'error') && (
             <div className="cpi-vault-notice" role="status">
@@ -245,7 +270,7 @@ export function StoreVault({
             {error ?? notice}
           </p>
         )}
-        {QA_TOOLS_ENABLED && snapshot.pending && (
+        {SIMULATED_STORE_ENABLED && snapshot.pending && (
           <aside className="cpi-vault-pending">
             <div>
               <strong>{t('vault.pendingTitle')}</strong>
@@ -328,6 +353,7 @@ export function StoreVault({
             {visibleWorlds.map((product) => {
               const theme = product.theme!;
               const owned = snapshot.owned.includes(theme);
+              const showPurchase = showWorldAction(product, owned);
               return (
                 <article
                   className={'cpi-vault-world world-' + theme}
@@ -342,28 +368,32 @@ export function StoreVault({
                     <h2>{t(product.name)}</h2>
                     <p>{t(WORLD_KITS[theme].mood)}</p>
                     <div className="cpi-vault-world-actions">
-                      <button
-                        type="button"
-                        className="is-primary"
-                        disabled={owned ? !canEquip : !canBuy(product)}
-                        aria-label={
-                          !QA_TOOLS_ENABLED && !canBuy(product) && !owned
-                            ? t('vault.purchasesUnavailable')
-                            : owned
+                      {showPurchase && (
+                        <button
+                          type="button"
+                          className="is-primary"
+                          disabled={owned ? !canEquip : !canBuy(product)}
+                          aria-label={
+                            owned
                               ? undefined
                               : t('vault.unlock') + ' · ' + t(product.name) + ' · ' + price(product)
-                        }
-                        onClick={() =>
-                          owned
-                            ? equip(snapshot.equipped === theme ? 'obsidian' : theme)
-                            : buy(product)
-                        }
+                          }
+                          onClick={() =>
+                            owned
+                              ? equip(snapshot.equipped === theme ? 'obsidian' : theme)
+                              : buy(product)
+                          }
+                        >
+                          {owned
+                            ? t(snapshot.equipped === theme ? 'vault.unequip' : 'vault.equip')
+                            : buyLabel(product)}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className={showPurchase ? undefined : 'is-primary'}
+                        onClick={() => setDialog({ kind: 'theme', theme })}
                       >
-                        {owned
-                          ? t(snapshot.equipped === theme ? 'vault.unequip' : 'vault.equip')
-                          : buyLabel(product)}
-                      </button>
-                      <button type="button" onClick={() => setDialog({ kind: 'theme', theme })}>
                         {t('vault.explore')}
                       </button>
                     </div>
@@ -477,12 +507,17 @@ export function StoreVault({
                           type="button"
                           disabled={!canBuy(product)}
                           aria-label={
-                            QA_TOOLS_ENABLED
-                              ? t('vault.testBuyLabel', {
-                                  name: t(product.name),
-                                  amount: amount(product),
-                                  price: price(product),
-                                })
+                            SIMULATED_STORE_ENABLED
+                              ? t(
+                                  PLAYER_PREVIEW_ENABLED
+                                    ? 'vault.previewBuyLabel'
+                                    : 'vault.testBuyLabel',
+                                  {
+                                    name: t(product.name),
+                                    amount: amount(product),
+                                    price: price(product),
+                                  },
+                                )
                               : buyLabel(product)
                           }
                           onClick={() => buy(product)}
@@ -521,7 +556,7 @@ export function StoreVault({
           </>
         )}
         <footer className="cpi-vault-footer">
-          {!QA_TOOLS_ENABLED && liveStore && live.phase !== 'unavailable' && (
+          {!SIMULATED_STORE_ENABLED && liveStore && live.phase !== 'unavailable' && (
             <button
               type="button"
               disabled={liveBusy}
@@ -530,17 +565,17 @@ export function StoreVault({
               {t(live.wallet ? 'commerce.restore' : 'commerce.retry')}
             </button>
           )}
-          {!QA_TOOLS_ENABLED && liveStore && live.wallet && live.phase === 'error' && (
+          {!SIMULATED_STORE_ENABLED && liveStore && live.wallet && live.phase === 'error' && (
             <button type="button" onClick={() => void liveStore.load()}>
               {t('commerce.retry')}
             </button>
           )}
-          {onReturnToRun && (
+          {onReturnToRun && !returningToRun && (
             <button className="cpi-vault-return" type="button" onClick={onReturnToRun}>
               {t('vault.returnToRun')}
             </button>
           )}
-          {QA_TOOLS_ENABLED && <p>{t('vault.testDetail')}</p>}
+          {SIMULATED_STORE_ENABLED && <p>{t('vault.testDetail')}</p>}
           {assistedBest !== null && <p>{t('vault.localBest', { row: number(assistedBest) })}</p>}
           {QA_TOOLS_ENABLED && (
             <button type="button" onClick={() => setDialog({ kind: 'reset' })}>
@@ -571,7 +606,7 @@ export function StoreVault({
           </div>
         </StoreDialog>
       )}
-      {dialog?.kind === 'theme' && (
+      {dialog?.kind === 'theme' && exploredProduct && (
         <StoreDialog
           title={t(WORLD_KITS[dialog.theme].title)}
           world={dialog.theme}
@@ -580,72 +615,81 @@ export function StoreVault({
           <WorldShowcase key={dialog.theme} theme={dialog.theme} />
           <p>{t(WORLD_KITS[dialog.theme].detail)}</p>
           <p className="cpi-vault-muted">{t('vault.included')}</p>
-          <button
-            type="button"
-            className="cpi-vault-primary cpi-vault-unlock"
-            disabled={
-              snapshot.owned.includes(dialog.theme)
-                ? !canEquip
-                : !canBuy(STORE_PRODUCTS.find((item) => item.theme === dialog.theme)!)
-            }
-            onClick={() => {
-              const product = STORE_PRODUCTS.find((item) => item.theme === dialog.theme)!;
-              if (snapshot.owned.includes(dialog.theme)) {
-                equip(snapshot.equipped === dialog.theme ? 'obsidian' : dialog.theme);
-                setDialog(null);
-              } else buy(product);
-            }}
-          >
-            {snapshot.owned.includes(dialog.theme)
-              ? t(snapshot.equipped === dialog.theme ? 'vault.unequip' : 'vault.equip')
-              : buyLabel(STORE_PRODUCTS.find((item) => item.theme === dialog.theme)!)}
-          </button>
+          {showWorldAction(exploredProduct, exploredOwned) && (
+            <button
+              type="button"
+              className="cpi-vault-primary cpi-vault-unlock"
+              disabled={exploredOwned ? !canEquip : !canBuy(exploredProduct)}
+              onClick={() => {
+                if (exploredOwned) {
+                  equip(snapshot.equipped === dialog.theme ? 'obsidian' : dialog.theme);
+                  setDialog(null);
+                } else buy(exploredProduct);
+              }}
+            >
+              {exploredOwned
+                ? t(snapshot.equipped === dialog.theme ? 'vault.unequip' : 'vault.equip')
+                : buyLabel(exploredProduct)}
+            </button>
+          )}
         </StoreDialog>
       )}
-      {QA_TOOLS_ENABLED && checkout && checkoutProduct && (
+      {SIMULATED_STORE_ENABLED && checkout && checkoutProduct && (
         <StoreDialog
-          title={t('vault.checkout')}
+          title={t(PLAYER_PREVIEW_ENABLED ? 'vault.previewCheckout' : 'vault.checkout')}
           world={checkoutProduct.theme}
           onClose={() => closeDialog()}
         >
-          <span className="cpi-store-status">{t('vault.test')}</span>
+          <span className="cpi-store-status">{storeStatus}</span>
           <h3>{t(checkoutProduct.name)}</h3>
           <p>{checkoutProduct.kind === 'theme' ? t('vault.included') : amount(checkoutProduct)}</p>
-          <p>{t('vault.testPrice', { price: price(checkoutProduct) })}</p>
+          <p>
+            {t(PLAYER_PREVIEW_ENABLED ? 'vault.previewBuyPrice' : 'vault.testPrice', {
+              price: price(checkoutProduct),
+            })}
+          </p>
           <p className="cpi-vault-muted">{t('vault.testDetail')}</p>
           <div className="cpi-vault-checkout-actions">
             <button
               type="button"
               className="cpi-vault-primary"
               onClick={() =>
-                act(() => {
-                  store?.completePurchase(checkout.id);
-                  setDialog(null);
-                }, t('vault.success'))
+                act(
+                  () => {
+                    store?.completePurchase(checkout.id);
+                    setDialog(null);
+                    if (returningToRun) window.scrollTo({ top: 0, behavior: 'instant' });
+                  },
+                  t(PLAYER_PREVIEW_ENABLED ? 'vault.previewSuccess' : 'vault.success'),
+                )
               }
             >
-              {t('vault.approve')}
+              {t(PLAYER_PREVIEW_ENABLED ? 'vault.previewApprove' : 'vault.approve')}
             </button>
-            <button
-              type="button"
-              onClick={() => {
-                setDialog(null);
-                setNotice(t('vault.pendingDetail'));
-              }}
-            >
-              {t('vault.pending')}
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                act(() => {
-                  store?.cancelPurchase(checkout.id);
-                  setDialog(null);
-                }, t('vault.failed'))
-              }
-            >
-              {t('vault.fail')}
-            </button>
+            {QA_TOOLS_ENABLED && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDialog(null);
+                    setNotice(t('vault.pendingDetail'));
+                  }}
+                >
+                  {t('vault.pending')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    act(() => {
+                      store?.cancelPurchase(checkout.id);
+                      setDialog(null);
+                    }, t('vault.failed'))
+                  }
+                >
+                  {t('vault.fail')}
+                </button>
+              </>
+            )}
             <button
               type="button"
               onClick={() => {

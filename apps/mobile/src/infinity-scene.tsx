@@ -1,5 +1,5 @@
 import { nextPracticeRuleset } from './balance-tuning';
-import { QA_TOOLS_ENABLED, practiceStorage } from './app-profile';
+import { PLAYER_PREVIEW_ENABLED, QA_TOOLS_ENABLED, practiceStorage } from './app-profile';
 import { shouldFinishPracticeOnExit } from './practice-exit';
 import { DiscoveryIntroduction } from './mystery-introduction';
 import { MysteryJournal } from './mystery-discovery';
@@ -749,7 +749,7 @@ export function InfinitySceneView({
                   </p>
                 </div>
                 <div className="cpi-outcome-next">
-                  {resourcePanel ? (
+                  {outcome.offer && resourcePanel ? (
                     resourcePanel
                   ) : outcome.offer && QA_TOOLS_ENABLED ? (
                     <div className="cpi-revive-offer">
@@ -762,16 +762,22 @@ export function InfinitySceneView({
                       <span>{t('game.bargainSleeping')}</span>
                     </div>
                   ) : outcome.offer ? (
-                    <p>{t('vault.continuationUnavailable')}</p>
+                    <p>
+                      {t(
+                        PLAYER_PREVIEW_ENABLED && !state.storeTest
+                          ? 'vault.previewNewCrossing'
+                          : 'vault.continuationUnavailable',
+                      )}
+                    </p>
                   ) : outcome.phase === 'grant-ready' ? (
                     <p role="status">{t('game.grantReady')}</p>
                   ) : (
                     <p>{t('game.noContinues')}</p>
                   )}
-                  <div className="cpi-overlay-actions">
+                  <div className="cpi-overlay-actions cpi-result-navigation">
                     <button
                       type="button"
-                      data-cpi-overlay-primary={!resourcePanel || undefined}
+                      data-cpi-overlay-primary={!(outcome.offer && resourcePanel) || undefined}
                       disabled={busy}
                       onClick={outcome.phase === 'dead' ? onRestart : onRequestEnd}
                     >

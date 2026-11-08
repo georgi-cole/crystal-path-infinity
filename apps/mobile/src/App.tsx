@@ -1,4 +1,4 @@
-import { practiceStorage, QA_TOOLS_ENABLED } from './app-profile';
+import { practiceStorage, PLAYER_PREVIEW_ENABLED, QA_TOOLS_ENABLED } from './app-profile';
 import { rememberMysteries } from './mystery-journal-model';
 import { useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { usesStoreTestRules, parseTileExperiment } from '@crystal-path-infinity/game-core';
@@ -57,7 +57,7 @@ export interface ApprovedAccountServices {
 }
 
 const build = __CPI_BUILD_INFO__;
-const showBuildDetails = build.environment !== 'production';
+const showBuildDetails = build.environment !== 'production' && !PLAYER_PREVIEW_ENABLED;
 
 function loadLocalPractice(): PracticeLoad {
   if (typeof window === 'undefined') return { status: 'empty' };

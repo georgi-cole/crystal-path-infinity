@@ -51,7 +51,6 @@ export const bg = {
   'game.pauseClockHeld': 'Часовникът е спрян',
   'game.pauseTestTools': 'Тестови инструменти',
   'game.backToPause': 'Към паузата',
-  'game.backToTestTools': 'Към тестовете',
   'game.stepLeft': 'Довери се на лявото',
   'game.stepRight': 'Довери се на дясното',
   'game.bridgeGuidance': 'Избери кое ще издържи',

@@ -201,3 +201,10 @@ reuse the matching bridge cache in its open state.
 The pause header uses the equipped world's existing scenery and a contained
 companion portrait. A shared, low-contrast list keeps the game actions readable.
 Resume retains the world's engraved button artwork.
+
+### World exploration in the web reviews on 8 November 2026
+
+Explore remains available even when the store is offline. The dedicated player
+review can unlock and equip worlds through the same simulated checkout as QA,
+using its own wallet. The discovery journal gives its existing world-specific
+glyphs a larger display with the title on a separate row.

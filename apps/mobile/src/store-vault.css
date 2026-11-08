@@ -412,7 +412,7 @@
   font: inherit;
   cursor: pointer;
 }
-.cpi-vault-footer .cpi-vault-return {
+.cpi-store-vault .cpi-vault-return {
   display: block;
   margin: 0 auto 1rem;
   padding: 0.75rem 1rem;
@@ -423,6 +423,13 @@
   font: inherit;
   cursor: pointer;
   text-decoration: none;
+}
+.cpi-store-vault .cpi-vault-return--top {
+  min-height: 2.75rem;
+  margin-block: 0.45rem 0.65rem;
+}
+.cpi-vault-world-actions > button:only-child {
+  flex: 1;
 }
 .cpi-vault-pack.is-hints {
   --pack-accent: #b59bdd;
