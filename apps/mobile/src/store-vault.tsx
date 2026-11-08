@@ -1,4 +1,4 @@
-import { BUSINESS_STORE_RULESET_VERSION } from '@crystal-path-infinity/game-core';
+import { READING_STORE_RULESET_VERSION } from '@crystal-path-infinity/game-core';
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useLanguage } from './language-context';
@@ -115,7 +115,7 @@ export function StoreVault({
       ? !!store && !error && !snapshot.pending
       : !!liveStore && !!live.wallet && !liveBusy && !!liveProduct(product);
   const assistedBest =
-    store?.assistedBest(snapshot.checkpoint?.rulesetVersion ?? BUSINESS_STORE_RULESET_VERSION) ??
+    store?.assistedBest(snapshot.checkpoint?.rulesetVersion ?? READING_STORE_RULESET_VERSION) ??
     null;
   const [filter, setFilter] = useState<'worlds' | 'essentials' | 'collection'>(initialFilter);
   const [allPacks, setAllPacks] = useState(false);

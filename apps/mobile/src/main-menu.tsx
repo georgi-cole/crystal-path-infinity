@@ -137,7 +137,12 @@ function HubUtilityControls({
   settings,
   onSettingsChange,
   onOpen,
-}: Pick<MainMenuProps, 'settings' | 'onSettingsChange' | 'onOpen'>) {
+  musicAwaitingGesture,
+  onActivateMusic,
+}: Pick<
+  MainMenuProps,
+  'settings' | 'onSettingsChange' | 'onOpen' | 'musicAwaitingGesture' | 'onActivateMusic'
+>) {
   const { t } = useLanguage();
   const theme = useThemeId();
   return (
@@ -148,29 +153,37 @@ function HubUtilityControls({
             { key: 'music', icon: 'music_v2.svg', label: t('settings.music') },
             { key: 'soundEffects', icon: 'sound_v2.svg', label: t('settings.sfx') },
           ] as const
-        ).map(({ key, icon, label }) => (
-          <button
-            key={key}
-            type="button"
-            className={'cpi-hub-chip' + (settings[key] ? '' : ' cpi-hub-chip--inactive')}
-            aria-label={t(settings[key] ? 'settings.disable' : 'settings.enable', {
-              setting: label.toLowerCase(),
-            })}
-            aria-pressed={settings[key]}
-            onClick={() => onSettingsChange({ ...settings, [key]: !settings[key] })}
-          >
-            {theme !== 'obsidian' ? (
-              <WorldNavGlyph theme={theme} name={key === 'music' ? 'music' : 'sound'} />
-            ) : (
-              <img
-                className="cpi-hub-chip-glyph"
-                src={INTRO_HUB_BASE + 'utilities/' + icon}
-                alt=""
-                aria-hidden="true"
-              />
-            )}
-          </button>
-        ))}
+        ).map(({ key, icon, label }) => {
+          const waiting = key === 'music' && settings.music && musicAwaitingGesture;
+          const playing = settings[key] && !waiting;
+          return (
+            <button
+              key={key}
+              type="button"
+              className={'cpi-hub-chip' + (playing ? '' : ' cpi-hub-chip--inactive')}
+              aria-label={t(playing ? 'settings.disable' : 'settings.enable', {
+                setting: label.toLowerCase(),
+              })}
+              aria-pressed={playing}
+              onClick={() =>
+                waiting
+                  ? onActivateMusic?.()
+                  : onSettingsChange({ ...settings, [key]: !settings[key] })
+              }
+            >
+              {theme !== 'obsidian' ? (
+                <WorldNavGlyph theme={theme} name={key === 'music' ? 'music' : 'sound'} />
+              ) : (
+                <img
+                  className="cpi-hub-chip-glyph"
+                  src={INTRO_HUB_BASE + 'utilities/' + icon}
+                  alt=""
+                  aria-hidden="true"
+                />
+              )}
+            </button>
+          );
+        })}
       </div>
       <button
         type="button"
@@ -215,6 +228,8 @@ export interface MainMenuProps {
   best: string | null;
   online: boolean;
   settings: PracticeSettings;
+  musicAwaitingGesture?: boolean;
+  onActivateMusic?: () => void;
   onOpen: (view: MenuView) => void;
   onBack: () => void;
   onResume: () => void;
@@ -451,6 +466,8 @@ export function MainMenu({
   best,
   online,
   settings,
+  musicAwaitingGesture,
+  onActivateMusic,
   onOpen,
   onBack,
   onResume,
@@ -500,6 +517,8 @@ export function MainMenu({
                 settings={settings}
                 onSettingsChange={onSettingsChange}
                 onOpen={onOpen}
+                musicAwaitingGesture={musicAwaitingGesture}
+                onActivateMusic={onActivateMusic}
               />
             ) : undefined
           }

@@ -1,7 +1,8 @@
 import { practiceStorage, QA_TOOLS_ENABLED } from './app-profile';
 import { useEffect, useRef, useState } from 'react';
 import { useThemeId } from './store-context';
-import { BUSINESS_RULESET_VERSION, mysteryTier } from '@crystal-path-infinity/game-core';
+import { mysteryTier } from '@crystal-path-infinity/game-core';
+import { PRACTICE_RULESET_VERSION } from './practice-rules';
 import type { EffectKind, RunState } from '@crystal-path-infinity/game-core';
 import { useLanguage } from './language-context';
 import { EffectGlyph } from './mystery-effects';
@@ -78,7 +79,7 @@ export function MysteryJournal({
       )}
       <div className="cpi-journal-grid">
         {known.map((kind) => {
-          const copy = effectCopy(locale, kind, state?.rulesetVersion ?? BUSINESS_RULESET_VERSION);
+          const copy = effectCopy(locale, kind, state?.rulesetVersion ?? PRACTICE_RULESET_VERSION);
           return (
             <article key={kind} data-tier={mysteryTier(kind)}>
               <header>

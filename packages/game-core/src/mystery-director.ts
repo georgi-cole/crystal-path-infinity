@@ -6,8 +6,10 @@ import {
   getRuleset,
   CHOICE_GRACE_MS,
   IDLE_WARNING_MS,
+  discoveryTiming,
   DEATH_COUNTDOWN_MS,
   usesBusinessRules,
+  usesExtendedDiscoveryReading,
   assertSpAmount,
 } from './rules.ts';
 import { isPactKind } from './pacts.ts';
@@ -189,6 +191,8 @@ export function rebaseDeathPressure(state: RunState, previousSp: number): RunSta
 
 /** A newly accepted hint or box gets a fresh reading window, once per action. */
 export function refreshDecisionWindow(state: RunState): RunState {
+  if (usesExtendedDiscoveryReading(state.rulesetVersion) && state.discovery?.introduction)
+    return state;
   return usesBusinessRules(state.rulesetVersion) && state.mysteryDirector
     ? {
         ...state,
@@ -205,14 +209,17 @@ export function getDeathClock(
   state: RunState,
 ): { warningAt: number; expiresAt: number; firstLossAt?: number } | null {
   if (!usesMysteryDirectorRules(state.rulesetVersion) || state.status !== 'playing') return null;
+  const intro = state.discovery?.introduction;
   const warningAt =
     state.pact?.phase === 'offered'
       ? addSafeInteger(state.pact.offeredAt!, CHOICE_GRACE_MS, 'Decision grace')
-      : addSafeInteger(
-          state.discovery?.introduction?.expiresAt ?? state.mysteryDirector!.lastStepAt,
-          IDLE_WARNING_MS,
-          'Idle grace',
-        );
+      : intro
+        ? addSafeInteger(
+            intro.startedAt,
+            discoveryTiming(state.rulesetVersion).warningDelayMs,
+            'Discovery grace',
+          )
+        : addSafeInteger(state.mysteryDirector!.lastStepAt, IDLE_WARNING_MS, 'Idle grace');
   return {
     warningAt,
     expiresAt: addSafeInteger(warningAt, DEATH_COUNTDOWN_MS, 'Death clock expiry'),

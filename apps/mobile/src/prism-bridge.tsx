@@ -802,30 +802,32 @@ export function PrismBridge({
                   !row.mysteryAvailable
                 }
               >
-                {themeId !== 'obsidian' ? (
-                  <MysteryCache
-                    theme={themeId}
-                    open={mysteryReveal && row.phase === 'current' && !row.mysteryAvailable}
-                  />
-                ) : (
-                  <>
+                <span className="cpi-mystery-material" aria-hidden="true">
+                  {themeId !== 'obsidian' ? (
+                    <MysteryCache
+                      theme={themeId}
+                      open={mysteryReveal && row.phase === 'current' && !row.mysteryAvailable}
+                    />
+                  ) : (
                     <MysteryCube
                       tier={row.mysteryTier ?? 'standard'}
                       opened={mysteryReveal && row.phase === 'current' && !row.mysteryAvailable}
                     />
-                    <span className="cpi-box-tier-label">
-                      {locale === 'bg'
-                        ? {
-                            standard: 'ИСКРА',
-                            choice: 'СДЕЛКА',
-                            major: 'РИТУАЛ',
-                            anomaly: '50/50',
-                          }[row.mysteryTier ?? 'standard']
-                        : { standard: 'SPARK', choice: 'TRADE', major: 'RITUAL', anomaly: '50/50' }[
-                            row.mysteryTier ?? 'standard'
-                          ]}
-                    </span>
-                  </>
+                  )}
+                </span>
+                {themeId === 'obsidian' && (
+                  <span className="cpi-box-tier-label" aria-hidden="true">
+                    {locale === 'bg'
+                      ? {
+                          standard: 'ИСКРА',
+                          choice: 'СДЕЛКА',
+                          major: 'РИТУАЛ',
+                          anomaly: '50/50',
+                        }[row.mysteryTier ?? 'standard']
+                      : { standard: 'SPARK', choice: 'TRADE', major: 'RITUAL', anomaly: '50/50' }[
+                          row.mysteryTier ?? 'standard'
+                        ]}
+                  </span>
                 )}
               </button>
             )}

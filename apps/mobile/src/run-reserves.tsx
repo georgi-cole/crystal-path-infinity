@@ -43,15 +43,28 @@ export function RunReserves({
   return (
     <section
       className={'cpi-resource-panel' + (dead ? ' is-continuation' : '')}
-      aria-label={t('vault.manage')}
+      aria-label={t(dead ? 'vault.continuations' : 'vault.manage')}
     >
-      <h3>{t(dead ? 'vault.continuations' : 'vault.manage')}</h3>
-      <div className="cpi-resource-balances">
-        {!dead && <span>{number(snapshot.sp)} SP</span>}
-        <span>{t('vault.creditAmount', { count: number(snapshot.credits) })}</span>
-        {!dead && <span>{t('vault.hintAmount', { count: number(snapshot.hints) })}</span>}
-      </div>
-      <small>{t('vault.test')}</small>
+      {dead ? (
+        <div className="cpi-continuation-meta">
+          <span>
+            {t('vault.continueCount', {
+              next: number(state.revivesApplied + 1),
+              credits: number(snapshot.credits),
+            })}
+          </span>
+          <small>{t('vault.test')}</small>
+        </div>
+      ) : (
+        <>
+          <div className="cpi-resource-balances">
+            <span>{number(snapshot.sp)} SP</span>
+            <span>{t('vault.creditAmount', { count: number(snapshot.credits) })}</span>
+            <span>{t('vault.hintAmount', { count: number(snapshot.hints) })}</span>
+          </div>
+          <small>{t('vault.test')}</small>
+        </>
+      )}
       {confirmation ? (
         <div className="cpi-resource-confirm" role="group" aria-label={confirmation.label}>
           <p>{confirmation.label}</p>
@@ -77,37 +90,45 @@ export function RunReserves({
         <>
           {dead ? (
             <>
-              <p>
-                {t('vault.continueCount', {
-                  next: number(state.revivesApplied + 1),
-                  credits: number(snapshot.credits),
-                })}
-              </p>
               {state.revivesApplied >= 10 && <p>{t('vault.extra')}</p>}
-              <div className="cpi-resource-actions">
-                {(snapshot.credits > 0 || state.revivesApplied >= 10) && (
-                  <button
-                    type="button"
-                    disabled={busy || snapshot.credits < 1 || !!error}
-                    onClick={() => request('credit', 1, t('vault.useCredit', { sp: number(sp) }))}
-                  >
-                    {t('vault.useCredit', { sp: number(sp) })}
-                  </button>
-                )}
-                {snapshot.credits === 0 && onOpenStore && (
-                  <button type="button" disabled={busy || !!error} onClick={onOpenStore}>
-                    {t('vault.shopCredits')}
-                  </button>
-                )}
+              <div className="cpi-resource-actions cpi-continuation-actions">
                 {state.revivesApplied < 10 && (
                   <button
                     type="button"
+                    className="cpi-continuation-ad"
+                    data-cpi-overlay-primary
                     disabled={busy || !!error}
                     onClick={() => {
                       void onUse('ad', 1);
                     }}
                   >
-                    {t('vault.testAd', { sp: number(sp) })}
+                    <span>{t('vault.testAd')}</span>
+                    <strong>{t('vault.restoreSp', { sp: number(sp) })}</strong>
+                  </button>
+                )}
+                {(snapshot.credits > 0 || (state.revivesApplied >= 10 && !onOpenStore)) && (
+                  <button
+                    type="button"
+                    className="cpi-continuation-credit"
+                    data-cpi-overlay-primary={state.revivesApplied >= 10 || undefined}
+                    disabled={busy || snapshot.credits < 1 || !!error}
+                    onClick={() => request('credit', 1, t('vault.useCredit', { sp: number(sp) }))}
+                  >
+                    <span>
+                      {t(state.revivesApplied < 10 ? 'vault.skipAdCredit' : 'vault.oneCredit')}
+                    </span>
+                    <strong>{t('vault.restoreSp', { sp: number(sp) })}</strong>
+                  </button>
+                )}
+                {snapshot.credits === 0 && onOpenStore && (
+                  <button
+                    type="button"
+                    className="cpi-continuation-credit"
+                    data-cpi-overlay-primary={state.revivesApplied >= 10 || undefined}
+                    disabled={busy || !!error}
+                    onClick={onOpenStore}
+                  >
+                    {t('vault.shopCredits')}
                   </button>
                 )}
               </div>

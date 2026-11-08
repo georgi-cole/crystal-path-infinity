@@ -79,6 +79,8 @@ The player preview has no mock checkout, wallet reset, simulated ad button or QA
 
 Cold page starts show the owner-approved 3-second Kolequant DNA → codons → actual INFINITY home-title transition. Route changes and resume do not replay it; reduced motion uses a static signature. The original heading is restored on completion, resize, backgrounding or cleanup. See [the full decision and verification](../../docs/decisions/PLAYER-QA-RELEASE-PREVIEW.md).
 
+The menu track streams after the splash while the crossing track prepares in the background. The first ordinary interaction retries music when the browser requires one. New local v13 runs give the first mystery description up to 10 seconds, with clock protection through the first 7 seconds or until the player steps. The tester can open a new crossing or try a timed effect in the QA Mystery Lab. [Soundtrack](../../docs/decisions/CPI-010-scene-soundtrack.md) · [Discovery rules](../../docs/decisions/MYSTERY-DISCOVERY-V7.md).
+
 ## Build identities
 
 | Environment | Application ID / bundle identifier | Display name |

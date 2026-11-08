@@ -4,6 +4,8 @@
 
 Картите Worlds получават изображенията си със самата сборка. `apps/mobile/src/assets/world-previews/` съдържа портрети 384×576 и спокойната поза 176×176 от първия кадър на оригиналните трикадрови спрайтове. Изходните изображения за играта остават в `apps/mobile/public/assets/worlds/`. За нова карта преоразмери съответните източници със запазени пропорции, запази WebP с прозрачността на героя и добави двойката в `world-preview-art.ts`.
 
+В компактния QA екран след загуба възстановяването на SP е отделен ред във всяко действие. Симулираната реклама е обозначена като тест, а „Без реклама“ изисква 1 кредит и потвърждение. При слотове 11–15 действието е само с кредит. Резервът за активен опит е в сгъваема секция на паузата.
+
 **Version note · 6 November 2026:** the implementation details below describe the original `infinity-store-test-v1` baseline. The combined v11 playtest uses [the current rules](../CURRENT_GAME_RULES.md), including uncapped active SP, fixed 5 SP base damage, 5–7-row mystery spacing and the current effects/death clock. Wallet prices, the 200 SP cumulative direct-reserve allowance, 10/15 continuation slots and Assisted separation remain applicable. Ads and purchases remain simulated. Commercial proposals are in [the business plan](../BUSINESS_PLAN.md).
 
 Owner-authorized implementation, 5 November 2026. Follows the catalog preview

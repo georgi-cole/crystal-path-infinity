@@ -165,21 +165,11 @@
   font-size: 0.72rem;
 }
 .cpi-run-outcome .cpi-resource-panel.is-continuation {
-  padding: 0.65rem;
-}
-.cpi-resource-panel.is-continuation h3 {
-  display: none;
-}
-.cpi-resource-panel.is-continuation .cpi-resource-balances {
-  margin-bottom: 0.25rem;
-  font-size: 0.68rem;
+  padding: 0.55rem 0.65rem;
 }
 .cpi-run-outcome .cpi-resource-panel.is-continuation p {
   margin: 0.35rem 0;
   font-size: 0.68rem;
-}
-.cpi-resource-panel.is-continuation > small {
-  font-size: 0.6rem;
 }
 .cpi-resource-panel.is-continuation .cpi-resource-actions {
   margin-bottom: 0;
@@ -274,17 +264,18 @@
   border-color: color-mix(in srgb, var(--world-accent) 40%, transparent);
   border-radius: 1rem;
   background: linear-gradient(150deg, var(--world-panel), #0b101b 60%);
-  padding: 1.15rem;
+  padding: var(--cpi-dialog-pad, 1.15rem);
 }
 .cpi-world-outcome-hero {
-  height: 6.3rem;
+  height: clamp(3.65rem, 10dvh, 5.25rem);
   position: relative;
   isolation: isolate;
   display: flex;
   align-items: center;
   overflow: hidden;
-  margin: -1.15rem -1.15rem 1rem;
-  padding: 1rem 1.15rem;
+  margin: calc(-1 * var(--cpi-dialog-pad, 1.15rem)) calc(-1 * var(--cpi-dialog-pad, 1.15rem))
+    0.55rem;
+  padding: 0.55rem var(--cpi-dialog-pad, 1.15rem);
   border-bottom: 1px solid color-mix(in srgb, var(--world-accent) 25%, transparent);
 }
 .cpi-world-outcome-hero > img {
@@ -344,7 +335,7 @@
   display: none;
 }
 .cpi-run-outcome.is-world-outcome .cpi-dialog-heading {
-  margin-bottom: 0.65rem;
+  margin-bottom: 0.4rem;
 }
 .cpi-run-outcome.is-world-outcome h2 {
   font-size: 1.45rem;
@@ -353,28 +344,16 @@
 .cpi-run-outcome h2:focus {
   outline: none;
 }
-.cpi-run-outcome.is-world-outcome p {
-  line-height: 1.6;
-  margin: 0.6rem 0;
-}
 .cpi-run-outcome.is-world-outcome .cpi-result-score {
-  margin: 0.8rem 0;
-  padding: 0.8rem 1rem;
+  padding: 0.45rem 0.65rem;
   border-radius: 0.65rem;
   border: 1px solid color-mix(in srgb, var(--world-accent) 24%, transparent);
   background: #ffffff04;
 }
 .cpi-run-outcome.is-world-outcome .cpi-result-score > strong {
-  font-size: 3rem;
   color: var(--world-soft);
 }
-.cpi-run-outcome.is-world-outcome .cpi-result-details {
-  gap: 0.7rem 1rem;
-  margin: 0.8rem 0;
-}
 .cpi-run-outcome.is-world-outcome .cpi-revive-offer {
-  padding: 0.7rem 0.8rem;
-  margin: 0.7rem 0;
   border-radius: 0.65rem;
   border-color: color-mix(in srgb, var(--world-accent) 25%, transparent);
   background: #ffffff04;
@@ -383,19 +362,11 @@
 .cpi-run-outcome.is-world-outcome .cpi-run-status-label {
   color: var(--world-accent);
 }
-.cpi-run-outcome.is-world-outcome .cpi-overlay-actions {
-  margin-top: 0.85rem;
-  gap: 0.5rem;
-}
 .cpi-run-outcome.is-world-outcome .cpi-overlay-actions > button[data-cpi-overlay-primary] {
   color: #101b21;
   background: var(--world-accent);
   border-color: transparent;
   font-weight: 600;
-}
-.cpi-run-outcome.is-world-outcome .cpi-resource-panel {
-  padding: 0.7rem;
-  margin: 0.7rem 0;
 }
 
 @keyframes cpi-cache-heartbeat {

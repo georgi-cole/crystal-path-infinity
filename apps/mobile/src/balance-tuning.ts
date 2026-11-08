@@ -1,6 +1,6 @@
 import {
-  BUSINESS_RULESET_VERSION,
-  BUSINESS_STORE_RULESET_VERSION,
+  READING_RULESET_VERSION,
+  READING_STORE_RULESET_VERSION,
   tileExperimentVersion,
 } from '@crystal-path-infinity/game-core';
 import type { PracticeStorage } from './practice-save';
@@ -53,9 +53,9 @@ export function writeBalanceTuning(
 export function tuningRuleset(tuning: BalanceTuning, store: boolean): string {
   return tuning.mode === 'classic'
     ? store
-      ? BUSINESS_STORE_RULESET_VERSION
-      : BUSINESS_RULESET_VERSION
-    : tileExperimentVersion(tuning.high, tuning.low, store, true);
+      ? READING_STORE_RULESET_VERSION
+      : READING_RULESET_VERSION
+    : tileExperimentVersion(tuning.high, tuning.low, store, 'extended-reading');
 }
 export function nextPracticeRuleset(store: boolean): string {
   if (!QA_TOOLS_ENABLED || import.meta.env.MODE === 'production' || typeof window === 'undefined')

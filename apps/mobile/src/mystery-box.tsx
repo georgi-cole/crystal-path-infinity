@@ -333,7 +333,7 @@ export function DeathClockBadge({
       </b>
       <i
         style={{
-          transform: `scaleX(${Math.max(0, (clock.expiresAt - activeTimeMs) / DEATH_COUNTDOWN_MS)})`,
+          transform: `scaleX(${Math.min(1, Math.max(0, (clock.expiresAt - activeTimeMs) / DEATH_COUNTDOWN_MS))})`,
         }}
       />
     </div>

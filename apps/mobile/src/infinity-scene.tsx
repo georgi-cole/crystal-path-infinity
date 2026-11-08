@@ -24,7 +24,7 @@ import type { ReactNode } from 'react';
 import { StageAtmosphere } from './stage-atmosphere';
 import { useSoundtrack } from './soundtrack';
 import { PrismBridge } from './prism-bridge';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import {
   createPracticeCursor,
   createRun,
@@ -124,6 +124,47 @@ export interface InfinitySceneViewProps {
 }
 
 /** No game-core mutations or timers. All callbacks are externally owned events. */
+function PauseDetails({
+  progress,
+  reserve,
+  audio,
+}: {
+  progress: ReactNode;
+  reserve?: ReactNode;
+  audio: ReactNode;
+}) {
+  const { t } = useLanguage();
+  const id = useId();
+  const [open, setOpen] = useState<string | null>(null);
+  const panels = [
+    { key: 'progress', label: t('game.runDetails'), content: progress },
+    ...(reserve ? [{ key: 'reserve', label: t('vault.manage'), content: reserve }] : []),
+    { key: 'sound', label: t('settings.audioLegend'), content: audio },
+  ];
+  return (
+    <div className="cpi-pause-details">
+      <div className="cpi-pause-detail-buttons" role="group" aria-label={t('game.runDetails')}>
+        {panels.map((panel) => (
+          <button
+            key={panel.key}
+            type="button"
+            aria-expanded={open === panel.key}
+            aria-controls={`${id}-${panel.key}`}
+            onClick={() => setOpen((current) => (current === panel.key ? null : panel.key))}
+          >
+            {panel.label}
+          </button>
+        ))}
+      </div>
+      {panels.map((panel) => (
+        <div key={panel.key} id={`${id}-${panel.key}`} hidden={open !== panel.key}>
+          {panel.content}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function InfinitySceneView({
   resourcePanel,
   trial = false,
@@ -541,7 +582,7 @@ export function InfinitySceneView({
       </div>
       <EffectConsumption cue={resourceCues.consumption} hidden={overlayVisible} />
       {overlayVisible && (
-        <div className="cpi-overlay">
+        <div className="cpi-overlay cpi-crossing-overlay">
           <div
             className={
               'cpi-overlay-card cpi-run-outcome' + (worldOutcomeTheme ? ' is-world-outcome' : '')
@@ -725,7 +766,9 @@ export function InfinitySceneView({
                     row: fatalRow ?? t('general.none'),
                   })}
                 </p>
-                {outcome.offer && (QA_TOOLS_ENABLED || resourcePanel) ? (
+                {resourcePanel ? (
+                  resourcePanel
+                ) : outcome.offer && QA_TOOLS_ENABLED ? (
                   <div className="cpi-revive-offer">
                     <strong>
                       {t(petWorld ? 'vault.petContinueTitle' : 'game.bargainTitle', {
@@ -733,7 +776,7 @@ export function InfinitySceneView({
                       })}
                     </strong>
                     <span>{t(petWorld ? 'vault.petContinueBody' : 'game.bargainBody')}</span>
-                    {!resourcePanel && <span>{t('game.bargainSleeping')}</span>}
+                    <span>{t('game.bargainSleeping')}</span>
                   </div>
                 ) : outcome.offer ? (
                   <p>{t('vault.continuationUnavailable')}</p>
@@ -742,11 +785,10 @@ export function InfinitySceneView({
                 ) : (
                   <p>{t('game.noContinues')}</p>
                 )}
-                {resourcePanel}
                 <div className="cpi-overlay-actions">
                   <button
                     type="button"
-                    data-cpi-overlay-primary
+                    data-cpi-overlay-primary={!resourcePanel || undefined}
                     disabled={busy}
                     onClick={outcome.phase === 'dead' ? onRestart : onRequestEnd}
                   >
@@ -759,41 +801,20 @@ export function InfinitySceneView({
               </>
             ) : (
               <>
-                <p>{t(petWorld ? 'vault.petPausedDetail' : 'game.pausedExplanation')}</p>
-                <p>{t('game.pausedRows', { row: clearedRows })}</p>
-                <details className="cpi-run-ledger">
-                  <summary>{t('game.runDetails')}</summary>
-                  <div className="cpi-run-metrics" aria-label={t('menu.progress')}>
-                    <span>
-                      {t('game.cleared')} <strong>{clearedRows}</strong>
-                    </span>
-                    <span>
-                      {t('game.used')}{' '}
-                      <strong>
-                        {number(outcome.appliedContinues)} / {getMaxRevives(state.rulesetVersion)}
-                      </strong>
-                    </span>
-                    <span>
-                      {t('game.granted')}{' '}
-                      <strong>
-                        {number(outcome.grantedContinues)} / {getMaxRevives(state.rulesetVersion)}
-                      </strong>
-                    </span>
-                    <span>
-                      {t('game.quota')} <strong>{number(outcome.grantsRemaining)}</strong>
-                    </span>
-                  </div>
-                </details>
-                {resourcePanel}
-                <details className="cpi-run-ledger">
-                  <summary>{t('settings.audioLegend')}</summary>
-                  <AudioSettingsControls
-                    settings={settings}
-                    onChange={onSettingsChange}
-                    hideLegend
-                  />
-                </details>
-                <div className="cpi-overlay-actions">
+                <p className="cpi-pause-summary">
+                  <span>{t(petWorld ? 'vault.petPausedDetail' : 'game.pausedExplanation')}</span>{' '}
+                  <strong>{t('game.pausedRows', { row: clearedRows })}</strong>
+                </p>
+                <div className="cpi-overlay-actions cpi-pause-actions">
+                  <button type="button" data-cpi-overlay-primary disabled={busy} onClick={onPause}>
+                    {t('general.resume')}
+                  </button>
+                  <button type="button" disabled={busy} onClick={onRequestEnd}>
+                    {t('general.endRun')}
+                  </button>
+                  <button type="button" disabled={busy} onClick={onExit}>
+                    {t('general.saveLeave')}
+                  </button>
                   {onMysteryJournal && (
                     <button type="button" disabled={busy} onClick={onMysteryJournal}>
                       {t('guide.journalTab')}
@@ -804,17 +825,39 @@ export function InfinitySceneView({
                       {mysteryText(locale, 'lab')} · {locale === 'bg' ? 'Тест' : 'Test'}
                     </button>
                   )}
-
-                  <button type="button" data-cpi-overlay-primary disabled={busy} onClick={onPause}>
-                    {t('general.resume')}
-                  </button>
-                  <button type="button" disabled={busy} onClick={onRequestEnd}>
-                    {t('general.endRun')}
-                  </button>
-                  <button type="button" disabled={busy} onClick={onExit}>
-                    {t('general.saveLeave')}
-                  </button>
                 </div>
+                <PauseDetails
+                  progress={
+                    <div className="cpi-run-metrics" aria-label={t('menu.progress')}>
+                      <span>
+                        {t('game.cleared')} <strong>{clearedRows}</strong>
+                      </span>
+                      <span>
+                        {t('game.used')}{' '}
+                        <strong>
+                          {number(outcome.appliedContinues)} / {getMaxRevives(state.rulesetVersion)}
+                        </strong>
+                      </span>
+                      <span>
+                        {t('game.granted')}{' '}
+                        <strong>
+                          {number(outcome.grantedContinues)} / {getMaxRevives(state.rulesetVersion)}
+                        </strong>
+                      </span>
+                      <span>
+                        {t('game.quota')} <strong>{number(outcome.grantsRemaining)}</strong>
+                      </span>
+                    </div>
+                  }
+                  reserve={resourcePanel}
+                  audio={
+                    <AudioSettingsControls
+                      settings={settings}
+                      onChange={onSettingsChange}
+                      hideLegend
+                    />
+                  }
+                />
               </>
             )}
           </div>
@@ -1066,7 +1109,7 @@ function InfinityRun({
       } else {
         document
           .querySelector<HTMLButtonElement>('.cpi-overlay [data-cpi-overlay-primary]')
-          ?.focus();
+          ?.focus({ preventScroll: true });
       }
     }
   }, [paused, confirmEnd, state.status, state.pendingReward, error, cinematic?.fatal]);

@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import { mysteryTier } from '@crystal-path-infinity/game-core';
+import { discoveryTiming, mysteryTier } from '@crystal-path-infinity/game-core';
 import type { MysteryDiscovery } from '@crystal-path-infinity/game-core';
 import { useLanguage } from './language-context';
 import { EffectGlyph } from './mystery-effects';
@@ -72,6 +72,8 @@ export function DiscoveryIntroduction({
   const dramatic = dangerous || tier === 'anomaly';
   const summary = mysteryDiscoverySummary(intro.kind, bg) ?? copy.detail;
   const remaining = Math.max(0, intro.expiresAt - activeTimeMs);
+  const timing = discoveryTiming(rulesetVersion);
+  const reading = activeTimeMs < intro.startedAt + timing.holdMs;
   const arrived = !reducedMotion && arrivedAt === intro.startedAt;
   const activeFlight =
     !reducedMotion && flight?.startedAt === intro.startedAt && !arrived ? flight : null;
@@ -96,16 +98,24 @@ export function DiscoveryIntroduction({
           <small>{bg ? 'Откри нова мистерия' : 'A new discovery'}</small>
           <strong>{copy.title}</strong>
           <span className="cpi-discovery-countdown">
-            {bg ? 'Стъпи, когато си готов' : 'Step when you are ready'} ·{' '}
-            <b>{Math.ceil(remaining / 1000)}s</b>
+            {reading
+              ? bg
+                ? 'Стъпи, когато си готов'
+                : 'Step when you are ready'
+              : bg
+                ? 'Описание'
+                : 'Description'}{' '}
+            · <b>{Math.ceil(remaining / 1000)}s</b>
           </span>
           <span className="cpi-discovery-summary">{summary}</span>
         </span>
-        <span className="visually-hidden">
-          {bg
-            ? 'Таймерите са спрени. Следващата стъпка активира ефекта; играта продължава автоматично до 4 секунди.'
-            : 'Timers are paused. Your next step activates the effect; play resumes automatically within 4 seconds.'}
-        </span>
+        {reading && (
+          <span className="visually-hidden">
+            {bg
+              ? `Таймерите изчакват до ${timing.holdMs / 1000} секунди или до следващата ти стъпка.`
+              : `Timers wait up to ${timing.holdMs / 1000} seconds or until your next step.`}
+          </span>
+        )}
       </aside>
       {activeFlight &&
         createPortal(

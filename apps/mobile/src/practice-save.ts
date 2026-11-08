@@ -19,6 +19,8 @@ import {
   CLASSIC_STORE_RULESET_VERSION,
   BUSINESS_RULESET_VERSION,
   BUSINESS_STORE_RULESET_VERSION,
+  READING_RULESET_VERSION,
+  READING_STORE_RULESET_VERSION,
   usesBusinessRules,
 } from '@crystal-path-infinity/game-core';
 import type { RunState } from '@crystal-path-infinity/game-core';
@@ -122,6 +124,8 @@ function validatePracticeState(state: RunState): void {
         CLASSIC_STORE_RULESET_VERSION,
         BUSINESS_RULESET_VERSION,
         BUSINESS_STORE_RULESET_VERSION,
+        READING_RULESET_VERSION,
+        READING_STORE_RULESET_VERSION,
         STORE_TEST_RULESET_VERSION,
       ].includes(state.rulesetVersion)) ||
     state.rows.length > MAX_BUFFER_ROWS ||

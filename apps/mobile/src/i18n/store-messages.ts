@@ -188,7 +188,10 @@ export const storeEn = {
     'Using a reserve or credit marks this run Assisted. Its record stays separate from Classic.',
   'vault.spRemaining': '{amount} / 200 reserve SP used this run',
   'vault.useCredit': 'Use 1 credit · Restore {sp} SP',
-  'vault.testAd': 'Simulate rewarded ad · Restore {sp} SP',
+  'vault.testAd': 'Simulate rewarded ad',
+  'vault.skipAdCredit': 'Skip ad · 1 credit',
+  'vault.oneCredit': 'Use 1 credit',
+  'vault.restoreSp': 'Restore {sp} SP',
   'vault.continueCount': 'Continuation {next} of 15 · {credits} credits owned',
   'vault.extra':
     'The first ten chances are behind you. A credit opens one of five extra continuations.',
@@ -397,7 +400,10 @@ export const storeBg: Record<keyof typeof storeEn, string> = {
     'Резервите и кредитите правят опита „С помощ“. Рекордът му се пази отделно от класическия.',
   'vault.spRemaining': '{amount} / 200 резервни SP използвани в този опит',
   'vault.useCredit': 'Използвай 1 кредит · Възстанови {sp} SP',
-  'vault.testAd': 'Симулирай наградена реклама · Възстанови {sp} SP',
+  'vault.testAd': 'Симулирай наградена реклама',
+  'vault.skipAdCredit': 'Без реклама · 1 кредит',
+  'vault.oneCredit': 'Използвай 1 кредит',
+  'vault.restoreSp': 'Възстанови {sp} SP',
   'vault.continueCount': 'Продължаване {next} от 15 · {credits} притежавани кредита',
   'vault.extra':
     'Първите десет шанса са зад теб. Кредит отключва едно от пет допълнителни продължавания.',
