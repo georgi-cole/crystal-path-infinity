@@ -912,38 +912,31 @@ async function ios() {
     await runLogged('xcrun', commandArgs, file, timeout);
     return readFileSync(join(evidenceRoot, file), 'utf8').trim();
   }
-  async function openSettingsUntilNativePause(boundary, file) {
+  async function openSettingsUntilObservation(description, file, observe) {
     const child = detachedLog('xcrun', ['simctl', 'launch', udid, 'com.apple.Preferences'], file);
     const entry = transcript.at(-1);
-    let pauseObserved = false;
+    let observationComplete = false;
     try {
-      await waitFor(
-        'iOS native inactive boundary after opening Settings',
-        provisioningBudgetsMs.systemLaunch,
-        () => {
-          if (child.smokeError) throw child.smokeError;
-          if (child.exitCode !== null && child.exitCode !== 0) {
-            throw new Error(`Settings launch failed; see ${file}`);
-          }
-          pauseObserved = hasNativeActivityEvidence(boundary, false);
-          return pauseObserved;
-        },
-      );
+      await waitFor(description, provisioningBudgetsMs.systemLaunch, () => {
+        if (child.smokeError) throw child.smokeError;
+        if (child.exitCode !== null && child.exitCode !== 0) {
+          throw new Error(`Settings launch failed; see ${file}`);
+        }
+        observationComplete = observe();
+        return observationComplete;
+      });
       Object.assign(entry, {
-        completedBy: 'observed-native-inactive-boundary',
+        completedBy: 'observed-native-lifecycle-boundary',
         nativeBoundaryObservedAt: new Date().toISOString(),
       });
     } finally {
       if (child.exitCode === null) {
-        if (pauseObserved) entry.stoppedAfterNativeBoundary = true;
+        if (observationComplete) entry.stoppedAfterNativeBoundary = true;
         child.kill('SIGKILL');
         await waitFor('iOS Settings launch control cleanup', 10_000, () => child.smokeClosed);
       }
     }
-    assert.ok(
-      pauseObserved,
-      'iOS never reported a native inactive boundary after opening Settings',
-    );
+    assert.ok(observationComplete, description);
     return readFileSync(join(evidenceRoot, file), 'utf8').trim();
   }
 
@@ -1046,21 +1039,18 @@ async function ios() {
           0,
           'iOS page ran before the native interruption',
         );
-        recordLifecycleAction('prebridge-background-via-settings');
-        await control(
-          ['simctl', 'launch', udid, 'com.apple.Preferences'],
+        recordLifecycleAction('prebridge-deactivation-via-settings');
+        await openSettingsUntilObservation(
+          'iOS native scene deactivation before page creation',
           `ios-attempt-${attempt}-prebridge-settings.txt`,
-          provisioningBudgetsMs.systemLaunch,
-        );
-        await waitFor('iOS real background before page creation', 30_000, () =>
-          readAnalysis().prebridgeGates.some((gate) => gate.stage === 'paused'),
+          () => readAnalysis().prebridgeGates.some((gate) => gate.stage === 'paused'),
         );
         assert.equal(
           readAnalysis().diagnostics.length,
           0,
-          'iOS prebridge background unexpectedly initialized a page',
+          'iOS prebridge deactivation unexpectedly initialized a page',
         );
-        recordLifecycleAction('prebridge-native-pause-observed');
+        recordLifecycleAction('prebridge-native-deactivation-observed');
         await control(
           ['simctl', 'launch', udid, buildInfo.appId],
           `ios-attempt-${attempt}-prebridge-resume.txt`,
@@ -1072,11 +1062,15 @@ async function ios() {
       });
       boundary = lifecycleBoundary(readAnalysis());
       // simctl exposes app launching, not a portable Home-button command. Opening
-      // Settings and returning exercises actual iOS background/resume without edits.
-      recordLifecycleAction('background-via-settings', { boundary });
+      // Settings and returning exercises native scene deactivation/reactivation.
+      recordLifecycleAction('inactive-via-settings', { boundary });
       save(
-        'ios-background-launch.txt',
-        await openSettingsUntilNativePause(boundary, `ios-attempt-${attempt}-background.txt`),
+        'ios-inactive-launch.txt',
+        await openSettingsUntilObservation(
+          'iOS native inactive boundary after opening Settings',
+          `ios-attempt-${attempt}-inactive.txt`,
+          () => hasNativeActivityEvidence(boundary, false),
+        ),
       );
       await waitFor('iOS native inactive state after opening Settings', 30_000, () => {
         assertRunning(child, 'simctl attached launch');
@@ -1125,8 +1119,8 @@ async function ios() {
       coldStartAttempts: iosColdStarts,
       lifecycleAction:
         profile === 'full'
-          ? 'Settings interruption before first JS page; two recreated WebViews; Settings/resume on both attempts'
-          : 'One real cold start, native bridge and Settings/background/resume',
+          ? 'Settings scene deactivation before first JS page; two recreated WebViews; Settings/reactivation on both attempts'
+          : 'One real cold start, native bridge and Settings scene deactivation/reactivation',
     };
   } catch (error) {
     run(
@@ -1167,7 +1161,7 @@ try {
     unexpectedJavaScriptOrRuntimeErrors: 0,
     confirmedExternalRuntimeErrorEntries: diagnostics.externalRuntimeErrors.length,
     scope:
-      'Development launch, native bridge, and OS background/resume; no gameplay, ads, backend or store validation.',
+      'Development launch, native bridge, and OS scene deactivation/reactivation; no gameplay, ads, backend or store validation.',
   };
   save(`${platform}-launch-result.json`, `${JSON.stringify(report, null, 2)}\n`);
   console.log(JSON.stringify(report, null, 2));

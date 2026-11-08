@@ -33,8 +33,8 @@ aggregate only passes when App quality succeeded and both native jobs either
 succeeded for `smoke/full` or were explicitly skipped for `none`.
 
 Both native profiles require the same *real* launch and lifecycle observations:
-React and document readiness, native bridge startup, OS background/foreground,
-native inactive/active clock boundaries on the same page, successful bridge
+React and document readiness, native bridge startup, OS app inactive/active
+transitions, native clock boundaries on the same page, successful bridge
 round-trip after reactivation, screenshot, and zero unexpected runtime errors. Android also
 requires real ordered native Activity pause/resume, process identity across
 Home/resume, and no target ANR. The smoke profile reduces the **number of
@@ -47,6 +47,12 @@ but no longer stand in for the native clock transition. On iOS, the Settings
 launch command is monitored alongside the actual inactive snapshot; the command
 can be stopped after that transition is proven if `simctl` remains blocked.
 Earlier workflow artifacts remain unchanged and keep the assertions they ran.
+
+## iOS scene-deactivation gate (8 November 2026)
+
+Required run [42475988431](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/42475988431), on head `a4aa719`, compiled the unsigned Simulator app and Android passed. iOS failed before JavaScript page startup: Settings launched, but the prebridge gate never logged its pause observation within the existing 30-second wait. No page or app lifecycle bridge result was recorded, so this is not a passing iOS run.
+
+The gate waited for `UIScene.didEnterBackgroundNotification`, while CPI-007's foreground clock uses `UIScene.willDeactivateNotification`. Align the startup gate to that same native deactivation boundary, keep navigation held until `didActivate`, and observe the gate while Settings launches. This tests the native state transition the clock actually uses; the failed run remains recorded unchanged.
 
 ## Nightly regression and manual escalation
 

@@ -417,7 +417,7 @@ export function nativeLaunchProblems(
         resumed &&
         event.sequence > resumed.sequence,
     );
-    if (!inactive) problems.push('No native inactive boundary after the background action');
+    if (!inactive) problems.push('No native inactive boundary after the Settings action');
     if (!resumed) problems.push('No native active boundary after resume');
     if (!resumedBridge) problems.push('No successful native bridge round-trip after native resume');
     if (platform === 'android') {

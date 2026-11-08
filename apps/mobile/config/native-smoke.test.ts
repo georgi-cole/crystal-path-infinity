@@ -224,6 +224,17 @@ function healthy(platform: 'android' | 'ios' = 'android') {
 }
 
 describe('native launch evidence gates', () => {
+  it('gates the iOS first page on real scene deactivation and activation', () => {
+    const source = readFileSync(
+      new URL('../native-templates/ios/CpiLifecycle.swift', import.meta.url),
+      'utf8',
+    );
+    const gate = source.slice(source.indexOf('class CpiWebView:'));
+    expect(gate).toContain('UIScene.willDeactivateNotification');
+    expect(gate).toContain('UIScene.didActivateNotification');
+    expect(gate).toContain('observedInactive');
+    expect(gate).not.toContain('UIScene.didEnterBackgroundNotification');
+  });
   it.each(['android', 'ios'] as const)(
     'accepts complete %s startup and a scoped lifecycle sequence',
     (platform) => {
@@ -280,7 +291,7 @@ describe('native launch evidence gates', () => {
     const fixture = healthy();
     const analysis = analyzeNativeLog(fixture.log, build);
     expect(nativeLaunchProblems(analysis, 'android', lifecycleBoundary(analysis))).toContain(
-      'No native inactive boundary after the background action',
+      'No native inactive boundary after the Settings action',
     );
   });
   it('rejects a replacement page session as resuming the same page', () => {
@@ -581,7 +592,8 @@ describe('iOS cold-start launch-service preflight', () => {
     expect(iosHarness).toContain("'iOS native prebridge navigation gate'");
     expect(iosHarness).toContain("'iOS React, page-load, and native bridge readiness'");
     expect(iosHarness).toContain("'iOS bridge round-trip after native app resume'");
-    expect(iosHarness).toContain('openSettingsUntilNativePause');
+    expect(iosHarness).toContain('openSettingsUntilObservation');
+    expect(iosHarness).toContain('iOS native scene deactivation before page creation');
     expect(iosHarness).toContain('assertHealthyLaunch()');
   });
 });
