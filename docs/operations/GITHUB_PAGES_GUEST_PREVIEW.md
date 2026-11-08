@@ -16,8 +16,12 @@ Native builds retain their existing asset paths and environment identities.
 
 Every PR validates the guest Pages build without deploying it. Main pushes and
 manual runs on main deploy through the protected `github-pages` environment.
-Required app and planning checks still apply to the PR before merge; this
-workflow does not weaken or replace them. Actions are pinned to commit SHAs.
+Manual runs on `codex/store-test-mode` and the dedicated `codex/phone-preview`
+branch also publish the guest build for owner-authorized phone testing. The
+phone-preview branch is a snapshot of `codex/mystery-pacts`; it publishes only
+the same guest web bundle. Required app and planning checks still apply to the
+PR before merge; this workflow does not weaken or replace them. Actions are pinned
+to commit SHAs.
 
 With the pinned Node version and installed workspace dependencies:
 
