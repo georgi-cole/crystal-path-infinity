@@ -596,4 +596,15 @@ describe('iOS cold-start launch-service preflight', () => {
     expect(iosHarness).toContain('iOS native scene deactivation before page creation');
     expect(iosHarness).toContain('assertHealthyLaunch()');
   });
+
+  it('uses the documented bounded allowance for the required iOS screenshot', () => {
+    const source = readFileSync(new URL('../scripts/smoke-native.mjs', import.meta.url), 'utf8');
+    const iosHarness = source.slice(source.indexOf('async function ios()'));
+    const screenshotCapture = iosHarness.slice(
+      iosHarness.indexOf("const screenshot = join(evidenceRoot, 'ios-launch.png')"),
+      iosHarness.indexOf('assertPng(screenshot)'),
+    );
+
+    expect(screenshotCapture).toContain('provisioningBudgetsMs.screenshot');
+  });
 });

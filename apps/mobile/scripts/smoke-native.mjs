@@ -1094,6 +1094,7 @@ async function ios() {
       await control(
         ['simctl', 'io', udid, 'screenshot', screenshot],
         `ios-attempt-${attempt}-screenshot.log`,
+        provisioningBudgetsMs.screenshot,
       );
       assertPng(screenshot);
       recordLifecycleAction('observation-complete');

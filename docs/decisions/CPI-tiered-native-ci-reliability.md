@@ -172,3 +172,7 @@ It retains the same pinned Xcode 26.6 and iOS 26.5 (both installed on that image
 all budgets and assertions, the fresh owned SE and every required lifecycle step.
 This is the standard runner class for this public repository, not a paid larger
 runner. Native execution is still required to establish success.
+
+## iOS screenshot allowance wiring (8 November 2026)
+
+Required run [42478841638](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/42478841638), on head `8051bed`, observed the native prebridge interruption, same-page inactive/active clock snapshots, successful resume bridge checks and no unexpected runtime errors. It then failed the required screenshot because the smoke harness still used its generic 60-second control timeout, despite the separately documented 180-second screenshot budget. The screenshot remains mandatory. The harness now passes `iosProvisioningBudgetsMs.screenshot` to that capture; this is a timeout wiring correction, not a change to lifecycle acceptance. Validation of this correction is pending on the updated PR head; the historical run remains failed.
