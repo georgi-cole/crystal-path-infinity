@@ -36,7 +36,8 @@ import './game-settings.css';
 
 const INTRO_HUB_BASE = import.meta.env.BASE_URL + 'intro-hub/';
 
-type GlyphName = 'play' | 'practice' | 'ranking' | 'profile' | 'settings' | 'store' | 'arrow';
+type GlyphName =
+  'play' | 'practice' | 'guide' | 'ranking' | 'profile' | 'settings' | 'store' | 'arrow';
 
 function Glyph({ name }: { name: GlyphName }) {
   const theme = useThemeId();
@@ -49,6 +50,7 @@ function Glyph({ name }: { name: GlyphName }) {
         <path d="M8 11h8M12 4v16" />
       </>
     ),
+    guide: <path d="M12 6c-3-2-6-2-9-1v13c3-1 6-1 9 1 3-2 6-2 9-1V5c-3-1-6-1-9 1Zm0 0v13" />,
     ranking: (
       <>
         <path d="M4 20V9h5v11M10 20V4h5v16M16 20v-7h4v7" />
@@ -363,7 +365,7 @@ function MenuHome({
         />
         <MenuAction
           label={tutorialProgress === 'completed' ? t('menu.replay') : t('menu.learn')}
-          icon="practice"
+          icon="guide"
           variant="quiet"
           onClick={() => onOpen('tutorial')}
         />
@@ -550,7 +552,7 @@ export function MainMenu({
             <MenuAction
               label={tutorialProgress === 'completed' ? t('menu.replay') : t('menu.learn')}
               description={t('menu.tutorialExercise')}
-              icon="practice"
+              icon="guide"
               onClick={() => onOpen('tutorial')}
             />
             {canResumePractice(saved) && saved.status === 'ready' && (

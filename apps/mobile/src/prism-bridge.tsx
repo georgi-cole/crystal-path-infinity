@@ -347,7 +347,7 @@ export function PrismBridge({
     { t, number, locale } = useLanguage();
   const themeId = useThemeId();
   const theme = THEMES[themeId];
-  const COLORS = theme.colors;
+  const { railLights } = theme;
   const osReduced = useSyncExternalStore(subscribeMotion, motionSnapshot, serverMotionSnapshot);
   const reduced = reducedMotion || osReduced;
   const currentIndex = rows?.find((r) => r.phase === 'current')?.index ?? '0';
@@ -459,7 +459,7 @@ export function PrismBridge({
           const row = rows?.find((r) => r.distance === distance);
           const absolute = BigInt(currentIndex) + BigInt(distance);
           const tone = row?.tone ?? Number(((absolute % 3n) + 3n) % 3n);
-          const color = COLORS[tone],
+          const color = railLights[tone],
             rowPhase = row?.phase ?? 'future';
           const key = absolute.toString();
           return (
@@ -626,7 +626,7 @@ export function PrismBridge({
                     key={x + ':' + i}
                     x={x}
                     z={0.45 + distance * 1.15 + offset}
-                    color={COLORS[(tone + i) % 3]}
+                    color={railLights[(tone + i) % railLights.length]}
                     previous={moving}
                     step={camera.row}
                   />

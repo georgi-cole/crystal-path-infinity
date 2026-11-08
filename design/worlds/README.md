@@ -25,6 +25,20 @@ Simulated checkout and test disclosures belong only to development/QA. Player st
 
 **Settings follow-up:** actual settings panels, language selection, disclosure rows, custom switch tracks/thumbs and keyboard focus now share world materials and corner shapes, including Obsidian. The visible sound heading sits inside its panel; long labels wrap beside fixed-size icons/switches. The pause sound group stays collapsed by default. Tutorial entry text is How to play / „Как се играе“; mobile store actions use concise labels such as „Използвай“ and „Свали“ without hiding price or ownership context.
 
+### Home and bridge palettes on 8 November 2026
+
+The six home screens frame the artwork around a neutral title and a single
+material accent on Play. Practice and the guide use quieter surfaces. The
+utility controls share a tray, and the bottom navigation uses simple line icons.
+
+The home flyover and playable bridge share a separate palette for glass, frames
+and rail lights. Rockmallow pairs sandstone controls with cool smoked crystal.
+Pawrachute pairs powder blue controls with warm glass, and Flipzel sets orange
+controls against steel blue panes. Boltmuffin uses copper and champagne crystal,
+Squishphony uses cool opal, and Purralune uses warm silver against moonlit roofs.
+Rail lights and small reflections carry color while the panes stay translucent.
+Mint still identifies the hinted pane across the worlds.
+
 ## References and decisions
 
 - [Monument Valley 3: art and design, with John Lau](https://legacy-activation-v2.unity3d.com/vn/resources/monument-valley-3-blurring-art-and-design):

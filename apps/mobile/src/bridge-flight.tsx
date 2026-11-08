@@ -9,8 +9,8 @@ export function BridgeFlight({ reduced }: { reduced: boolean }) {
   const themeId = useThemeId();
   const canvas = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
-    const LIGHTS = THEMES[themeId].colors;
     const material = THEMES[themeId];
+    const { railLights } = material;
     const surface = canvas.current;
     const ctx = surface?.getContext('2d');
     if (!surface || !ctx) return;
@@ -60,13 +60,13 @@ export function BridgeFlight({ reduced }: { reduced: boolean }) {
           if (i === 70) ctx!.moveTo(p.x, p.y);
           else ctx!.lineTo(p.x, p.y);
         }
-        ctx!.strokeStyle = '#aaa6b62e';
+        ctx!.strokeStyle = material.surface.frame + '42';
         ctx!.lineWidth = 3;
         ctx!.stroke();
       }
       for (let i = 18; i >= 0; i--) {
         const z = 0.45 + i * 1.15 - phase;
-        const color = LIGHTS[(advance + i) % 3];
+        const color = railLights[(advance + i) % railLights.length];
         ctx!.globalAlpha = Math.max(0.15, 1 - i * 0.045);
         for (const side of [-1, 1]) {
           const left = side < 0 ? -430 : 24,
@@ -117,7 +117,7 @@ export function BridgeFlight({ reduced }: { reduced: boolean }) {
             const depth = z + k * 0.37,
               p = project(side * 472, depth);
             const scale = 1 / (1 + depth * 0.65),
-              lamp = LIGHTS[(i + advance + k) % 3];
+              lamp = railLights[(i + advance + k) % railLights.length];
             ctx!.globalAlpha *= 0.88 + Math.sin(time * 1.8 + i * 1.7 + k) * 0.1;
             for (const [radius, alpha] of [
               [11, '12'],
