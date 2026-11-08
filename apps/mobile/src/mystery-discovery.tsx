@@ -1,5 +1,5 @@
 import { practiceStorage, QA_TOOLS_ENABLED } from './app-profile';
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useThemeId } from './store-context';
 import { mysteryTier } from '@crystal-path-infinity/game-core';
@@ -14,19 +14,6 @@ import { MysteryLab } from './mystery-lab';
 import { MysteryPager } from './mystery-pager';
 import './mystery-discovery.css';
 
-const compactJournal =
-  '(max-width: 430px) and (max-height: 740px), (orientation: landscape) and (max-height: 500px)';
-
-function subscribeToJournalViewport(onChange: () => void) {
-  window.addEventListener('resize', onChange);
-  return () => window.removeEventListener('resize', onChange);
-}
-
-function journalPageLimit() {
-  if (window.matchMedia(compactJournal).matches) return 170;
-  return window.matchMedia('(max-width: 430px)').matches ? 400 : Infinity;
-}
-
 function JournalCard({
   kind,
   version,
@@ -38,19 +25,10 @@ function JournalCard({
   navigation: ReactNode;
   onTry: () => void;
 }) {
-  const { locale, t, number } = useLanguage();
-  const [part, setPart] = useState(0);
-  const pageLimit = useSyncExternalStore(
-    subscribeToJournalViewport,
-    journalPageLimit,
-    () => Infinity,
-  );
+  const { locale, t } = useLanguage();
   const copy = effectCopy(locale, kind, version);
   const summary = mysteryDiscoverySummary(kind, locale === 'bg', version);
   const paragraphs = copy.detail.split('\n\n');
-  const paged = paragraphs.length > 1 && copy.detail.length > pageLimit;
-  const selected = Math.min(part, paragraphs.length - 1);
-  const visible = paged ? [paragraphs[selected]] : paragraphs;
   return (
     <article className="cpi-journal-card" data-tier={mysteryTier(kind)}>
       <header className="cpi-journal-hero">
@@ -61,25 +39,8 @@ function JournalCard({
         {summary && <p className="cpi-journal-summary">{summary}</p>}
       </header>
       <div className="cpi-journal-explanation">
-        <div className="cpi-journal-explanation-heading">
-          <h3>{t('guide.howItWorks')}</h3>
-          {paged && (
-            <MysteryPager
-              className="cpi-journal-pager"
-              label={t('guide.howItWorks')}
-              previous={t('guide.previousPart')}
-              next={t('guide.nextPart')}
-              position={t('guide.partPosition', {
-                page: number(selected + 1),
-                total: number(paragraphs.length),
-              })}
-              onChange={(offset) =>
-                setPart((index) => (index + offset + paragraphs.length) % paragraphs.length)
-              }
-            />
-          )}
-        </div>
-        {visible.map((paragraph) => (
+        <h3>{t('guide.howItWorks')}</h3>
+        {paragraphs.map((paragraph) => (
           <p key={paragraph}>{paragraph}</p>
         ))}
       </div>

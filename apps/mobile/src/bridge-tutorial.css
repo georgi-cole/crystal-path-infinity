@@ -290,6 +290,16 @@
 .cpi-guide-tabs .cpi-menu-action-chevron {
   display: none;
 }
+@media (max-width: 400px) and (max-height: 700px) {
+  .cpi-menu-shell.cpi-menu-view--journal .cpi-menu-inner {
+    padding-block-end: max(0.18rem, env(safe-area-inset-bottom, 0px));
+    padding-inline: max(0.45rem, env(safe-area-inset-left, 0px))
+      max(0.45rem, env(safe-area-inset-right, 0px));
+  }
+  .cpi-menu-view--journal .cpi-guide-tabs {
+    margin-block: 0.22rem;
+  }
+}
 .cpi-guide-clock {
   position: absolute;
   z-index: 3;
