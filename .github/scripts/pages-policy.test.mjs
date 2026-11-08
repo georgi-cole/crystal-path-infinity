@@ -14,7 +14,7 @@ assert.ok(condition, 'Pages deploy must have an explicit publication gate');
 for (const [event, ref, expected] of [
   ['push', 'refs/heads/main', true],
   ['workflow_dispatch', 'refs/heads/main', true],
-  ['workflow_dispatch', 'refs/heads/codex/store-test-mode', true],
+  ['workflow_dispatch', 'refs/heads/codex/store-test-mode', false],
   ['push', 'refs/heads/codex/store-test-mode', false],
   ['pull_request', 'refs/heads/main', false],
   ['pull_request', 'refs/heads/codex/store-test-mode', false],

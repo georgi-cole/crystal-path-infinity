@@ -1,64 +1,159 @@
 .cpi-discovery-intro {
-  position: relative;
-  width: min(100% - 1rem, 24rem);
   display: flex;
-  gap: 0.9rem;
-  padding: 1rem 1.1rem;
-  margin: 0.6rem auto;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  min-height: 2.25rem;
+  padding: 0.15rem 0.25rem;
   color: #eeeaf5;
-  border: 1px solid rgba(var(--mystery-rgb), 0.25);
-  border-radius: 0.6rem;
-  background: linear-gradient(135deg, #141923ed, #10121bef);
-  box-shadow: 0 0 32px rgba(var(--mystery-rgb), 0.1);
   pointer-events: none;
 }
-.cps-board > .cpi-discovery-intro {
-  position: absolute;
-  z-index: 8;
-  bottom: 42%;
-  left: 50%;
-  translate: -50% 0;
-}
-.cpi-discovery-intro > .cpi-effect-glyph {
-  width: 2.5rem;
-  height: 2.5rem;
-  flex: 0 0 auto;
+.cpi-discovery-symbol {
+  display: grid;
+  flex: 0 0 2rem;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
   color: rgb(var(--mystery-rgb));
+  filter: drop-shadow(0 0 0.55rem rgba(var(--mystery-rgb), 0.55));
+  transition: opacity 0.16s ease-out;
 }
-.cpi-discovery-intro small {
+.cpi-discovery-symbol .cpi-effect-glyph {
+  width: 100%;
+  height: 100%;
+}
+.cpi-discovery-intro.is-in-flight .cpi-discovery-symbol {
+  opacity: 0;
+}
+.cpi-discovery-intro.is-dangerous .cpi-discovery-symbol {
+  color: #ff9982;
+  filter: drop-shadow(0 0 0.8rem #ff765ccc);
+}
+.cpi-discovery-intro.is-arrived .cpi-discovery-symbol {
+  animation: cpi-discovery-arrive 0.42s ease-out both;
+}
+.cpi-discovery-intro.is-arrived.is-dramatic .cpi-discovery-symbol {
+  animation-name: cpi-discovery-arrive-dramatic;
+  animation-duration: 0.68s;
+}
+.cpi-discovery-copy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.5rem;
+  min-width: 0;
+}
+.cpi-discovery-copy small {
   color: rgb(var(--mystery-rgb));
-  font-size: 0.6rem;
-  letter-spacing: 0.08em;
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
-.cpi-discovery-intro h2 {
-  font-size: 1.1rem;
-  margin: 0.25rem 0 0.5rem;
-  font-weight: 500;
+.cpi-discovery-copy strong {
+  font-size: 0.76rem;
+  font-weight: 550;
 }
-.cpi-discovery-intro p {
-  font-size: 0.8rem;
-  line-height: 1.5;
-  margin: 0 0 0.6rem;
-}
-.cpi-discovery-intro div > span {
+.cpi-discovery-countdown {
   color: #b6b2c4;
-  font-size: 0.65rem;
+  font-size: 0.6rem;
 }
-.cpi-discovery-intro b {
+.cpi-discovery-countdown b {
   color: rgb(var(--mystery-rgb));
   font-weight: 400;
 }
-.cpi-discovery-intro > i {
-  position: absolute;
-  bottom: 0;
-  left: 5%;
-  width: 90%;
-  height: 2px;
-  background: rgb(var(--mystery-rgb));
-  transform-origin: left;
+.cpi-discovery-summary {
+  flex: 1 0 100%;
+  margin-inline-start: 2.55rem;
+  color: #c4c0cf;
+  font-size: 0.65rem;
+  line-height: 1.35;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
-.cpi-discovery-intro.is-dangerous {
-  border-color: #e4a99055;
+.cpi-discovery-flight {
+  position: fixed;
+  z-index: 1000;
+  display: block;
+  width: 3rem;
+  height: 3rem;
+  pointer-events: none;
+  color: rgb(var(--mystery-rgb));
+  filter: drop-shadow(0 0 0.8rem rgba(var(--mystery-rgb), 0.8));
+  animation: cpi-discovery-flight 0.72s cubic-bezier(0.18, 0.72, 0.24, 1) both;
+}
+.cpi-discovery-flight .cpi-effect-glyph {
+  width: 100%;
+  height: 100%;
+}
+.cpi-discovery-flight.is-dangerous {
+  color: #ff9982;
+  filter: drop-shadow(0 0 1rem #ff765cf2);
+}
+.cpi-discovery-flight.is-dramatic {
+  animation-name: cpi-discovery-flight-dramatic;
+  animation-duration: 0.96s;
+}
+@keyframes cpi-discovery-flight {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(0.38) rotate(-22deg);
+  }
+  16% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1.18) rotate(7deg);
+  }
+  100% {
+    opacity: 0.86;
+    transform: translate3d(var(--flight-x), var(--flight-y), 0) scale(0.72) rotate(0);
+  }
+}
+@keyframes cpi-discovery-arrive {
+  0% {
+    opacity: 0.2;
+    transform: scale(0.42);
+  }
+  65% {
+    opacity: 1;
+    transform: scale(1.18);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes cpi-discovery-flight-dramatic {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(0.28) rotate(-35deg);
+  }
+  16% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1.48) rotate(20deg);
+  }
+  55% {
+    opacity: 1;
+    transform: translate3d(var(--flight-mid-x), var(--flight-mid-y), 0) scale(1.24) rotate(-12deg);
+  }
+  100% {
+    opacity: 0.92;
+    transform: translate3d(var(--flight-x), var(--flight-y), 0) scale(0.84) rotate(0);
+  }
+}
+@keyframes cpi-discovery-arrive-dramatic {
+  0% {
+    opacity: 0.15;
+    transform: scale(0.25) rotate(-20deg);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1.45) rotate(12deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
 }
 .cpi-rules-tabs {
   display: flex;
@@ -157,14 +252,4 @@
 .cpi-journal-empty > span {
   font-size: 3rem;
   color: #8fbfc1;
-}
-@media (max-width: 600px) {
-  .cpi-discovery-intro {
-    padding: 0.8rem;
-    gap: 0.6rem;
-  }
-  .cpi-discovery-intro > .cpi-effect-glyph {
-    width: 2rem;
-    height: 2rem;
-  }
 }

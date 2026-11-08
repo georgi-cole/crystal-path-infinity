@@ -9,7 +9,7 @@ import {
   resolveUnsignedRelease,
 } from './config/release-build';
 
-const CPI_BRAND_BACKGROUND = '#060a18';
+const CPI_BRAND_BACKGROUND = '#000000';
 
 // Capacitor 8.5.3 loads this TypeScript file through its CommonJS config loader.
 const environment = requireEnvironment(process.env.CPI_APP_ENV ?? 'development');

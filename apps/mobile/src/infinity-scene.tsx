@@ -202,6 +202,13 @@ export function InfinitySceneView({
   const clockActive = deathClock !== null && state.activeTimeMs >= deathClock.warningAt;
   const oracleActive = state.pact?.kind === 'false_oracle' && state.pact.phase === 'active';
   const maxSp = getRuleset(state.rulesetVersion).maxSp;
+  const mysteryFeedbackVisible =
+    mysteryFeedback !== null &&
+    !(isPactKind(mysteryFeedback.kind) && mysteryFeedback.action === null) &&
+    !(
+      mysteryFeedback.action === null &&
+      state.effects.some((effect) => effect.kind === mysteryFeedback.kind)
+    );
   const criticalSp = maxSp === null ? 10 : 60;
   const warningSp = maxSp === null ? 30 : 140;
   const bonus = liveSignal(signals.bonus, state, 2400);
@@ -409,15 +416,15 @@ export function InfinitySceneView({
             />
           </div>
           <div className="cpi-status-feedback-slot">
+            <DiscoveryIntroduction
+              discovery={state.discovery}
+              activeTimeMs={state.activeTimeMs}
+              rulesetVersion={state.rulesetVersion}
+            />
             {!overlayVisible && (
               <MysteryFeedbackView
                 rulesetVersion={state.rulesetVersion}
-                feedback={
-                  mysteryFeedback &&
-                  !(isPactKind(mysteryFeedback.kind) && mysteryFeedback.action === null)
-                    ? mysteryFeedback
-                    : null
-                }
+                feedback={mysteryFeedbackVisible ? mysteryFeedback : null}
               />
             )}
             {bonus && (
@@ -428,11 +435,6 @@ export function InfinitySceneView({
           </div>
         </aside>
         <section className="cps-board" aria-label={t('game.bridge')} dir="ltr">
-          <DiscoveryIntroduction
-            discovery={state.discovery}
-            activeTimeMs={state.activeTimeMs}
-            rulesetVersion={state.rulesetVersion}
-          />
           {pactOffered && (
             <PactPanel
               pact={state.pact}
@@ -456,10 +458,10 @@ export function InfinitySceneView({
             reducedMotion={settings.reducedMotion}
             phase={cinematic?.phase}
             collapsed={catastrophic && (!cinematic || cinematic.phase === 'collapse')}
-            eventId={state.death?.id ?? cinematic?.id ?? ''}
             fractureSeed={`${state.runId}:${state.revivesApplied}`}
             hintScan={hintScan}
             showHintCaption={hintCaptionRow === state.currentRow}
+            mysteryReveal={!!state.discovery?.introduction}
           />
           <WorldStepEffect theme={themeId} cinematic={cinematic} reduced={settings.reducedMotion} />
           {themeId !== 'obsidian' && outcome.phase !== 'finished' && (

@@ -316,7 +316,6 @@ export function PrismBridge({
   reducedMotion = false,
   phase,
   collapsed = false,
-  eventId = '',
   fractureSeed = 'bridge',
   hintScan = null,
   showHintCaption = false,
@@ -324,6 +323,7 @@ export function PrismBridge({
   allowChoices = true,
   allowedSide,
   omen,
+  mysteryReveal = false,
 }: {
   rows?: readonly PresentedRow[];
   feedback?: SceneFeedback | null;
@@ -334,7 +334,6 @@ export function PrismBridge({
   reducedMotion?: boolean;
   phase?: SceneCinematic['phase'];
   collapsed?: boolean;
-  eventId?: string | number;
   fractureSeed?: string;
   hintScan?: HintScan | null;
   showHintCaption?: boolean;
@@ -342,6 +341,7 @@ export function PrismBridge({
   allowChoices?: boolean;
   allowedSide?: TileSide;
   omen?: TileSide | null;
+  mysteryReveal?: boolean;
 }) {
   const id = useId().replace(/:/g, ''),
     { t, number, locale } = useLanguage();
@@ -484,8 +484,15 @@ export function PrismBridge({
               {(['left', 'right'] as const).map((side) => {
                 const pts = bridgePane(distance, side),
                   old = moving ? bridgePane(distance + 1, side) : undefined;
+                const isBreakingNow =
+                  feedback?.kind === 'wrong' &&
+                  feedback.row === row?.index &&
+                  feedback.side === side;
                 const status = paneState(row, side, phase === 'contact' ? null : feedback);
                 const broken = collapsed || status.includes('wrong') || status.includes('cracked');
+                const falling =
+                  !reduced &&
+                  (collapsed || (isBreakingNow && (phase === 'impact' || phase === 'travel')));
                 return (
                   <g
                     key={side}
@@ -597,14 +604,12 @@ export function PrismBridge({
                     />
                     {broken && (
                       <PaneFragments
-                        key={eventId}
+                        key={`${absolute}:${side}`}
                         points={pts}
                         previous={old}
                         step={camera.row}
                         collapsed={collapsed}
-                        falling={
-                          !reduced && (collapsed || phase === 'impact' || phase === 'travel')
-                        }
+                        falling={falling}
                         detail={distance > 3 ? 1 : 3}
                         seed={glassSeed(`${fractureSeed}:${absolute}:${side}`)}
                         delay={
@@ -773,10 +778,16 @@ export function PrismBridge({
           ))}
           {row.hasMystery &&
             row.phase !== 'past' &&
-            (row.phase !== 'current' || row.mysteryAvailable) && (
+            (row.phase !== 'current' || row.mysteryAvailable || mysteryReveal) && (
               <button
                 type="button"
-                className={'cpi-bridge-mystery' + (row.mysteryTier ? ' is-tiered' : '')}
+                className={
+                  'cpi-bridge-mystery' +
+                  (row.mysteryTier ? ' is-tiered' : '') +
+                  (mysteryReveal && row.phase === 'current' && !row.mysteryAvailable
+                    ? ' is-revealing'
+                    : '')
+                }
                 data-tier={row.mysteryTier}
                 style={{
                   top: `${(projectBridgePoint(0, 0.8 + row.distance * 1.15).y / HEIGHT) * 100}%`,
@@ -792,10 +803,16 @@ export function PrismBridge({
                 }
               >
                 {themeId !== 'obsidian' ? (
-                  <MysteryCache theme={themeId} />
+                  <MysteryCache
+                    theme={themeId}
+                    open={mysteryReveal && row.phase === 'current' && !row.mysteryAvailable}
+                  />
                 ) : (
                   <>
-                    <MysteryCube tier={row.mysteryTier ?? 'standard'} />
+                    <MysteryCube
+                      tier={row.mysteryTier ?? 'standard'}
+                      opened={mysteryReveal && row.phase === 'current' && !row.mysteryAvailable}
+                    />
                     <span className="cpi-box-tier-label">
                       {locale === 'bg'
                         ? {

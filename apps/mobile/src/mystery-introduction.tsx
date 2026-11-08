@@ -1,4 +1,6 @@
-import { DISCOVERY_INTRO_MS, mysteryTier } from '@crystal-path-infinity/game-core';
+import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { createPortal } from 'react-dom';
+import { mysteryTier } from '@crystal-path-infinity/game-core';
 import type { MysteryDiscovery } from '@crystal-path-infinity/game-core';
 import { useLanguage } from './language-context';
 import { EffectGlyph } from './mystery-effects';
@@ -17,33 +19,115 @@ export function DiscoveryIntroduction({
 }) {
   const { locale } = useLanguage();
   const intro = discovery?.introduction;
+  const target = useRef<HTMLSpanElement>(null);
+  const [flight, setFlight] = useState<{
+    startedAt: number;
+    x: number;
+    y: number;
+    dx: number;
+    dy: number;
+    midX: number;
+    midY: number;
+  } | null>(null);
+  const [arrivedAt, setArrivedAt] = useState<number | null>(null);
+  const startedAt = intro?.startedAt;
+  useLayoutEffect(() => {
+    if (startedAt === undefined) return;
+    const board = document.querySelector<HTMLElement>('.cps-board');
+    const source =
+      board?.querySelector<HTMLElement>('.cpi-bridge-row.is-current .cpi-bridge-mystery') ??
+      board?.querySelector<HTMLElement>('.cpi-bridge-row.is-current') ??
+      board?.querySelector<HTMLElement>('.cpi-bridge-mystery');
+    const destination = target.current;
+    if (!source || !destination || window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+      return;
+    const frame = window.requestAnimationFrame(() => {
+      const from = source.getBoundingClientRect();
+      const to = destination.getBoundingClientRect();
+      const dx = to.left + to.width / 2 - (from.left + from.width / 2);
+      const dy = to.top + to.height / 2 - (from.top + from.height / 2);
+      setFlight({
+        startedAt,
+        x: from.left + from.width / 2 - 24,
+        y: from.top + from.height / 2 - 24,
+        dx,
+        dy,
+        midX: dx * 0.55,
+        midY: dy * 0.55,
+      });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [startedAt]);
   if (!intro) return null;
   const bg = locale === 'bg';
   const copy = effectCopy(locale, intro.kind, rulesetVersion);
+  const tier = mysteryTier(intro.kind);
+  const dangerous = !copy.positive;
+  const dramatic = dangerous || tier === 'anomaly';
+  const summary = mysteryDiscoverySummary(intro.kind, bg) ?? copy.detail;
   const remaining = Math.max(0, intro.expiresAt - activeTimeMs);
+  const arrived = arrivedAt === intro.startedAt;
+  const activeFlight = flight?.startedAt === intro.startedAt && !arrived ? flight : null;
   return (
-    <aside
-      className={'cpi-discovery-intro' + (copy.positive ? '' : ' is-dangerous')}
-      data-tier={mysteryTier(intro.kind)}
-      aria-label={bg ? 'Нова мистерия' : 'New discovery'}
-      role="status"
-    >
-      <EffectGlyph kind={intro.kind} />
-      <div>
-        <small>{bg ? 'Откри нова мистерия' : 'A new discovery'}</small>
-        <h2>{copy.title}</h2>
-        <p>{mysteryDiscoverySummary(intro.kind, bg) ?? copy.detail}</p>
-        <span>
-          {bg ? 'Стъпи, когато си готов' : 'Step when you are ready'}{' '}
-          <b>· {Math.ceil(remaining / 1000)}s</b>
+    <>
+      <aside
+        className={
+          'cpi-discovery-intro' +
+          (dangerous ? ' is-dangerous' : '') +
+          (dramatic ? ' is-dramatic' : '') +
+          (activeFlight ? ' is-in-flight' : '') +
+          (arrived ? ' is-arrived' : '')
+        }
+        data-tier={tier}
+        aria-label={bg ? 'Нова мистерия' : 'New discovery'}
+        role="status"
+      >
+        <span className="cpi-discovery-symbol" ref={target} aria-hidden="true">
+          <EffectGlyph kind={intro.kind} />
         </span>
-      </div>
-      <i style={{ transform: `scaleX(${remaining / DISCOVERY_INTRO_MS})` }} aria-hidden="true" />
-      <span className="visually-hidden">
-        {bg
-          ? 'Таймерите са спрени. Следващата стъпка активира ефекта; играта продължава автоматично до 4 секунди.'
-          : 'Timers are paused. Your next step activates the effect; play resumes automatically within 4 seconds.'}
-      </span>
-    </aside>
+        <span className="cpi-discovery-copy">
+          <small>{bg ? 'Откри нова мистерия' : 'A new discovery'}</small>
+          <strong>{copy.title}</strong>
+          <span className="cpi-discovery-countdown">
+            {bg ? 'Стъпи, когато си готов' : 'Step when you are ready'} ·{' '}
+            <b>{Math.ceil(remaining / 1000)}s</b>
+          </span>
+          <span className="cpi-discovery-summary">{summary}</span>
+        </span>
+        <span className="visually-hidden">
+          {bg
+            ? 'Таймерите са спрени. Следващата стъпка активира ефекта; играта продължава автоматично до 4 секунди.'
+            : 'Timers are paused. Your next step activates the effect; play resumes automatically within 4 seconds.'}
+        </span>
+      </aside>
+      {activeFlight &&
+        createPortal(
+          <span
+            className={
+              'cpi-discovery-flight' +
+              (dangerous ? ' is-dangerous' : '') +
+              (dramatic ? ' is-dramatic' : '')
+            }
+            data-tier={tier}
+            style={
+              {
+                left: `${activeFlight.x}px`,
+                top: `${activeFlight.y}px`,
+                '--flight-x': `${activeFlight.dx}px`,
+                '--flight-y': `${activeFlight.dy}px`,
+                '--flight-mid-x': `${activeFlight.midX}px`,
+                '--flight-mid-y': `${activeFlight.midY}px`,
+              } as CSSProperties
+            }
+            aria-hidden="true"
+            onAnimationEnd={(event) => {
+              if (event.target === event.currentTarget) setArrivedAt(intro.startedAt);
+            }}
+          >
+            <EffectGlyph kind={intro.kind} />
+          </span>,
+          document.body,
+        )}
+    </>
   );
 }

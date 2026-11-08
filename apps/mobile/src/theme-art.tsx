@@ -29,9 +29,11 @@ const MOTES = Array.from({ length: 12 }, (_, i) => ({
 export function ThemeArtwork({
   theme,
   background = false,
+  priority = false,
 }: {
   theme: ThemeId;
   background?: boolean;
+  priority?: boolean;
 }) {
   const suspended = useSyncExternalStore(subscribeMotion, motionSuspended, serverSuspended);
   if (theme === 'obsidian') return null;
@@ -53,7 +55,8 @@ export function ThemeArtwork({
         width="1024"
         height="1536"
         decoding="async"
-        loading={background ? 'eager' : 'lazy'}
+        loading="eager"
+        fetchPriority={priority ? 'high' : 'auto'}
         draggable={false}
       />
       <svg className="cpi-world-near" viewBox="0 0 720 1080" preserveAspectRatio="xMidYMid slice">

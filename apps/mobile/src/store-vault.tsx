@@ -325,7 +325,7 @@ export function StoreVault({
                 </button>
               </article>
             )}
-            {visibleWorlds.map((product) => {
+            {visibleWorlds.map((product, index) => {
               const theme = product.theme!;
               const owned = snapshot.owned.includes(theme);
               return (
@@ -335,7 +335,7 @@ export function StoreVault({
                   data-world={theme}
                 >
                   <div className="cpi-vault-world-picture">
-                    <ThemeArtwork theme={theme} />
+                    <ThemeArtwork theme={theme} priority={index < 2} />
                     {owned && <span className="cpi-vault-world-tag">{t('vault.owned')}</span>}
                   </div>
                   <div className="cpi-vault-world-copy">

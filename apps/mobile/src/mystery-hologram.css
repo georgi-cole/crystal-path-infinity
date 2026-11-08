@@ -61,6 +61,11 @@
   height: clamp(4.5rem, 10vw, 6.5rem);
   overflow: visible;
 }
+.cpi-bridge-mystery.is-revealing:disabled {
+  opacity: 1;
+  filter: drop-shadow(0 0 1rem rgba(var(--mystery-rgb), 0.85));
+  pointer-events: none;
+}
 .cpi-bridge-mystery.is-tiered::before {
   content: '';
   position: absolute;

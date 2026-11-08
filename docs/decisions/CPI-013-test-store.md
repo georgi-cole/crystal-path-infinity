@@ -1,5 +1,7 @@
 # CPI-013 / CPI-005 — Test store, resource reserve and original worlds
 
+**Допълнение · 8 ноември 2026 · преди merge и Pages публикация:** Този PR подготвя отделен QA профил за `https://georgi-cole.github.io/crystal-path-infinity/tester/` (директно към магазина: `#store`). След успешна публикация основният адрес ще остане production/player build без QA менюта, test wallet или симулиран checkout; `/tester/` ще бъде самостоятелна QA компилация със същия основен код, видими референтни тестови цени и симулации без таксуване. Никакви тестови салда или отключвания не се пренасят към player профила. Връзката е публична и няма достъп с парола — използва се само за локална демонстрация в отделно браузърно хранилище. Няма акаунти, класации, реклами, доставчик на плащане или реални разписки. За реални StoreKit/Play sandbox покупки е необходим native TestFlight/Play тестов build.
+
 **Version note · 6 November 2026:** the implementation details below describe the original `infinity-store-test-v1` baseline. The combined v11 playtest uses [the current rules](../CURRENT_GAME_RULES.md), including uncapped active SP, fixed 5 SP base damage, 5–7-row mystery spacing and the current effects/death clock. Wallet prices, the 200 SP cumulative direct-reserve allowance, 10/15 continuation slots and Assisted separation remain applicable. Ads and purchases remain simulated. Commercial proposals are in [the business plan](../BUSINESS_PLAN.md).
 
 Owner-authorized implementation, 5 November 2026. Follows the catalog preview
@@ -103,6 +105,9 @@ Local test balances and cosmetic unlocks must never migrate into live purchases.
 Signed physical-device billing/ads and production ranked assisted standings are
 not represented as implemented or tested. The owner authorized updating the
 GitHub Pages guest preview on 6 November 2026. Its build asserts simulated payment
-mode and records that boundary in deployment-info.json. Publication is manual
-from the explicitly allowed test-store branch (or main); PR events cannot publish.
-This does not enable live services, submit a store listing or authorize live sales.
+mode and records that boundary in deployment-info.json. This PR changes the
+publication policy so that, after it merges, only `main` can publish; each Pages
+artifact will contain the player build at the root and the separate simulated QA
+build under `/tester/`. PRs and the former test-store branch cannot publish or
+replace the player preview. This does not enable live services, submit a store
+listing or authorize live sales.
