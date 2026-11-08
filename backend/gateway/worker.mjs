@@ -30,7 +30,7 @@ export default {
       fetch(target.href + '/_worker', {
         method: 'POST',
         headers: { authorization: 'Bearer ' + env.CPI_WORKER_KEY },
-        redirect: 'error',
+        redirect: 'manual',
         signal: AbortSignal.timeout(120000),
       }).then(async (response) => {
         await response.body?.cancel();

@@ -147,6 +147,8 @@ Apple показва приет Developer Program License Agreement и акти�
 
 Временният 24-часов Supabase токен беше ограничен до Edge Functions и Edge Function Secrets на Crystal Path staging. Диагностичните функции са премахнати, а API потвърди отнемането на токена.
 
+**Автоматично Google сверяване · 8 ноември 2026 г.** След първоначалната ръчна проверка срокът на сверяването изтече. Cloudflare отчете, че минутният cron спира преди заявката заради неподдържания режим `redirect: 'error'`. Worker-ът използва `manual` и отхвърля неуспешния HTTP отговор. Версия `f938c86c-bf3f-4ea9-bbca-c57d40b32ad5` е внедрена само в Crystal Path staging. Две поредни автоматични изпълнения обновиха `google.staging` без ръчно извикване. Android и iOS preflight заявките върнаха HTTP 204. Временното логване е изключено. [Режими за пренасочване в Cloudflare Workers](https://developers.cloudflare.com/workers/runtime-apis/request/#properties).
+
 ### 9. Разгърни сървъра и периодичните задачи
 
 **Проверено в staging на 7 ноември 2026 г.** Supabase CLI `3.0.0` потвърди, че след качването няма чакащи миграции. Ограниченият DB вход може да приеме `service_role` и не е член на `postgres`. Всичките 45 таблици в `cpi_private` имат принудително RLS. `cpi-live` използва сертификата от Supabase, а сървърът отхвърли директна неподписана заявка за вход.
