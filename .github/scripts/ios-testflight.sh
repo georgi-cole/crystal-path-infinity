@@ -24,8 +24,21 @@ preflight() {
   xcodebuild -version
   xcodebuild -help > "$RUNNER_TEMP/cpi-xcodebuild-help.txt" 2>&1 || true
   grep -Fq testFlightInternalTestingOnly "$RUNNER_TEMP/cpi-xcodebuild-help.txt"
+  if [[ "$CPI_NATIVE_ADS" != "$VITE_REWARDED_ADS_ENABLED" ||
+        "$VITE_ACCOUNT_API_BASE_URL" != https://crystal-path-staging-api.kolequant.workers.dev ]]; then
+    echo 'Internal TestFlight requires matching ad flags and the Crystal Path staging gateway.' >&2
+    exit 1
+  fi
   if [[ "$CPI_IOS_UPLOAD" == true ]]; then
     require_current_main
+    if [[ "$CPI_NATIVE_ADS" == true ]]; then
+      local version
+      version=$(node -p 'require("./apps/mobile/package.json").version')
+      if [[ "${CPI_IOS_ADMOB_TEST_VERSION:-}" != "$version" ]]; then
+        echo 'Confirm version-specific AdMob test mode in CPI_IOS_ADMOB_TEST_VERSION before upload.' >&2
+        exit 1
+      fi
+    fi
     gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs" \
       > "$RUNNER_TEMP/cpi-source-checks.json"
     node --experimental-strip-types --input-type=module - "$RUNNER_TEMP/cpi-source-checks.json" <<'JS'
@@ -131,6 +144,7 @@ compile_archive() {
   local app="$archive/Products/Applications/App.app"
   python3 - "$app" "$bundle_id" "$GITHUB_RUN_NUMBER" <<'PY'
 import json
+import os
 import pathlib
 import plistlib
 import sys
@@ -145,13 +159,17 @@ assert info["CFBundleShortVersionString"] == metadata["version"]
 assert info["CFBundleVersion"] == build
 assert info["UIDeviceFamily"] == [1]
 assert metadata["environment"] == "production" and not (public / "qa-info.json").exists()
+if os.environ["CPI_NATIVE_ADS"] == "true":
+    assert info["GADApplicationIdentifier"] == "ca-app-pub-9243398419153145~7303584917"
+else:
+    assert "GADApplicationIdentifier" not in info
 PY
   if [[ "$CPI_IOS_UPLOAD" == true ]]; then
     codesign --verify --deep --strict "$app"
     codesign -d --verbose=4 "$app" 2>&1 | grep -Fx "TeamIdentifier=$team_id"
   fi
-  printf '### Crystal Path iOS archive\n\nBundle: %s\n\nBuild: %s\n\nSource: %s\n\n' \
-    "$bundle_id" "$GITHUB_RUN_NUMBER" "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+  printf '### Crystal Path iOS archive\n\nBundle: %s\n\nBuild: %s\n\nSource: %s\n\nRewarded ads test: %s\n\n' \
+    "$bundle_id" "$GITHUB_RUN_NUMBER" "$GITHUB_SHA" "$CPI_NATIVE_ADS" >> "$GITHUB_STEP_SUMMARY"
   if [[ "$CPI_IOS_UPLOAD" != true ]]; then
     printf 'Unsigned verification archive. No Apple credentials used.\n' >> "$GITHUB_STEP_SUMMARY"
   fi
@@ -181,7 +199,7 @@ PY
   xcodebuild -exportArchive -archivePath "$archive" -exportPath "$signing/export" \
     -exportOptionsPlist "$signing/ExportOptions.plist" -allowProvisioningUpdates \
     -authenticationKeyPath "$key" -authenticationKeyID "$CPI_ASC_UPLOAD_KEY_ID" \
-    -authenticationKeyIssuer "$CPI_ASC_UPLOAD_ISSUER_ID"
+    -authenticationKeyIssuerID "$CPI_ASC_UPLOAD_ISSUER_ID"
   printf 'Sent to App Store Connect as an internal TestFlight build for Apple processing.\n' \
     >> "$GITHUB_STEP_SUMMARY"
 }
