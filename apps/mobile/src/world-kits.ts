@@ -95,9 +95,9 @@ export const WORLD_KITS = {
 export const WORLD_COLORS = {
   chaos: ['#ffe0a4', '#a75e3b', '#392e36', '#baffde'],
   jelly: ['#fff2ff', '#ceacf5', '#5568a6', '#edc9ff'],
-  wilds: ['#e1eac1', '#627866', '#263e38', '#bce5ad'],
+  wilds: ['#eadcc0', '#77786a', '#28322e', '#e6bb7c'],
   league: ['#ffd2a3', '#c66e37', '#253548', '#8edeee'],
-  puppy: ['#edd8b3', '#af6d47', '#303b3c', '#9cdbcd'],
+  puppy: ['#f3dcc4', '#ad755b', '#303746', '#afd3e2'],
   kitten: ['#eadff0', '#7d759c', '#292c48', '#efc584'],
 } as const satisfies Record<WorldId, readonly [string, string, string, string]>;
 
