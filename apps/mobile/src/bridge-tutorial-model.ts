@@ -43,7 +43,7 @@ export interface TutorialSession {
 export function createTutorialSession(): TutorialSession {
   const run = createRun(
     {
-      runId: 'tutorial-only-not-a-score',
+      runId: 'practice-tutorial-only-not-a-score',
       rulesetVersion: PRACTICE_RULESET_VERSION,
       routeRng: createPracticeCursor(14014),
       mysteryRng: createPracticeCursor(14141),

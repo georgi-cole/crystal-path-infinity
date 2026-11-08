@@ -1,41 +1,3 @@
-/* The world carries through every navigation surface, using one open-prism cut. */
-[data-world='wilds'] {
-  --world-accent: #b6e4a2;
-  --world-soft: #edbd76;
-  --world-panel: #152422;
-  --world-radius: 0.35rem;
-}
-[data-world='league'] {
-  --world-accent: #ffa65e;
-  --world-soft: #8cddf4;
-  --world-panel: #122335;
-  --world-radius: 0.3rem;
-}
-[data-world='puppy'] {
-  --world-accent: #efb475;
-  --world-soft: #92dbce;
-  --world-panel: #242a2b;
-  --world-radius: 0.55rem;
-}
-[data-world='kitten'] {
-  --world-accent: #d1c2ef;
-  --world-soft: #f3c483;
-  --world-panel: #1c1d30;
-  --world-radius: 0.4rem;
-}
-[data-world='chaos'] {
-  --world-radius: 0.45rem;
-}
-[data-world='jelly'] {
-  --world-radius: 0.9rem;
-}
-.cpi-world-mark {
-  width: 1rem;
-  height: 1rem;
-  stroke: currentColor;
-  stroke-width: 1.3;
-  flex: 0 0 auto;
-}
 .cpi-world-nav-glyph {
   width: 1.65rem;
   height: 1.65rem;
@@ -55,9 +17,13 @@
   color: var(--world-accent);
   stroke-width: 1.35;
 }
-.cpi-hub-chip .cpi-world-nav-glyph {
-  width: 1.6rem;
-  height: 1.6rem;
+.cpi-menu-shell .cpi-world-nav-glyph :is(.cpi-world-icon-setting, .cpi-world-icon-seam) {
+  display: none;
+}
+.cpi-menu-shell .cpi-world-icon-mark {
+  color: inherit;
+  transform: translate(4px, 4px) scale(1.33333);
+  stroke-width: 1.5;
 }
 .cpi-world-home-identity {
   display: flex;
@@ -69,139 +35,174 @@
   text-align: start;
 }
 .cpi-world-home-friend {
-  position: relative;
-  flex: 0 0 4.6rem;
-  width: 4.6rem;
-  height: 4.6rem;
-}
-.cpi-world-home-friend .cpi-companion-sprite {
-  position: relative;
-  z-index: 1;
-}
-.cpi-world-home-perch {
-  position: absolute;
-  inset: 55% -4% 0;
-  border: 1px solid color-mix(in srgb, var(--world-accent) 35%, transparent);
-  background: radial-gradient(
-    ellipse,
-    color-mix(in srgb, var(--world-soft) 15%, transparent),
-    transparent 70%
-  );
-  border-radius: 50%;
-  transform: rotate(-9deg);
+  flex: 0 0 4.9rem;
+  width: 4.9rem;
+  height: 4.9rem;
+  filter: drop-shadow(0 5px 9px #0008);
 }
 .cpi-world-home-copy {
   display: grid;
-  gap: 0.25rem;
+  gap: 0.18rem;
   min-width: 0;
+  text-shadow: 0 1px 8px #0009;
 }
 .cpi-world-home-copy > span {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
   color: var(--world-accent);
-  font-size: 0.52rem;
-  letter-spacing: 0.15em;
+  font-size: 0.59rem;
+  font-weight: 650;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 .cpi-world-home-copy > strong {
-  color: #f1e9ed;
-  font: 600 1.15rem/1.15 var(--cpi-font-display);
+  color: #f5f1ee;
+  font: 700 1.25rem/1.18 var(--cpi-font-display);
 }
 .cpi-world-home-copy > p {
-  color: color-mix(in srgb, var(--world-soft) 65%, #c4bec7);
-  font-size: 0.65rem;
+  color: #d4cfd3;
+  font-size: 0.72rem;
   line-height: 1.45;
   margin: 0;
   max-width: 17rem;
 }
 .cpi-menu-shell[data-world]:not([data-world='obsidian']) .cpi-menu-hero h1 {
   background-image: linear-gradient(
-    155deg,
-    #fff 10%,
-    var(--world-accent) 52%,
-    #ffffffd9 56%,
-    var(--world-soft)
+    180deg,
+    #faf9f7 20%,
+    #edecea 60%,
+    color-mix(in srgb, var(--world-accent) 20%, #c0c2c6)
   );
   letter-spacing: 0.065em;
 }
 .cpi-menu-shell[data-world]:not([data-world='obsidian']) .cpi-menu-kicker {
-  color: var(--world-soft);
+  color: #e1dcd8;
 }
 .cpi-menu-shell[data-world]:not([data-world='obsidian']) .cpi-menu-action {
-  border-color: color-mix(in srgb, var(--world-accent) 35%, transparent);
+  border-color: var(--cpi-line);
   border-radius: var(--world-radius);
-  background: linear-gradient(135deg, #ffffff0b, transparent 45%), var(--world-panel);
-  color: #f4eef4;
-  box-shadow:
-    inset 0 1px #ffffff15,
-    inset 0 -1px #0008,
-    0 8px 24px #0003;
+  background:
+    linear-gradient(#ffffff08, transparent), color-mix(in srgb, var(--world-panel) 68%, #0a0a0e);
+  color: #f4f1f0;
+  box-shadow: inset 0 1px #ffffff0d;
 }
-.cpi-menu-shell[data-world]:not([data-world='obsidian']) .cpi-menu-action::after {
-  content: '';
-  position: absolute;
-  top: 0.45rem;
-  right: 0.45rem;
-  width: 0.55rem;
-  height: 0.55rem;
-  border-top: 1px solid var(--world-soft);
-  border-right: 1px solid var(--world-soft);
-  opacity: 0.6;
+.cpi-menu-shell[data-world]:not([data-world='obsidian']) .cpi-menu-action:hover {
+  border-color: color-mix(in srgb, var(--world-soft) 37%, transparent);
+  background-color: color-mix(in srgb, var(--world-panel) 86%, white);
+}
+.cpi-menu-shell[data-world]:not([data-world='obsidian']) .cpi-menu-action-icon {
+  color: var(--world-soft);
 }
 .cpi-menu-shell[data-world]:not([data-world='obsidian']) .cpi-menu-action--primary {
-  border-color: var(--world-accent);
-  background: linear-gradient(
-    120deg,
-    color-mix(in srgb, var(--world-accent) 22%, var(--world-panel)),
-    var(--world-panel)
-  );
+  border-color: color-mix(in srgb, var(--world-accent) 65%, white);
+  background: linear-gradient(#ffffff43, transparent 60%, #211a2512), var(--world-accent);
+  color: #17161b;
   box-shadow:
-    inset 3px 0 var(--world-accent),
-    inset 0 1px #ffffff20,
-    0 9px 35px #0005;
+    inset 0 1px #ffffff55,
+    0 8px 24px #0005;
+}
+.cpi-menu-shell[data-world]:not([data-world='obsidian']) .cpi-menu-action--primary:hover {
+  border-color: color-mix(in srgb, var(--world-accent) 45%, white);
+  background-color: color-mix(in srgb, var(--world-accent) 85%, white);
+}
+.cpi-menu-shell[data-world]:not([data-world='obsidian'])
+  .cpi-menu-action--primary
+  .cpi-menu-action-title {
+  font-size: 0.94rem;
+  font-weight: 750;
 }
 .cpi-menu-shell[data-world]:not([data-world='obsidian'])
   .cpi-menu-action--primary
   .cpi-menu-action-icon {
-  width: 2.45rem;
-  height: 2.45rem;
+  width: 1.65rem;
+  height: 1.65rem;
   border: 0;
   background: none;
+  color: inherit;
 }
 .cpi-menu-shell[data-world]:not([data-world='obsidian'])
   .cpi-menu-action--primary
-  .cpi-world-nav-glyph {
-  width: 2.2rem;
-  height: 2.2rem;
+  :is(.cpi-menu-action-chevron, .cpi-menu-action-description) {
+  color: #312b2b;
 }
-.cpi-menu-shell[data-world]:not([data-world='obsidian']) .cpi-menu-action-chevron {
-  color: var(--world-soft);
+
+/* Keep status and destinations quieter than the action that starts a crossing. */
+.cpi-menu-view--home[data-world]:not([data-world='obsidian']) .cpi-menu-scoreboard {
+  margin-bottom: 0.55rem;
+  padding-inline: 0.2rem;
+  border: 0;
+  background: none;
+  backdrop-filter: none;
+  text-shadow: 0 1px 5px #000b;
 }
-.cpi-menu-shell[data-world]:not([data-world='obsidian']) .cpi-menu-action:hover {
-  border-color: var(--world-soft);
-  background-color: color-mix(in srgb, var(--world-accent) 9%, var(--world-panel));
-}
-.cpi-menu-shell[data-world]:not([data-world='obsidian']) .cpi-menu-grid .cpi-menu-action {
-  border: 1px solid color-mix(in srgb, var(--world-accent) 16%, transparent);
-  background: color-mix(in srgb, var(--world-panel) 85%, transparent);
-}
-.cpi-menu-shell[data-world]:not([data-world='obsidian']) .cpi-menu-grid .cpi-menu-action::after {
-  display: none;
-}
-.cpi-menu-shell[data-world]:not([data-world='obsidian']) .cpi-menu-grid .cpi-menu-action-title {
+.cpi-menu-view--home[data-world]:not([data-world='obsidian']) .cpi-menu-score {
   color: var(--world-accent);
+  font-weight: 700;
 }
-.cpi-menu-shell[data-world]:not([data-world='obsidian'])
-  :is(.cpi-hub-chip, .cpi-menu-scoreboard, .cpi-menu-panel, .cpi-menu-notice) {
+.cpi-menu-view--home[data-world]:not([data-world='obsidian'])
+  .cpi-menu-actions
+  > :is(.cpi-menu-action--secondary, .cpi-menu-action--quiet) {
+  gap: 0.4rem;
+  padding-inline: 0.5rem;
+}
+.cpi-menu-view--home[data-world]:not([data-world='obsidian'])
+  .cpi-menu-actions
+  > :is(.cpi-menu-action--secondary, .cpi-menu-action--quiet)
+  .cpi-menu-action-title {
+  font-size: 0.74rem;
+}
+.cpi-menu-view--home[data-world]:not([data-world='obsidian']) .cpi-menu-grid {
+  padding-top: 0.4rem;
+}
+.cpi-menu-view--home[data-world]:not([data-world='obsidian']) .cpi-menu-grid .cpi-menu-action {
+  gap: 0.22rem;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  color: #c8c5cd;
+}
+.cpi-menu-view--home[data-world]:not([data-world='obsidian'])
+  .cpi-menu-grid
+  .cpi-menu-action:hover {
+  background: #ffffff0d;
+  color: #f6f3f1;
+}
+.cpi-menu-view--home[data-world]:not([data-world='obsidian'])
+  .cpi-menu-grid
+  :is(.cpi-menu-action-icon, .cpi-menu-action-title) {
+  color: inherit;
+}
+.cpi-menu-view--home[data-world]:not([data-world='obsidian'])
+  .cpi-menu-grid
+  .cpi-menu-action-title {
+  font-size: 0.69rem;
+}
+.cpi-menu-view--home[data-world]:not([data-world='obsidian']) .cpi-hub-utilities {
+  gap: 0;
+  border: 1px solid var(--cpi-line);
+  border-radius: var(--world-radius);
+  background: color-mix(in srgb, var(--world-panel) 80%, #0b0b10);
+}
+.cpi-menu-view--home[data-world]:not([data-world='obsidian']) .cpi-hub-utility-stack {
+  gap: 0;
+}
+.cpi-menu-view--home[data-world]:not([data-world='obsidian']) .cpi-hub-chip {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0.5rem;
+  border: 0;
+  border-radius: var(--world-radius);
+  background: transparent;
+  box-shadow: none;
+  color: #e4dfdc;
+}
+.cpi-menu-view--home[data-world]:not([data-world='obsidian']) .cpi-hub-chip:hover {
+  background: #ffffff13;
+}
+.cpi-menu-shell[data-world]:not([data-world='obsidian']) :is(.cpi-menu-panel, .cpi-menu-notice) {
   border-color: color-mix(in srgb, var(--world-accent) 26%, transparent);
   border-radius: var(--world-radius);
   background:
     linear-gradient(135deg, #ffffff07, transparent 40%),
     color-mix(in srgb, var(--world-panel) 92%, transparent);
-}
-.cpi-menu-shell[data-world]:not([data-world='obsidian']) .cpi-hub-chip--inactive {
-  opacity: 0.5;
 }
 .cpi-menu-shell[data-world]:not([data-world='obsidian']) .cpi-menu-back {
   color: var(--world-accent);
@@ -209,38 +210,8 @@
 .cpi-menu-shell[data-world]:not([data-world='obsidian']) :is(input, select) {
   accent-color: var(--world-accent);
 }
-.cpi-menu-shell[data-world='league'] .cpi-menu-action--primary {
-  background-image: linear-gradient(110deg, #ea9b5f30, transparent 45%, #8cdaf015);
-}
-.cpi-menu-shell[data-world='wilds'] .cpi-menu-action--primary {
-  box-shadow:
-    inset 3px 0 var(--world-accent),
-    inset 0 -3px #516b4e60,
-    0 9px 35px #0005;
-}
-.cpi-menu-shell[data-world='puppy'] .cpi-menu-action--primary::after {
-  width: 0.9rem;
-  height: 1.2rem;
-  border: 1px solid var(--world-soft);
-  transform: rotate(12deg);
-  border-radius: 0 0 30% 30%;
-}
-.cpi-menu-shell[data-world='kitten'] .cpi-menu-action--primary::after {
-  width: 1.2rem;
-  height: 1.2rem;
-  border: 0;
-  border-inline-start: 2px solid var(--world-soft);
-  border-radius: 50%;
-  transform: rotate(-25deg);
-}
 .cpi-infinity-scene[data-world]:not([data-world='obsidian'])
-  :is(
-    .cpi-overlay-card,
-    .cpi-resource-panel,
-    .cpi-result-score,
-    .cpi-revive-offer,
-    .cpi-result-details
-  ) {
+  :is(.cpi-resource-panel, .cpi-result-score, .cpi-revive-offer, .cpi-result-details) {
   border-color: color-mix(in srgb, var(--world-accent) 30%, transparent);
   border-radius: var(--world-radius);
   background: linear-gradient(
@@ -249,63 +220,19 @@
     color-mix(in srgb, var(--world-panel) 35%, #070709) 65%
   );
 }
-.cpi-infinity-scene[data-world]:not([data-world='obsidian'])
-  .cpi-overlay-actions
-  button[data-cpi-overlay-primary] {
-  border-radius: var(--world-radius);
-}
-.cpi-infinity-scene[data-world]:not([data-world='obsidian'])
-  :is(
-    .cpi-resource-actions button,
-    .cpi-resource-confirm button,
-    .cpi-reward-actions button,
-    .cpi-overlay-actions button:not([data-cpi-overlay-primary])
-  ) {
-  border-radius: var(--world-radius);
-  border-color: color-mix(in srgb, var(--world-accent) 40%, transparent);
-  background: linear-gradient(135deg, #ffffff0b, transparent 45%), var(--world-panel);
-  color: color-mix(in srgb, var(--world-accent) 25%, #fff);
-  font-family: var(--cpi-font-body);
-  font-size: 0.83rem;
-  font-weight: 600;
-  letter-spacing: 0.025em;
-}
-.cpi-infinity-scene[data-world]:not([data-world='obsidian'])
-  :is(
-    .cpi-resource-actions button,
-    .cpi-resource-confirm button,
-    .cpi-reward-actions button,
-    .cpi-overlay-actions button:not([data-cpi-overlay-primary])
-  ):hover:not(:disabled) {
-  border-color: var(--world-soft);
-  background-color: color-mix(in srgb, var(--world-accent) 10%, var(--world-panel));
-}
-
 /* Guide controls follow the world; its isolated bridge example stays Obsidian. */
-.cpi-mystery-journal[data-world]:not([data-world='obsidian']) .cpi-journal-grid article {
-  border-radius: var(--world-radius);
-  background: color-mix(in srgb, var(--world-panel) 92%, transparent);
-}
-.cpi-mystery-journal[data-world]:not([data-world='obsidian']) button {
-  border-radius: var(--world-radius);
-  border-color: color-mix(in srgb, var(--world-accent) 40%, transparent);
-  background: var(--world-panel);
-  color: var(--world-accent);
-  font: 600 0.73rem var(--cpi-font-body);
-  letter-spacing: 0.025em;
-}
-.cpi-menu-shell[data-world]:not([data-world='obsidian']) :is(.cpi-guide-topline, .cpi-guide-index) {
+.cpi-menu-shell[data-world]:not([data-world='obsidian']) .cpi-guide-topline {
   color: color-mix(in srgb, var(--world-accent) 60%, #a9a3b0);
 }
 .cpi-menu-shell[data-world]:not([data-world='obsidian']) .cpi-guide-chapters .is-current {
   color: var(--world-accent);
 }
 .cpi-menu-shell[data-world]:not([data-world='obsidian'])
-  :is(.cpi-guide-chapters .is-complete, .cpi-guide-whisper, .cpi-guide-rehearsal) {
+  :is(.cpi-guide-chapters .is-complete, .cpi-guide-rehearsal) {
   color: var(--world-soft);
 }
 .cpi-menu-shell[data-world]:not([data-world='obsidian'])
-  :is(.cpi-guide-chapters, .cpi-guide-chapter-mark, .cpi-guide-footer) {
+  :is(.cpi-guide-topline, .cpi-guide-chapter-mark, .cpi-guide-footer) {
   border-color: color-mix(in srgb, var(--world-accent) 20%, transparent);
 }
 .cpi-menu-shell[data-world]:not([data-world='obsidian'])
@@ -342,7 +269,9 @@
   color: var(--world-accent);
 }
 .cpi-menu-shell[data-world]:not([data-world='obsidian']) .cpi-menu-scoreboard .cpi-menu-eyebrow {
-  color: #c7c1c8;
+  color: #dad4d8;
+  font-size: 0.66rem;
+  font-weight: 500;
 }
 .cpi-menu-modal[data-world]:not([data-world='obsidian']) .cpi-menu-dialog,
 .cpi-vault-backdrop[data-world]:not([data-world='obsidian']) .cpi-vault-dialog {
@@ -364,8 +293,11 @@
 .cpi-menu-modal[data-world]:not([data-world='obsidian']) button:focus-visible {
   outline-color: var(--world-soft);
 }
-.cpi-menu-shell[data-world]:not([data-world='obsidian']) .cpi-home-composition {
-  padding-top: clamp(1.5rem, 4dvh, 3rem);
+.cpi-menu-view--home[data-world]:not([data-world='obsidian']) .cpi-home-composition {
+  padding-top: clamp(1.5rem, 3.6dvh, 2.8rem);
+}
+.cpi-menu-view--home[data-world]:not([data-world='obsidian']) .cpi-home-scenery {
+  mask-image: linear-gradient(transparent, #000 12%, #000 36%, #0009 48%, transparent 65%);
 }
 @media (max-height: 700px) {
   .cpi-world-home-friend {
@@ -380,6 +312,6 @@
     font-size: 1rem;
   }
   .cpi-world-home-copy > p {
-    font-size: 0.6rem;
+    font-size: 0.67rem;
   }
 }

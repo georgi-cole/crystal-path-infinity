@@ -11,6 +11,11 @@
 .cpi-status-clock-slot {
   min-height: 1.6rem;
 }
+.cpi-status-clock-slot:empty,
+.cpi-status-feedback-slot:empty {
+  display: none;
+  min-height: 0;
+}
 .cpi-status-forces {
   display: flex;
   flex-wrap: wrap;
@@ -24,7 +29,7 @@
   display: contents;
 }
 .cpi-status-forces .cpi-force {
-  flex: 1 1 8rem;
+  flex: 1 1 13rem;
   background: #101017d9;
 }
 .cpi-status-forces .cpi-force summary {
@@ -51,15 +56,6 @@
 }
 .cpi-infinity-scene .cps-board > .cpi-relic-choice {
   top: max(0.5rem, calc(69.3% - 23rem));
-  bottom: auto;
-}
-.cpi-infinity-scene .cpi-relic-details {
-  top: auto;
-  bottom: 2rem;
-  max-height: 8rem;
-}
-.cpi-infinity-scene .cps-board > .cpi-discovery-intro {
-  top: 0.5rem;
   bottom: auto;
 }
 .cpi-active-pact {
@@ -134,6 +130,9 @@
   white-space: nowrap;
 }
 .cpi-status-feedback-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
   min-height: 2.25rem;
 }
 .cpi-run-status .cpi-mystery-feedback {

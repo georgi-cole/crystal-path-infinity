@@ -21,7 +21,7 @@
                                 </constraints>
                             </imageView>
                         </subviews>
-                        <color key="backgroundColor" red="0.0235294118" green="0.0392156863" blue="0.0941176471" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <color key="backgroundColor" red="0" green="0" blue="0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <constraints>
                             <constraint firstItem="CPI-001-SYM" firstAttribute="centerX" secondItem="snD-IY-ifK" secondAttribute="centerX" id="CPI-001-CX"/>
                             <constraint firstItem="CPI-001-SYM" firstAttribute="centerY" secondItem="snD-IY-ifK" secondAttribute="centerY" id="CPI-001-CY"/>

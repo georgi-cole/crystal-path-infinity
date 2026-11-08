@@ -14,6 +14,7 @@ import {
   DIRECTOR_RULESET_VERSION,
   RELIC_RULESET_VERSION,
   DISCOVERY_RULESET_VERSION,
+  READING_RULESET_VERSION,
   usesRelicRules,
   usesMysteryDirectorRules,
   getDeathClock,
@@ -32,6 +33,8 @@ import {
 } from '../src/mystery-effects';
 import { parseRankedReply } from '../src/ranked/ranked-client';
 import { mysteryChoiceCards } from '../src/mystery-choice-model';
+import { THEME_IDS } from '../src/store-catalog';
+import { ThemeScope } from '../src/store-provider';
 import {
   readPracticeCheckpoint,
   readPracticePersonalBest,
@@ -126,7 +129,7 @@ describe('mystery feedback, practice chamber and public contracts', () => {
       );
       expect(waiting.sp).toBe(80);
       expect(html).toContain('cpi-relic-options');
-      expect(html).toContain('relic-open-v6.webp');
+      expect(html).toMatch(/class="cpi-relic-open" src="data:image\/webp;base64,/);
       expect(html).not.toContain('65% ·');
       expect(html.match(/data-pact-option=/g)).toHaveLength(2);
       expect(html).toContain('data-tier="major"');
@@ -533,6 +536,47 @@ describe('mystery feedback, practice chamber and public contracts', () => {
       }),
     );
     expect(soulHtml).toMatch(/disabled="" data-pact-option="hint"/);
+  });
+
+  it.each([
+    ['fragility_5s', 'double the next tile damage'],
+    ['inversion_5s', 'every broken tile gives +5 SP'],
+  ] as const)('explains an active %s in the collapsed status strip', (kind, summary) => {
+    const effect = applyMysteryEffect(kind, 0).addedEffect!;
+    const html = renderToStaticMarkup(
+      createElement(MysteryEffects, {
+        effects: [effect],
+        activeTimeMs: 1000,
+        rulesetVersion: READING_RULESET_VERSION,
+      }),
+    );
+    expect(html.match(/<summary>(.*?)<\/summary>/)?.[1]).toContain(summary);
+    expect(html).not.toContain('open=""');
+  });
+
+  it('opens a choice with the equipped relic artwork for every world', () => {
+    const state = createMysteryLabRun('half_life', 100, 91025, RELIC_RULESET_VERSION).state;
+    for (const theme of THEME_IDS) {
+      const html = renderToStaticMarkup(
+        createElement(ThemeScope, {
+          theme,
+          children: createElement(PactPanel, {
+            pact: state.pact,
+            hints: state.hints,
+            rulesetVersion: state.rulesetVersion,
+            revealed: false,
+            disabled: false,
+            onChoose: () => {},
+          }),
+        }),
+      );
+      if (theme === 'obsidian') {
+        expect(html).toContain('cpi-mystery-cube is-open');
+      } else {
+        expect(html).toContain('cpi-world-cache world-' + theme + ' is-open');
+        expect(html).not.toContain('cpi-mystery-cube');
+      }
+    }
   });
 
   it.each(PACT_KINDS)(

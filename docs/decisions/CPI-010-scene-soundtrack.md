@@ -1,5 +1,7 @@
 # CPI-010 — Owner-supplied scene music
 
+**8 November 2026 · phone review.** The menu track streams from the original AAC file. The splash can prepare the track silently, and playback starts when the splash has finished and the menu is ready. The crossing track prepares in the background and uses the same Web Audio loop when a run takes over. The music button retries playback on its first press when a browser has blocked autoplay. An ordinary tap or key press also retries. Native Capacitor playback is configured to allow autoplay on both platforms. The AAC recordings and the gameplay and ending cue times are retained.
+
 The owner supplied recordings from `Downloads/Crystal path audio` on
 5 November 2026. The home track is Silent Descent (original MP3). Enjoythepath
 was supplied as stereo Opus/WebM. The owner subsequently replaced the result

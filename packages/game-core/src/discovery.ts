@@ -2,7 +2,8 @@ import { addSafeInteger, assertNonNegativeInteger } from './numbers.ts';
 import { isPactKind } from './pacts.ts';
 import {
   DISCOVERY_RULESET_VERSION,
-  DISCOVERY_INTRO_MS,
+  IDLE_WARNING_MS,
+  discoveryTiming,
   getRuleset,
   usesDiscoveryRules,
 } from './rules.ts';
@@ -15,7 +16,11 @@ export function needsDiscoveryIntroduction(kind: EffectKind): boolean {
   );
 }
 
-export function assertDiscovery(value: MysteryDiscovery, activeTimeMs: number): void {
+export function assertDiscovery(
+  value: MysteryDiscovery,
+  activeTimeMs: number,
+  rulesetVersion = DISCOVERY_RULESET_VERSION,
+): void {
   const kinds = getRuleset(DISCOVERY_RULESET_VERSION).mysteryTable.map(({ kind }) => kind);
   if (
     !value ||
@@ -34,7 +39,7 @@ export function assertDiscovery(value: MysteryDiscovery, activeTimeMs: number): 
   assertNonNegativeInteger(intro.startedAt, 'Introduction start');
   assertNonNegativeInteger(intro.expiresAt, 'Introduction expiry');
   if (
-    intro.expiresAt - intro.startedAt !== DISCOVERY_INTRO_MS ||
+    intro.expiresAt - intro.startedAt !== discoveryTiming(rulesetVersion).displayMs ||
     intro.startedAt > activeTimeMs ||
     intro.expiresAt <= activeTimeMs
   )
@@ -55,7 +60,7 @@ export function discoverMystery(state: RunState, kind: EffectKind): RunState {
             startedAt: state.activeTimeMs,
             expiresAt: addSafeInteger(
               state.activeTimeMs,
-              DISCOVERY_INTRO_MS,
+              discoveryTiming(state.rulesetVersion).displayMs,
               'Introduction expiry',
             ),
           }
@@ -73,8 +78,8 @@ export function discoverMystery(state: RunState, kind: EffectKind): RunState {
   };
 }
 
-/** Reading consumes at most four seconds, and none of an owned effect's lifetime.
- * This lives in the engine so catch-up ticks, pause and checkpoint recovery agree. */
+/** Advance the protected part of the reading window without consuming effects.
+ * The description can remain visible after normal time resumes. */
 export function settleDiscoveryIntroduction(
   state: RunState,
   now: number,
@@ -82,9 +87,18 @@ export function settleDiscoveryIntroduction(
 ): RunState {
   const intro = state.discovery?.introduction;
   if (!intro) return state;
-  const until = Math.min(now, intro.expiresAt);
+  const timing = discoveryTiming(state.rulesetVersion);
+  const holdUntil = addSafeInteger(intro.startedAt, timing.holdMs, 'Reading hold expiry');
+  const until = Math.min(now, holdUntil);
   const elapsed = until - state.activeTimeMs;
+  if (elapsed <= 0) return state;
   const shift = (time: number) => addSafeInteger(time, elapsed, 'Frozen introduction time');
+  // Keep the same death-clock deadline after the description is dismissed.
+  const clockAnchor = addSafeInteger(
+    intro.startedAt,
+    timing.warningDelayMs - IDLE_WARNING_MS,
+    'Reading death clock anchor',
+  );
   return {
     ...state,
     activeTimeMs: until,
@@ -102,7 +116,7 @@ export function settleDiscoveryIntroduction(
     ),
     mysteryDirector: {
       ...state.mysteryDirector!,
-      lastStepAt: until,
+      lastStepAt: Math.min(until, clockAnchor),
       pressure: undefined,
       rhythm: state.mysteryDirector!.rhythm
         ? {

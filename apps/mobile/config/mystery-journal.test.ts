@@ -151,17 +151,30 @@ describe('personal mystery discoveries', () => {
     expect(restricted).not.toContain('Marketing');
   });
 
+  it('shows one known discovery at a time with its explanation already visible', () => {
+    const html = renderToStaticMarkup(
+      createElement(MysteryJournal, { known: ['false_oracle', 'marketing'] }),
+    );
+    expect(html).toContain('1 of 2');
+    expect(html).toContain('Next discovery');
+    expect(html).toContain('How does it work?');
+    expect(html).toContain('points to the safe tile');
+    expect(html).not.toContain('Marketing');
+  });
+
   it('explains the current oracle and purchased-hint limits without rewriting an older run', () => {
-    const known = ['false_oracle', 'marketing'] as const;
-    const current = renderToStaticMarkup(createElement(MysteryJournal, { known }));
-    expect(current).toContain('points to the safe tile');
+    const current = renderToStaticMarkup(createElement(MysteryJournal, { known: ['marketing'] }));
     expect(current).toContain('200 SP per crossing');
-    expect(current).toContain('How does it work?');
     for (const version of [DISCOVERY_RULESET_VERSION, BUSINESS_RULESET_VERSION]) {
       const state = createMysteryLabRun('false_oracle', 100, 91025, version).state;
-      const html = renderToStaticMarkup(createElement(MysteryJournal, { known, state }));
-      expect(html.includes('less dangerous side')).toBe(version === DISCOVERY_RULESET_VERSION);
-      expect(html.includes('200 SP per crossing')).toBe(version === BUSINESS_RULESET_VERSION);
+      const oracle = renderToStaticMarkup(
+        createElement(MysteryJournal, { known: ['false_oracle'], state }),
+      );
+      const marketing = renderToStaticMarkup(
+        createElement(MysteryJournal, { known: ['marketing'], state }),
+      );
+      expect(oracle.includes('less dangerous side')).toBe(version === DISCOVERY_RULESET_VERSION);
+      expect(marketing.includes('200 SP per crossing')).toBe(version === BUSINESS_RULESET_VERSION);
     }
   });
 

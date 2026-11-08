@@ -19,6 +19,7 @@ import { useLanguage } from './language-context';
 import { effectCopy, mysteryText } from './mystery.messages';
 import './mystery-effects.css';
 import { HolographicOffer } from './mystery-box';
+import { mysteryDiscoverySummary } from './mystery-discovery-copy';
 
 export function EffectGlyph({ kind, burst = false }: { kind: EffectKind; burst?: boolean }) {
   const theme = useThemeId();
@@ -287,6 +288,7 @@ export function MysteryEffects({
     <div className="cpi-mystery-effects" aria-label={mysteryText(locale, 'effects')}>
       {effects.map((effect, index) => {
         const copy = effectCopy(locale, effect.kind, rulesetVersion);
+        const summary = mysteryDiscoverySummary(effect.kind, locale === 'bg', rulesetVersion);
         const remaining =
           effect.expiresAt === null
             ? effect.rowsLeft
@@ -300,20 +302,26 @@ export function MysteryEffects({
           >
             <summary>
               <EffectGlyph kind={effect.kind} />
-              <span>
+              <span className="cpi-force-copy">
                 <strong>{copy.title.replace(/\s*·\s*\d+s$/, '')}</strong>
+                {summary && <small>{summary}</small>}
               </span>
               <b>
                 {effect.expiresAt === null
                   ? `${remaining} ${locale === 'bg' ? 'реда' : 'rows'}`
                   : `${(remaining / 1000).toFixed(1)}s`}
               </b>
+              <svg className="cpi-force-caret" viewBox="0 0 16 16" aria-hidden="true">
+                <path d="m4 6 4 4 4-4" />
+              </svg>
               <span
                 className="cpi-force-track"
                 style={{ width: `${(remaining / total) * 100}%` }}
               />
             </summary>
-            <p>{copy.detail}</p>
+            {copy.detail.split('\n\n').map((paragraph) => (
+              <p key={paragraph}>{paragraph}</p>
+            ))}
             <small className="cpi-force-priority">
               {effects.some((active) => active.kind === 'coyote_10s')
                 ? locale === 'bg'
@@ -401,6 +409,7 @@ export function PactPanel({
   if (pact.phase === 'offered' && usesMysteryDirectorRules(rulesetVersion))
     return (
       <HolographicOffer
+        key={pact.kind + ':' + pact.offeredAt}
         pact={pact}
         sp={sp}
         hints={hints}

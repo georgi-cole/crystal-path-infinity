@@ -15,7 +15,7 @@
 .cpi-brand-backdrop {
   position: absolute;
   inset: 0;
-  background: #060a18;
+  background: #000000;
   opacity: calc(1 - var(--launch-exit));
 }
 .cpi-brand-backdrop::before {

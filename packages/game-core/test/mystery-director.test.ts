@@ -9,6 +9,8 @@ import {
   DIRECTOR_RULESET_VERSION,
   RELIC_RULESET_VERSION,
   DISCOVERY_RULESET_VERSION,
+  READING_RULESET_VERSION,
+  READING_STORE_RULESET_VERSION,
   getCurrentRow,
   getDeathClock,
   getRuleset,
@@ -18,6 +20,7 @@ import {
   PRACTICE_RNG,
   prepareMysteryRow,
   rollMysteryEffect,
+  tileExperimentVersion,
   transitionRun,
 } from '../src/index.ts';
 import type { EffectKind, MysteryTier, RunCommand, RunState } from '../src/index.ts';
@@ -498,6 +501,60 @@ describe('v7 first discoveries', () => {
       stepped = act(stepped, { type: 'tick' }, time).state;
     expect(stepped.sp).toBe(oneJump.sp);
     expect(stepped.death?.activeTimeMs).toBe(oneJump.death?.activeTimeMs);
+  });
+
+  it.each([
+    READING_RULESET_VERSION,
+    READING_STORE_RULESET_VERSION,
+    tileExperimentVersion(60, 1, true, 'extended-reading'),
+  ])('gives %s seven protected seconds and ten seconds of description', (version) => {
+    const opened = open('shield_5s', fresh(version));
+    expect(opened.discovery!.introduction!.expiresAt).toBe(10_000);
+
+    const reading = act(opened, { type: 'tick' }, 6_999).state;
+    expect(reading.mysteryDirector!.pressure).toBeUndefined();
+    expect(reading.effects[0].expiresAt! - reading.activeTimeMs).toBe(5_000);
+
+    const clockStarted = act(reading, { type: 'tick' }, 7_000).state;
+    expect(clockStarted.mysteryDirector!.pressure?.anchorAt).toBe(7_000);
+    expect(clockStarted.discovery!.introduction).not.toBeNull();
+    const clock = { warningAt: 7_000, firstLossAt: 10_000, expiresAt: 17_000 };
+    expect(getDeathClock(clockStarted)).toEqual(clock);
+
+    const lastSecond = act(clockStarted, { type: 'tick' }, 9_999).state;
+    const recovered = JSON.parse(JSON.stringify(lastSecond)) as RunState;
+    expect(recovered.discovery!.introduction).not.toBeNull();
+    expect(recovered.effects[0].expiresAt).toBe(12_000);
+    const expired = act(recovered, { type: 'tick' }, 10_000).state;
+    expect(expired.discovery!.introduction).toBeNull();
+    expect(getDeathClock(expired)).toEqual(clock);
+    expect(expired.sp).toBe(299.5);
+    expect(act(opened, { type: 'tick' }, 10_000).state).toEqual(expired);
+  });
+
+  it('ends the reading window on an early step and restarts the normal idle grace', () => {
+    const opened = open('shield_5s', fresh(READING_RULESET_VERSION));
+    const stepped = act(
+      opened,
+      { type: 'choose', row: opened.currentRow, life: 0, side: getCurrentRow(opened).safeSide },
+      2_000,
+    ).state;
+    expect(stepped.discovery!.introduction).toBeNull();
+    expect(stepped.effects[0].expiresAt).toBe(7_000);
+    expect(getDeathClock(stepped)).toEqual({
+      warningAt: 5_000,
+      firstLossAt: 8_000,
+      expiresAt: 15_000,
+    });
+  });
+
+  it('keeps the clock anchored if a hint is accepted while a v13 description is still visible', () => {
+    const opened = open('shield_5s', fresh(READING_RULESET_VERSION));
+    const result = act(opened, { type: 'hint', row: opened.currentRow, life: 0 }, 8_500);
+    expect(result.accepted).toBe(true);
+    expect(result.state.discovery!.introduction).not.toBeNull();
+    expect(result.state.mysteryDirector!.pressure?.anchorAt).toBe(7_000);
+    expect(act(result.state, { type: 'tick' }, 10_000).state.sp).toBe(299.5);
   });
 
   it('freezes existing damage pulses and a running mystery rhythm too', () => {

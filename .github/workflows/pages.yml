@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   build:
-    name: Pages guest web build
+    name: Pages player and tester web builds
     runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
@@ -35,12 +35,11 @@ jobs:
         run: node --experimental-strip-types .github/scripts/build-pages.mjs
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
-          path: apps/mobile/dist
+          path: apps/mobile/dist-pages
 
   deploy:
     name: Publish guest game
-    # The owner approved publishing the test-store branch for phone testing.
-    if: (github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')) || (github.ref == 'refs/heads/codex/store-test-mode' && github.event_name == 'workflow_dispatch')
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 10

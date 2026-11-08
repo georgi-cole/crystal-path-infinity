@@ -1,5 +1,5 @@
 import { nextPracticeRuleset } from './balance-tuning';
-import { QA_TOOLS_ENABLED, practiceStorage } from './app-profile';
+import { PLAYER_PREVIEW_ENABLED, QA_TOOLS_ENABLED, practiceStorage } from './app-profile';
 import { shouldFinishPracticeOnExit } from './practice-exit';
 import { DiscoveryIntroduction } from './mystery-introduction';
 import { MysteryJournal } from './mystery-discovery';
@@ -10,7 +10,7 @@ import { MysteryEffects, MysteryFeedbackView, PactPanel, EffectGlyph } from './m
 import { EffectConsumption, HintCounter } from './resource-feedback';
 import { MysteryRhythmBadge, DeathClockBadge } from './mystery-box';
 import { MysteryLab } from './mystery-lab';
-import { effectCopy, mysteryText } from './mystery.messages';
+import { effectCopy } from './mystery.messages';
 import './run-status.css';
 import { RunReserves } from './run-reserves';
 import { useTestStore, useThemeId } from './store-context';
@@ -61,7 +61,7 @@ import {
 import { presentRunOutcome } from './run-outcome';
 import { useLanguage } from './language-context';
 import type { PracticeSettings } from './practice-save';
-import { AudioSettingsControls } from './audio-settings-controls';
+import { RunPauseMenu } from './run-pause-menu';
 import { createPracticeRuntime, schedulePracticeTick } from './practice-runtime';
 import type { PracticePauseLease, PracticeRuntime } from './practice-runtime';
 import { presentInfinityScene } from './infinity-presentation';
@@ -123,7 +123,6 @@ export interface InfinitySceneViewProps {
   readonly hintCaptionRow?: string | null;
 }
 
-/** No game-core mutations or timers. All callbacks are externally owned events. */
 export function InfinitySceneView({
   resourcePanel,
   trial = false,
@@ -195,6 +194,9 @@ export function InfinitySceneView({
     : null;
   const overlayVisible =
     !!error || (!cinematic?.fatal && (paused || confirmEnd || outcome.phase !== 'playing'));
+  const pauseVisible = paused && !error && !confirmEnd && outcome.phase === 'playing';
+  const worldDialogTheme =
+    worldOutcomeTheme ?? (pauseVisible && themeId !== 'obsidian' ? themeId : null);
   const catastrophic = state.death !== null && state.status !== 'playing';
   const pressure = presentRowPressure(state);
   const deathClock = getDeathClock(state);
@@ -202,6 +204,18 @@ export function InfinitySceneView({
   const clockActive = deathClock !== null && state.activeTimeMs >= deathClock.warningAt;
   const oracleActive = state.pact?.kind === 'false_oracle' && state.pact.phase === 'active';
   const maxSp = getRuleset(state.rulesetVersion).maxSp;
+  const discoveryKind = state.discovery?.introduction?.kind;
+  const rhythm = state.mysteryDirector?.rhythm;
+  const visibleEffects = discoveryKind
+    ? state.effects.filter((effect) => effect.kind !== discoveryKind)
+    : state.effects;
+  const mysteryFeedbackVisible =
+    mysteryFeedback !== null &&
+    (mysteryFeedback.action !== null ||
+      (!isPactKind(mysteryFeedback.kind) &&
+        mysteryFeedback.kind !== discoveryKind &&
+        mysteryFeedback.kind !== rhythm?.kind &&
+        !state.effects.some((effect) => effect.kind === mysteryFeedback.kind)));
   const criticalSp = maxSp === null ? 10 : 60;
   const warningSp = maxSp === null ? 30 : 140;
   const bonus = liveSignal(signals.bonus, state, 2400);
@@ -272,6 +286,47 @@ export function InfinitySceneView({
                     : state.current.mysteryOutcome
                       ? t('game.noticeMysteryDone')
                       : t('game.noticeChoose')));
+
+  const rescueNote = worldOutcomeTheme && (
+    <p className="cpi-world-safe-home" role="status">
+      {t(WORLD_KITS[worldOutcomeTheme].safe)}
+    </p>
+  );
+  const dialogHeading = (
+    <h2 id="cpi-run-outcome-title" tabIndex={-1}>
+      {t(
+        error
+          ? 'game.clockTitle'
+          : confirmEnd && outcome.canEnd
+            ? 'game.confirmTitle'
+            : outcome.phase === 'verification-pending'
+              ? 'game.pendingTitle'
+              : outcome.phase === 'finished'
+                ? petWorld
+                  ? 'vault.petFinishedTitle'
+                  : themeId === 'league'
+                    ? 'vault.leagueFinishedTitle'
+                    : 'game.complete'
+                : outcome.phase === 'dead' || outcome.phase === 'grant-ready'
+                  ? petWorld
+                    ? 'vault.petRestTitle'
+                    : themeId === 'league'
+                      ? 'vault.leagueRestTitle'
+                      : 'game.deathTitle'
+                  : petWorld
+                    ? 'vault.petPaused'
+                    : 'game.paused',
+      )}
+    </h2>
+  );
+
+  const pauseFoothold = pauseVisible && (
+    <div className="cpi-pause-foothold">
+      <span>{t(petWorld ? 'vault.rowsExplored' : 'game.rowsCleared')}</span>
+      <strong>{clearedRows}</strong>
+      <span className="visually-hidden">{t('game.pausedExplanation')}</span>
+    </div>
+  );
 
   return (
     <main
@@ -386,7 +441,7 @@ export function InfinitySceneView({
           </div>
           <div className="cpi-status-forces">
             <MysteryEffects
-              effects={state.effects}
+              effects={visibleEffects}
               activeTimeMs={state.activeTimeMs}
               rulesetVersion={state.rulesetVersion}
             />
@@ -403,21 +458,21 @@ export function InfinitySceneView({
                 activeTimeMs={state.activeTimeMs}
               />
             )}
-            <MysteryRhythmBadge
-              rhythm={state.mysteryDirector?.rhythm}
-              activeTimeMs={state.activeTimeMs}
-            />
+            {rhythm?.kind !== discoveryKind && (
+              <MysteryRhythmBadge rhythm={rhythm} activeTimeMs={state.activeTimeMs} />
+            )}
           </div>
           <div className="cpi-status-feedback-slot">
+            <DiscoveryIntroduction
+              discovery={state.discovery}
+              activeTimeMs={state.activeTimeMs}
+              rulesetVersion={state.rulesetVersion}
+              reducedMotion={settings.reducedMotion}
+            />
             {!overlayVisible && (
               <MysteryFeedbackView
                 rulesetVersion={state.rulesetVersion}
-                feedback={
-                  mysteryFeedback &&
-                  !(isPactKind(mysteryFeedback.kind) && mysteryFeedback.action === null)
-                    ? mysteryFeedback
-                    : null
-                }
+                feedback={mysteryFeedbackVisible ? mysteryFeedback : null}
               />
             )}
             {bonus && (
@@ -428,11 +483,6 @@ export function InfinitySceneView({
           </div>
         </aside>
         <section className="cps-board" aria-label={t('game.bridge')} dir="ltr">
-          <DiscoveryIntroduction
-            discovery={state.discovery}
-            activeTimeMs={state.activeTimeMs}
-            rulesetVersion={state.rulesetVersion}
-          />
           {pactOffered && (
             <PactPanel
               pact={state.pact}
@@ -456,10 +506,10 @@ export function InfinitySceneView({
             reducedMotion={settings.reducedMotion}
             phase={cinematic?.phase}
             collapsed={catastrophic && (!cinematic || cinematic.phase === 'collapse')}
-            eventId={state.death?.id ?? cinematic?.id ?? ''}
             fractureSeed={`${state.runId}:${state.revivesApplied}`}
             hintScan={hintScan}
             showHintCaption={hintCaptionRow === state.currentRow}
+            mysteryReveal={!!state.discovery?.introduction}
           />
           <WorldStepEffect theme={themeId} cinematic={cinematic} reduced={settings.reducedMotion} />
           {themeId !== 'obsidian' && outcome.phase !== 'finished' && (
@@ -534,65 +584,30 @@ export function InfinitySceneView({
       </div>
       <EffectConsumption cue={resourceCues.consumption} hidden={overlayVisible} />
       {overlayVisible && (
-        <div className="cpi-overlay">
+        <div className="cpi-overlay cpi-crossing-overlay">
           <div
             className={
-              'cpi-overlay-card cpi-run-outcome' + (worldOutcomeTheme ? ' is-world-outcome' : '')
+              'cpi-overlay-card cpi-run-outcome' +
+              (worldOutcomeTheme ? ' is-world-outcome' : '') +
+              (pauseVisible ? ' cpi-pause-card' : '')
             }
             role="dialog"
             aria-modal="true"
             aria-labelledby="cpi-run-outcome-title"
           >
-            {worldOutcomeTheme && (
-              <WorldOutcomeHero theme={worldOutcomeTheme} finished={outcome.phase === 'finished'} />
-            )}
-            <header className="cpi-dialog-heading">
-              <span className="cpi-dialog-emblem" data-phase={outcome.phase} aria-hidden="true">
-                <svg viewBox="0 0 48 48" fill="none">
-                  <path
-                    d={
-                      catastrophic
-                        ? 'M5 35 14 20l6 8 6-14 8 6 9 15M12 35l8-7m6-14 6 21M6 40h12m12 0h12'
-                        : outcome.phase === 'finished'
-                          ? 'M8 26l11 11L40 12M8 10h12M8 15h7'
-                          : paused && !confirmEnd
-                            ? 'M16 12v24M32 12v24'
-                            : 'M8 34 24 10l16 24M18 25h12M24 34v6'
-                    }
-                  />
-                  <circle cx="40" cy="8" r="2" />
-                </svg>
-              </span>
-              <h2 id="cpi-run-outcome-title" tabIndex={-1}>
-                {t(
-                  error
-                    ? 'game.clockTitle'
-                    : confirmEnd && outcome.canEnd
-                      ? 'game.confirmTitle'
-                      : outcome.phase === 'verification-pending'
-                        ? 'game.pendingTitle'
-                        : outcome.phase === 'finished'
-                          ? petWorld
-                            ? 'vault.petFinishedTitle'
-                            : themeId === 'league'
-                              ? 'vault.leagueFinishedTitle'
-                              : 'game.complete'
-                          : outcome.phase === 'dead' || outcome.phase === 'grant-ready'
-                            ? petWorld
-                              ? 'vault.petRestTitle'
-                              : themeId === 'league'
-                                ? 'vault.leagueRestTitle'
-                                : 'game.deathTitle'
-                            : petWorld
-                              ? 'vault.petPaused'
-                              : 'game.paused',
+            {worldDialogTheme ? (
+              <WorldOutcomeHero theme={worldDialogTheme} finished={outcome.phase === 'finished'}>
+                {dialogHeading}
+                {pauseFoothold}
+              </WorldOutcomeHero>
+            ) : (
+              <header className="cpi-dialog-heading">
+                {pauseVisible && (
+                  <span className="cpi-dialog-kicker">{t('game.pauseClockHeld')}</span>
                 )}
-              </h2>
-            </header>
-            {worldOutcomeTheme && (
-              <p className="cpi-world-safe-home" role="status">
-                {t(WORLD_KITS[worldOutcomeTheme].safe)}
-              </p>
+                {dialogHeading}
+                {pauseFoothold}
+              </header>
             )}
             {error ? (
               <>
@@ -647,168 +662,148 @@ export function InfinitySceneView({
                 </div>
               </>
             ) : outcome.phase === 'finished' ? (
-              <>
-                <p className="cpi-run-status-label">
-                  {t(state.storeTest?.assisted ? 'vault.assisted' : 'game.practiceUnverified')}
-                </p>
-                <div className="cpi-result-score">
-                  <span>{t(petWorld ? 'vault.rowsExplored' : 'game.rowsCleared')}</span>
-                  <strong>
-                    <AnimatedResult
-                      value={state.result?.lastClearedRow ?? state.lastClearedRow}
-                      reduced={settings.reducedMotion}
-                    />
-                  </strong>
-                </div>
-                <dl className="cpi-result-details">
-                  <div>
-                    <dt>{t(petWorld ? 'vault.uncrossedRow' : 'game.fatalRow')}</dt>
-                    <dd>
-                      {rawFatalRow === null ? (
-                        t('general.none')
-                      ) : (
-                        <AnimatedResult value={rawFatalRow} reduced={settings.reducedMotion} />
-                      )}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>{t('game.activeTime')}</dt>
-                    <dd>{outcome.activeTime}</dd>
-                  </div>
-                  <div>
-                    <dt>{t('game.revivesApplied')}</dt>
-                    <dd>
+              <div className="cpi-outcome-split">
+                <div>
+                  {rescueNote}
+                  <p className="cpi-run-status-label">
+                    {t(state.storeTest?.assisted ? 'vault.assisted' : 'game.practiceUnverified')}
+                  </p>
+                  <div className="cpi-result-score">
+                    <span>{t(petWorld ? 'vault.rowsExplored' : 'game.rowsCleared')}</span>
+                    <strong>
                       <AnimatedResult
-                        value={String(outcome.appliedContinues)}
+                        value={state.result?.lastClearedRow ?? state.lastClearedRow}
                         reduced={settings.reducedMotion}
                       />
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>{t('game.bestLocal')}</dt>
-                    <dd>{personalBest === null ? t('general.notSaved') : number(personalBest)}</dd>
-                  </div>
-                </dl>
-                {localizedDeathReason && <p>{localizedDeathReason}</p>}
-                {newPersonalBest && <p className="cpi-new-best">{t('game.bestNew')}</p>}
-                <p>{t(state.storeTest?.assisted ? 'vault.assistedResult' : 'game.resultLocal')}</p>
-                <div className="cpi-overlay-actions">
-                  <button type="button" data-cpi-overlay-primary onClick={onRestart}>
-                    {t('game.nextRun')}
-                  </button>
-                  <button type="button" onClick={onViewRankings}>
-                    {t('game.rankingsNotLive')}
-                  </button>
-                  <button type="button" onClick={onExit}>
-                    {t('game.returnMenu')}
-                  </button>
-                </div>
-              </>
-            ) : outcome.phase === 'dead' || outcome.phase === 'grant-ready' ? (
-              <>
-                {localizedDeathReason && <p>{localizedDeathReason}</p>}
-                <div className="cpi-result-score">
-                  <span>{t(petWorld ? 'vault.rowsExplored' : 'game.rowsCleared')}</span>
-                  <strong>
-                    <AnimatedResult value={state.lastClearedRow} reduced={settings.reducedMotion} />
-                  </strong>
-                </div>
-                <p>
-                  {t(petWorld ? 'vault.petFatalNotCounted' : 'game.fatalNotCounted', {
-                    row: fatalRow ?? t('general.none'),
-                  })}
-                </p>
-                {outcome.offer && (QA_TOOLS_ENABLED || resourcePanel) ? (
-                  <div className="cpi-revive-offer">
-                    <strong>
-                      {t(petWorld ? 'vault.petContinueTitle' : 'game.bargainTitle', {
-                        sp: number(outcome.offer.restoreSp),
-                      })}
                     </strong>
-                    <span>{t(petWorld ? 'vault.petContinueBody' : 'game.bargainBody')}</span>
-                    {!resourcePanel && <span>{t('game.bargainSleeping')}</span>}
                   </div>
-                ) : outcome.offer ? (
-                  <p>{t('vault.continuationUnavailable')}</p>
-                ) : outcome.phase === 'grant-ready' ? (
-                  <p role="status">{t('game.grantReady')}</p>
-                ) : (
-                  <p>{t('game.noContinues')}</p>
-                )}
-                {resourcePanel}
-                <div className="cpi-overlay-actions">
-                  <button
-                    type="button"
-                    data-cpi-overlay-primary
-                    disabled={busy}
-                    onClick={outcome.phase === 'dead' ? onRestart : onRequestEnd}
-                  >
-                    {t(outcome.phase === 'dead' ? 'vault.restartFree' : 'general.endRun')}
-                  </button>
-                  <button type="button" disabled={busy} onClick={onExit}>
-                    {t(outcome.forfeitsGrant ? 'general.saveLeave' : 'game.returnMenu')}
-                  </button>
+                  <dl className="cpi-result-details">
+                    <div>
+                      <dt>{t(petWorld ? 'vault.uncrossedRow' : 'game.fatalRow')}</dt>
+                      <dd>
+                        {rawFatalRow === null ? (
+                          t('general.none')
+                        ) : (
+                          <AnimatedResult value={rawFatalRow} reduced={settings.reducedMotion} />
+                        )}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>{t('game.activeTime')}</dt>
+                      <dd>{outcome.activeTime}</dd>
+                    </div>
+                    <div>
+                      <dt>{t('game.revivesApplied')}</dt>
+                      <dd>
+                        <AnimatedResult
+                          value={String(outcome.appliedContinues)}
+                          reduced={settings.reducedMotion}
+                        />
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>{t('game.bestLocal')}</dt>
+                      <dd>
+                        {personalBest === null ? t('general.notSaved') : number(personalBest)}
+                      </dd>
+                    </div>
+                  </dl>
                 </div>
-              </>
+                <div className="cpi-outcome-next">
+                  {localizedDeathReason && <p>{localizedDeathReason}</p>}
+                  {newPersonalBest && <p className="cpi-new-best">{t('game.bestNew')}</p>}
+                  <p>
+                    {t(state.storeTest?.assisted ? 'vault.assistedResult' : 'game.resultLocal')}
+                  </p>
+                  <div className="cpi-overlay-actions cpi-result-actions">
+                    <button type="button" data-cpi-overlay-primary onClick={onRestart}>
+                      {t('game.nextRun')}
+                    </button>
+                    <button type="button" onClick={onViewRankings}>
+                      {t('game.rankingsNotLive')}
+                    </button>
+                    <button type="button" onClick={onExit}>
+                      {t('game.returnMenu')}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : outcome.phase === 'dead' || outcome.phase === 'grant-ready' ? (
+              <div className="cpi-outcome-split">
+                <div>
+                  {rescueNote}
+                  {localizedDeathReason && <p>{localizedDeathReason}</p>}
+                  <div className="cpi-result-score">
+                    <span>{t(petWorld ? 'vault.rowsExplored' : 'game.rowsCleared')}</span>
+                    <strong>
+                      <AnimatedResult
+                        value={state.lastClearedRow}
+                        reduced={settings.reducedMotion}
+                      />
+                    </strong>
+                  </div>
+                  <p>
+                    {t(petWorld ? 'vault.petFatalNotCounted' : 'game.fatalNotCounted', {
+                      row: fatalRow ?? t('general.none'),
+                    })}
+                  </p>
+                </div>
+                <div className="cpi-outcome-next">
+                  {outcome.offer && resourcePanel ? (
+                    resourcePanel
+                  ) : outcome.offer && QA_TOOLS_ENABLED ? (
+                    <div className="cpi-revive-offer">
+                      <strong>
+                        {t(petWorld ? 'vault.petContinueTitle' : 'game.bargainTitle', {
+                          sp: number(outcome.offer.restoreSp),
+                        })}
+                      </strong>
+                      <span>{t(petWorld ? 'vault.petContinueBody' : 'game.bargainBody')}</span>
+                      <span>{t('game.bargainSleeping')}</span>
+                    </div>
+                  ) : outcome.offer ? (
+                    <p>
+                      {t(
+                        PLAYER_PREVIEW_ENABLED && !state.storeTest
+                          ? 'vault.previewNewCrossing'
+                          : 'vault.continuationUnavailable',
+                      )}
+                    </p>
+                  ) : outcome.phase === 'grant-ready' ? (
+                    <p role="status">{t('game.grantReady')}</p>
+                  ) : (
+                    <p>{t('game.noContinues')}</p>
+                  )}
+                  <div className="cpi-overlay-actions cpi-result-navigation">
+                    <button
+                      type="button"
+                      data-cpi-overlay-primary={!(outcome.offer && resourcePanel) || undefined}
+                      disabled={busy}
+                      onClick={outcome.phase === 'dead' ? onRestart : onRequestEnd}
+                    >
+                      {t(outcome.phase === 'dead' ? 'vault.restartFree' : 'general.endRun')}
+                    </button>
+                    <button type="button" disabled={busy} onClick={onExit}>
+                      {t(outcome.forfeitsGrant ? 'general.saveLeave' : 'game.returnMenu')}
+                    </button>
+                  </div>
+                </div>
+              </div>
             ) : (
-              <>
-                <p>{t(petWorld ? 'vault.petPausedDetail' : 'game.pausedExplanation')}</p>
-                <p>{t('game.pausedRows', { row: clearedRows })}</p>
-                <details className="cpi-run-ledger">
-                  <summary>{t('game.runDetails')}</summary>
-                  <div className="cpi-run-metrics" aria-label={t('menu.progress')}>
-                    <span>
-                      {t('game.cleared')} <strong>{clearedRows}</strong>
-                    </span>
-                    <span>
-                      {t('game.used')}{' '}
-                      <strong>
-                        {number(outcome.appliedContinues)} / {getMaxRevives(state.rulesetVersion)}
-                      </strong>
-                    </span>
-                    <span>
-                      {t('game.granted')}{' '}
-                      <strong>
-                        {number(outcome.grantedContinues)} / {getMaxRevives(state.rulesetVersion)}
-                      </strong>
-                    </span>
-                    <span>
-                      {t('game.quota')} <strong>{number(outcome.grantsRemaining)}</strong>
-                    </span>
-                  </div>
-                </details>
-                {resourcePanel}
-                <details className="cpi-run-ledger">
-                  <summary>{t('settings.audioLegend')}</summary>
-                  <AudioSettingsControls
-                    settings={settings}
-                    onChange={onSettingsChange}
-                    hideLegend
-                  />
-                </details>
-                <div className="cpi-overlay-actions">
-                  {onMysteryJournal && (
-                    <button type="button" disabled={busy} onClick={onMysteryJournal}>
-                      {t('guide.journalTab')}
-                    </button>
-                  )}
-                  {onMysteryLab && (
-                    <button type="button" disabled={busy} onClick={onMysteryLab}>
-                      {mysteryText(locale, 'lab')} · {locale === 'bg' ? 'Тест' : 'Test'}
-                    </button>
-                  )}
-
-                  <button type="button" data-cpi-overlay-primary disabled={busy} onClick={onPause}>
-                    {t('general.resume')}
-                  </button>
-                  <button type="button" disabled={busy} onClick={onRequestEnd}>
-                    {t('general.endRun')}
-                  </button>
-                  <button type="button" disabled={busy} onClick={onExit}>
-                    {t('general.saveLeave')}
-                  </button>
-                </div>
-              </>
+              <RunPauseMenu
+                outcome={outcome}
+                clearedRows={clearedRows}
+                maxContinues={getMaxRevives(state.rulesetVersion)}
+                resources={resourcePanel}
+                settings={settings}
+                onSettingsChange={onSettingsChange}
+                busy={busy}
+                onResume={onPause}
+                onDiscoveries={onMysteryJournal}
+                onMysteryLab={onMysteryLab}
+                onExit={onExit}
+                onEnd={onRequestEnd}
+              />
             )}
           </div>
         </div>
@@ -1059,7 +1054,7 @@ function InfinityRun({
       } else {
         document
           .querySelector<HTMLButtonElement>('.cpi-overlay [data-cpi-overlay-primary]')
-          ?.focus();
+          ?.focus({ preventScroll: true });
       }
     }
   }, [paused, confirmEnd, state.status, state.pendingReward, error, cinematic?.fatal]);

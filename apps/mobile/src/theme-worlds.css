@@ -1,12 +1,41 @@
 [data-world='chaos'] {
-  --world-accent: #ffc58e;
-  --world-soft: #79dec2;
-  --world-panel: #201a15;
+  --world-accent: #96cdb9;
+  --world-soft: #dcad7d;
+  --world-panel: #22221e;
+  --world-radius: 0.45rem;
+  --world-home-art-opacity: 0.6;
 }
 [data-world='jelly'] {
-  --world-accent: #e7b3fa;
-  --world-soft: #9bdff5;
-  --world-panel: #191628;
+  --world-accent: #d7b3e8;
+  --world-soft: #a7d6ed;
+  --world-panel: #211a31;
+  --world-radius: 0.75rem;
+  --world-home-art-opacity: 0.65;
+}
+[data-world='wilds'] {
+  --world-accent: #d6bd96;
+  --world-soft: #aebdb4;
+  --world-panel: #242420;
+  --world-radius: 0.4rem;
+  --world-home-art-saturation: 0.58;
+}
+[data-world='league'] {
+  --world-accent: #f1a46e;
+  --world-soft: #9ac3df;
+  --world-panel: #182331;
+  --world-radius: 0.4rem;
+}
+[data-world='puppy'] {
+  --world-accent: #aecde0;
+  --world-soft: #e0a58c;
+  --world-panel: #2a2224;
+  --world-radius: 0.65rem;
+}
+[data-world='kitten'] {
+  --world-accent: #d3cce4;
+  --world-soft: #e3be91;
+  --world-panel: #211e30;
+  --world-radius: 0.55rem;
 }
 [data-world='obsidian'] {
   --world-accent: #d9b4cf;
@@ -48,23 +77,14 @@
   color: var(--world-soft, #b6d8d0);
   stroke-width: 2;
 }
-.world-wilds .cpi-world-edge-details {
-  color: #a9cba0;
-}
 .world-league .cpi-world-edge-details {
-  color: #f0a86f;
-}
-.world-puppy .cpi-world-edge-details {
-  color: #b9d9c4;
-}
-.world-kitten .cpi-world-edge-details {
-  color: #e1c29d;
+  color: var(--world-accent, #f1a46e);
 }
 .cpi-world-speed-flags {
   animation: cpi-world-sway 8s ease-in-out infinite alternate;
 }
 .world-wilds .cpi-world-mote {
-  color: #b5d8a5;
+  color: #d8b78a;
   border-radius: 0;
   rotate: 35deg;
 }
@@ -88,16 +108,6 @@
 :is(.world-wilds, .world-league, .world-puppy, .world-kitten) .cpi-world-mote:nth-of-type(n + 7) {
   display: none;
 }
-:is(.world-wilds, .world-league, .world-puppy, .world-kitten) .cpi-world-haze {
-  background:
-    radial-gradient(ellipse at 0 70%, #b8cb9610, transparent 36%),
-    radial-gradient(ellipse at 100% 85%, #c9996d12, transparent 35%);
-}
-.world-kitten .cpi-world-haze {
-  background:
-    radial-gradient(ellipse at 0 60%, #b9a8dc18, transparent 36%),
-    radial-gradient(ellipse at 100% 80%, #d8b17a12, transparent 35%);
-}
 .cpi-world-cog {
   animation: cpi-theme-turn 85s linear infinite;
 }
@@ -113,14 +123,17 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse at 8% 60%, #9de2c317, transparent 45%),
-    radial-gradient(ellipse at 98% 80%, #edb97818, transparent 40%);
+    radial-gradient(
+      ellipse at 8% 60%,
+      color-mix(in srgb, var(--world-soft, #b6d8d0) 10%, transparent),
+      transparent 45%
+    ),
+    radial-gradient(
+      ellipse at 98% 80%,
+      color-mix(in srgb, var(--world-accent, #e7c489) 10%, transparent),
+      transparent 40%
+    );
   animation: cpi-world-haze 24s ease-in-out infinite alternate;
-}
-.world-jelly .cpi-world-haze {
-  background:
-    radial-gradient(ellipse at 8% 60%, #9bcfea18, transparent 45%),
-    radial-gradient(ellipse at 98% 80%, #ddadf21a, transparent 40%);
 }
 .cpi-world-focus-veil {
   position: absolute;
@@ -128,6 +141,28 @@
   background:
     linear-gradient(#03060d82, transparent 35%, #03060d66),
     radial-gradient(ellipse 34% 55% at 50% 58%, #03060ddd 25%, #03060d8c 70%, transparent 100%);
+}
+/* Frame the title with the world artwork and grade into the controls below. */
+.cpi-menu-view--home .cpi-world-art.is-backdrop {
+  --world-stage: color-mix(in srgb, var(--world-panel) 42%, #060608);
+  background: var(--world-stage);
+}
+.cpi-menu-view--home .cpi-world-art.is-backdrop .cpi-world-plate {
+  object-position: 50% 23%;
+  opacity: var(--world-home-art-opacity, 0.78);
+  filter: saturate(var(--world-home-art-saturation, 0.86));
+}
+.cpi-menu-view--home .cpi-world-art.is-backdrop .cpi-world-focus-veil {
+  background:
+    linear-gradient(#08090b9c, transparent 24%),
+    radial-gradient(ellipse 54% 42% at 50% 26%, #090b10a6 12%, transparent 100%),
+    linear-gradient(transparent 44%, var(--world-stage) 96%);
+}
+@media (max-width: 760px) {
+  .cpi-menu-view--home .cpi-world-art.is-backdrop .cpi-world-plate {
+    height: auto;
+    mask-image: linear-gradient(#000 52%, transparent 100%);
+  }
 }
 .is-poster .cpi-world-focus-veil {
   background:
@@ -334,14 +369,19 @@
   transform: translateX(-50%);
   filter: drop-shadow(0 3px 5px #050910b3);
 }
+.cpi-world-poster-companion > img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
 .cpi-world-impact.world-wilds {
-  color: #b0dca2;
+  color: #d9c3a0;
 }
 .cpi-world-impact.world-league {
   color: #efa66e;
 }
 .cpi-world-impact.world-puppy {
-  color: #b2d9cb;
+  color: #afd3e2;
 }
 .cpi-world-impact.world-kitten {
   color: #d8c1ec;

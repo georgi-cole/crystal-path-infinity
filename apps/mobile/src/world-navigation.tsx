@@ -6,33 +6,28 @@ import { CompanionSprite } from './theme-art';
 import './world-navigation.css';
 
 export type WorldNavAction =
-  'play' | 'practice' | 'ranking' | 'profile' | 'settings' | 'store' | 'arrow' | 'music' | 'sound';
-
-/** A shared open prism cut gives the collection its own visual signature. */
-export function WorldMark() {
-  return (
-    <svg className="cpi-world-mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-      <path d="m16 2 12 8-8 19-4-8-4 8L4 10 16 2Z" />
-      <path d="m5 10 10 7L26 8M16 3v10m0 8 8-11" />
-    </svg>
-  );
-}
+  | 'play'
+  | 'practice'
+  | 'guide'
+  | 'ranking'
+  | 'profile'
+  | 'settings'
+  | 'store'
+  | 'arrow'
+  | 'music'
+  | 'sound';
 
 export function WorldNavGlyph({ theme, name }: { theme: WorldId; name: WorldNavAction }) {
   const material = WORLD_KITS[theme].material;
   const art: Record<WorldNavAction, ReactNode> = {
-    play: (
-      <>
-        <path d="m9 5 11 7-11 7V5Z" />
-        <path d="m5 5-2 7 2 7" />
-      </>
-    ),
+    play: <path d="m8 5 11 7-11 7V5Z" />,
     practice: (
       <>
         <path d="m12 2 7 8-7 12-7-12 7-8Z" />
         <path d="m6 10 6 4 6-4M12 3v7m0 4v7" />
       </>
     ),
+    guide: <path d="M12 6c-3-2-6-2-9-1v13c3-1 6-1 9 1 3-2 6-2 9-1V5c-3-1-6-1-9 1Zm0 0v13" />,
     ranking: (
       <>
         <path d="M5 4h14v6a7 7 0 0 1-14 0V4Zm3 16h8m-4-3v3M5 6H2v3c0 3 3 4 4 4M19 6h3v3c0 3-3 4-4 4" />
@@ -41,8 +36,8 @@ export function WorldNavGlyph({ theme, name }: { theme: WorldId; name: WorldNavA
     ),
     profile: (
       <>
-        <path d="m6 11-2-7 7 3m7 4 2-7-7 3M5 12c0-5 14-5 14 0v5c-2 5-12 5-14 0v-5Z" />
-        <path d="M8 14h1m6 0h1m-6 4 2 1 2-1" />
+        <circle cx="12" cy="8" r="3.5" />
+        <path d="M5 20c0-4 3-6.5 7-6.5s7 2.5 7 6.5" />
       </>
     ),
     settings: (
@@ -114,13 +109,9 @@ export function WorldHomeIdentity({ theme }: { theme: WorldId }) {
     <div className={'cpi-world-home-identity world-' + theme}>
       <div className="cpi-world-home-friend" aria-hidden="true">
         <CompanionSprite theme={theme} reaction="calm" />
-        <span className="cpi-world-home-perch" />
       </div>
       <div className="cpi-world-home-copy">
-        <span>
-          <WorldMark />
-          {t('vault.activeWorld')}
-        </span>
+        <span>{t('vault.activeWorld')}</span>
         <strong>{t(kit.title)}</strong>
         <p>{t(kit.mood)}</p>
       </div>

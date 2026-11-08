@@ -25,6 +25,20 @@ Simulated checkout and test disclosures belong only to development/QA. Player st
 
 **Settings follow-up:** actual settings panels, language selection, disclosure rows, custom switch tracks/thumbs and keyboard focus now share world materials and corner shapes, including Obsidian. The visible sound heading sits inside its panel; long labels wrap beside fixed-size icons/switches. The pause sound group stays collapsed by default. Tutorial entry text is How to play / „Как се играе“; mobile store actions use concise labels such as „Използвай“ and „Свали“ without hiding price or ownership context.
 
+### Home and bridge palettes on 8 November 2026
+
+The six home screens frame the artwork around a neutral title and a single
+material accent on Play. Practice and the guide use quieter surfaces. The
+utility controls share a tray, and the bottom navigation uses simple line icons.
+
+The home flyover and playable bridge share a separate palette for glass, frames
+and rail lights. Rockmallow pairs sandstone controls with cool smoked crystal.
+Pawrachute pairs powder blue controls with warm glass, and Flipzel sets orange
+controls against steel blue panes. Boltmuffin uses copper and champagne crystal,
+Squishphony uses cool opal, and Purralune uses warm silver against moonlit roofs.
+Rail lights and small reflections carry color while the panes stay translucent.
+Mint still identifies the hinted pane across the worlds.
+
 ## References and decisions
 
 - [Monument Valley 3: art and design, with John Lau](https://legacy-activation-v2.unity3d.com/vn/resources/monument-valley-3-blurring-art-and-design):
@@ -185,3 +199,26 @@ ranked eligibility, and both pet portraits can be explored without buying anythi
 
 
 Public names are **Boltmuffin, Squishphony, Rockmallow, Flipzel, Pawrachute and Purralune**, with owner-selected Bulgarian names in the current table above. Each character and world share a name. Internal IDs and historical generation prompts stay stable so existing test ownership, receipts and reproducible art are preserved.
+
+### Mobile run controls on 8 November 2026
+
+Seven original engravings in the mobile app's run-control SVG collection depict
+Obsidian facets, Boltmuffin's riveted copper, Squishphony's opal ripples,
+Rockmallow's jade leaf, Neo Striker's enamel stripes, Pawrachute's canvas
+stitching and Purralune's moonlit trim. The app bundles the vector masks and
+colors them with each world's material palette. The result uses the entire
+existing companion frame inside a dedicated portrait slot. Choice offers
+reuse the matching bridge cache in its open state.
+
+### Pause artwork on 8 November 2026
+
+The pause header uses the equipped world's existing scenery and a contained
+companion portrait. A shared, low-contrast list keeps the game actions readable.
+Resume retains the world's engraved button artwork.
+
+### World exploration in the web reviews on 8 November 2026
+
+Explore remains available even when the store is offline. The dedicated player
+review can unlock and equip worlds through the same simulated checkout as QA,
+using its own wallet. The discovery journal gives its existing world-specific
+glyphs a larger display with the title on a separate row.

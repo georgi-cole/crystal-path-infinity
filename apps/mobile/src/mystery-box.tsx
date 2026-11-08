@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { CHOICE_GRACE_MS, DEATH_COUNTDOWN_MS, mysteryTier } from '@crystal-path-infinity/game-core';
 import type {
   MysteryPact,
@@ -9,6 +9,11 @@ import type {
 import { useLanguage } from './language-context';
 import { effectCopy } from './mystery.messages';
 import { mysteryChoiceCards } from './mystery-choice-model';
+import { MysteryPager } from './mystery-pager';
+import { useThemeId } from './store-context';
+import { MysteryCache } from './world-treasures';
+import relicClosed from './assets/mystery/relic-closed.webp?inline';
+import relicOpen from './assets/mystery/relic-open.webp?inline';
 import './mystery-hologram.css';
 
 const names = {
@@ -32,18 +37,20 @@ export function MysteryCube({
     >
       <img
         className="cpi-relic-closed"
-        src={`${import.meta.env.BASE_URL}mystery/relic-closed-v6.webp`}
+        src={relicClosed}
         alt=""
-        width="512"
-        height="512"
+        width="256"
+        height="256"
+        decoding="sync"
         draggable={false}
       />
       <img
         className="cpi-relic-open"
-        src={`${import.meta.env.BASE_URL}mystery/relic-open-v6.webp`}
+        src={relicOpen}
         alt=""
-        width="512"
-        height="512"
+        width="256"
+        height="256"
+        decoding="sync"
         draggable={false}
       />
     </span>
@@ -95,17 +102,29 @@ export function HolographicOffer({
   rulesetVersion: string;
   marketingHints?: number;
 }) {
-  const { locale } = useLanguage();
+  const { locale, t, number } = useLanguage();
+  const theme = useThemeId();
   const bg = locale === 'bg',
     tier = mysteryTier(pact.kind),
     copy = effectCopy(locale, pact.kind, rulesetVersion);
   const cards = mysteryChoiceCards(pact, sp, hints, revealed, bg, marketingHints);
   const primary = cards.slice(0, 2),
     extra = cards.slice(2);
-  const [showDetails, setShowDetails] = useState(false);
-  const heading = useRef<HTMLHeadingElement>(null),
-    id = useId(),
-    detailsId = useId();
+  const [detailPage, setDetailPage] = useState<number | null>(null);
+  const paragraphs = copy.detail.split('\n\n');
+  const totalDetailPages = paragraphs.length + 1;
+  const showDetails = detailPage !== null;
+  const heading = useRef<HTMLHeadingElement>(null);
+  const openButton = useRef<HTMLButtonElement>(null);
+  const backButton = useRef<HTMLButtonElement>(null);
+  const wasShowingDetails = useRef(false);
+  const id = useId();
+  const detailsId = useId();
+  useLayoutEffect(() => {
+    if (showDetails) backButton.current?.focus({ preventScroll: true });
+    else if (wasShowingDetails.current) openButton.current?.focus({ preventScroll: true });
+    wasShowingDetails.current = showDetails;
+  }, [showDetails]);
   useEffect(() => {
     heading.current?.focus({ preventScroll: true });
     return () => {
@@ -131,12 +150,13 @@ export function HolographicOffer({
       className="cpi-relic-choice"
       data-tier={tier}
       data-pact={pact.kind}
+      data-view={showDetails ? 'details' : undefined}
       role="dialog"
       aria-labelledby={id}
       onKeyDown={(event) => {
         if (event.key === 'Escape' && showDetails) {
-          setShowDetails(false);
-          event.currentTarget.querySelector<HTMLButtonElement>('.cpi-relic-info')?.focus();
+          event.preventDefault();
+          setDetailPage(null);
         }
       }}
     >
@@ -146,104 +166,145 @@ export function HolographicOffer({
           {copy.title}
         </h2>
       </header>
-      <div className="cpi-relic-options">
-        {primary.map((card, index) => (
-          <button
-            type="button"
-            key={card.option}
-            data-pact-option={card.option}
-            className={'cpi-relic-option' + (card.quiet ? ' is-quiet' : '')}
-            disabled={disabled || card.disabled}
-            onClick={() => onChoose(card.option)}
-          >
-            <span className="cpi-relic-symbol" aria-hidden="true">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.25"
-                strokeLinejoin="round"
-                strokeLinecap="round"
-              >
-                <path d={glyphPaths[card.glyph]} />
-              </svg>
-            </span>
-            <span className="cpi-relic-option-title">{card.title}</span>
-            <strong>{card.reward}</strong>
-            <span className="cpi-relic-price">{card.price}</span>
-            {card.risk && <span className="cpi-relic-risk">{card.risk}</span>}
-            <span className="cpi-relic-key" aria-hidden="true">
-              0{index + 1}
-            </span>
-          </button>
-        ))}
-      </div>
-      <div className="cpi-relic-tools">
-        {extra.map((card) => (
-          <button
-            type="button"
-            key={card.option}
-            data-pact-option={card.option}
-            className="cpi-relic-leave"
-            disabled={disabled || card.disabled}
-            onClick={() => onChoose(card.option)}
-          >
-            {card.title} · {card.price}
-          </button>
-        ))}
-        <button
-          type="button"
-          className="cpi-relic-info"
-          aria-expanded={showDetails}
-          aria-controls={detailsId}
-          onClick={() => setShowDetails(!showDetails)}
-        >
-          {showDetails ? (bg ? 'Затвори' : 'Close') : bg ? 'Условия' : 'Details'}{' '}
-          <span aria-hidden="true">{showDetails ? '−' : '+'}</span>
-        </button>
-      </div>
-      {showDetails && (
-        <div className="cpi-relic-details" id={detailsId}>
-          <p>{copy.detail}</p>
-          {pact.kind === 'marketing' && marketingHints < hints && (
-            <p>
-              {bg
-                ? 'Резервните подсказки споделят лимита за SP в този опит. Останалите можеш да използваш по пътя.'
-                : 'Reserve hints share this run’s SP allowance. You can still use the remaining hints on the bridge.'}
-            </p>
-          )}
-          {cards
-            .filter((card) => !card.quiet)
-            .map((card) => (
-              <div key={card.option}>
-                <b>{card.title}</b>
-                {card.lines.map((line) => (
-                  <span key={line}>{line}</span>
-                ))}
-              </div>
-            ))}
-          <p>
-            {bg
-              ? 'Ефектите са спрени за първата минута. След нея започва death clock.'
-              : 'Effects pause for the first minute. The death clock starts after that.'}
-          </p>
+      <div className="cpi-relic-choice-actions" hidden={showDetails}>
+        <div className="cpi-relic-options">
+          {primary.map((card, index) => (
+            <button
+              type="button"
+              key={card.option}
+              data-pact-option={card.option}
+              className={'cpi-relic-option' + (card.quiet ? ' is-quiet' : '')}
+              disabled={disabled || card.disabled}
+              onClick={() => onChoose(card.option)}
+            >
+              <span className="cpi-relic-symbol" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.25"
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                >
+                  <path d={glyphPaths[card.glyph]} />
+                </svg>
+              </span>
+              <span className="cpi-relic-option-title">{card.title}</span>
+              <strong>{card.reward}</strong>
+              <span className="cpi-relic-price">{card.price}</span>
+              {card.risk && <span className="cpi-relic-risk">{card.risk}</span>}
+              <span className="cpi-relic-key" aria-hidden="true">
+                0{index + 1}
+              </span>
+            </button>
+          ))}
         </div>
-      )}
-      {pact.kind === 'soul_exchange' && (
-        <p className="cpi-relic-caution">
-          {bg
-            ? 'Жертвата е задължителна · може да е фатална'
-            : 'A sacrifice is required · can be fatal'}
-        </p>
-      )}
-      {pact.kind === 'false_oracle' && revealed && (
-        <p className="cpi-relic-caution">
-          {bg ? 'Редът е разкрит · видението е недостъпно' : 'Row revealed · vision unavailable'}
-        </p>
-      )}
-      <div className="cpi-relic-source" aria-hidden="true">
-        <MysteryCube tier={tier} opened />
+        <div className="cpi-relic-tools">
+          {extra.map((card) => (
+            <button
+              type="button"
+              key={card.option}
+              data-pact-option={card.option}
+              className="cpi-relic-leave"
+              disabled={disabled || card.disabled}
+              onClick={() => onChoose(card.option)}
+            >
+              {card.title} · {card.price}
+            </button>
+          ))}
+          <button
+            type="button"
+            ref={openButton}
+            className="cpi-relic-info"
+            aria-expanded={showDetails}
+            aria-controls={detailsId}
+            onClick={() => setDetailPage(0)}
+          >
+            {bg ? 'Условия' : 'Details'} <span aria-hidden="true">+</span>
+          </button>
+        </div>
+        {pact.kind === 'soul_exchange' && (
+          <p className="cpi-relic-caution">
+            {bg
+              ? 'Жертвата е задължителна · може да е фатална'
+              : 'A sacrifice is required · can be fatal'}
+          </p>
+        )}
+        {pact.kind === 'false_oracle' && revealed && (
+          <p className="cpi-relic-caution">
+            {bg ? 'Редът е разкрит · видението е недостъпно' : 'Row revealed · vision unavailable'}
+          </p>
+        )}
+        <div className="cpi-relic-source" aria-hidden="true">
+          {theme === 'obsidian' ? (
+            <MysteryCube tier={tier} opened />
+          ) : (
+            <MysteryCache theme={theme} open />
+          )}
+        </div>
       </div>
+      {detailPage !== null && (
+        <section className="cpi-relic-details" id={detailsId} aria-label={t('guide.howItWorks')}>
+          <header>
+            <h3>{t('guide.howItWorks')}</h3>
+            <button
+              ref={backButton}
+              type="button"
+              className="cpi-relic-detail-back"
+              onClick={() => setDetailPage(null)}
+            >
+              {bg ? 'Към избора' : 'Back to choices'}
+            </button>
+          </header>
+          <div className="cpi-relic-detail-copy">
+            {detailPage < paragraphs.length ? (
+              <p>{paragraphs[detailPage]}</p>
+            ) : (
+              <>
+                {pact.kind === 'marketing' && marketingHints < hints && (
+                  <p>
+                    {bg
+                      ? 'Резервните подсказки споделят лимита за SP в този опит. Останалите можеш да използваш по пътя.'
+                      : 'Reserve hints share this run’s SP allowance. You can still use the remaining hints on the bridge.'}
+                  </p>
+                )}
+                <dl>
+                  {cards
+                    .filter((card) => !card.quiet)
+                    .map((card) => (
+                      <div key={card.option}>
+                        <dt>{card.title}</dt>
+                        {card.lines.map((line) => (
+                          <dd key={line}>{line}</dd>
+                        ))}
+                      </div>
+                    ))}
+                </dl>
+              </>
+            )}
+          </div>
+          <footer className="cpi-relic-detail-footer">
+            <p className="cpi-relic-detail-note">
+              {bg
+                ? 'Ефектите чакат 60 сек. После тръгва death clock.'
+                : 'Effects wait 60s. Then the death clock starts.'}
+            </p>
+            <MysteryPager
+              className="cpi-relic-detail-pager"
+              label={t('guide.howItWorks')}
+              previous={t('guide.previousPart')}
+              next={t('guide.nextPart')}
+              position={t('guide.partPosition', {
+                page: number(detailPage + 1),
+                total: number(totalDetailPages),
+              })}
+              onChange={(offset) =>
+                setDetailPage((detailPage + offset + totalDetailPages) % totalDetailPages)
+              }
+            />
+          </footer>
+        </section>
+      )}
       <span
         className={'cpi-choice-clock' + (remaining === 0 ? ' is-active' : '')}
         role="timer"
@@ -329,7 +390,7 @@ export function DeathClockBadge({
       </b>
       <i
         style={{
-          transform: `scaleX(${Math.max(0, (clock.expiresAt - activeTimeMs) / DEATH_COUNTDOWN_MS)})`,
+          transform: `scaleX(${Math.min(1, Math.max(0, (clock.expiresAt - activeTimeMs) / DEATH_COUNTDOWN_MS))})`,
         }}
       />
     </div>

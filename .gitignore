@@ -1,6 +1,8 @@
 node_modules/
 dist/
 dist-qa/
+dist-pages/
+dist-player-preview/
 coverage/
 test-results/
 playwright-report/

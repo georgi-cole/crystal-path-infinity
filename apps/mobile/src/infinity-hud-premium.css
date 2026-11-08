@@ -212,35 +212,15 @@
 .cps-effect.is-neg .cps-effect-bar {
   background: #e48bc2;
 }
-.cpi-run-ledger {
-  border-top: 1px solid #ffffff12;
-  border-bottom: 1px solid #ffffff12;
-  margin-block: 1rem;
-}
-.cpi-run-ledger summary {
-  min-height: 2.75rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  cursor: pointer;
-  color: #b8a9c3;
-  font-size: 0.72rem;
-  list-style: none;
-}
-.cpi-run-ledger summary::after {
-  content: '+';
-}
-.cpi-run-ledger[open] summary::after {
-  content: '−';
-}
 .cpi-run-metrics {
   display: grid;
-  gap: 0.7rem;
-  padding: 0.5rem 0 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  padding: 0.6rem 0.25rem 0.1rem;
 }
 .cpi-run-metrics > span {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  gap: 0.2rem;
   font-size: 0.7rem;
   color: #9b8ea5;
 }

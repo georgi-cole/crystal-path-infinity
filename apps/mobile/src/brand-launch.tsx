@@ -1,6 +1,7 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { BRAND_LAUNCH_MS, brandLaunchFrame } from './brand-launch-model';
+import { BrandLaunchActive } from './brand-launch-state';
 import { practiceStorage } from './app-profile';
 import { readPracticeSettings } from './practice-save';
 import './brand-launch.css';
@@ -186,11 +187,11 @@ export function BrandLaunchGate({ children }: { children: ReactNode }) {
   const [active, setActive] = useState(true);
   const finish = useCallback(() => setActive(false), []);
   return (
-    <>
+    <BrandLaunchActive.Provider value={active}>
       <div className="cpi-launch-app" inert={active} aria-hidden={active || undefined}>
         {children}
       </div>
       {active && <BrandLaunch onComplete={finish} />}
-    </>
+    </BrandLaunchActive.Provider>
   );
 }

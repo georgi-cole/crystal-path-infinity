@@ -11,10 +11,16 @@ assert.ok(deploy, 'Missing Pages deploy job');
 const condition = deploy.match(/^ {4}if: (.+)$/m)?.[1];
 assert.ok(condition, 'Pages deploy must have an explicit publication gate');
 
+test('Pages publishes only the production output directory', () => {
+  const artifact = workflow.split(/uses: actions\/upload-pages-artifact@[^\n]+\n/);
+  assert.equal(artifact.length, 2);
+  assert.match(artifact[1], /^ {8}with:\s*\n {10}path: apps\/mobile\/dist-pages\s*$/m);
+});
+
 for (const [event, ref, expected] of [
   ['push', 'refs/heads/main', true],
   ['workflow_dispatch', 'refs/heads/main', true],
-  ['workflow_dispatch', 'refs/heads/codex/store-test-mode', true],
+  ['workflow_dispatch', 'refs/heads/codex/store-test-mode', false],
   ['push', 'refs/heads/codex/store-test-mode', false],
   ['pull_request', 'refs/heads/main', false],
   ['pull_request', 'refs/heads/codex/store-test-mode', false],

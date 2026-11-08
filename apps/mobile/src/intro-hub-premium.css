@@ -189,23 +189,8 @@
   animation: cpi-holo-scan 3s ease-in-out infinite;
 }
 .cpi-bridge-row.is-future .cpi-bridge-mystery {
-  scale: 0.6;
-  opacity: 0.35;
-}
-.cpi-bridge-mystery:not(:disabled) {
-  animation: cpi-holo-appear 0.6s ease-out both;
-}
-@keyframes cpi-holo-appear {
-  from {
-    opacity: 0;
-    filter: blur(4px);
-    scale: 0.5;
-  }
-  to {
-    opacity: 1;
-    filter: blur(0);
-    scale: 1;
-  }
+  scale: 0.82;
+  opacity: 0.76;
 }
 @keyframes cpi-holo-float {
   50% {
@@ -221,7 +206,7 @@
 }
 .cpi-bridge-mystery:disabled {
   cursor: default;
-  opacity: 0.3;
+  opacity: 1;
 }
 .cpi-bridge-mystery:focus-visible {
   outline: 2px solid var(--cpi-focus);

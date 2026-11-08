@@ -66,3 +66,11 @@ desktop and 390/320 px layouts plus a real practice scan/countdown observation.
 Exact test counts, screenshots, built revision and native launch results are
 recorded in PR #83. A physical-device or unfamiliar-player review is not
 implied by automated or browser checks.
+
+## Mobile layout follow-up on 8 November 2026
+
+The rehearsal uses a single compact chapter rail and a bridge stage sized for
+the space beneath the instructions. The mystery step keeps both choices in one
+row. The guide tabs lead to Discoveries, which opens one entry at a time with
+its explanation visible. Long entries page through paragraphs on short screens.
+See the [current player and QA behavior](PLAYER-QA-RELEASE-PREVIEW.md#mobile-layout-follow-up-on-8-november-2026).

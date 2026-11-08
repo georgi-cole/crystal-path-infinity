@@ -36,7 +36,8 @@ import './game-settings.css';
 
 const INTRO_HUB_BASE = import.meta.env.BASE_URL + 'intro-hub/';
 
-type GlyphName = 'play' | 'practice' | 'ranking' | 'profile' | 'settings' | 'store' | 'arrow';
+type GlyphName =
+  'play' | 'practice' | 'guide' | 'ranking' | 'profile' | 'settings' | 'store' | 'arrow';
 
 function Glyph({ name }: { name: GlyphName }) {
   const theme = useThemeId();
@@ -49,6 +50,7 @@ function Glyph({ name }: { name: GlyphName }) {
         <path d="M8 11h8M12 4v16" />
       </>
     ),
+    guide: <path d="M12 6c-3-2-6-2-9-1v13c3-1 6-1 9 1 3-2 6-2 9-1V5c-3-1-6-1-9 1Zm0 0v13" />,
     ranking: (
       <>
         <path d="M4 20V9h5v11M10 20V4h5v16M16 20v-7h4v7" />
@@ -137,7 +139,12 @@ function HubUtilityControls({
   settings,
   onSettingsChange,
   onOpen,
-}: Pick<MainMenuProps, 'settings' | 'onSettingsChange' | 'onOpen'>) {
+  musicAwaitingGesture,
+  onActivateMusic,
+}: Pick<
+  MainMenuProps,
+  'settings' | 'onSettingsChange' | 'onOpen' | 'musicAwaitingGesture' | 'onActivateMusic'
+>) {
   const { t } = useLanguage();
   const theme = useThemeId();
   return (
@@ -148,29 +155,37 @@ function HubUtilityControls({
             { key: 'music', icon: 'music_v2.svg', label: t('settings.music') },
             { key: 'soundEffects', icon: 'sound_v2.svg', label: t('settings.sfx') },
           ] as const
-        ).map(({ key, icon, label }) => (
-          <button
-            key={key}
-            type="button"
-            className={'cpi-hub-chip' + (settings[key] ? '' : ' cpi-hub-chip--inactive')}
-            aria-label={t(settings[key] ? 'settings.disable' : 'settings.enable', {
-              setting: label.toLowerCase(),
-            })}
-            aria-pressed={settings[key]}
-            onClick={() => onSettingsChange({ ...settings, [key]: !settings[key] })}
-          >
-            {theme !== 'obsidian' ? (
-              <WorldNavGlyph theme={theme} name={key === 'music' ? 'music' : 'sound'} />
-            ) : (
-              <img
-                className="cpi-hub-chip-glyph"
-                src={INTRO_HUB_BASE + 'utilities/' + icon}
-                alt=""
-                aria-hidden="true"
-              />
-            )}
-          </button>
-        ))}
+        ).map(({ key, icon, label }) => {
+          const waiting = key === 'music' && settings.music && musicAwaitingGesture;
+          const playing = settings[key] && !waiting;
+          return (
+            <button
+              key={key}
+              type="button"
+              className={'cpi-hub-chip' + (playing ? '' : ' cpi-hub-chip--inactive')}
+              aria-label={t(playing ? 'settings.disable' : 'settings.enable', {
+                setting: label.toLowerCase(),
+              })}
+              aria-pressed={playing}
+              onClick={() =>
+                waiting
+                  ? onActivateMusic?.()
+                  : onSettingsChange({ ...settings, [key]: !settings[key] })
+              }
+            >
+              {theme !== 'obsidian' ? (
+                <WorldNavGlyph theme={theme} name={key === 'music' ? 'music' : 'sound'} />
+              ) : (
+                <img
+                  className="cpi-hub-chip-glyph"
+                  src={INTRO_HUB_BASE + 'utilities/' + icon}
+                  alt=""
+                  aria-hidden="true"
+                />
+              )}
+            </button>
+          );
+        })}
       </div>
       <button
         type="button"
@@ -215,6 +230,8 @@ export interface MainMenuProps {
   best: string | null;
   online: boolean;
   settings: PracticeSettings;
+  musicAwaitingGesture?: boolean;
+  onActivateMusic?: () => void;
   onOpen: (view: MenuView) => void;
   onBack: () => void;
   onResume: () => void;
@@ -348,7 +365,7 @@ function MenuHome({
         />
         <MenuAction
           label={tutorialProgress === 'completed' ? t('menu.replay') : t('menu.learn')}
-          icon="practice"
+          icon="guide"
           variant="quiet"
           onClick={() => onOpen('tutorial')}
         />
@@ -451,6 +468,8 @@ export function MainMenu({
   best,
   online,
   settings,
+  musicAwaitingGesture,
+  onActivateMusic,
   onOpen,
   onBack,
   onResume,
@@ -500,6 +519,8 @@ export function MainMenu({
                 settings={settings}
                 onSettingsChange={onSettingsChange}
                 onOpen={onOpen}
+                musicAwaitingGesture={musicAwaitingGesture}
+                onActivateMusic={onActivateMusic}
               />
             ) : undefined
           }
@@ -531,7 +552,7 @@ export function MainMenu({
             <MenuAction
               label={tutorialProgress === 'completed' ? t('menu.replay') : t('menu.learn')}
               description={t('menu.tutorialExercise')}
-              icon="practice"
+              icon="guide"
               onClick={() => onOpen('tutorial')}
             />
             {canResumePractice(saved) && saved.status === 'ready' && (

@@ -1,6 +1,6 @@
-import { practiceStorage, QA_TOOLS_ENABLED } from './app-profile';
+import { practiceStorage, PLAYER_PREVIEW_ENABLED, QA_TOOLS_ENABLED } from './app-profile';
 import { rememberMysteries } from './mystery-journal-model';
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { usesStoreTestRules, parseTileExperiment } from '@crystal-path-infinity/game-core';
 import { useTestStore } from './store-context';
 import { selectTestPractice } from './test-store';
@@ -19,7 +19,8 @@ import {
 } from './practice-save';
 import type { PracticeLoad, PracticeSettings } from './practice-save';
 import { InfinityPractice } from './infinity-scene';
-import { useSoundtrack } from './soundtrack';
+import { useHomeSoundtrack } from './soundtrack';
+import { BrandLaunchActive } from './brand-launch-state';
 import { ConfirmNewPractice, MainMenu } from './main-menu';
 import { canResumePractice, historyFlag, viewFromHash, viewHash } from './menu-navigation';
 import { readTutorialProgress, writeTutorialProgress } from './tutorial-progress';
@@ -56,7 +57,7 @@ export interface ApprovedAccountServices {
 }
 
 const build = __CPI_BUILD_INFO__;
-const showBuildDetails = build.environment !== 'production';
+const showBuildDetails = build.environment !== 'production' && !PLAYER_PREVIEW_ENABLED;
 
 function loadLocalPractice(): PracticeLoad {
   if (typeof window === 'undefined') return { status: 'empty' };
@@ -95,6 +96,7 @@ interface GameOwner {
 
 export function App({ services }: { services?: ApprovedAccountServices }) {
   const { t } = useLanguage();
+  const launchActive = useContext(BrandLaunchActive);
   const { store, snapshot: testSnapshot } = useTestStore();
   const accountScope = useSyncExternalStore(
     (listener) => services?.session?.subscribeAccountScope(listener) ?? (() => {}),
@@ -138,8 +140,9 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
     () => rankedClient?.snapshot().run?.runId ?? null,
     () => null,
   );
-  useSoundtrack(
-    !game && !(view === 'play' && rankedRunId) && bootPhase === 'ready' ? 'home' : null,
+  const { activate: activateMusic, awaitingGesture: musicAwaitingGesture } = useHomeSoundtrack(
+    !game && !(view === 'play' && rankedRunId) && bootPhase === 'ready',
+    !launchActive,
     settings.music,
   );
   const [rewardOwner, setRewardOwner] = useState<{
@@ -317,15 +320,19 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
     setStorageWarning('Local startup was unavailable. Practice is playable, but saving may fail.');
     setBootPhase('ready');
   };
-  const changeSettings = useCallback((next: PracticeSettings) => {
-    setSettings(next);
-    try {
-      writePracticeSettings(practiceStorage(), next);
-      setStorageWarning(null);
-    } catch {
-      setStorageWarning('Settings could not be saved on this device.');
-    }
-  }, []);
+  const changeSettings = useCallback(
+    (next: PracticeSettings) => {
+      if (next.music && !settings.music) activateMusic();
+      setSettings(next);
+      try {
+        writePracticeSettings(practiceStorage(), next);
+        setStorageWarning(null);
+      } catch {
+        setStorageWarning('Settings could not be saved on this device.');
+      }
+    },
+    [activateMusic, settings.music],
+  );
   const onTutorialProgress = (progress: Exclude<TutorialProgress, 'unseen'>) => {
     // Replaying or skipping a completed tutorial must never erase completion.
     const next = tutorialProgress === 'completed' ? 'completed' : progress;
@@ -529,6 +536,8 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
           best={best}
           online={online}
           settings={settings}
+          musicAwaitingGesture={musicAwaitingGesture}
+          onActivateMusic={activateMusic}
           onOpen={navigate}
           onBack={back}
           onResume={resumePractice}

@@ -81,6 +81,7 @@ import {
   STARTING_SP,
   usesMysteryDirectorRules,
   usesDiscoveryRules,
+  usesExtendedDiscoveryReading,
   usesStoreTestRules,
   CHOICE_GRACE_MS,
   usesBusinessRules,
@@ -126,15 +127,18 @@ export function createRun(options: CreateRunOptions, rng: RandomSource): RunStat
     assertDiscovery(
       { known: options.discoveredMysteries, introduction: null },
       options.activeTimeMs ?? 0,
+      rulesetVersion,
     );
   }
   assertNonEmpty(options.runId, 'Run ID');
   if (
     rulesetVersion !== LIVE_RULESET_VERSION &&
-    (usesStoreTestRules(rulesetVersion) || parseTileExperiment(rulesetVersion)) &&
+    (usesStoreTestRules(rulesetVersion) ||
+      usesExtendedDiscoveryReading(rulesetVersion) ||
+      parseTileExperiment(rulesetVersion)) &&
     !options.runId.startsWith('practice-')
   )
-    throw new RangeError('Test economy requires a local practice run.');
+    throw new RangeError('This ruleset requires a local practice run.');
   assertNonNegativeInteger(options.observedAt, 'Observation timestamp');
   const activeTimeMs = options.activeTimeMs ?? 0;
   assertNonNegativeInteger(activeTimeMs, 'Active time');
@@ -210,12 +214,15 @@ export function createRun(options: CreateRunOptions, rng: RandomSource): RunStat
 export function assertRunState(state: RunState, rng?: RandomSource): void {
   if (state.schemaVersion !== 1) throw new RangeError('Unsupported run schema.');
   getRuleset(state.rulesetVersion);
+  assertNonEmpty(state.runId, 'Run ID');
+  if (usesExtendedDiscoveryReading(state.rulesetVersion) && !state.runId.startsWith('practice-'))
+    throw new RangeError('Discovery reading rules require a local practice run.');
   assertPact(state);
   assertMysteryDirector(state);
   if (usesDiscoveryRules(state.rulesetVersion)) {
     const discovery = state.discovery;
     if (!discovery) throw new RangeError('Missing mystery discoveries.');
-    assertDiscovery(discovery, state.activeTimeMs);
+    assertDiscovery(discovery, state.activeTimeMs, state.rulesetVersion);
     if (
       discovery.introduction &&
       (state.status !== 'playing' ||
@@ -224,7 +231,6 @@ export function assertRunState(state: RunState, rng?: RandomSource): void {
     )
       throw new RangeError('Introduction outside active play.');
   } else if (state.discovery !== undefined) throw new RangeError('Discoveries outside v7.');
-  assertNonEmpty(state.runId, 'Run ID');
   if (usesStoreTestRules(state.rulesetVersion)) {
     const economy = state.storeTest;
     if (
@@ -659,7 +665,11 @@ function settleTime(state: RunState, context: TransitionContext, events: RunEven
     }
   }
   next = { ...next, activeTimeMs: context.activeTimeMs };
-  return clockExpired ? die(next, 'death_clock', events) : next;
+  if (clockExpired) return die(next, 'death_clock', events);
+  const introduction = next.discovery?.introduction;
+  return introduction && introduction.expiresAt <= next.activeTimeMs
+    ? endDiscoveryIntroduction(next)
+    : next;
 }
 
 export function getRunResult(state: RunState): RunResult | null {

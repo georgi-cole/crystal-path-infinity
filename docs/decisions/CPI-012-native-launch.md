@@ -2,7 +2,9 @@
 
 ## Contract and inherited decisions
 
-CPI-011 Midnight Prism is the baseline for launch branding, not a copy of the original The Big Eye icon or global splash overlay. Android, iOS and React use the same dark starting color **#060a18**. The transparent prism icon asset belongs to CPI-011; its binary exports are generated deterministically by CPI-012. All UI text remains live HTML; no fake ranking, season reward or "win at 350" content is introduced.
+CPI-011 Midnight Prism is the baseline for launch branding, not a copy of the original The Big Eye icon or global splash overlay. The transparent prism icon asset belongs to CPI-011; its binary exports are generated deterministically by CPI-012. All UI text remains live HTML; no fake ranking, season reward or "win at 350" content is introduced.
+
+**Owner correction · 8 November 2026:** the original CPI launch base was deep navy `#060a18`. Georgi now explicitly requests the pure-black metal start used by The Big Eye. This supersedes the earlier background choice for the OS launch screen, first HTML paint and in-app brand intro: all now use `#000000`, while the metallic prism/INFINITY mark remains. Gameplay/world colors are unchanged.
 
 The original Big Eye source was inspected at commit \`6ace929a60410e728928aa51eaf80ba9b5cf2262\`:
 
@@ -26,7 +28,7 @@ The generator owns *all* durable native resources in disposable generated projec
 | Android 12+ splash | \`drawable-nodpi/cpi_splash_logo.png\` + launch theme | 256px centered mark, \`windowSplashScreenAnimatedIcon\` and \`windowSplashScreenBackground\` |
 | iOS app icon | \`Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png\` | 1024px opaque, universal iPhone slot |
 | iOS launch mark | \`CpiLaunchMark.imageset\` | 160/320/480 px for 1x/2x/3x |
-| iOS launch storyboard | \`Base.lproj/LaunchScreen.storyboard\` | Static centered 160pt image; explicit opaque #060a18 background |
+| iOS launch storyboard | \`Base.lproj/LaunchScreen.storyboard\` | Static centered 160pt image; explicit opaque #000000 background |
 
 The generator regenerates these after Capacitor \`add/sync\`, validates their exact binary output in \`--check\`, and writes the source asset size/hash inventory to native evidence. No legacy story-icon aliases, signing secrets, static full-screen art or remote image URLs are added.
 
@@ -36,7 +38,7 @@ The generator regenerates these after Capacitor \`add/sync\`, validates their ex
 
 The native OS renders its own screen and returns to React when ready. React's first \`loading\` view is a separate lightweight in-app state, using the same logo and dark background. Local checkpoint/preferences are read immediately, **without minimum hold time** or network calls. A failed/hanging local bootstrap has a bounded 1.5-second deadline with accessible \`Retry startup\` and \`Play offline\` actions. Offline fallback keeps existing saved data untouched; running a new practice still displays normal explicit overwrite confirmation where applicable. No ad, analytics, profile, leaderboard or consent service can delay offline practice.
 
-Launch colors are set in native config, Android splash values, iOS storyboard, HTML initial background, React CSS and the brand tokens. Keyboard focus, native safe-area padding and reduced-motion CSS remain effective.
+Launch colors are set in native config, Android splash values, iOS storyboard, HTML initial background, React CSS and the brand tokens. Since the 8 November correction, each start surface uses pure black. Keyboard focus, native safe-area padding and reduced-motion CSS remain effective.
 
 ## Verification and remaining gates
 

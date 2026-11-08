@@ -5,6 +5,10 @@ export const QA_TOOLS_ENABLED =
   import.meta.env.MODE === 'development' ||
   import.meta.env.MODE === 'qa' ||
   import.meta.env.MODE === 'test';
+
+/** A guest review build uses the player controls with a browser-only simulated wallet. */
+export const PLAYER_PREVIEW_ENABLED = import.meta.env.MODE === 'player-preview';
+export const SIMULATED_STORE_ENABLED = QA_TOOLS_ENABLED || PLAYER_PREVIEW_ENABLED;
 export const PLAYER_STORAGE_PREFIX = 'cpi.player.v1:';
 
 /** QA keeps its historical data; player saves/records/discoveries use a separate namespace. */
