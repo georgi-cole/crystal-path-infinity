@@ -45,7 +45,7 @@
 
 **Staging.** Подготвеният адрес за тестови кодове е `login@auth.kolequant.xyz`. Поддомейнът вече е потвърден в Resend. Когато има staging проект, създай отделен ключ само за изпращане от този поддомейн. Запиши ключа като `CPI_RESEND_API_KEY`, а адреса като `CPI_MAIL_FROM`. Адресът за изпращане може да се използва без собствена входяща кутия. [Resend: адреси на потвърден домейн](https://resend.com/docs/knowledge-base/how-do-i-create-an-email-address-or-sender-in-resend).
 
-**Production.** Запазваме избрания публичен адрес `support@kolequant.com`. Настрой DNS и входящата поща или препращането за него. За кодовете добави `kolequant.com` в Resend, постави DNS записите, показани от Resend, и потвърди домейна. В отделната production конфигурация използвай `CPI_MAIL_FROM=login@kolequant.com` и отделен ключ само за изпращане от този домейн. Онлайн проверката за production и за release проверява и DNS записите за входящата поща на `kolequant.com`.
+**Production.** От 9 ноември 2026 г. публичният контакт за Crystal Path е `support@kolequant.xyz`. Production и release проверките търсят MX записите на `kolequant.xyz`. При приемане потвърди получаване и отговор от тази пощенска кутия. За кодовете за вход използвай отделен потвърден изпращащ домейн `auth.kolequant.xyz` в Resend, `CPI_MAIL_FROM` от този домейн и отделен ключ само за изпращане. Публичният контакт е независим от изпращача на кодовете.
 
 Кодовете се изпращат през [Email API на Resend](https://resend.com/docs/api-reference/emails/send-email).
 
@@ -194,10 +194,11 @@ Apple показва приет Developer Program License Agreement и акти�
 
 **Проверка през staging gateway · 8 ноември 2026 г.** AdMob потвърди подписаните Verify URL заявки към Cloudflare staging за Android и iOS. Резервираният тестов nonce не начислява награда. И двата app записа още показват Requires review и Limited ad serving до свързване на публикувана store страница. В AdMob е потвърден редът `google.com, pub-9243398419153145, DIRECT, f08c47fec0942fa0` за app-ads.txt. Публичният DNS за kolequant.com върна NXDOMAIN. Работещият публичен developer сайт и адресът за поддръжка остават част от подготовката за рилийз.
 
-### 11. Публикувай account страницата и Apple notifications адреса
+### 11. Публични страници, управление на профил и Apple notifications
 
-- Публикувай `account.html` от production web build на избрания HTTPS домейн с правилния API адрес и allowed origin. Тя е отделна от игровия екран и не съдържа реклами или QA инструменти.
-- Посочи реалния URL в Google Play account deletion полето. Вътре в приложението изтриването остава в account секцията. [Google: account deletion requirements](https://support.google.com/googleplay/android-developer/answer/13327111).
+- **9 ноември 2026 г.** Публичният пакет на GitHub Pages включва [политика за поверителност](https://georgi-cole.github.io/crystal-path-infinity/privacy.html) и [поддръжка](https://georgi-cole.github.io/crystal-path-infinity/support.html) на английски и български. Проверявай публичните адреси след deploy. Страниците посочват Innovation Creativity Opportunities Ltd и `support@kolequant.xyz`. Настройките в играта водят към тях.
+- За Google Play account deletion използвай [публичния раздел за заявка за изтриване](https://georgi-cole.github.io/crystal-path-infinity/support.html#account-deletion). Той е достъпен без вход и позволява заявка по имейл. [Google: account deletion requirements](https://support.google.com/googleplay/android-developer/answer/13327111).
+- Преди пускане на профилите провери и самостоятелното изтриване в account секцията и в `account.html` с production API адреса и allowed origin.
 - В App Store Connect за Server Notifications V2 посочи `https://api.crystalpath.kolequant.com/cpi/commerce/apple-notifications`, а за sandbox — отделния staging адрес. Провери Apple test notification и последващите refund/reversal сценарии.
 - При изтриване личният профил, игровите данни и сесиите се заличават. Минималният финансов запис с произволен billing alias остава, за да не се получава една покупка повторно. Възстановяването е към същия акаунт; автоматично прехвърляне на покупки към нов акаунт след изтриване не е реализирано. Това поведение и сроковете за финансовите записи трябва да са ясно описани в политиката/потвърждението преди публично пускане.
 
@@ -209,7 +210,7 @@ Apple показва приет Developer Program License Agreement и акти�
 2. Реклама: UMP, отказ, затваряне, липса на налична реклама, background/return, късен или повторен подписан callback, запазен и възстановен опит. Симулация или demo видео не доказва реална награда.
 3. Покупка в Play internal testing/TestFlight: успешно плащане, отказ, pending плащане, затваряне на приложението, автоматично довършване при отваряне на магазина, повторно Restore, refund, отнет свят и refund reversal.
 4. Реално изразходване на SP/подсказка/кредит, общият 200 SP бюджет, последните пет продължавания само с кредит и assisted резултатът извън официалната класация.
-5. Пълен export с повече от една страница и изтриване през приложението и публичната account страница; в production няма fake/simulate бутони.
+5. Пълен export с повече от една страница, изтриване през приложението и `account.html` и обработване на заявка, получена на публичния адрес за поддръжка. Провери, че production показва само действителните възможности.
 6. Подписани сборки, правилни store декларации за данни/възраст/реклами, работещ support адрес и публични правила за поверителност/условия.
 
 Едва тогава включваме production backend, одобрените country/SDK/operations редове и клиентските флагове за реалните услуги. Наличната unsigned preparation сборка остава с изключени live услуги; нейният предпазен механизъм не се премахва. Новите официални опити ползват `infinity-v11-live`; започнатите v1 опити запазват старите правила и отделното възстановяване.
