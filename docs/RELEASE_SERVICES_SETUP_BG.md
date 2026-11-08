@@ -133,6 +133,12 @@ Team ID `C97T2A5255` не замества Issuer ID. Следвай [Apple: Gen
 
 Подписването изисква Apple Distribution сертификат с частния му ключ във формат P12, App Store Connect provisioning profile за Crystal Path и отделен App Store Connect ключ за качване. Записват се като CPI_IOS_DISTRIBUTION_P12_BASE64, CPI_IOS_DISTRIBUTION_P12_PASSWORD, CPI_IOS_PROFILE_BASE64, CPI_ASC_UPLOAD_KEY_BASE64, CPI_ASC_UPLOAD_KEY_ID и CPI_ASC_UPLOAD_ISSUER_ID в средата cpi-ios-testflight, ограничена до main. Ключът за проверка на покупки остава в Supabase staging. Workflow не публикува подписани артефакти в публичното GitHub хранилище.
 
+**Проверка на 8 ноември 2026 г.** [GitHub Actions](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/42490556975) успешно компилира и провери неподписан iPhone архив за PR #87. Създадена е групата [Crystal Path Internal QA](https://appstoreconnect.apple.com/teams/784da51c-4744-46ce-83d3-dfca3ce1152c/apps/6831790531/testflight/groups/5bfefb85-8274-4d40-a4f8-0b34d935159c) с ръчно добавяне на сборки. Отделната задължителна iOS Simulator проверка на PR #87 не премина при отваряне на Settings поради изтекло време за преминаване на приложението във фонов режим. Подписването, качването и тестът на телефон предстоят след успешни проверки на готовия main и настройването на Apple ключовете.
+
+Apple показва приет Developer Program License Agreement и активни Paid Apps и Free Apps договори. Запазени са английски текстове за двата магазина. Apple 1.0 е с ръчно пускане и категории Games, Puzzle и Casual. Категорията Puzzle в Google Play е запазена и чака подаване за преглед. Първият пакет кредити и първият свят имат бележки за App Review. Снимките на финалната версия, review достъпът до покупките и декларациите за privacy и възраст остават преди подаване.
+
+**Play Billing staging · 8 ноември 2026 г.** Play Console потвърди финансовите права и управлението на поръчки за служебния акаунт само за Crystal Path. Staging потвърди точните два разрешени акаунта и 18 Android SKU. Supabase запази purchase флага на false и не приложи тестовото разгръщане през редактора. Няма успешно сверяване в provider_sync. Предишният резултат 401 permissionDenied остава последният потвърден отговор на Google за проверката на анулирани покупки. Android тестовото плащане чака нова успешна проверка от staging.
+
 ### 9. Разгърни сървъра и периодичните задачи
 
 **Проверено в staging на 7 ноември 2026 г.** Supabase CLI `3.0.0` потвърди, че след качването няма чакащи миграции. Ограниченият DB вход може да приеме `service_role` и не е член на `postgres`. Всичките 45 таблици в `cpi_private` имат принудително RLS. `cpi-live` използва сертификата от Supabase, а сървърът отхвърли директна неподписана заявка за вход.
@@ -173,6 +179,8 @@ Team ID `C97T2A5255` не замества Issuer ID. Следвай [Apple: Gen
 Не добавяй mediation мрежи без отделен SDK/privacy преглед. Операторските настройки са описани в `backend/live-operations.example.sql`; нормалният сървърен вход няма право сам да ги одобрява.
 
 **SSV проверка · 7 ноември 2026 г.** AdMob Verify URL мина за Android и iOS срещу staging Edge адреса. Конзолата подписа тестовия идентификатор `1234567890`, `reward_amount=1` и `reward_item=Continue`. За него в staging има отделен изключен договор с Android demo inventory, а резервираният nonce може да върне само `verified-no-reward`. Двата callback адреса в AdMob не са записвани. Следва тест на показване, затваряне и доставка на награда на телефон с тестова реклама.
+
+**Проверка през staging gateway · 8 ноември 2026 г.** AdMob потвърди подписаните Verify URL заявки към Cloudflare staging за Android и iOS. Резервираният тестов nonce не начислява награда. И двата app записа още показват Requires review и Limited ad serving до свързване на публикувана store страница. В AdMob е потвърден редът `google.com, pub-9243398419153145, DIRECT, f08c47fec0942fa0` за app-ads.txt. Публичният DNS за kolequant.com върна NXDOMAIN. Работещият публичен developer сайт и адресът за поддръжка остават част от подготовката за рилийз.
 
 ### 11. Публикувай account страницата и Apple notifications адреса
 
