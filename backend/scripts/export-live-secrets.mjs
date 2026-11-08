@@ -1,8 +1,14 @@
 import { parseEnv } from 'node:util';
 import { readFile, writeFile } from 'node:fs/promises';
 import { readLiveConfiguration } from '../../packages/server-core/src/live-configuration.ts';
-const root = new URL('../', import.meta.url),
-  values = parseEnv(await readFile(new URL('.env.live.local', root), 'utf8'));
+const root = new URL('../', import.meta.url);
+const envPath =
+  process.argv.find((arg) => arg.startsWith('--env='))?.slice(6) ??
+  new URL('.env.live.local', root);
+const outputPath =
+  process.argv.find((arg) => arg.startsWith('--out='))?.slice(6) ??
+  new URL('.env.edge.upload.local', root);
+const values = parseEnv(await readFile(envPath, 'utf8'));
 try {
   if (!readLiveConfiguration((name) => values[name])) throw new Error();
 } catch {
@@ -36,6 +42,21 @@ if (values.CPI_PURCHASES_ENABLED === 'true')
     'CPI_APPLE_PRIVATE_KEY',
   );
 // SUPABASE_* is reserved and supplied by the hosted function. Never deploy bootstrap/admin credentials.
-const text = names.map((name) => name + '=' + JSON.stringify(values[name])).join('\n') + '\n';
-await writeFile(new URL('.env.edge.upload.local', root), text, { mode: 0o600 });
-console.log('Prepared ignored backend/.env.edge.upload.local. No secret values were printed.');
+// Supabase CLI's dotenv parser preserves escaped quotes and expands newline escapes in double quotes.
+// Literal quotes keep JSON and escaped PEM newlines intact for the runtime.
+const text =
+  names
+    .map((name) => {
+      const value =
+        name === 'CPI_ACCOUNT_POLICY' || name === 'CPI_COMMERCE_PRODUCTS'
+          ? values[name].replaceAll("'", '\\u0027')
+          : values[name];
+      const quote = ["'", '`'].find((candidate) => !value.includes(candidate));
+      if (quote && !value.endsWith('\\')) return name + '=' + quote + value + quote;
+      if (value === value.trim() && !/[#\r\n]/.test(value) && !/^["'`]/.test(value))
+        return name + '=' + value;
+      throw new Error('Cannot safely export edge secret ' + name);
+    })
+    .join('\n') + '\n';
+await writeFile(outputPath, text, { mode: 0o600 });
+console.log('Prepared edge secret upload. No secret values were printed.');
