@@ -55,11 +55,16 @@ PGlite integration is additional local evidence. Required CI still runs against 
 | CPI-034 physical-device QA | Exact-build Android/iPhone matrix, weak Android, narrow safe areas, VoiceOver/TalkBack, larger text, reduced motion, lock/call interruption and weak-signal recovery | Not run in this task |
 | CPI-034 endless/revive evidence | Physical sessions beyond 350→351, long-soak memory/frame/network/storage measurements; ten real rewarded revives, 5→6 200/150 SP boundary, no-fill/error and restart cases | Synthetic mechanics tested; physical/ad/balance evidence open |
 | CPI-035 signed betas | Matching symbols/mappings where applicable, external-device install from normal beta channels and signed iOS TestFlight evidence | Android `0.1.0 (1)` signed and available in Internal Testing. External-device installation and iOS beta pending |
-| CPI-036 store package | Real build captures, accurate BG/EN copy, chosen target audience/category/rating, exact SDK/network privacy disclosures, verified support/privacy/deletion URLs and reviewer access | No forms submitted, screenshots fabricated or URLs invented |
+| CPI-036 store package | Real build captures, accurate BG/EN copy, chosen target audience/category/rating, exact SDK/network privacy disclosures and reviewer access | The Pages build includes privacy, support and a public email deletion route. Store forms and support mailbox acceptance remain open |
 | CPI-037 live operations | Named support/security paths and owners, numeric alarms, real backup restore/forward-fix exercise, outage/late-SSV/ruleset drill and incident coverage | Source controls/runbook only; no monitor deployed |
 | CPI-038 public go/no-go | Accepted P0 issues, reviewed beta and balance data, numerical rollout stop/continue criteria, checked signed production build, named release owner and explicit approval | NO GO |
 
 The source retains guest practice without optional analytics, account or ad availability. Neither unknown age nor a failed ad request synthesizes an adult context, a grant or ranked score. No pending reward is silently forfeited to meet a release deadline.
+
+## Public player information · 2026-11-09
+
+- [Privacy policy](https://georgi-cole.github.io/crystal-path-infinity/privacy.html), [support](https://georgi-cole.github.io/crystal-path-infinity/support.html) and [account deletion requests](https://georgi-cole.github.io/crystal-path-infinity/support.html#account-deletion) are packaged with the public web build. The pages are available in English and Bulgarian and identify Innovation Creativity Opportunities Ltd and `support@kolequant.xyz`.
+- The web release uses guest play. The policy identifies optional account and native features by availability. Confirm support receipt and handling, and match the store disclosures to the signed candidate and its enabled SDKs before submitting.
 
 ## Capture and store-material handoff
 

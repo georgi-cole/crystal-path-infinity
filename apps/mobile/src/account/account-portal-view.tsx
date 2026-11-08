@@ -7,6 +7,7 @@ import { createSessionTransport } from './session-gateway';
 import { createOtpGateway } from './otp-gateway';
 import { AccountControls } from './account-controls';
 import { createAccountControlsClient } from './account-controls-client';
+import { SUPPORT_EMAIL, SUPPORT_MAILTO } from '../support-contact';
 /** Web self-service only: credentials live in memory, with no native SDK, analytics or guest-score promotion. */
 function portalServices() {
   const base: unknown = import.meta.env.VITE_ACCOUNT_API_BASE_URL;
@@ -64,7 +65,7 @@ export function AccountPortal() {
           <p>{t('accountPortal.unavailable')}</p>
         )}
         <p>
-          <a href="mailto:support@kolequant.com">support@kolequant.com</a>
+          <a href={SUPPORT_MAILTO}>{SUPPORT_EMAIL}</a>
         </p>
       </main>
     </ThemeScope>

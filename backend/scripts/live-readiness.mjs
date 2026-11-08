@@ -69,7 +69,7 @@ const checks = {
 if (process.argv.includes('--online')) {
   if (config.environment === 'production' || process.argv.includes('--release')) {
     try {
-      checks.supportMailDns = (await resolveMx('kolequant.com')).length > 0;
+      checks.supportMailDns = (await resolveMx('kolequant.xyz')).length > 0;
     } catch {
       checks.supportMailDns = false;
     }

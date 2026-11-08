@@ -127,6 +127,8 @@ describe('player presentation and QA isolation', () => {
     const help = renderToStaticMarkup(createElement(PrivacyAccountSupport));
     expect(help).toContain(SUPPORT_EMAIL);
     expect(help).toContain(SUPPORT_MAILTO);
+    expect(help).toContain('https://georgi-cole.github.io/crystal-path-infinity/privacy.html');
+    expect(help).toContain('https://georgi-cole.github.io/crystal-path-infinity/support.html');
     expect(help).not.toContain('Submit ticket');
   });
 });
