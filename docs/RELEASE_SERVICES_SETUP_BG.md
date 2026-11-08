@@ -113,7 +113,7 @@ Team ID `C97T2A5255` не замества Issuer ID. Следвай [Apple: Gen
 
 ### 8. Създай истинските продукти в двата магазина
 
-Оригиналното предложение е в `backend/commerce-products.proposed.json`. `backend/commerce-products.live.example.json` остава пример с отделни Android/iOS записи и статус `unconfirmed`. За Android вече са създадени предложените SKU. Последно провереният Apple каталог е празен.
+Оригиналното предложение е в `backend/commerce-products.proposed.json`. `backend/commerce-products.live.example.json` остава пример с отделни Android/iOS записи и статус `unconfirmed`. За Android вече са създадени предложените SKU. При проверката на 7 ноември Apple каталогът още беше празен.
 
 **Google Play Internal Testing · 7 ноември 2026 г.** Подписаната `0.1.0` (version code `1`) от `bf7f804` е `Active` и `Available to internal testers`. Използва регистрирания package `com.georgicole.crystalpath.infinity`, включва Billing и сочи към отделния Crystal Path staging API. Рекламите са изключени в тази сборка. Потвърдени са подписът и AAB структурата. [Инсталиране през Internal Testing](https://play.google.com/apps/internaltest/4701734144458822899).
 
@@ -122,6 +122,30 @@ Team ID `C97T2A5255` не замества Issuer ID. Следвай [Apple: Gen
 На телефон инсталирай от Google Play със същия акаунт, който е в License testing. При плащане провери обозначението за тестова покупка и избери тестовия метод на Google. Тестовият канал сам по себе си допуска и реално плащане за акаунти извън License testing. [Google Play Billing testing](https://developer.android.com/google/play/billing/test).
 
 Покупката и начисляването в играта все още не са проверени на телефон. Staging покупките са изключени. Остават Google Play server credentials, достъп за тестовите акаунти и потвърден сървърен SKU manifest. Текущата конфигурация при включване изисква и Apple credentials. За първи Android тест може да се подготви отделна Android-only staging конфигурация, която запазва проверката на всяка разписка. За iOS следват 18-те продукта, съответните sandbox тестери и TestFlight сборка за регистрирания bundle ID. Запази смисъла и количеството на вече продаден SKU. Оттеглените SKU остават за възстановяване с `available:false`. [Apple StoreKit sandbox](https://developer.apple.com/documentation/storekit/testing-in-app-purchases-with-sandbox).
+
+### iOS TestFlight в GitHub Actions
+
+**Каталог на 8 ноември 2026 г.** Crystal Path има 18 записа в Google Play и 18 съответстващи чернови в [App Store Connect](https://appstoreconnect.apple.com/apps/6831790531/distribution/iaps/drafts). Apple показва Prepare for Submission за всичките 18. Каталогът съдържа 4 пакета кредити, 6 SP пакета, 2 пакета подсказки и 6 постоянни свята. Базовите цени в България следват [първоначалния каталог](../backend/commerce-products.proposed.json). Преди App Review добавяме снимки на покупките в играта и включваме първия consumable и първия non-consumable със съответната версия.
+
+[CPI-035](https://github.com/georgi-cole/crystal-path-infinity/issues/35) добавя workflow **Crystal Path iOS TestFlight** на GitHub macOS runner. PR проверката компилира неподписан iPhone архив. След сливането на поправките в main стартираме workflow ръчно с upload_to_testflight и пълния SHA на проверения main commit. Преди качване той проверява същия SHA отново. Повторен опит за качване изисква нов run с нов номер на сборката.
+
+Сборката използва регистрирания bundle ID и само staging gateway за вход и StoreKit. Рекламите са изключени в този вариант. Apple получава сборката с **TestFlight Internal Only**. За публичната версия се подготвя отделна сборка с одобрения production сървър. Правилата за допускане на staging акаунти се проверяват от сървъра.
+
+Подписването изисква Apple Distribution сертификат с частния му ключ във формат P12, App Store Connect provisioning profile за Crystal Path и отделен App Store Connect ключ за качване. Записват се като CPI_IOS_DISTRIBUTION_P12_BASE64, CPI_IOS_DISTRIBUTION_P12_PASSWORD, CPI_IOS_PROFILE_BASE64, CPI_ASC_UPLOAD_KEY_BASE64, CPI_ASC_UPLOAD_KEY_ID и CPI_ASC_UPLOAD_ISSUER_ID в средата cpi-ios-testflight, ограничена до main. Ключът за проверка на покупки остава в Supabase staging. Workflow не публикува подписани артефакти в публичното GitHub хранилище.
+
+**Проверка на 8 ноември 2026 г.** [GitHub Actions](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/42490556975) успешно компилира и провери неподписан iPhone архив за PR #87. Създадена е групата [Crystal Path Internal QA](https://appstoreconnect.apple.com/teams/784da51c-4744-46ce-83d3-dfca3ce1152c/apps/6831790531/testflight/groups/5bfefb85-8274-4d40-a4f8-0b34d935159c) с ръчно добавяне на сборки. Отделната задължителна iOS Simulator проверка на PR #87 не премина при отваряне на Settings поради изтекло време за преминаване на приложението във фонов режим. Подписването, качването и тестът на телефон предстоят след успешни проверки на готовия main и настройването на Apple ключовете.
+
+Apple показва приет Developer Program License Agreement и активни Paid Apps и Free Apps договори. Запазени са английски текстове за двата магазина. Apple 1.0 е с ръчно пускане и категории Games, Puzzle и Casual. Категорията Puzzle в Google Play е запазена и чака подаване за преглед. Първият пакет кредити и първият свят имат бележки за App Review. Снимките на финалната версия, review достъпът до покупките и декларациите за privacy и възраст остават преди подаване.
+
+**Play Billing staging · 8 ноември 2026 г.** Play Console потвърди финансовите права и управлението на поръчки за служебния акаунт само за Crystal Path. Staging потвърди точните два разрешени акаунта и 18 Android SKU. Supabase запази purchase флага на false и не приложи тестовото разгръщане през редактора. Няма успешно сверяване в provider_sync. Предишният резултат 401 permissionDenied остава последният потвърден отговор на Google за проверката на анулирани покупки. Android тестовото плащане чака нова успешна проверка от staging.
+
+**Apple подписване · последваща проверка на 8 ноември 2026 г.** Новият Apple Distribution сертификат и профилът `Crystal Path Infinity TestFlight` съвпадат с `C97T2A5255.com.georgicole.crystalpath.infinity`. Локалната проверка на P12 и подписания профил мина. Шестте signing и upload secrets са потвърдени в GitHub средата `cpi-ios-testflight` с достъп само от `main`. Отделният Developer ключ за качване върна HTTP 200 за точния App Store Connect запис. Подписаното изпълнение чака поправките и успешните проверки на `main`.
+
+**Android staging · последваща проверка на 8 ноември 2026 г.** Staging върна HTTP 200 за Google OAuth и анулираните покупки. Умишлено невалидната разписка получи HTTP 400 `invalid`. Работникът записа успешно сверяване `google.staging` без грешки. Покупките са включени само с потвърдените 18 Android SKU, за двата одобрени тестови акаунта. Първата покупка и начисляването в играта предстоят на телефон с тестов метод на плащане. [Android Internal Testing](https://play.google.com/apps/internaltest/4701734144458822899) · [Google Play Billing тестове](https://developer.android.com/google/play/billing/test).
+
+**Apple Sandbox · последваща проверка на 8 ноември 2026 г.** Потвърдени са 18 SKU и типовете им в Apple каталога. Отделният In-App Purchase ключ е в Crystal Path Supabase staging. Apple прие ключа за Sandbox history и отхвърли невалидната тестова транзакция. Sandbox Server URL V2 е записан за staging gateway. Apple SDK в Supabase отказа ES256 при сверяване. Истинският подписан Apple `TEST` пакет мина с проверка на сертификатите и OCSP в Node, а същият пакет се провали в staging заради липсващи методи на `X509Certificate`. След проверката върнахме Android-only каталога, за да остане достъпен Android тестът. iOS покупките чакат съвместима сървърна проверка и тест на телефон. [Доклад за Supabase runtime](https://github.com/supabase/edge-runtime/issues/761).
+
+Временният 24-часов Supabase токен беше ограничен до Edge Functions и Edge Function Secrets на Crystal Path staging. Диагностичните функции са премахнати, а API потвърди отнемането на токена.
 
 ### 9. Разгърни сървъра и периодичните задачи
 
@@ -163,6 +187,8 @@ Team ID `C97T2A5255` не замества Issuer ID. Следвай [Apple: Gen
 Не добавяй mediation мрежи без отделен SDK/privacy преглед. Операторските настройки са описани в `backend/live-operations.example.sql`; нормалният сървърен вход няма право сам да ги одобрява.
 
 **SSV проверка · 7 ноември 2026 г.** AdMob Verify URL мина за Android и iOS срещу staging Edge адреса. Конзолата подписа тестовия идентификатор `1234567890`, `reward_amount=1` и `reward_item=Continue`. За него в staging има отделен изключен договор с Android demo inventory, а резервираният nonce може да върне само `verified-no-reward`. Двата callback адреса в AdMob не са записвани. Следва тест на показване, затваряне и доставка на награда на телефон с тестова реклама.
+
+**Проверка през staging gateway · 8 ноември 2026 г.** AdMob потвърди подписаните Verify URL заявки към Cloudflare staging за Android и iOS. Резервираният тестов nonce не начислява награда. И двата app записа още показват Requires review и Limited ad serving до свързване на публикувана store страница. В AdMob е потвърден редът `google.com, pub-9243398419153145, DIRECT, f08c47fec0942fa0` за app-ads.txt. Публичният DNS за kolequant.com върна NXDOMAIN. Работещият публичен developer сайт и адресът за поддръжка остават част от подготовката за рилийз.
 
 ### 11. Публикувай account страницата и Apple notifications адреса
 
