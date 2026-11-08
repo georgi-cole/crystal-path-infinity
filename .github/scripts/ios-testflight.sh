@@ -181,7 +181,7 @@ PY
   xcodebuild -exportArchive -archivePath "$archive" -exportPath "$signing/export" \
     -exportOptionsPlist "$signing/ExportOptions.plist" -allowProvisioningUpdates \
     -authenticationKeyPath "$key" -authenticationKeyID "$CPI_ASC_UPLOAD_KEY_ID" \
-    -authenticationKeyIssuer "$CPI_ASC_UPLOAD_ISSUER_ID"
+    -authenticationKeyIssuerID "$CPI_ASC_UPLOAD_ISSUER_ID"
   printf 'Sent to App Store Connect as an internal TestFlight build for Apple processing.\n' \
     >> "$GITHUB_STEP_SUMMARY"
 }
