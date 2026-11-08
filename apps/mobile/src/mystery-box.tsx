@@ -9,6 +9,8 @@ import type {
 import { useLanguage } from './language-context';
 import { effectCopy } from './mystery.messages';
 import { mysteryChoiceCards } from './mystery-choice-model';
+import relicClosed from './assets/mystery/relic-closed.webp?inline';
+import relicOpen from './assets/mystery/relic-open.webp?inline';
 import './mystery-hologram.css';
 
 const names = {
@@ -32,18 +34,20 @@ export function MysteryCube({
     >
       <img
         className="cpi-relic-closed"
-        src={`${import.meta.env.BASE_URL}mystery/relic-closed-v6.webp`}
+        src={relicClosed}
         alt=""
-        width="512"
-        height="512"
+        width="256"
+        height="256"
+        decoding="sync"
         draggable={false}
       />
       <img
         className="cpi-relic-open"
-        src={`${import.meta.env.BASE_URL}mystery/relic-open-v6.webp`}
+        src={relicOpen}
         alt=""
-        width="512"
-        height="512"
+        width="256"
+        height="256"
+        decoding="sync"
         draggable={false}
       />
     </span>

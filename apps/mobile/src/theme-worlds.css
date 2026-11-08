@@ -334,6 +334,11 @@
   transform: translateX(-50%);
   filter: drop-shadow(0 3px 5px #050910b3);
 }
+.cpi-world-poster-companion > img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
 .cpi-world-impact.world-wilds {
   color: #b0dca2;
 }

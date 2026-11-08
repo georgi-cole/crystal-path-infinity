@@ -126,7 +126,7 @@ describe('mystery feedback, practice chamber and public contracts', () => {
       );
       expect(waiting.sp).toBe(80);
       expect(html).toContain('cpi-relic-options');
-      expect(html).toContain('relic-open-v6.webp');
+      expect(html).toMatch(/class="cpi-relic-open" src="data:image\/webp;base64,/);
       expect(html).not.toContain('65% ·');
       expect(html.match(/data-pact-option=/g)).toHaveLength(2);
       expect(html).toContain('data-tier="major"');

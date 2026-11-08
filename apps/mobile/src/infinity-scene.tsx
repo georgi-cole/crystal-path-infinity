@@ -202,13 +202,18 @@ export function InfinitySceneView({
   const clockActive = deathClock !== null && state.activeTimeMs >= deathClock.warningAt;
   const oracleActive = state.pact?.kind === 'false_oracle' && state.pact.phase === 'active';
   const maxSp = getRuleset(state.rulesetVersion).maxSp;
+  const discoveryKind = state.discovery?.introduction?.kind;
+  const rhythm = state.mysteryDirector?.rhythm;
+  const visibleEffects = discoveryKind
+    ? state.effects.filter((effect) => effect.kind !== discoveryKind)
+    : state.effects;
   const mysteryFeedbackVisible =
     mysteryFeedback !== null &&
-    !(isPactKind(mysteryFeedback.kind) && mysteryFeedback.action === null) &&
-    !(
-      mysteryFeedback.action === null &&
-      state.effects.some((effect) => effect.kind === mysteryFeedback.kind)
-    );
+    (mysteryFeedback.action !== null ||
+      (!isPactKind(mysteryFeedback.kind) &&
+        mysteryFeedback.kind !== discoveryKind &&
+        mysteryFeedback.kind !== rhythm?.kind &&
+        !state.effects.some((effect) => effect.kind === mysteryFeedback.kind)));
   const criticalSp = maxSp === null ? 10 : 60;
   const warningSp = maxSp === null ? 30 : 140;
   const bonus = liveSignal(signals.bonus, state, 2400);
@@ -393,7 +398,7 @@ export function InfinitySceneView({
           </div>
           <div className="cpi-status-forces">
             <MysteryEffects
-              effects={state.effects}
+              effects={visibleEffects}
               activeTimeMs={state.activeTimeMs}
               rulesetVersion={state.rulesetVersion}
             />
@@ -410,16 +415,16 @@ export function InfinitySceneView({
                 activeTimeMs={state.activeTimeMs}
               />
             )}
-            <MysteryRhythmBadge
-              rhythm={state.mysteryDirector?.rhythm}
-              activeTimeMs={state.activeTimeMs}
-            />
+            {rhythm?.kind !== discoveryKind && (
+              <MysteryRhythmBadge rhythm={rhythm} activeTimeMs={state.activeTimeMs} />
+            )}
           </div>
           <div className="cpi-status-feedback-slot">
             <DiscoveryIntroduction
               discovery={state.discovery}
               activeTimeMs={state.activeTimeMs}
               rulesetVersion={state.rulesetVersion}
+              reducedMotion={settings.reducedMotion}
             />
             {!overlayVisible && (
               <MysteryFeedbackView

@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react';
 import type { ThemeId, WorldId } from './store-catalog';
 import { getGameplayLifecycle } from './gameplay-lifecycle';
 import { WORLD_ASSETS, worldAsset } from './world-assets';
+import { WORLD_PREVIEWS } from './world-preview-art';
 
 function subscribeMotion(listener: () => void) {
   document.addEventListener('visibilitychange', listener);
@@ -29,15 +30,13 @@ const MOTES = Array.from({ length: 12 }, (_, i) => ({
 export function ThemeArtwork({
   theme,
   background = false,
-  priority = false,
 }: {
   theme: ThemeId;
   background?: boolean;
-  priority?: boolean;
 }) {
   const suspended = useSyncExternalStore(subscribeMotion, motionSuspended, serverSuspended);
   if (theme === 'obsidian') return null;
-  const assets = WORLD_ASSETS[theme];
+  const preview = background ? null : WORLD_PREVIEWS[theme];
   return (
     <div
       className={
@@ -50,13 +49,12 @@ export function ThemeArtwork({
     >
       <img
         className="cpi-world-plate"
-        src={worldAsset(assets.environment)}
+        src={preview?.plate ?? worldAsset(WORLD_ASSETS[theme].environment)}
         alt=""
-        width="1024"
-        height="1536"
-        decoding="async"
+        width={preview ? 384 : 1024}
+        height={preview ? 576 : 1536}
+        decoding={preview ? 'sync' : 'async'}
         loading="eager"
-        fetchPriority={priority ? 'high' : 'auto'}
         draggable={false}
       />
       <svg className="cpi-world-near" viewBox="0 0 720 1080" preserveAspectRatio="xMidYMid slice">
@@ -112,9 +110,16 @@ export function ThemeArtwork({
         />
       ))}
       <div className="cpi-world-focus-veil" />
-      {!background && (
+      {preview && (
         <div className="cpi-world-poster-companion">
-          <CompanionSprite theme={theme} reaction="calm" />
+          <img
+            src={preview.companion}
+            alt=""
+            width="176"
+            height="176"
+            decoding="sync"
+            draggable={false}
+          />
         </div>
       )}
     </div>

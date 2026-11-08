@@ -289,6 +289,7 @@ export function MysteryLab({
             discovery={state.discovery}
             activeTimeMs={state.activeTimeMs}
             rulesetVersion={state.rulesetVersion}
+            reducedMotion={reducedMotion}
           />
           <PactPanel
             pact={state.pact}

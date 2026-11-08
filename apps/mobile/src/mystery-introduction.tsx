@@ -12,10 +12,12 @@ export function DiscoveryIntroduction({
   discovery,
   activeTimeMs,
   rulesetVersion,
+  reducedMotion = false,
 }: {
   discovery?: MysteryDiscovery;
   activeTimeMs: number;
   rulesetVersion: string;
+  reducedMotion?: boolean;
 }) {
   const { locale } = useLanguage();
   const intro = discovery?.introduction;
@@ -32,15 +34,19 @@ export function DiscoveryIntroduction({
   const [arrivedAt, setArrivedAt] = useState<number | null>(null);
   const startedAt = intro?.startedAt;
   useLayoutEffect(() => {
-    if (startedAt === undefined) return;
+    if (
+      startedAt === undefined ||
+      reducedMotion ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    )
+      return;
     const board = document.querySelector<HTMLElement>('.cps-board');
     const source =
       board?.querySelector<HTMLElement>('.cpi-bridge-row.is-current .cpi-bridge-mystery') ??
       board?.querySelector<HTMLElement>('.cpi-bridge-row.is-current') ??
       board?.querySelector<HTMLElement>('.cpi-bridge-mystery');
     const destination = target.current;
-    if (!source || !destination || window.matchMedia('(prefers-reduced-motion: reduce)').matches)
-      return;
+    if (!source || !destination) return;
     const frame = window.requestAnimationFrame(() => {
       const from = source.getBoundingClientRect();
       const to = destination.getBoundingClientRect();
@@ -57,7 +63,7 @@ export function DiscoveryIntroduction({
       });
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [startedAt]);
+  }, [startedAt, reducedMotion]);
   if (!intro) return null;
   const bg = locale === 'bg';
   const copy = effectCopy(locale, intro.kind, rulesetVersion);
@@ -66,8 +72,9 @@ export function DiscoveryIntroduction({
   const dramatic = dangerous || tier === 'anomaly';
   const summary = mysteryDiscoverySummary(intro.kind, bg) ?? copy.detail;
   const remaining = Math.max(0, intro.expiresAt - activeTimeMs);
-  const arrived = arrivedAt === intro.startedAt;
-  const activeFlight = flight?.startedAt === intro.startedAt && !arrived ? flight : null;
+  const arrived = !reducedMotion && arrivedAt === intro.startedAt;
+  const activeFlight =
+    !reducedMotion && flight?.startedAt === intro.startedAt && !arrived ? flight : null;
   return (
     <>
       <aside

@@ -1,5 +1,6 @@
 .cpi-discovery-intro {
   display: flex;
+  box-sizing: border-box;
   align-items: center;
   gap: 0.55rem;
   width: 100%;
@@ -63,7 +64,6 @@
 }
 .cpi-discovery-summary {
   flex: 1 0 100%;
-  margin-inline-start: 2.55rem;
   color: #c4c0cf;
   font-size: 0.65rem;
   line-height: 1.35;
