@@ -1,0 +1,39 @@
+.cpi-identity-options {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.cpi-identity-options .cpi-provider-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  min-height: 44px;
+  padding: 0.55rem 0.8rem;
+  border-radius: 0.55rem;
+  font:
+    600 0.96rem/1.25 system-ui,
+    sans-serif;
+}
+
+.cpi-identity-options .cpi-provider-button--apple {
+  color: #fff;
+  background: #000;
+  border: 1px solid #888;
+}
+
+.cpi-identity-options .cpi-provider-button--google {
+  color: #1f1f1f;
+  background: #fff;
+  border: 1px solid #747775;
+}
+
+.cpi-provider-button svg {
+  inline-size: 20px;
+  block-size: 20px;
+  flex: 0 0 auto;
+}
+
+.cpi-identity-links .cpi-identity-options {
+  margin-block-end: 0.75rem;
+}

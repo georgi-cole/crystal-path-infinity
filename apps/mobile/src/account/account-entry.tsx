@@ -9,10 +9,13 @@ import type { OtpGateway } from './otp-flow';
 import type { AccountSessionOwner } from './session-owner';
 import { ACCOUNT_COUNTRIES } from './country-codes';
 import { playerInformationUrl } from '../support-contact';
+import { IdentityButtons } from './provider-sign-in';
+import type { IdentityProvider, NativeIdentityClient } from './native-identity-client';
 
 export interface AccountEntryBinding {
   readonly gateway: OtpGateway;
   readonly session: AccountSessionOwner;
+  readonly identity?: NativeIdentityClient | null;
 }
 
 /**
@@ -56,6 +59,9 @@ export function AccountEntry({
   const [sessionFailed, setSessionFailed] = useState(false);
   const [age, setAge] = useState('');
   const [country, setCountry] = useState('');
+  const [method, setMethod] = useState<IdentityProvider | 'email' | null>(null);
+  const [needsLink, setNeedsLink] = useState(false);
+  const providerAttempt = useRef<AbortController | null>(null);
   const mounted = useRef(true);
   const ownsConnection = useRef(false);
 
@@ -63,6 +69,7 @@ export function AccountEntry({
     mounted.current = true;
     return () => {
       mounted.current = false;
+      providerAttempt.current?.abort();
       flow?.cancel();
       if (ownsConnection.current && binding?.session.snapshot().phase === 'connecting')
         void binding.session.signOut();
@@ -71,7 +78,10 @@ export function AccountEntry({
 
   useEffect(() => {
     flow?.cancel();
-    if (!online) flow?.offline();
+    if (!online) {
+      flow?.offline();
+      providerAttempt.current?.abort();
+    }
     let active = true;
     void Promise.resolve().then(() => {
       if (!active) return;
@@ -97,6 +107,44 @@ export function AccountEntry({
       setCountry('');
     }
     sync();
+    if (method === 'apple' || method === 'google') await signInWith(method);
+  }
+  async function signInWith(provider: IdentityProvider) {
+    const permit = flow?.identityPermit();
+    if (!permit || !binding?.identity || !online || providerAttempt.current || !mounted.current)
+      return;
+    const controller = new AbortController();
+    providerAttempt.current = controller;
+    setMethod(null);
+    setNeedsLink(false);
+    setSessionFailed(false);
+    setConnecting(true);
+    try {
+      const result = await binding.identity.signIn(provider, permit, controller.signal);
+      if (controller.signal.aborted) return;
+      if (result.status === 'link_required') {
+        setNeedsLink(true);
+      } else if (result.status === 'verified') {
+        ownsConnection.current = true;
+        const active = await binding.session.exchangeVerifiedTicket(result.ticket);
+        ownsConnection.current = false;
+        if (mounted.current && !controller.signal.aborted) setSessionFailed(!active);
+      }
+    } catch {
+      if (!controller.signal.aborted) setSessionFailed(true);
+    } finally {
+      providerAttempt.current = null;
+      if (mounted.current) setConnecting(false);
+    }
+  }
+  function chooseProvider(provider: IdentityProvider) {
+    if (flow?.identityPermit()) {
+      void signInWith(provider);
+    } else {
+      flow?.cancel();
+      setMethod(provider);
+      sync();
+    }
   }
   async function send() {
     if (!flow) return;
@@ -132,6 +180,9 @@ export function AccountEntry({
     }
   }
   function cancel() {
+    providerAttempt.current?.abort();
+    setMethod(null);
+    setNeedsLink(false);
     if (binding?.session.snapshot().phase === 'connecting') void binding.session.signOut();
     flow?.cancel();
     setEmail('');
@@ -155,6 +206,10 @@ export function AccountEntry({
   const step = state?.step;
   const screening =
     step === 'guest' || step === 'checking' || step === 'unavailable' || step === 'offline';
+  const showMethods =
+    !!binding?.identity &&
+    !method &&
+    (step === 'guest' || step === 'offline' || step === 'eligible');
   const codeStep =
     step === 'code' || step === 'verifying' || (step === 'sending' && state?.codeExpiresAt != null);
   const busy = step === 'sending' || step === 'verifying' || connecting;
@@ -200,7 +255,27 @@ export function AccountEntry({
         </>
       ) : (
         <>
-          {screening && (
+          {showMethods && (
+            <>
+              <IdentityButtons disabled={busy || !online} onChoose={chooseProvider} />
+              <button
+                type="button"
+                className="cpi-email-fallback"
+                disabled={busy || !online}
+                onClick={() => {
+                  setMethod('email');
+                  setNeedsLink(false);
+                  setSessionFailed(false);
+                }}
+              >
+                {t('account.continueEmail')}
+              </button>
+              {connecting && <p role="status">{t('account.signingIn')}</p>}
+              {!online && <p role="status">{t('account.offline')}</p>}
+              {needsLink && <p role="status">{t('account.identityNeedsLink')}</p>}
+            </>
+          )}
+          {screening && !showMethods && (
             <form
               onSubmit={(event) => {
                 event.preventDefault();
@@ -243,7 +318,7 @@ export function AccountEntry({
             </form>
           )}
           {step === 'parental_review' && <p role="status">{t('account.parentalReview')}</p>}
-          {(step === 'eligible' || (step === 'sending' && !codeStep)) && (
+          {!showMethods && (step === 'eligible' || (step === 'sending' && !codeStep)) && (
             <form
               onSubmit={(event) => {
                 event.preventDefault();
@@ -319,7 +394,7 @@ export function AccountEntry({
             <p role="alert">{sessionFailed ? t('account.retry') : problem && errors[problem]}</p>
           )}
           <div className="cpi-account-links">
-            {!screening && !codeStep && !connecting && (
+            {!showMethods && (!screening || method) && !codeStep && !connecting && (
               <button type="button" onClick={cancel}>
                 {t('account.cancel')}
               </button>

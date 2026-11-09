@@ -91,6 +91,21 @@ export function readLiveConfiguration(env: (name: string) => string | undefined)
     projectRef,
     url,
     environment,
+    // Staging is opt-in and this project is pinned independently of client flags.
+    nativeIdentity:
+      environment === 'staging' &&
+      projectRef === 'yfntwewvfsvljxcztoyp' &&
+      env('CPI_NATIVE_IDENTITY_ENABLED') === 'true'
+        ? {
+            googleClientId: require('CPI_IDENTITY_GOOGLE_IOS_CLIENT_ID'),
+            apple: {
+              clientId: 'com.georgicole.crystalpath.infinity',
+              teamId: 'C97T2A5255',
+              keyId: require('CPI_IDENTITY_APPLE_KEY_ID'),
+              privateKey: require('CPI_IDENTITY_APPLE_PRIVATE_KEY').replaceAll('\\n', '\n'),
+            },
+          }
+        : undefined,
     policy,
     origins,
     products,

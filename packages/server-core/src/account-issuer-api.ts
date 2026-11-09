@@ -46,7 +46,7 @@ export function createAccountIssuerHandler(options: {
         return reply({ code: 'invalid_request' }, 400);
       if (
         !path ||
-        !/^\/(eligibility|otp\/(request|verify)|session\/(exchange|refresh|revoke)|reauth\/(request|verify|proof))$/.test(
+        !/^\/(eligibility|otp\/(request|verify)|identity\/(begin|complete)|session\/(exchange|refresh|revoke)|reauth\/(request|verify|proof))$/.test(
           path,
         )
       )
@@ -55,10 +55,21 @@ export function createAccountIssuerHandler(options: {
       if (request.method !== 'POST') return reply({ code: 'method_not_allowed' }, 405);
       const context = await options.context(request);
       if (!context) return reply({ code: 'service_unavailable' }, 503);
-      const input = await privateJson(request);
+      const input = await privateJson(request, path === '/identity/complete' ? 12_288 : 8192);
       if (path === '/eligibility') return reply(await options.issuer.eligibility(input, context));
       if (path === '/otp/request') return reply(await options.issuer.requestCode(input, context));
       if (path === '/otp/verify') return reply(await options.issuer.verifyCode(input));
+      if (path.startsWith('/identity/')) {
+        const header = request.headers.get('authorization');
+        const bearer = header?.match(/^Bearer ([A-Za-z0-9_-]{43})$/)?.[1];
+        const auth = bearer ? await options.issuer.authenticate(bearer) : null;
+        if (header && !auth) return reply({ code: 'account_required' }, 401);
+        return reply(
+          path === '/identity/begin'
+            ? await options.issuer.beginIdentity(input, context, auth)
+            : await options.issuer.completeIdentity(input, context, auth),
+        );
+      }
       if (path.startsWith('/reauth/')) {
         const bearer = request.headers
           .get('authorization')

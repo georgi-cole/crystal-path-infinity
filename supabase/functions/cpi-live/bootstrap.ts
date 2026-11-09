@@ -4,6 +4,7 @@ import { readLiveConfiguration } from '../../../packages/server-core/src/live-co
 import { createProjectSqlPool } from '../../../packages/server-core/src/supabase-database.ts';
 import { privateCryptography } from '../../../packages/server-core/src/private-services.ts';
 import { createAccountIssuer } from '../../../packages/server-core/src/account-issuer.ts';
+import { createNativeIdentity } from '../../../packages/server-core/src/native-identity.ts';
 import {
   createResendAccountMailer,
   createSupabaseAccountDirectory,
@@ -50,6 +51,7 @@ export function createCpiLiveFunction(env: (name: string) => string | undefined)
         database,
         crypto,
         policy: config.policy,
+        identity: config.nativeIdentity ? createNativeIdentity(config.nativeIdentity) : undefined,
         directory: createSupabaseAccountDirectory({
           url: config.url,
           serviceKey: config.serviceKey,

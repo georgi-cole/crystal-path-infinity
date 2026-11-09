@@ -5,6 +5,7 @@ import { protectedRefreshTokenStore } from './account/secure-session';
 import { createSessionTransport } from './account/session-gateway';
 import { createAccountControlsClient } from './account/account-controls-client';
 import { createOtpGateway } from './account/otp-gateway';
+import { createNativeIdentityClient } from './account/native-identity-client';
 import { createProfileClient } from './account/profile-client';
 import { createRankedClient } from './ranked/ranked-client';
 import { createSavedPendingClient } from './ranked/saved-pending-client';
@@ -59,7 +60,14 @@ export function createLiveServices(values: Readonly<Record<string, unknown>>): L
   return {
     account: {
       session,
-      accountEntry: { gateway, session },
+      accountEntry: {
+        gateway,
+        session,
+        identity:
+          values.VITE_IOS_PROVIDER_SIGN_IN === 'true'
+            ? createNativeIdentityClient(base, session)
+            : null,
+      },
       signOut: () => session.signOut(),
       accountControlsClient: createAccountControlsClient(base, session),
       adPrivacyOptions: ad?.available ? () => ad.showPrivacyOptions() : undefined,
