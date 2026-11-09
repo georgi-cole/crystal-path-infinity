@@ -196,11 +196,11 @@
   line-height: 1.5;
 }
 
-.cpi-profile-menu .cpi-profile-editor :is(label, h3) {
+.cpi-profile-menu .cpi-profile-editor label {
   font-size: 0.82rem;
 }
 
-.cpi-profile-menu .cpi-profile-editor :is(input, select, button) {
+.cpi-profile-menu .cpi-profile-editor :is(input:not([type='checkbox']), select, button) {
   min-block-size: 44px;
 }
 

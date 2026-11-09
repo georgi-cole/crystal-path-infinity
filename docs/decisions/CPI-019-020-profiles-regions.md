@@ -168,3 +168,5 @@ An authenticated player can skip setup or save a country before choosing a uniqu
 ## 9 November 2026 · Signed-in profile presentation
 
 The iPhone review profile welcomes the player by their displayed name and shows a faceted initial using the current world's colors. Profile editing, sign-in methods and saved runs use compact expandable rows. Sign out sits below those controls. The signed-in Play action belongs in the home hub.
+
+Profile setup and editing use one optional age field when age sharing is authorized. A blank field keeps any existing age group. Players with a saved age group can mark it for removal when saving their profile.
