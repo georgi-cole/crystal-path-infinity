@@ -43,6 +43,7 @@ describe('CPI-012 native icon exports', () => {
     const themed = source('native-templates/android/cpi_monochrome.xml');
     const ios = source('native-templates/ios/LaunchScreen.storyboard');
     const generator = source('scripts/generate-native.mjs');
+    const iosController = source('native-templates/ios/CpiLifecycle.swift');
     const cap = source('capacitor.config.ts');
     const html = source('index.html');
     const brandLaunch = source('src/brand-launch.css');
@@ -55,6 +56,10 @@ describe('CPI-012 native icon exports', () => {
     expect(ios).toContain('launchScreen="YES"');
     expect(ios).toContain('red="0" green="0" blue="0"');
     expect(ios).not.toContain('systemBackgroundColor');
+    expect(iosController).toContain('var prefersStatusBarHidden: Bool { true }');
+    expect(iosController).toContain('var prefersHomeIndicatorAutoHidden: Bool { true }');
+    expect(generator).toContain('config.GCSupportsGameMode = true');
+    expect(generator).toContain('config.LSSupportsGameMode = true');
     expect(generator).toContain(
       '<item name="windowSplashScreenAnimatedIcon">@android:color/transparent</item>',
     );

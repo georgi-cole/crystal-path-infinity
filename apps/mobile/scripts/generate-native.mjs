@@ -388,6 +388,10 @@ function configureIOS(info) {
   config.UISupportedInterfaceOrientations = ['UIInterfaceOrientationPortrait'];
   delete config['UISupportedInterfaceOrientations~ipad'];
   config.UIUserInterfaceStyle = 'Dark';
+  config.GCSupportsGameMode = true;
+  config.LSSupportsGameMode = true;
+  config.UIStatusBarHidden = true;
+  config.UIViewControllerBasedStatusBarAppearance = true;
   if (integrations.ads) {
     config.GADApplicationIdentifier = integrations.iosAdMobAppId;
     config.GADDelayAppMeasurementInit = true;
@@ -625,6 +629,10 @@ function verifyNative(platform, info) {
     assert.equal(plist.CFBundleDisplayName, info.appName);
     assert.deepEqual(plist.UISupportedInterfaceOrientations, ['UIInterfaceOrientationPortrait']);
     assert.equal(plist.UIUserInterfaceStyle, 'Dark');
+    assert.equal(plist.GCSupportsGameMode, true);
+    assert.equal(plist.LSSupportsGameMode, true);
+    assert.equal(plist.UIStatusBarHidden, true);
+    assert.equal(plist.UIViewControllerBasedStatusBarAppearance, true);
     assert.equal(plist.NSAppTransportSecurity, undefined);
     assert.ok(
       !Object.keys(plist).some(

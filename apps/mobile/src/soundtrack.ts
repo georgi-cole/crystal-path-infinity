@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { getGameplayLifecycle } from './gameplay-lifecycle';
 
 export type SoundtrackScene = 'home' | 'run' | 'ended';
@@ -71,6 +72,7 @@ function soundtrackContext(): AudioContext | null {
 }
 
 function resumeSoundtrack() {
+  if (Capacitor.getPlatform() === 'ios') return;
   const audio = soundtrackContext();
   if (audio && audio.state !== 'running') void audio.resume().catch(() => {});
 }
@@ -189,7 +191,7 @@ export function useHomeSoundtrack(menu: boolean, launchComplete: boolean, music:
       enabled = nextMusic;
       if (inMenu && enabled) {
         prepareHome();
-        const audio = soundtrackContext();
+        const audio = Capacitor.getPlatform() === 'ios' ? null : soundtrackContext();
         if (audio) {
           owners.set(owner, ['run']);
           void load('run', audio, 'low').catch(() => {});
@@ -227,6 +229,104 @@ export function useHomeSoundtrack(menu: boolean, launchComplete: boolean, music:
   return { activate, awaitingGesture };
 }
 
+/** Use the same native iPhone media path as the menu, with the authored cue windows. */
+export function createStreamedSoundtrack(createMedia: () => HTMLAudioElement) {
+  const tracks = new Map<
+    BufferedScene,
+    { media: HTMLAudioElement; restart: boolean; release: () => void }
+  >();
+  let selected: BufferedScene | null = null;
+  let enabled = false;
+  let foreground = true;
+  let finished = false;
+
+  function sync() {
+    if (!selected) return;
+    const player = tracks.get(selected);
+    if (!player) return;
+    const { media } = player;
+    if (!enabled || !foreground || finished) {
+      media.pause();
+      return;
+    }
+    if (media.readyState < 1) return;
+    if (player.restart) {
+      media.currentTime = SOUNDTRACKS[selected].start;
+      player.restart = false;
+    }
+    if (media.paused) void media.play().catch(() => {});
+  }
+
+  function prepare(scene: BufferedScene) {
+    const previous = tracks.get(scene);
+    if (previous) return previous;
+    const media = createMedia();
+    const track = SOUNDTRACKS[scene];
+    const boundary = track.loop ? track.loopEnd : track.duration;
+    const tick = () => {
+      if (scene !== selected || media.currentTime < boundary) return;
+      if (track.loop) {
+        media.currentTime = soundtrackOffset(scene, media.currentTime - track.start);
+      } else {
+        finished = true;
+      }
+      sync();
+    };
+    const ended = () => {
+      if (scene !== selected) return;
+      if (track.loop) media.currentTime = track.loopStart;
+      else finished = true;
+      sync();
+    };
+    const player = {
+      media,
+      restart: true,
+      release() {
+        media.removeEventListener('loadedmetadata', sync);
+        media.removeEventListener('timeupdate', tick);
+        media.removeEventListener('ended', ended);
+        media.pause();
+        media.removeAttribute('src');
+        media.load();
+      },
+    };
+    tracks.set(scene, player);
+    media.addEventListener('loadedmetadata', sync);
+    media.addEventListener('timeupdate', tick);
+    media.addEventListener('ended', ended);
+    media.preload = 'auto';
+    media.volume = 0.4;
+    media.src = musicUrl(scene);
+    return player;
+  }
+
+  return {
+    sync,
+    update(this: void, next: BufferedScene | null, music: boolean, prepareEnding: boolean) {
+      if (next !== selected) {
+        if (selected) tracks.get(selected)?.media.pause();
+        selected = next;
+        finished = false;
+        const prepared = next && tracks.get(next);
+        if (prepared) prepared.restart = true;
+      }
+      enabled = music;
+      if (music && next) prepare(next);
+      if (prepareEnding) prepare('ended');
+      sync();
+    },
+    setForeground(active: boolean) {
+      foreground = active;
+      sync();
+    },
+    dispose() {
+      selected = null;
+      for (const player of tracks.values()) player.release();
+      tracks.clear();
+    },
+  };
+}
+
 /** Scene music owns no gameplay timers. Pause/mute/background retain the position. */
 export function useSoundtrack(
   scene: BufferedScene | null,
@@ -237,11 +337,32 @@ export function useSoundtrack(
     ((scene: BufferedScene | null, enabled: boolean, prepareEnding: boolean) => void) | null
   >(null);
   useEffect(() => {
+    const lifecycle = getGameplayLifecycle();
+    if (Capacitor.getPlatform() === 'ios' && typeof Audio !== 'undefined') {
+      const stream = createStreamedSoundtrack(() => new Audio());
+      const visibility = () =>
+        stream.setForeground(
+          document.visibilityState !== 'hidden' && lifecycle.getSnapshot()?.active !== false,
+        );
+      update.current = stream.update;
+      visibility();
+      const unsubscribe = lifecycle.subscribe(visibility);
+      document.addEventListener('click', stream.sync, true);
+      document.addEventListener('keydown', stream.sync, true);
+      document.addEventListener('visibilitychange', visibility);
+      return () => {
+        unsubscribe();
+        update.current = null;
+        document.removeEventListener('click', stream.sync, true);
+        document.removeEventListener('keydown', stream.sync, true);
+        document.removeEventListener('visibilitychange', visibility);
+        stream.dispose();
+      };
+    }
     const availableContext = soundtrackContext();
     if (!availableContext) return;
     const audio = availableContext;
     const owner = {};
-    const lifecycle = getGameplayLifecycle();
     const gain = audio.createGain();
     gain.gain.value = 0.4;
     gain.connect(audio.destination);
