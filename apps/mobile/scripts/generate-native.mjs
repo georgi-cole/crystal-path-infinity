@@ -40,6 +40,7 @@ let buildNumber = 1;
 let release = null;
 let integrations;
 let accountVaultSuffix;
+let iosGoogleSignInClientId;
 const background = BRAND_BACKGROUND;
 const nativePackages = [
   '@capacitor/cli',
@@ -354,6 +355,19 @@ function configureAndroid(info) {
   );
   syncNativeBrandAssets(appRoot, 'android');
 }
+function withIdentityBridge(delegate) {
+  return (
+    replaceOnce(
+      delegate,
+      'bridge?.registerPluginInstance(CpiSecureSession())',
+      'bridge?.registerPluginInstance(CpiSecureSession())\n        bridge?.registerPluginInstance(CpiIdentity())',
+      'iOS provider sign-in bridge',
+    ) +
+    '\n' +
+    read('native-templates/ios/CpiIdentity.swift')
+  );
+}
+
 function configureIOS(info) {
   if (integrations.ads) {
     let swift = read('ios/App/CapApp-SPM/Package.swift');
@@ -431,6 +445,21 @@ function configureIOS(info) {
         read('native-templates/ios/CpiRewardedAds.swift'),
     );
   }
+  if (iosGoogleSignInClientId) {
+    config.CpiGoogleSignInClientID = iosGoogleSignInClientId;
+    config.CFBundleURLTypes = [
+      ...(config.CFBundleURLTypes ?? []),
+      { CFBundleURLSchemes: [iosGoogleSignInClientId.split('.').reverse().join('.')] },
+    ];
+    write(
+      'ios/App/App/CpiIdentity.entitlements',
+      plist.build({
+        'com.apple.developer.applesignin': ['Default'],
+      }) + '\n',
+    );
+    const path = 'ios/App/App/AppDelegate.swift';
+    write(path, withIdentityBridge(read(path)));
+  }
   delete config.NSAppTransportSecurity; // ATS defaults; no local/remote cleartext exception.
   assert.ok(
     !Object.keys(config).some((key) => key.endsWith('UsageDescription')),
@@ -476,6 +505,11 @@ function configureIOS(info) {
       'CODE_SIGN_STYLE = Manual;\n\t\t\t\tCODE_SIGNING_ALLOWED = NO;',
     )
     .replaceAll('CODE_SIGN_IDENTITY = "iPhone Developer";', 'CODE_SIGN_IDENTITY = "";');
+  if (iosGoogleSignInClientId)
+    project = project.replaceAll(
+      'CODE_SIGNING_ALLOWED = NO;',
+      'CODE_SIGNING_ALLOWED = NO;\n\t\t\t\tCODE_SIGN_ENTITLEMENTS = App/CpiIdentity.entitlements;',
+    );
   write('ios/App/App.xcodeproj/project.pbxproj', project);
 
   // Match the WebView background while the Kolequant intro is loading.
@@ -709,6 +743,19 @@ function verifyNative(platform, info) {
         ) +
         '\n' +
         read('native-templates/ios/CpiRewardedAds.swift');
+    if (iosGoogleSignInClientId) {
+      expectedDelegate = withIdentityBridge(expectedDelegate);
+      assert.ok(
+        plist.CFBundleURLTypes.some(({ CFBundleURLSchemes }) =>
+          CFBundleURLSchemes.includes(iosGoogleSignInClientId.split('.').reverse().join('.')),
+        ),
+      );
+    }
+    assert.equal(plist.CpiGoogleSignInClientID, iosGoogleSignInClientId);
+    assert.equal(
+      project.split('CODE_SIGN_ENTITLEMENTS = App/CpiIdentity.entitlements;').length,
+      iosGoogleSignInClientId ? 3 : 1,
+    );
     assert.ok(read('ios/App/App/AppDelegate.swift').endsWith(expectedDelegate));
     assert.equal(
       read('ios/App/App/PrivacyInfo.xcprivacy'),
@@ -754,6 +801,18 @@ function verifyNative(platform, info) {
 try {
   const { platform, environment, check } = options();
   integrations = readNativeIntegrations(process.env, environment);
+  if (process.env.VITE_IOS_PROVIDER_SIGN_IN === 'true') {
+    iosGoogleSignInClientId = process.env.CPI_IOS_GOOGLE_CLIENT_ID;
+    assert.ok(
+      platform === 'ios' &&
+        environment === 'production' &&
+        process.env.VITE_ACCOUNT_SERVICES_ENABLED === 'true' &&
+        process.env.VITE_ACCOUNT_API_BASE_URL ===
+          'https://crystal-path-staging-api.kolequant.workers.dev/cpi' &&
+        /^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(iosGoogleSignInClientId ?? ''),
+      'Provider sign-in is limited to the configured internal iPhone staging build',
+    );
+  }
   accountVaultSuffix = accountVaultFor(environment);
   const manifest = verifyPackages();
   release = resolveUnsignedRelease(environment, manifest.version, process.env);

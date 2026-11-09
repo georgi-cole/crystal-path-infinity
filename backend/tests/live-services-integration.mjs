@@ -48,6 +48,10 @@ try {
       version: 'fixture-live',
       countries: { BG: { minimumAge: 16, neutralAgeScreenAllowed: true } },
     },
+    identity: {
+      verify: (_provider, credential) => Promise.resolve({ subject: credential }),
+      revokeApple: () => Promise.resolve(),
+    },
     directory: {
       verifiedEmail: () => Promise.resolve(user),
       emailForSubject: () => Promise.resolve(user + '@example.invalid'),
@@ -95,6 +99,60 @@ try {
   const actor = await issuer.authenticate(rotated[0].accessToken);
   assert.ok(actor);
   assert.equal(await issuer.authenticate('raw-supabase-jwt'), null);
+
+  // The provider link belongs to the authenticated iPhone family.
+  await runtime.query("update cpi_private.account_families set platform='ios' where id=$1", [
+    actor.familyId,
+  ]);
+  const iphone = await issuer.authenticate(rotated[0].accessToken);
+  assert.ok(iphone);
+  const link = await issuer.beginIdentity(
+    { schemaVersion: 1, provider: 'google', eligibilityPermit: null },
+    context,
+    iphone,
+  );
+  const linkProof = {
+    schemaVersion: 1,
+    provider: 'google',
+    nonce: link.nonce,
+    credential: 'fixture-google-id',
+  };
+  await assert.rejects(() => issuer.completeIdentity(linkProof, context, null), { status: 410 });
+  await assert.rejects(
+    () => issuer.completeIdentity(linkProof, context, { ...iphone, familyId: randomUUID() }),
+    { status: 410 },
+  );
+  assert.equal((await issuer.completeIdentity(linkProof, context, iphone)).status, 'linked');
+  await runtime.query("update cpi_private.account_families set platform='android' where id=$1", [
+    actor.familyId,
+  ]);
+
+  const iphonePermit = await issuer.eligibility(
+    { schemaVersion: 2, age: 27, country: 'BG', platform: 'ios', clientBuild: 1 },
+    context,
+  );
+  await assert.rejects(
+    () =>
+      issuer.beginIdentity(
+        { schemaVersion: 1, provider: 'google', eligibilityPermit: permit.permit },
+        context,
+        null,
+      ),
+    { status: 403 },
+  );
+  const signIn = await issuer.beginIdentity(
+    { schemaVersion: 1, provider: 'google', eligibilityPermit: iphonePermit.permit },
+    context,
+    null,
+  );
+  const signInProof = { ...linkProof, nonce: signIn.nonce };
+  const providerTicket = await issuer.completeIdentity(signInProof, context, null);
+  assert.equal(providerTicket.status, 'verified');
+  const linkedSession = await issuer.exchange(providerTicket.verifiedTicket);
+  assert.equal(linkedSession.subject, user);
+  assert.equal((await issuer.authenticate(linkedSession.accessToken)).platform, 'ios');
+  await assert.rejects(() => issuer.completeIdentity(signInProof, context, null), { status: 410 });
+  await issuer.revoke(linkedSession.refreshToken);
   const rate = createDurableRateLimit(runtime, crypto),
     limited = await Promise.all(Array.from({ length: 32 }, () => rate('ci:' + user, 12, 60_000)));
   assert.equal(limited.filter(Boolean).length, 12);

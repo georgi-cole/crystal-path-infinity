@@ -8,6 +8,7 @@ import { AudioSettingsControls } from './audio-settings-controls';
 import { AccountEntry } from './account/account-entry';
 import type { AccountEntryBinding } from './account/account-entry';
 import { ProfileEditor } from './account/profile-editor';
+import { IdentityLinks } from './account/provider-sign-in';
 import type { ProfileClient } from './account/profile-client';
 import { LeaderboardView } from './leaderboard/leaderboard-view';
 import type { LeaderboardClient } from './leaderboard/leaderboard-client';
@@ -668,6 +669,9 @@ export function MainMenu({
                   <summary>{t('profile.edit')}</summary>
                   <ProfileEditor client={profileClient} online={online} />
                 </details>
+                {accountEntry?.identity && (
+                  <IdentityLinks client={accountEntry.identity} online={online} />
+                )}
                 {savedRuns}
                 {onSignOut && (
                   <MenuAction
