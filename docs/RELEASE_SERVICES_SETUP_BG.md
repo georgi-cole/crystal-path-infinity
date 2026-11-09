@@ -167,6 +167,7 @@ Staging `cpi-live` включва потвърдените 18 Apple и 18 Google
 
 - Worker версия `bcfbb105-4a2f-4b28-b7e1-15b47c698186` прие истински Sandbox `TEST`, отхвърли променен подпис и отказа достъп без отделния сървърен ключ.
 - Apple Sandbox отчете `SUCCESS` за нова подписана `TEST` нотификация към staging gateway. След обновяването периодичната задача обнови `apple.staging` и `google.staging`. Гостът получава `account_required`.
+- В 11:56 ч. българско време TestFlight `0.1.0 (17)` записа една потвърдена Sandbox доставка на Rockmallow. Staging портфейлът потвърди собствеността. Това покрива checkout и доставка на свят. Консуматив и Restore Purchases чакат отделна проверка.
 - Съхранявай различен 32-byte hex `CPI_APPLE_SANDBOX_VERIFIER_KEY` в Worker и staging Supabase. Разгърни `backend/apple-receipt-verifier/wrangler.json` с Wrangler 4.158.0, потвърди Apple `TEST`, после качи `cpi-live` в staging и потвърди успешното сверяване. При нужда върни потвърдения Android-only каталог. iOS checkout изчаква прясна Apple синхронизация, а Android проверява своята независимо.
 - За приемане отвори `0.1.0 (17)` или по-нова вътрешна TestFlight сборка от България и влез с одобрения Crystal Path email. В The Vault купи свят и консуматив и провери доставката след повторно отваряне. Провери Restore Purchases за света и че повторна обработка не добавя втори комплект ресурси. Apple изпълнява TestFlight покупки в Sandbox. [Apple TestFlight покупки](https://developer.apple.com/help/app-store-connect/test-a-beta-version/testing-subscriptions-and-in-app-purchases-in-testflight).
 
