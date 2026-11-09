@@ -43,7 +43,7 @@ jobs:
       CPI_NATIVE_PURCHASES: 'true'
       CPI_NATIVE_ADS: ${{ inputs.rewarded_ads_test && 'true' || 'false' }}
       CPI_IOS_ADMOB_TEST_VERSION: ${{ vars.CPI_IOS_ADMOB_TEST_VERSION }}
-      VITE_ACCOUNT_API_BASE_URL: https://crystal-path-staging-api.kolequant.workers.dev
+      VITE_ACCOUNT_API_BASE_URL: https://crystal-path-staging-api.kolequant.workers.dev/cpi
       VITE_ACCOUNT_SERVICES_ENABLED: 'true'
       VITE_PURCHASES_ENABLED: 'true'
       VITE_REWARDED_ADS_ENABLED: ${{ inputs.rewarded_ads_test && 'true' || 'false' }}
