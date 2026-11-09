@@ -52,9 +52,10 @@ try {
       verify: (_provider, credential) => Promise.resolve({ subject: credential }),
       revokeApple: () => Promise.resolve(),
     },
+    stagingTestEmails: [user + '@example.invalid', 'backup@example.invalid'],
     directory: {
       verifiedEmail: () => Promise.resolve(user),
-      emailForSubject: () => Promise.resolve(user + '@example.invalid'),
+      emailForSubject: (subject) => Promise.resolve(subject + '@example.invalid'),
     },
     mailer: {
       send: (message) => {
@@ -63,6 +64,8 @@ try {
       },
     },
   });
+  assert.equal(await issuer.isStagingTestAccount(user), true);
+  assert.equal(await issuer.isStagingTestAccount(randomUUID()), false);
   const context = { country: 'BG', rateKey: 'ci:' + randomUUID() };
   const permit = await issuer.eligibility(
     { schemaVersion: 2, age: 27, country: 'BG', platform: 'android', clientBuild: 1 },
@@ -182,7 +185,7 @@ try {
         },
       }),
   });
-  const wallet = await commerce.wallet(user),
+  const wallet = await commerce.wallet(linkedSession.subject),
     proof = {
       platform: 'android',
       sku: 'fixture.live.sp500',

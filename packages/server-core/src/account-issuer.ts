@@ -74,11 +74,15 @@ export function createAccountIssuer(options: {
   mailer: AccountMailer;
   policy: AccountPolicy;
   identity?: NativeIdentity;
+  stagingTestEmails?: readonly string[];
   now?: () => number;
 }) {
   const { database, crypto } = options,
     now = options.now ?? Date.now;
   const policy = validateAccountPolicy(options.policy);
+  const stagingTestEmails = new Set(
+    (options.stagingTestEmails ?? []).map((address) => email(address)),
+  );
   const limit = createDurableRateLimit(database, crypto, now);
   const digest = (domain: string, value: string) => crypto.digest(domain, value);
   async function owner(connection: SqlConnection, subject: string) {
@@ -113,7 +117,7 @@ export function createAccountIssuer(options: {
   }
   async function authenticate(access: string): Promise<IssuedAccountActor | null> {
     if (!tokenPattern.test(access)) return null;
-    return sqlTransaction(database, async (connection) => {
+    const authenticated = await sqlTransaction(database, async (connection) => {
       const row = (
         await connection.query(
           `select f.* from cpi_private.account_families f
@@ -128,6 +132,20 @@ export function createAccountIssuer(options: {
         ? actor(row)
         : null;
     });
+    if (
+      !authenticated ||
+      (stagingTestEmails.size && !(await isStagingTestAccount(authenticated.subject)))
+    )
+      return null;
+    return authenticated;
+  }
+  async function isStagingTestAccount(subject: string): Promise<boolean> {
+    if (!stagingTestEmails.size) return false;
+    try {
+      return stagingTestEmails.has(email(await options.directory.emailForSubject(subject)));
+    } catch {
+      return false;
+    }
   }
   async function envelope(
     connection: SqlConnection,
@@ -266,6 +284,8 @@ export function createAccountIssuer(options: {
     const address = auth
       ? email(await options.directory.emailForSubject(auth.subject))
       : email(input.email);
+    if (stagingTestEmails.size && !stagingTestEmails.has(address))
+      throw new AccountIssuerError(403);
     const emailHash = digest('email', address);
     if (
       !(await limit('mail-ip:' + context.rateKey, 12, 60 * MINUTE)) ||
@@ -342,6 +362,8 @@ export function createAccountIssuer(options: {
     const address = auth
       ? email(await options.directory.emailForSubject(auth.subject))
       : email(input.email);
+    if (stagingTestEmails.size && !stagingTestEmails.has(address))
+      throw new AccountIssuerError(403);
     const emailHash = digest('email', address);
     if (!(await limit('verify:' + emailHash, 30, 10 * MINUTE))) throw new AccountIssuerError(429);
     const challenge = await sqlTransaction(database, async (connection) => {
@@ -598,6 +620,20 @@ export function createAccountIssuer(options: {
   }
   async function exchange(value: unknown) {
     const hash = digest('ticket', token(value));
+    if (stagingTestEmails.size) {
+      const subject = await sqlTransaction(
+        database,
+        async (connection) =>
+          (
+            await connection.query(
+              'select user_id from cpi_private.account_tickets where token_hash=$1',
+              [hash],
+            )
+          ).rows[0]?.user_id,
+      );
+      if (typeof subject !== 'string' || !(await isStagingTestAccount(subject)))
+        throw new AccountIssuerError(403);
+    }
     return sqlTransaction(database, async (connection) => {
       const subject = (
         await connection.query(
@@ -667,6 +703,20 @@ export function createAccountIssuer(options: {
   }
   async function refresh(value: unknown) {
     const hash = digest('refresh', token(value));
+    if (stagingTestEmails.size) {
+      const subject = await sqlTransaction(
+        database,
+        async (connection) =>
+          (
+            await connection.query(
+              'select f.user_id from cpi_private.account_families f join cpi_private.account_refresh_tokens r on r.family_id=f.id where r.token_hash=$1',
+              [hash],
+            )
+          ).rows[0]?.user_id,
+      );
+      if (typeof subject !== 'string' || !(await isStagingTestAccount(subject)))
+        throw new AccountIssuerError(403);
+    }
     const result = await sqlTransaction(database, async (connection) => {
       const found = (
         await connection.query(
@@ -869,6 +919,7 @@ export function createAccountIssuer(options: {
     refresh,
     revoke,
     authenticate,
+    isStagingTestAccount,
     reauthProof,
     verifyReauthentication,
     revokeAllSessions,

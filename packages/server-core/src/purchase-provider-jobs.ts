@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { SignedDataVerifier, Environment } from '@apple/app-store-server-library';
+import type { AppleSignedVerifier } from './apple-sandbox-verifier.ts';
 import type { AppStoreServerAPIClient } from '@apple/app-store-server-library';
 import type { PurchaseProof } from './purchase-verification.ts';
 import type { VerifiedRefund } from './purchase-maintenance.ts';
@@ -138,6 +139,7 @@ export function createGooglePurchaseJobs(options: {
 const MINUTE = 60_000;
 export function createApplePurchaseJobs(options: {
   roots: readonly Buffer[];
+  signedVerifier?: AppleSignedVerifier;
   bundleId: string;
   appleAppId: number;
   environment: 'sandbox' | 'production';
@@ -145,13 +147,15 @@ export function createApplePurchaseJobs(options: {
   now?: () => number;
 }) {
   const now = options.now ?? Date.now;
-  const verifier = new SignedDataVerifier(
-    [...options.roots],
-    true,
-    options.environment === 'production' ? Environment.PRODUCTION : Environment.SANDBOX,
-    options.bundleId,
-    options.appleAppId,
-  );
+  const verifier =
+    options.signedVerifier ??
+    new SignedDataVerifier(
+      [...options.roots],
+      true,
+      options.environment === 'production' ? Environment.PRODUCTION : Environment.SANDBOX,
+      options.bundleId,
+      options.appleAppId,
+    );
   async function notification(
     signedPayload: string,
   ): Promise<(VerifiedRefund & { reverse?: boolean }) | null> {

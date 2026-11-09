@@ -107,14 +107,16 @@ if (process.argv.includes('--online')) {
       ).rows;
       checks.purchaseReconciliationFresh =
         !config.purchasesEnabled ||
-        ['google.' + config.environment, 'apple.' + config.environment].every((name) =>
-          worker.some(
-            (row) =>
-              row.name === name &&
-              Number(row.caught_up_at) > Date.now() - 7200000 &&
-              (!row.last_failure_at || Number(row.last_failure_at) < Number(row.last_success_at)),
-          ),
-        );
+        config.purchasePlatforms
+          .map((platform) => (platform === 'android' ? 'google.' : 'apple.') + config.environment)
+          .every((name) =>
+            worker.some(
+              (row) =>
+                row.name === name &&
+                Number(row.caught_up_at) > Date.now() - 7200000 &&
+                (!row.last_failure_at || Number(row.last_failure_at) < Number(row.last_success_at)),
+            ),
+          );
     } finally {
       connection.release();
     }

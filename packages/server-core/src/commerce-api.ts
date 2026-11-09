@@ -5,7 +5,12 @@ import type { createCommerceService } from './commerce-service.ts';
 export function createCommerceHandler(options: {
   basePath?: string;
   service: ReturnType<typeof createCommerceService>;
-  authenticate(token: string): Promise<{ subject: string; purchasesAllowed: boolean } | null>;
+  authenticate(token: string): Promise<{
+    subject: string;
+    purchasesAllowed: boolean;
+    platform: 'android' | 'ios' | 'web';
+  } | null>;
+  checkoutReady?(platform: 'android' | 'ios'): Promise<boolean>;
   allowOrigin(origin: string | null): boolean;
   rateLimit(request: Request, subject: string | null): Promise<boolean>;
 }) {
@@ -94,11 +99,19 @@ export function createCommerceHandler(options: {
       if (
         value.schemaVersion !== 1 ||
         (value.platform !== 'android' && value.platform !== 'ios') ||
+        value.platform !== actor.platform ||
         Object.keys(value).some(
           (key) => key !== 'schemaVersion' && key !== 'platform' && key !== extra,
         )
       )
         return reply({ code: 'invalid_request' }, 400);
+      // Existing receipts can still be restored during a provider reconciliation outage.
+      if (
+        (route === 'catalog' || route === 'begin') &&
+        options.checkoutReady &&
+        !(await options.checkoutReady(value.platform))
+      )
+        return reply({ code: 'commerce_unavailable' }, 503);
       if (route === 'catalog')
         return reply({
           schemaVersion: 1,

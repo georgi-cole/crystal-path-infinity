@@ -1,6 +1,7 @@
 import { Buffer } from 'node:buffer';
 import { createHash, createSign } from 'node:crypto';
 import { SignedDataVerifier, Environment } from '@apple/app-store-server-library';
+import type { AppleSignedVerifier } from './apple-sandbox-verifier.ts';
 import type {
   AppStoreServerAPIClient,
   JWSTransactionDecodedPayload,
@@ -93,6 +94,7 @@ function verified(
 /** Apple's verifier validates the signature, certificate chain, bundle and environment, including online revocation. */
 export function createApplePurchaseVerifier(options: {
   roots: readonly Buffer[];
+  signedVerifier?: AppleSignedVerifier;
   bundleId: string;
   appleAppId: number;
   environment: 'production' | 'sandbox';
@@ -107,13 +109,15 @@ export function createApplePurchaseVerifier(options: {
     throw new Error('Invalid Apple verifier configuration');
   const environment =
     options.environment === 'production' ? Environment.PRODUCTION : Environment.SANDBOX;
-  const verifier = new SignedDataVerifier(
-    [...options.roots],
-    true,
-    environment,
-    options.bundleId,
-    options.appleAppId,
-  );
+  const verifier =
+    options.signedVerifier ??
+    new SignedDataVerifier(
+      [...options.roots],
+      true,
+      environment,
+      options.bundleId,
+      options.appleAppId,
+    );
   function acceptable(transaction: JWSTransactionDecodedPayload, proof: PurchaseProof) {
     return (
       transaction.transactionId === proof.transactionId &&

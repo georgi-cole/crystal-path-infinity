@@ -17,3 +17,9 @@ The client and hosted configuration require the specific staging gateway and iso
 - Check that Apple revocation completes before the staged account deletion finishes using an explicitly disposable account.
 
 [Apple token verification](https://developer.apple.com/documentation/signinwithapple/verifying-a-user) · [Apple account deletion](https://developer.apple.com/documentation/technotes/tn3194-handling-account-deletions-and-revoking-tokens-for-sign-in-with-apple) · [Google OAuth for installed apps](https://developers.google.com/identity/protocols/oauth2/native-app)
+
+## 9 November 2026 · Receipt verification integration
+
+The signed-in Play review branch includes the Apple Sandbox receipt verifier and the latest launcher and audio updates from main. The account issuer uses both the provider verifier and the staging tester allowlist. The PostgreSQL fixture exercises provider linking and session exchange with the allowlist active, then checks wallet access on the original account.
+
+Build 35 uses the newer staged provider flow. [Its device purchase checks](../RELEASE_SERVICES_SETUP_BG.md#testflight-build-35) cover a world, one consumable delivery and purchase recovery with the same account.
