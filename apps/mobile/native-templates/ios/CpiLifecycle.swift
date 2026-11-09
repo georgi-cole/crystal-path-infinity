@@ -129,7 +129,6 @@ class CpiWebView: WKWebView {
 
 class CpiBridgeViewController: CAPBridgeViewController {
     override var prefersStatusBarHidden: Bool { true }
-    override var prefersHomeIndicatorAutoHidden: Bool { true }
 
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(CpiLifecycle())

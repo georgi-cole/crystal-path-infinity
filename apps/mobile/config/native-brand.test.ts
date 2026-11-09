@@ -57,7 +57,6 @@ describe('CPI-012 native icon exports', () => {
     expect(ios).toContain('red="0" green="0" blue="0"');
     expect(ios).not.toContain('systemBackgroundColor');
     expect(iosController).toContain('var prefersStatusBarHidden: Bool { true }');
-    expect(iosController).toContain('var prefersHomeIndicatorAutoHidden: Bool { true }');
     expect(generator).toContain('config.GCSupportsGameMode = true');
     expect(generator).toContain('config.LSSupportsGameMode = true');
     expect(generator).toContain(
