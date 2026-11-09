@@ -57,6 +57,7 @@ export interface LiveServerOptions {
   readonly rateLimit: (key: string, maximum: number, windowMs: number) => Promise<boolean>;
   readonly rewardsEnabled: boolean;
   readonly purchasesEnabled: boolean;
+  readonly purchasePlatforms: readonly ('android' | 'ios')[];
   readonly commerce: ReturnType<typeof createCommerceService>;
   readonly maintenance: ReturnType<typeof createPurchaseMaintenance>;
   readonly googleJobs?: ReturnType<typeof createGooglePurchaseJobs>;
@@ -78,17 +79,18 @@ export function createLiveServer(options: LiveServerOptions) {
   const auth = options.issuer.authenticate;
   const authenticate = async (token: string) => {
     const actor = await auth(token);
-    return actor
-      ? {
-          ...actor,
-          profileAllowed: true,
-          leaderboardAllowed: true,
-          rankedAllowed: true,
-          reportAllowed: true,
-          purchasesAllowed: options.purchasesEnabled && actor.platform !== 'web',
-          rewardsAllowed: options.rewardsEnabled && actor.platform !== 'web',
-        }
-      : null;
+    if (!actor) return null;
+    const purchasePlatformAllowed =
+      actor.platform !== 'web' && options.purchasePlatforms.includes(actor.platform);
+    return {
+      ...actor,
+      profileAllowed: true,
+      leaderboardAllowed: true,
+      rankedAllowed: true,
+      reportAllowed: true,
+      purchasesAllowed: options.purchasesEnabled && purchasePlatformAllowed,
+      rewardsAllowed: options.rewardsEnabled && actor.platform !== 'web',
+    };
   };
   const repository = new PostgresRankedRepository(options.database);
   const authorities = new Map(
@@ -181,6 +183,17 @@ export function createLiveServer(options: LiveServerOptions) {
     authenticate,
     allowOrigin,
     rateLimit,
+    checkoutReady: (platform) =>
+      sqlTransaction(options.database, async (connection) => {
+        const result = await connection.query(
+          'select 1 from cpi_private.provider_sync where name=$1 and caught_up_at>$2 and (last_failure_at is null or last_failure_at<last_success_at)',
+          [
+            (platform === 'android' ? 'google.' : 'apple.') + options.environment,
+            Date.now() - 2 * 3600_000,
+          ],
+        );
+        return result.rows.length === 1;
+      }),
   });
   const server = createMvpServer({
     basePath,
@@ -437,24 +450,6 @@ export function createLiveServer(options: LiveServerOptions) {
         const origin = request.headers.get('origin');
         if (origin) response.headers.set('access-control-allow-origin', origin);
         return response;
-      }
-      // Restore remains available during a reconciliation outage; new charges are suspended.
-      if (options.purchasesEnabled && /\/commerce\/(begin|catalog)$/.test(url.pathname)) {
-        const health = await sqlTransaction(
-          options.database,
-          async (connection) =>
-            (
-              await connection.query(
-                'select count(*)::int as fresh from cpi_private.provider_sync where name in($1,$2) and caught_up_at>$3 and (last_failure_at is null or last_failure_at<last_success_at)',
-                [
-                  'google.' + options.environment,
-                  'apple.' + options.environment,
-                  Date.now() - 2 * 3600_000,
-                ],
-              )
-            ).rows[0],
-        );
-        if (health?.fresh !== 2) return reply({ code: 'commerce_unavailable' }, 503);
       }
       const response = await server(request);
       const origin = request.headers.get('origin');

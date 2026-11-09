@@ -3,6 +3,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import type { SqlPool } from '../src/database.ts';
+import type { AccountDirectory, AccountMailer } from '../src/account-providers.ts';
 import { privateCryptography } from '../src/private-services.ts';
 import { createAccountIssuer } from '../src/account-issuer.ts';
 import { createAccountIssuerHandler } from '../src/account-issuer-api.ts';
@@ -36,34 +37,41 @@ const policy = {
 const context = { country: 'BG', rateKey: 'gateway-peer' };
 const messages: { id: string; email: string; code: string; purpose: string }[] = [];
 const directoryUsers = new Map<string, string>();
-const issuer = createAccountIssuer({
-  database: pool,
-  crypto: privateCryptography('1'.repeat(64), '2'.repeat(64)),
-  policy,
-  now: () => clock,
-  directory: {
-    async verifiedEmail(email) {
-      let id = directoryUsers.get(email);
-      if (!id) {
-        id = randomUUID();
-        directoryUsers.set(email, id);
-        await db.query('insert into auth.users(id,email,email_confirmed_at) values($1,$2,now())', [
-          id,
-          email,
-        ]);
-      }
-      return id;
-    },
-    emailForSubject: (id) =>
-      Promise.resolve([...directoryUsers].find(([, value]) => value === id)![0]),
+const directory: AccountDirectory = {
+  async verifiedEmail(email) {
+    let id = directoryUsers.get(email);
+    if (!id) {
+      id = randomUUID();
+      directoryUsers.set(email, id);
+      await db.query('insert into auth.users(id,email,email_confirmed_at) values($1,$2,now())', [
+        id,
+        email,
+      ]);
+    }
+    return id;
   },
-  mailer: {
-    send: (message) => {
-      messages.push(message);
-      return Promise.resolve();
-    },
+  emailForSubject: (id) =>
+    Promise.resolve([...directoryUsers].find(([, value]) => value === id)![0]),
+};
+const mailer: AccountMailer = {
+  send: (message) => {
+    messages.push(message);
+    return Promise.resolve();
   },
-});
+};
+function makeIssuer(stagingTestEmails?: readonly string[]) {
+  return createAccountIssuer({
+    database: pool,
+    crypto: privateCryptography('1'.repeat(64), '2'.repeat(64)),
+    policy,
+    ...(stagingTestEmails ? { stagingTestEmails } : {}),
+    now: () => clock,
+    directory,
+    mailer,
+  });
+}
+const issuer = makeIssuer();
+const stagingIssuer = makeIssuer(['allowed@example.com', 'second@example.net']);
 const api = createAccountIssuerHandler({
   issuer,
   basePath: '/cpi-live',
@@ -88,6 +96,72 @@ beforeAll(async () => {
 }, 30000);
 afterAll(async () => {
   await db?.close();
+});
+describe('staging tester allowlist', () => {
+  it('matches only verified account emails and fails closed for unknown accounts', async () => {
+    const allowed = randomUUID(),
+      denied = randomUUID();
+    directoryUsers.set('allowed@example.com', allowed);
+    directoryUsers.set('other@example.com', denied);
+    expect(await stagingIssuer.isStagingTestAccount(allowed)).toBe(true);
+    expect(await stagingIssuer.isStagingTestAccount(denied)).toBe(false);
+    expect(await stagingIssuer.isStagingTestAccount(randomUUID())).toBe(false);
+    directoryUsers.delete('allowed@example.com');
+    directoryUsers.delete('other@example.com');
+  });
+
+  it('allows OTP requests only for the two staging addresses', async () => {
+    messages.length = 0;
+    const decision = await stagingIssuer.eligibility(
+      { schemaVersion: 2, age: 28, country: 'BG', platform: 'android', clientBuild: 1 },
+      context,
+    );
+    expect(decision.status).toBe('eligible');
+    if (!('permit' in decision)) throw new Error('missing permit');
+
+    await expect(
+      stagingIssuer.requestCode(
+        { schemaVersion: 1, email: 'not-allowed@example.org', eligibilityPermit: decision.permit },
+        context,
+      ),
+    ).rejects.toMatchObject({ status: 403 });
+    expect(messages).toHaveLength(0);
+
+    await stagingIssuer.requestCode(
+      { schemaVersion: 1, email: 'allowed@example.com', eligibilityPermit: decision.permit },
+      context,
+    );
+    expect(messages.at(-1)?.email).toBe('allowed@example.com');
+
+    await issuer.requestCode(
+      { schemaVersion: 1, email: 'stale@example.org', eligibilityPermit: decision.permit },
+      context,
+    );
+    await expect(
+      stagingIssuer.verifyCode({
+        schemaVersion: 1,
+        email: 'stale@example.org',
+        code: messages.at(-1)!.code,
+        eligibilityPermit: decision.permit,
+      }),
+    ).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('keeps an allowed email authenticated and rejects a non-allowlisted existing account', async () => {
+    const allowed = await login('second@example.net');
+    expect(await stagingIssuer.authenticate(allowed.session.accessToken)).toMatchObject({
+      subject: allowed.session.subject,
+    });
+
+    const denied = await login('not-allowed@example.org');
+    expect(await stagingIssuer.authenticate(denied.session.accessToken)).toBeNull();
+    await expect(stagingIssuer.exchange(denied.verified.verifiedTicket)).rejects.toMatchObject({
+      status: 403,
+    });
+    await expect(stagingIssuer.refresh(denied.session.refreshToken)).rejects.toMatchObject({
+      status: 403,
+    });
+  });
 });
 async function post(path: string, input: unknown, bearer?: string) {
   return api(
@@ -130,6 +204,8 @@ async function login(address: string) {
 }
 describe('private account issuer with real PostgreSQL semantics', () => {
   it('decides jurisdiction before email and never treats analytics/ad flags as permission', async () => {
+    const priorMessageCount = messages.length;
+    const priorDirectoryCount = directoryUsers.size;
     expect(
       accountEligibility(policy, context, {
         schemaVersion: 2,
@@ -155,8 +231,8 @@ describe('private account issuer with real PostgreSQL semantics', () => {
       eligibilityPermit: 'x'.repeat(43),
     });
     expect(response.status).toBe(410);
-    expect(messages).toHaveLength(0);
-    expect(directoryUsers.size).toBe(0);
+    expect(messages).toHaveLength(priorMessageCount);
+    expect(directoryUsers.size).toBe(priorDirectoryCount);
   });
   it('verifies email, exchanges once, replays a lost response briefly, and never stores raw codes/tokens', async () => {
     const { verified, session } = await login('one@example.com');
@@ -220,6 +296,7 @@ describe('private account issuer with real PostgreSQL semantics', () => {
   });
   it('revokes the whole rotated family on late reuse and blocks pending deletion', async () => {
     const { session } = await login('reuse@example.com');
+    expect(await stagingIssuer.authenticate(session.accessToken)).toBeNull();
     const successor = (await issuer.refresh(session.refreshToken)) as { accessToken: string };
     clock += 61000;
     await expect(issuer.refresh(session.refreshToken)).rejects.toMatchObject({ status: 401 });

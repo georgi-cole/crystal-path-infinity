@@ -161,6 +161,15 @@ Apple показва приет Developer Program License Agreement и акти�
 
 **Автоматично Google сверяване · 8 ноември 2026 г.** След първоначалната ръчна проверка срокът на сверяването изтече. Cloudflare отчете, че минутният cron спира преди заявката заради неподдържания режим `redirect: 'error'`. Worker-ът използва `manual` и отхвърля неуспешния HTTP отговор. Версия `f938c86c-bf3f-4ea9-bbca-c57d40b32ad5` е внедрена само в Crystal Path staging. Две поредни автоматични изпълнения обновиха `google.staging` без ръчно извикване. Android и iOS preflight заявките върнаха HTTP 204. Временното логване е изключено. [Режими за пренасочване в Cloudflare Workers](https://developers.cloudflare.com/workers/runtime-apis/request/#properties).
 
+#### Apple Sandbox проверка · 9 ноември 2026 г.
+
+Staging `cpi-live` включва потвърдените 18 Apple и 18 Google Play SKU за двата одобрени пълнолетни акаунта в България. Отделният `crystal-path-staging-apple-verifier` изпълнява Apple SDK 3.1.0 с Apple Root CA G3 и онлайн OCSP. Използва се GET форматът на RFC 5019 за OCSP, защото Apple отказа POST от Workers. Проверка на подписа и срока на отговора остава в Apple SDK. Apple In-App Purchase ключът остава в staging Supabase и подписва Apple API заявките чрез P-256 Web Crypto.
+
+- Worker версия `bcfbb105-4a2f-4b28-b7e1-15b47c698186` прие истински Sandbox `TEST`, отхвърли променен подпис и отказа достъп без отделния сървърен ключ.
+- Apple Sandbox отчете `SUCCESS` за нова подписана `TEST` нотификация към staging gateway. След обновяването периодичната задача обнови `apple.staging` и `google.staging`. Гостът получава `account_required`.
+- Съхранявай различен 32-byte hex `CPI_APPLE_SANDBOX_VERIFIER_KEY` в Worker и staging Supabase. Разгърни `backend/apple-receipt-verifier/wrangler.json` с Wrangler 4.158.0, потвърди Apple `TEST`, после качи `cpi-live` в staging и потвърди успешното сверяване. При нужда върни потвърдения Android-only каталог. iOS checkout изчаква прясна Apple синхронизация, а Android проверява своята независимо.
+- За приемане отвори `0.1.0 (17)` или по-нова вътрешна TestFlight сборка от България и влез с одобрения Crystal Path email. В The Vault купи свят и консуматив и провери доставката след повторно отваряне. Провери Restore Purchases за света и че повторна обработка не добавя втори комплект ресурси. Apple изпълнява TestFlight покупки в Sandbox. [Apple TestFlight покупки](https://developer.apple.com/help/app-store-connect/test-a-beta-version/testing-subscriptions-and-in-app-purchases-in-testflight).
+
 ### 9. Разгърни сървъра и периодичните задачи
 
 **Проверено в staging на 7 ноември 2026 г.** Supabase CLI `3.0.0` потвърди, че след качването няма чакащи миграции. Ограниченият DB вход може да приеме `service_role` и не е член на `postgres`. Всичките 45 таблици в `cpi_private` имат принудително RLS. `cpi-live` използва сертификата от Supabase, а сървърът отхвърли директна неподписана заявка за вход.

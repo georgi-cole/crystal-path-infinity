@@ -1,4 +1,5 @@
 import pg from 'pg';
+import { createAppleSandboxVerifier } from '../../../packages/server-core/src/apple-sandbox-verifier.ts';
 import { createBoundedAppleApiClient } from '../../../packages/server-core/src/apple-api-client.ts';
 import { readLiveConfiguration } from '../../../packages/server-core/src/live-configuration.ts';
 import { createProjectSqlPool } from '../../../packages/server-core/src/supabase-database.ts';
@@ -56,8 +57,9 @@ export function createCpiLiveFunction(env: (name: string) => string | undefined)
           database,
         }),
         mailer: createResendAccountMailer({ apiKey: config.mailKey, from: config.mailFrom }),
+        stagingTestEmails: config.stagingTestEmails,
       });
-      const googleToken = config.purchasesEnabled
+      const googleToken = config.purchasePlatforms.includes('android')
         ? createGooglePlayAccessToken({
             clientEmail: config.googleClientEmail!,
             privateKey: config.googlePrivateKey!,
@@ -70,7 +72,7 @@ export function createCpiLiveFunction(env: (name: string) => string | undefined)
             accessToken: googleToken,
           })
         : undefined;
-      const appleApi = config.purchasesEnabled
+      const appleApi = config.purchasePlatforms.includes('ios')
         ? createBoundedAppleApiClient({
             signingKey: config.applePrivateKey!,
             keyId: config.appleKeyId!,
@@ -79,9 +81,13 @@ export function createCpiLiveFunction(env: (name: string) => string | undefined)
             environment: config.purchaseEnvironment,
           })
         : null;
+      const appleSignedVerifier = config.appleSandboxVerifierKey
+        ? createAppleSandboxVerifier(config.appleSandboxVerifierKey)
+        : undefined;
       const appleJobs = appleApi
         ? createApplePurchaseJobs({
             roots: [APPLE_ROOT_G3],
+            signedVerifier: appleSignedVerifier,
             bundleId: 'com.georgicole.crystalpath.infinity',
             appleAppId: 6831790531,
             environment: config.purchaseEnvironment,
@@ -98,6 +104,7 @@ export function createCpiLiveFunction(env: (name: string) => string | undefined)
       const appleVerify = appleApi
         ? createApplePurchaseVerifier({
             roots: [APPLE_ROOT_G3],
+            signedVerifier: appleSignedVerifier,
             bundleId: 'com.georgicole.crystalpath.infinity',
             appleAppId: 6831790531,
             environment: config.purchaseEnvironment,
@@ -128,6 +135,7 @@ export function createCpiLiveFunction(env: (name: string) => string | undefined)
         rateLimit: createDurableRateLimit(database, crypto),
         rewardsEnabled: config.rewardsEnabled,
         purchasesEnabled: config.purchasesEnabled,
+        purchasePlatforms: config.purchasePlatforms,
         commerce: createCommerceService({
           database,
           products: config.products,
