@@ -4,12 +4,12 @@ import type { AccountSessionOwner } from './session-owner';
 export type IdentityProvider = 'apple' | 'google';
 export type ProviderSignIn =
   | { status: 'verified'; ticket: string }
-  | {
-      status: 'cancelled' | 'link_required';
-    };
+  | { status: 'signup_available'; signupToken: string }
+  | { status: 'cancelled' | 'link_required' | 'signup_unavailable' };
 export type ProviderLink = 'linked' | 'cancelled' | 'already_linked';
 export interface NativeIdentityClient {
   signIn(provider: IdentityProvider, permit: string, signal: AbortSignal): Promise<ProviderSignIn>;
+  signUp(signupToken: string, signal: AbortSignal): Promise<ProviderSignIn>;
   link(provider: IdentityProvider, signal: AbortSignal): Promise<ProviderLink>;
 }
 
@@ -36,6 +36,29 @@ export function createNativeIdentityClient(
   )
     return null;
 
+  async function request(
+    path: 'begin' | 'complete' | 'signup',
+    fields: object,
+    signal: AbortSignal,
+    accessToken?: string,
+  ): Promise<unknown> {
+    const response = await fetch(base + '/identity/' + path, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...(accessToken ? { authorization: 'Bearer ' + accessToken } : {}),
+      },
+      body: JSON.stringify(fields),
+      signal,
+      credentials: 'omit',
+      redirect: 'error',
+      referrerPolicy: 'no-referrer',
+      cache: 'no-store',
+    });
+    if (!response.ok) throw new Error('Sign-in request unavailable');
+    return (await response.json()) as unknown;
+  }
+
   async function ceremony(
     provider: IdentityProvider,
     permit: string | null,
@@ -45,27 +68,11 @@ export function createNativeIdentityClient(
     if (permit === null && !scope) throw new Error('Account required');
     async function post(path: 'begin' | 'complete', fields: object) {
       if (signal.aborted) throw new Error('Sign-in cancelled');
-      async function request(accessToken?: string, accountSignal?: AbortSignal) {
-        const response = await fetch(base + '/identity/' + path, {
-          method: 'POST',
-          headers: {
-            'content-type': 'application/json',
-            ...(accessToken ? { authorization: 'Bearer ' + accessToken } : {}),
-          },
-          body: JSON.stringify({ schemaVersion: 1, provider, ...fields }),
-          signal: accountSignal ?? signal,
-          credentials: 'omit',
-          redirect: 'error',
-          referrerPolicy: 'no-referrer',
-          cache: 'no-store',
-        });
-        if (!response.ok) throw new Error('Sign-in request unavailable');
-        return (await response.json()) as unknown;
-      }
-      if (!scope) return request();
+      const input = { schemaVersion: path === 'complete' ? 2 : 1, provider, ...fields };
+      if (!scope) return request(path, input, signal);
       if (session.accountScope() !== scope) throw new Error('Account changed');
       return session.withAccountRequest(({ accessToken, signal: accountSignal }) =>
-        request(accessToken, accountSignal),
+        request(path, input, AbortSignal.any([signal, accountSignal]), accessToken),
       );
     }
 
@@ -85,20 +92,37 @@ export function createNativeIdentityClient(
       throw new Error('Invalid sign-in response');
     return post('complete', { nonce: opened.nonce, credential: reply.credential });
   }
+  function signInResult(reply: unknown): ProviderSignIn {
+    if (record(reply)) {
+      if (
+        reply.status === 'link_required' ||
+        reply.status === 'cancelled' ||
+        reply.status === 'signup_unavailable'
+      )
+        return { status: reply.status };
+      if (
+        reply.status === 'verified' &&
+        typeof reply.verifiedTicket === 'string' &&
+        opaqueToken.test(reply.verifiedTicket)
+      )
+        return { status: 'verified', ticket: reply.verifiedTicket };
+      if (
+        reply.status === 'signup_available' &&
+        typeof reply.signupToken === 'string' &&
+        opaqueToken.test(reply.signupToken)
+      )
+        return { status: 'signup_available', signupToken: reply.signupToken };
+    }
+    throw new Error('Sign-in unavailable');
+  }
+
   return {
     async signIn(provider, permit, signal) {
-      const reply = await ceremony(provider, permit, signal);
-      if (record(reply)) {
-        if (reply.status === 'link_required' || reply.status === 'cancelled')
-          return { status: reply.status };
-        if (
-          reply.status === 'verified' &&
-          typeof reply.verifiedTicket === 'string' &&
-          opaqueToken.test(reply.verifiedTicket)
-        )
-          return { status: 'verified', ticket: reply.verifiedTicket };
-      }
-      throw new Error('Sign-in unavailable');
+      return signInResult(await ceremony(provider, permit, signal));
+    },
+    async signUp(signupToken, signal) {
+      if (!opaqueToken.test(signupToken)) throw new Error('Invalid signup request');
+      return signInResult(await request('signup', { schemaVersion: 1, signupToken }, signal));
     },
     async link(provider, signal) {
       const reply = await ceremony(provider, null, signal);

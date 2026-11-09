@@ -42,6 +42,7 @@ public final class CpiIdentity: CAPPlugin, CAPBridgedPlugin,
     private func authorizeApple(_ nonce: String) {
         let request = ASAuthorizationAppleIDProvider().createRequest()
         request.nonce = nonce
+        request.requestedScopes = [.email]
         let controller = ASAuthorizationController(authorizationRequests: [request])
         controller.delegate = self
         controller.presentationContextProvider = self
@@ -111,7 +112,8 @@ public final class CpiIdentity: CAPPlugin, CAPBridgedPlugin,
             URLQueryItem(name: "client_id", value: clientId),
             URLQueryItem(name: "redirect_uri", value: scheme + ":" + path),
             URLQueryItem(name: "response_type", value: "code"),
-            URLQueryItem(name: "scope", value: "openid"),
+            URLQueryItem(name: "scope", value: "openid email"),
+            URLQueryItem(name: "prompt", value: "select_account"),
             URLQueryItem(name: "nonce", value: nonce),
             URLQueryItem(name: "state", value: state),
             URLQueryItem(name: "code_challenge", value: challenge),

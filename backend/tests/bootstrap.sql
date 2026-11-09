@@ -8,7 +8,8 @@ revoke all on schema auth from public, anon, authenticated;
 create table auth.users (
   id uuid primary key,
   email text not null unique,
-  email_confirmed_at timestamptz
+  email_confirmed_at timestamptz,
+  raw_app_meta_data jsonb
 );
 insert into auth.users (id, email) values
  ('00000000-0000-4000-8000-000000000001', 'owner-a@example.invalid'),

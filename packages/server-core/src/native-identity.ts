@@ -6,13 +6,17 @@ export type NativeIdentityProvider = 'apple' | 'google';
 export function isNativeIdentityProvider(value: unknown): value is NativeIdentityProvider {
   return value === 'apple' || value === 'google';
 }
+export interface VerifiedNativeIdentity {
+  readonly subject: string;
+  readonly signupEmail?: string;
+  readonly appleRefresh?: () => Promise<string>;
+}
 export interface NativeIdentity {
   verify(
     provider: NativeIdentityProvider,
     credential: unknown,
     nonce: string,
-    linking: boolean,
-  ): Promise<{ subject: string; appleRefreshToken?: string }>;
+  ): Promise<VerifiedNativeIdentity>;
   revokeApple(refreshToken: string, signal: AbortSignal): Promise<void>;
 }
 
@@ -79,7 +83,7 @@ export function createNativeIdentity(options: {
     provider: NativeIdentityProvider,
     input: unknown,
     expectedNonce: string | null,
-  ): Promise<string> {
+  ): Promise<VerifiedNativeIdentity> {
     if (typeof input !== 'string' || input.length > 8192) throw new NativeIdentityRejected();
     const parts = input.split('.');
     if (parts.length !== 3 || !parts.every((part) => claimsSegment.test(part)))
@@ -136,7 +140,17 @@ export function createNativeIdentity(options: {
       ))
     )
       throw new NativeIdentityRejected();
-    return subject;
+    const address = typeof value.email === 'string' ? value.email : null;
+    const confirmed =
+      value.email_verified === true || (provider === 'apple' && value.email_verified === 'true');
+    const providerOwnsEmail =
+      provider === 'apple' ||
+      address?.toLowerCase().endsWith('@gmail.com') ||
+      (typeof value.hd === 'string' && value.hd.length > 0);
+    // A verified third-party Google address may have changed owners since it was verified.
+    return address && confirmed && providerOwnsEmail
+      ? { subject, signupEmail: address }
+      : { subject };
   }
 
   function appleSecret() {
@@ -175,7 +189,7 @@ export function createNativeIdentity(options: {
   }
 
   return {
-    async verify(provider, credential, nonce, linking) {
+    async verify(provider, credential, nonce) {
       if (provider === 'google') {
         if (!exactObject(credential, ['code', 'verifier'])) throw new NativeIdentityRejected();
         const result = await exchange('https://oauth2.googleapis.com/token', {
@@ -186,23 +200,27 @@ export function createNativeIdentity(options: {
           code_verifier: requiredString(credential.verifier, pkceVerifier),
         });
         if (!isObject(result)) throw new NativeIdentityRejected();
-        return { subject: await verifyToken('google', result.id_token, nonce) };
+        return verifyToken('google', result.id_token, nonce);
       }
       if (!exactObject(credential, ['identityToken', 'code'])) throw new NativeIdentityRejected();
-      const subject = await verifyToken('apple', credential.identityToken, nonce);
-      if (!linking) return { subject };
-
-      const result = await exchange(appleIssuer + '/auth/token', {
-        grant_type: 'authorization_code',
-        client_id: apple.clientId,
-        client_secret: appleSecret(),
-        code: requiredString(credential.code, authorizationCode),
-      });
-      if (!isObject(result) || (await verifyToken('apple', result.id_token, null)) !== subject)
-        throw new NativeIdentityRejected();
+      const proof = await verifyToken('apple', credential.identityToken, nonce);
+      const code = requiredString(credential.code, authorizationCode);
       return {
-        subject,
-        appleRefreshToken: requiredString(result.refresh_token, /^[!-~]{8,4096}$/),
+        ...proof,
+        async appleRefresh() {
+          const result = await exchange(appleIssuer + '/auth/token', {
+            grant_type: 'authorization_code',
+            client_id: apple.clientId,
+            client_secret: appleSecret(),
+            code,
+          });
+          if (
+            !isObject(result) ||
+            (await verifyToken('apple', result.id_token, null)).subject !== proof.subject
+          )
+            throw new NativeIdentityRejected();
+          return requiredString(result.refresh_token, /^[!-~]{8,4096}$/);
+        },
       };
     },
     async revokeApple(refreshToken, signal) {

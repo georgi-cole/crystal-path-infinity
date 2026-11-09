@@ -273,8 +273,11 @@ export const en = {
   'account.identityLinked': 'Sign-in method linked.',
   'account.identityAlreadyLinked': 'A different account is already linked.',
   'account.identityNeedsLink': 'Continue with email, then link this sign-in method in Profile.',
-  'account.stagingLinkFirst':
-    'For this beta, sign in with email once to link Apple or Google in Profile.',
+  'account.providerSignupTitle': 'Create your account',
+  'account.providerSignupIntro': 'Start a new Crystal Path account with your chosen sign-in.',
+  'account.providerCreate': 'Create account',
+  'account.useExisting': 'Use my existing account',
+  'account.signupTestUnavailable': 'Choose an approved beta account or continue with email.',
   'account.restoreFailed': 'Couldn’t restore sign-in.',
   'account.resend': 'Resend code',
   'account.changeEmail': 'Change email',

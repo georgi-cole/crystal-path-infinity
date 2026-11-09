@@ -1,7 +1,30 @@
-import { isObject } from './private-services.ts';
+import { exactObject, isObject } from './private-services.ts';
 import { validateAccountPolicy } from './account-policy.ts';
 import type { AccountPolicy } from './account-policy.ts';
 import type { CommerceProduct } from './commerce-service.ts';
+
+function providerSignupEmails(configured: string | undefined) {
+  if (!configured) return undefined;
+  const value: unknown = JSON.parse(configured);
+  if (!exactObject(value, ['apple', 'google']))
+    throw new Error('Invalid staging provider signup list');
+  function addresses(input: unknown): string[] {
+    if (!Array.isArray(input) || input.length > 4)
+      throw new Error('Invalid staging provider signup list');
+    return (input as unknown[]).map((address) => {
+      if (
+        typeof address !== 'string' ||
+        address.length > 254 ||
+        !/^[A-Za-z0-9.!#$%&'*+/=?^`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?\.[A-Za-z]{2,}$/.test(
+          address,
+        )
+      )
+        throw new Error('Invalid staging provider signup address');
+      return address.toLowerCase();
+    });
+  }
+  return { apple: addresses(value.apple), google: addresses(value.google) };
+}
 
 export function readLiveConfiguration(env: (name: string) => string | undefined) {
   if (env('CPI_LIVE_ENABLED') !== 'true') return null;
@@ -98,6 +121,7 @@ export function readLiveConfiguration(env: (name: string) => string | undefined)
       env('CPI_NATIVE_IDENTITY_ENABLED') === 'true'
         ? {
             googleClientId: require('CPI_IDENTITY_GOOGLE_IOS_CLIENT_ID'),
+            signupEmails: providerSignupEmails(env('CPI_STAGING_PROVIDER_SIGNUP_EMAILS')),
             apple: {
               clientId: 'com.georgicole.crystalpath.infinity',
               teamId: 'C97T2A5255',

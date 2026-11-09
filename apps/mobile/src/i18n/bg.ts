@@ -56,8 +56,11 @@ export const bg = {
   'account.identityLinked': 'Начинът за вход е свързан.',
   'account.identityAlreadyLinked': 'Вече има свързан друг акаунт.',
   'account.identityNeedsLink': 'Продължи с имейл, после свържи този начин за вход в Профил.',
-  'account.stagingLinkFirst':
-    'В тази тестова версия първо влез с имейл, за да свържеш Apple или Google в Профил.',
+  'account.providerSignupTitle': 'Създай акаунт',
+  'account.providerSignupIntro': 'Създай нов акаунт в Crystal Path с избрания начин за вход.',
+  'account.providerCreate': 'Създай акаунт',
+  'account.useExisting': 'Използвай моя акаунт',
+  'account.signupTestUnavailable': 'Избери разрешен тестов акаунт или продължи с имейл.',
   'account.restoreFailed': 'Входът не можа да бъде възстановен.',
   'account.resend': 'Изпрати кода отново',
   'account.changeEmail': 'Смени имейла',

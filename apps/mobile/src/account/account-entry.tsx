@@ -10,7 +10,11 @@ import type { AccountSessionOwner } from './session-owner';
 import { ACCOUNT_COUNTRIES } from './country-codes';
 import { playerInformationUrl } from '../support-contact';
 import { IdentityButtons } from './provider-sign-in';
-import type { IdentityProvider, NativeIdentityClient } from './native-identity-client';
+import type {
+  IdentityProvider,
+  NativeIdentityClient,
+  ProviderSignIn,
+} from './native-identity-client';
 
 export interface AccountEntryBinding {
   readonly gateway: OtpGateway;
@@ -64,7 +68,10 @@ export function AccountEntry({
   const [age, setAge] = useState('');
   const [country, setCountry] = useState('');
   const [method, setMethod] = useState<IdentityProvider | 'email' | null>(null);
-  const [needsLink, setNeedsLink] = useState(false);
+  const [providerNotice, setProviderNotice] = useState<
+    'link_required' | 'signup_unavailable' | null
+  >(null);
+  const [signupToken, setSignupToken] = useState<string | null>(null);
   const providerAttempt = useRef<AbortController | null>(null);
   const mounted = useRef(true);
   const ownsConnection = useRef(false);
@@ -91,6 +98,7 @@ export function AccountEntry({
       if (!active) return;
       setEmail('');
       setCode('');
+      setSignupToken(null);
       setState(flow?.snapshot() ?? null);
     });
     return () => {
@@ -113,21 +121,22 @@ export function AccountEntry({
     sync();
     if (method === 'apple' || method === 'google') await signInWith(method);
   }
-  async function signInWith(provider: IdentityProvider) {
-    const permit = flow?.identityPermit();
-    if (!permit || !binding?.identity || !online || providerAttempt.current || !mounted.current)
-      return;
+  async function runProvider(
+    request: (identity: NativeIdentityClient, signal: AbortSignal) => Promise<ProviderSignIn>,
+  ) {
+    if (!binding?.identity || !online || providerAttempt.current || !mounted.current) return;
     const controller = new AbortController();
     providerAttempt.current = controller;
     setMethod(null);
-    setNeedsLink(false);
+    setProviderNotice(null);
     setSessionFailed(false);
     setConnecting(true);
     try {
-      const result = await binding.identity.signIn(provider, permit, controller.signal);
+      const result = await request(binding.identity, controller.signal);
       if (controller.signal.aborted) return;
-      if (result.status === 'link_required') {
-        setNeedsLink(true);
+      setSignupToken(result.status === 'signup_available' ? result.signupToken : null);
+      if (result.status === 'link_required' || result.status === 'signup_unavailable') {
+        setProviderNotice(result.status);
       } else if (result.status === 'verified') {
         ownsConnection.current = true;
         const active = await binding.session.exchangeVerifiedTicket(result.ticket);
@@ -140,6 +149,16 @@ export function AccountEntry({
       providerAttempt.current = null;
       if (mounted.current) setConnecting(false);
     }
+  }
+  function signInWith(provider: IdentityProvider) {
+    const permit = flow?.identityPermit();
+    if (permit) return runProvider((identity, signal) => identity.signIn(provider, permit, signal));
+  }
+  function chooseEmail() {
+    setMethod('email');
+    setSignupToken(null);
+    setProviderNotice(null);
+    setSessionFailed(false);
   }
   function chooseProvider(provider: IdentityProvider) {
     if (flow?.identityPermit()) {
@@ -186,7 +205,8 @@ export function AccountEntry({
   function cancel() {
     providerAttempt.current?.abort();
     setMethod(null);
-    setNeedsLink(false);
+    setSignupToken(null);
+    setProviderNotice(null);
     if (binding?.session.snapshot().phase === 'connecting') void binding.session.signOut();
     flow?.cancel();
     setEmail('');
@@ -213,6 +233,7 @@ export function AccountEntry({
   const showMethods =
     !!binding?.identity &&
     !method &&
+    !signupToken &&
     (step === 'guest' || step === 'offline' || step === 'eligible');
   const codeStep =
     step === 'code' || step === 'verifying' || (step === 'sending' && state?.codeExpiresAt != null);
@@ -232,7 +253,15 @@ export function AccountEntry({
 
   return (
     <section className="cpi-account-entry" aria-labelledby="cpi-account-entry-title">
-      <h2 id="cpi-account-entry-title">{t(codeStep ? 'account.checkEmail' : 'account.title')}</h2>
+      <h2 id="cpi-account-entry-title">
+        {t(
+          codeStep
+            ? 'account.checkEmail'
+            : signupToken
+              ? 'account.providerSignupTitle'
+              : 'account.title',
+        )}
+      </h2>
       {!gateway ? (
         <p role="status">{t('account.notReady')}</p>
       ) : sessionStatus ? (
@@ -261,21 +290,21 @@ export function AccountEntry({
         <>
           {showMethods && (
             <>
-              {needsLink ? (
-                <p role="status">{t('account.identityNeedsLink')}</p>
-              ) : (
-                staging && <p className="cpi-menu-fine-print">{t('account.stagingLinkFirst')}</p>
+              {providerNotice && (
+                <p role="status">
+                  {t(
+                    providerNotice === 'link_required'
+                      ? 'account.identityNeedsLink'
+                      : 'account.signupTestUnavailable',
+                  )}
+                </p>
               )}
               <IdentityButtons disabled={busy || !online} onChoose={chooseProvider} />
               <button
                 type="button"
                 className="cpi-email-fallback"
                 disabled={busy || !online}
-                onClick={() => {
-                  setMethod('email');
-                  setNeedsLink(false);
-                  setSessionFailed(false);
-                }}
+                onClick={chooseEmail}
               >
                 {t('account.continueEmail')}
               </button>
@@ -283,7 +312,24 @@ export function AccountEntry({
               {!online && <p role="status">{t('account.offline')}</p>}
             </>
           )}
-          {screening && !showMethods && (
+          {signupToken && (
+            <div className="cpi-identity-options">
+              <p>{t('account.providerSignupIntro')}</p>
+              <button
+                type="button"
+                disabled={connecting || !online}
+                onClick={() =>
+                  void runProvider((identity, signal) => identity.signUp(signupToken, signal))
+                }
+              >
+                {t(connecting ? 'account.signingIn' : 'account.providerCreate')}
+              </button>
+              <button type="button" disabled={connecting} onClick={chooseEmail}>
+                {t('account.useExisting')}
+              </button>
+            </div>
+          )}
+          {screening && !showMethods && !signupToken && (
             <form
               onSubmit={(event) => {
                 event.preventDefault();
@@ -326,32 +372,34 @@ export function AccountEntry({
             </form>
           )}
           {step === 'parental_review' && <p role="status">{t('account.parentalReview')}</p>}
-          {!showMethods && (step === 'eligible' || (step === 'sending' && !codeStep)) && (
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                void send();
-              }}
-            >
-              <p>{t('account.privacyFirst')}</p>
-              <label htmlFor="cpi-account-email">{t('account.email')}</label>
-              <input
-                id="cpi-account-email"
-                type="email"
-                autoComplete="email"
-                inputMode="email"
-                autoCapitalize="none"
-                required
-                maxLength={254}
-                value={email}
-                disabled={busy}
-                onChange={(event) => setEmail(event.target.value)}
-              />
-              <button type="submit" disabled={busy || !online}>
-                {t(step === 'sending' ? 'account.sendingCode' : 'account.sendCode')}
-              </button>
-            </form>
-          )}
+          {!showMethods &&
+            !signupToken &&
+            (step === 'eligible' || (step === 'sending' && !codeStep)) && (
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void send();
+                }}
+              >
+                <p>{t('account.privacyFirst')}</p>
+                <label htmlFor="cpi-account-email">{t('account.email')}</label>
+                <input
+                  id="cpi-account-email"
+                  type="email"
+                  autoComplete="email"
+                  inputMode="email"
+                  autoCapitalize="none"
+                  required
+                  maxLength={254}
+                  value={email}
+                  disabled={busy}
+                  onChange={(event) => setEmail(event.target.value)}
+                />
+                <button type="submit" disabled={busy || !online}>
+                  {t(step === 'sending' ? 'account.sendingCode' : 'account.sendCode')}
+                </button>
+              </form>
+            )}
           {codeStep && (
             <>
               <form
