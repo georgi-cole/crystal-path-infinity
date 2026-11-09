@@ -171,6 +171,12 @@ Staging `cpi-live` включва потвърдените 18 Apple и 18 Google
 - Съхранявай различен 32-byte hex `CPI_APPLE_SANDBOX_VERIFIER_KEY` в Worker и staging Supabase. Разгърни `backend/apple-receipt-verifier/wrangler.json` с Wrangler 4.158.0, потвърди Apple `TEST`, после качи `cpi-live` в staging и потвърди успешното сверяване. При нужда върни потвърдения Android-only каталог. iOS checkout изчаква прясна Apple синхронизация, а Android проверява своята независимо.
 - За приемане отвори `0.1.0 (17)` или по-нова вътрешна TestFlight сборка от България и влез с одобрения Crystal Path email. В The Vault купи свят и консуматив и провери доставката след повторно отваряне. Провери Restore Purchases за света и че повторна обработка не добавя втори комплект ресурси. Apple изпълнява TestFlight покупки в Sandbox. [Apple TestFlight покупки](https://developer.apple.com/help/app-store-connect/test-a-beta-version/testing-subscriptions-and-in-app-purchases-in-testflight).
 
+<a id="testflight-build-35"></a>
+
+**TestFlight 0.1.0 (35) · 9 ноември 2026 г.** В 21:59 ч. българско време App Store Connect показа активна вътрешна сборка и 18 продукта с локализация, цена и наличност. Сверяването в staging беше успешно. Ledger-ът съдържаше една потвърдена доставка на свят, който остава отключен, и нула iOS доставки на консумативи.
+
+Впиши се с одобрения staging акаунт в сборка 35. От The Vault отвори заключен свят и направи тестова покупка. В Essentials избери малък пакет, например три подсказки, и провери еднократното начисляване. Използвай Restore Purchases със същия акаунт и потвърди, че светът остава достъпен, а ресурсите не се начисляват отново. Това са проверки на iPhone с Apple Sandbox. [TestFlight покупки](https://developer.apple.com/help/app-store-connect/test-a-beta-version/testing-subscriptions-and-in-app-purchases-in-testflight/).
+
 ### 9. Разгърни сървъра и периодичните задачи
 
 **Проверено в staging на 7 ноември 2026 г.** Supabase CLI `3.0.0` потвърди, че след качването няма чакащи миграции. Ограниченият DB вход може да приеме `service_role` и не е член на `postgres`. Всичките 45 таблици в `cpi_private` имат принудително RLS. `cpi-live` използва сертификата от Supabase, а сървърът отхвърли директна неподписана заявка за вход.
