@@ -1,5 +1,7 @@
 # CPI-012 — Native icons, platform splash and bounded offline bootstrap
 
+The [9 November 2026 update](#9-november-2026-approved-icon-and-launch-handoff) supersedes the earlier prism icon and native launch artwork described below. Earlier runtime results describe their respective builds.
+
 ## Contract and inherited decisions
 
 CPI-011 Midnight Prism is the baseline for launch branding, not a copy of the original The Big Eye icon or global splash overlay. The transparent prism icon asset belongs to CPI-011; its binary exports are generated deterministically by CPI-012. All UI text remains live HTML; no fake ranking, season reward or "win at 350" content is introduced.
@@ -54,3 +56,11 @@ No new game-core rules, scores, revive credits or network authority are introduc
 [CI run 41435454704](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/41435454704) built the new splash/icon APK and rendered the offline menu correctly. Its first native smoke attempt timed out at the **ordinary Home key** pause step, with no JavaScript errors or AndroidRuntime crash. The captured `android-attempt-1-diagnostics.json` showed a valid startup bridge snapshot and menu; the prior pre-page Home/pause and resume succeeded. The ordinary `adb shell input keyevent KEYCODE_HOME` exited 0, but ActivityTaskManager had **no HOME launch after that command**, and the screenshot still showed the app in the foreground. SystemUI was restarting immediately before this transition.
 
 The test now requires either the actual ActivityTaskManager HOME launch or the real native `App paused` event after the key. Only if neither arrives within 5 seconds does it explicitly request a HOME activity launch through the Android OS (recorded as `home-key-not-dispatched-launcher-intent` with its command output). It then still requires the **same real native pause within 30 seconds**, a native resume, current page/bridge identities, frozen foreground time, three cold attempts and zero app runtime errors. This is an OS Home navigation delivery fallback, **not** a synthetic pause or unconditional test pass; an actual HOME transition that fails to pause the app still fails.
+
+## 9 November 2026 approved icon and launch handoff
+
+TestFlight `0.1.0 (17)` still used the old prism icon and showed a prism on the native launch screen before Kolequant. The approved artwork shows five glass tiles with cyan and violet lights and one fractured pane. Native generation now copies the reviewed Android exports and the 1024px iPhone icon from `apps/mobile/brand-assets/native/`. The iPhone export stores the same colors in RGB. The Android adaptive layer is inset to keep the panes within the launcher mask. The browser and home-screen shortcut use the matching 180px export.
+
+The iOS storyboard contains a black background. Android uses a transparent icon over its black starting window. The existing Kolequant animation follows on the same background and owns the visible splash. On-device acceptance uses a cold launch and a check of the launcher icon on the new build.
+
+Build 17 showed the clock and signal row above game screens, including Discoveries. The iPhone shell now starts with the status bar hidden and opts into Game Mode through the launch metadata. Safe-area spacing still protects content around the camera cutout and edges. The phone controls Game Mode availability and system gestures. [Apple Game Mode](https://developer.apple.com/documentation/bundleresources/information-property-list/lssupportsgamemode).

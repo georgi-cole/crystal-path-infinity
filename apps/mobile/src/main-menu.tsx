@@ -616,6 +616,7 @@ export function MainMenu({
               <RankedScene
                 client={rankedClient}
                 online={online}
+                music={settings.music}
                 onLeave={() => onOpen('home')}
                 rewardFlow={rewardFlow}
                 savedPendingClient={savedPendingClient}

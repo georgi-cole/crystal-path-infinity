@@ -292,7 +292,7 @@ function configureAndroid(info) {
   );
   assert.ok(gradle.includes(`versionCode ${buildNumber}`), 'Unexpected Android versionCode');
   write('android/app/build.gradle', gradle);
-  // Android 12+ splash is an icon on a fixed background, not fullscreen art.
+  // Use a black system starting window so the Kolequant intro owns the visible splash.
   write(
     'android/app/src/main/res/values/cpi_colors.xml',
     `<?xml version="1.0" encoding="utf-8"?>
@@ -316,7 +316,7 @@ function configureAndroid(info) {
     </style>
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/cpi_background</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/cpi_splash_logo</item>
+        <item name="windowSplashScreenAnimatedIcon">@android:color/transparent</item>
         <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>
 </resources>
@@ -388,6 +388,10 @@ function configureIOS(info) {
   config.UISupportedInterfaceOrientations = ['UIInterfaceOrientationPortrait'];
   delete config['UISupportedInterfaceOrientations~ipad'];
   config.UIUserInterfaceStyle = 'Dark';
+  config.GCSupportsGameMode = true;
+  config.LSSupportsGameMode = true;
+  config.UIStatusBarHidden = true;
+  config.UIViewControllerBasedStatusBarAppearance = true;
   if (integrations.ads) {
     config.GADApplicationIdentifier = integrations.iosAdMobAppId;
     config.GADDelayAppMeasurementInit = true;
@@ -451,25 +455,10 @@ function configureIOS(info) {
     .replaceAll('CODE_SIGN_IDENTITY = "iPhone Developer";', 'CODE_SIGN_IDENTITY = "";');
   write('ios/App/App.xcodeproj/project.pbxproj', project);
 
-  // Native static launch, no mandatory animation or wait.
+  // Match the WebView background while the Kolequant intro is loading.
   write(
     'ios/App/App/Base.lproj/LaunchScreen.storyboard',
     read('native-templates/ios/LaunchScreen.storyboard'),
-  );
-  write(
-    'ios/App/App/Assets.xcassets/CpiLaunchMark.imageset/Contents.json',
-    JSON.stringify(
-      {
-        images: [
-          { filename: 'CpiLaunchMark.png', idiom: 'universal', scale: '1x' },
-          { filename: 'CpiLaunchMark@2x.png', idiom: 'universal', scale: '2x' },
-          { filename: 'CpiLaunchMark@3x.png', idiom: 'universal', scale: '3x' },
-        ],
-        info: { author: 'xcode', version: 1 },
-      },
-      null,
-      2,
-    ) + '\n',
   );
   syncNativeBrandAssets(appRoot, 'ios');
 
@@ -567,9 +556,16 @@ function verifyNative(platform, info) {
     );
     assert.ok(read('android/app/src/main/res/values/cpi_colors.xml').includes(background));
     const launchStyle = read('android/app/src/main/res/values/styles.xml');
-    assert.ok(launchStyle.includes('@drawable/cpi_splash_logo'));
-    assert.ok(launchStyle.includes('windowSplashScreenBackground'));
-    assert.ok(!launchStyle.includes('cpi_launch_placeholder'));
+    assert.ok(
+      launchStyle.includes(
+        '<item name="windowSplashScreenAnimatedIcon">@android:color/transparent</item>',
+      ),
+    );
+    assert.ok(
+      launchStyle.includes(
+        '<item name="windowSplashScreenBackground">@color/cpi_background</item>',
+      ),
+    );
     for (const name of ['ic_launcher', 'ic_launcher_round']) {
       assert.equal(
         read(`android/app/src/main/res/mipmap-anydpi-v26/${name}.xml`),
@@ -633,6 +629,10 @@ function verifyNative(platform, info) {
     assert.equal(plist.CFBundleDisplayName, info.appName);
     assert.deepEqual(plist.UISupportedInterfaceOrientations, ['UIInterfaceOrientationPortrait']);
     assert.equal(plist.UIUserInterfaceStyle, 'Dark');
+    assert.equal(plist.GCSupportsGameMode, true);
+    assert.equal(plist.LSSupportsGameMode, true);
+    assert.equal(plist.UIStatusBarHidden, true);
+    assert.equal(plist.UIViewControllerBasedStatusBarAppearance, true);
     assert.equal(plist.NSAppTransportSecurity, undefined);
     assert.ok(
       !Object.keys(plist).some(
@@ -692,14 +692,12 @@ function verifyNative(platform, info) {
       read('ios/App/App/Base.lproj/LaunchScreen.storyboard'),
       read('native-templates/ios/LaunchScreen.storyboard'),
     );
-    const images = json('ios/App/App/Assets.xcassets/CpiLaunchMark.imageset/Contents.json');
-    assert.deepEqual(
-      images.images.map((item) => item.scale),
-      ['1x', '2x', '3x'],
-    );
-    assert.ok(images.images.every((item) => item.idiom === 'universal'));
     const appIcons = json('ios/App/App/Assets.xcassets/AppIcon.appiconset/Contents.json');
-    assert.ok(appIcons.images.some((item) => item.size === '1024x1024'));
+    assert.ok(
+      appIcons.images.some(
+        (item) => item.size === '1024x1024' && item.filename === 'AppIcon-512@2x.png',
+      ),
+    );
   }
   const brandAssets = syncNativeBrandAssets(appRoot, platform, true);
   const report = {
