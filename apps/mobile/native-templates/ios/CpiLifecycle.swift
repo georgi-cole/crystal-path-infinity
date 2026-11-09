@@ -96,6 +96,7 @@ class CpiWebView: WKWebView {
 
     override init(frame: CGRect, configuration: WKWebViewConfiguration) {
         super.init(frame: frame, configuration: configuration)
+        scrollView.pinchGestureRecognizer?.isEnabled = false
         observers.append(NotificationCenter.default.addObserver(forName: UIScene.willDeactivateNotification, object: nil, queue: .main) { [weak self] notification in
             guard let self = self, self.held != nil,
                   let scene = notification.object as? UIWindowScene,

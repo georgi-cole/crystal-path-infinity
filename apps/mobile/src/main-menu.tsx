@@ -1,3 +1,4 @@
+import { LIVE_RULESET_VERSION } from '@crystal-path-infinity/game-core';
 import { BalanceTuner } from './balance-tuner';
 import { MysteryJournal } from './mystery-discovery';
 import type { ReactNode } from 'react';
@@ -10,10 +11,7 @@ import { ProfileEditor } from './account/profile-editor';
 import type { ProfileClient } from './account/profile-client';
 import { LeaderboardView } from './leaderboard/leaderboard-view';
 import type { LeaderboardClient } from './leaderboard/leaderboard-client';
-import { RankedScene } from './ranked/ranked-scene';
 import type { RankedClient } from './ranked/ranked-client';
-import type { RewardFlow } from './rewards/reward-flow';
-import type { SavedPendingClient } from './ranked/saved-pending-client';
 import { AccountControls } from './account/account-controls';
 import type { AccountControlsClient } from './account/account-controls-model';
 import type { NameReportClient } from './leaderboard/name-report-client';
@@ -247,8 +245,6 @@ export interface MainMenuProps {
   leaderboardCountries?: readonly { countryCode: string; continentCode: string }[];
   pendingPersonalResult?: boolean;
   rankedClient?: RankedClient | null;
-  rewardFlow?: RewardFlow | null;
-  savedPendingClient?: SavedPendingClient | null;
   accountControlsClient?: AccountControlsClient | null;
   accountScope?: object | null;
   accountConnected?: boolean;
@@ -406,12 +402,12 @@ function MenuPanel({
   children,
 }: {
   title: string;
-  eyebrow: string;
+  eyebrow?: string;
   children: ReactNode;
 }) {
   return (
     <section className="cpi-menu-panel" aria-labelledby="cpi-panel-title">
-      <p className="cpi-menu-eyebrow">{eyebrow}</p>
+      {eyebrow && <p className="cpi-menu-eyebrow">{eyebrow}</p>}
       <h1 id="cpi-panel-title" tabIndex={-1} data-menu-heading>
         {title}
       </h1>
@@ -485,8 +481,6 @@ export function MainMenu({
   leaderboardCountries = [],
   pendingPersonalResult = false,
   rankedClient = null,
-  rewardFlow = null,
-  savedPendingClient = null,
   accountControlsClient = null,
   accountScope = null,
   accountConnected = false,
@@ -612,40 +606,28 @@ export function MainMenu({
           />
         ) : view === 'play' ? (
           <MenuPanel title={t('general.play')} eyebrow={t('menu.playEyebrow')}>
-            {rankedClient ? (
-              <RankedScene
-                client={rankedClient}
-                online={online}
-                music={settings.music}
-                onLeave={() => onOpen('home')}
-                rewardFlow={rewardFlow}
-                savedPendingClient={savedPendingClient}
-              />
-            ) : (
-              <>
-                <p>{t('menu.playUnavailable')}</p>
-                <div className="cpi-menu-notice" role="status">
-                  <strong>
-                    {service === 'offline' ? t('menu.youOffline') : t('menu.servicesMissing')}
-                  </strong>
-                  <span>{t('menu.noRankedHere')}</span>
-                </div>
-                <MenuAction
-                  label={t('menu.practiceInstead')}
-                  description={t('menu.practiceNow')}
-                  icon="practice"
-                  variant="primary"
-                  onClick={canResumePractice(saved) ? onResume : onNew}
-                />
-              </>
-            )}
+            <p>{t('menu.playUnavailable')}</p>
+            <div className="cpi-menu-notice" role="status">
+              <strong>
+                {service === 'offline' ? t('menu.youOffline') : t('menu.servicesMissing')}
+              </strong>
+              <span>{t('menu.noRankedHere')}</span>
+            </div>
+            <MenuAction
+              label={t('menu.practiceInstead')}
+              description={t('menu.practiceNow')}
+              icon="practice"
+              variant="primary"
+              onClick={canResumePractice(saved) ? onResume : onNew}
+            />
           </MenuPanel>
         ) : view === 'rankings' ? (
-          <MenuPanel title={t('general.rankings')} eyebrow={t('menu.rankingsScope')}>
+          <MenuPanel title={t('general.rankings')}>
             {leaderboardClient && (
               <LeaderboardView
                 client={leaderboardClient}
                 online={online}
+                rulesetVersion={LIVE_RULESET_VERSION}
                 countries={leaderboardCountries}
                 pendingPersonalResult={pendingPersonalResult}
                 reportClient={nameReportClient}

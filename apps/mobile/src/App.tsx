@@ -34,6 +34,7 @@ import type { ProfileClient } from './account/profile-client';
 import type { LeaderboardClient } from './leaderboard/leaderboard-client';
 import type { NameReportClient } from './leaderboard/name-report-client';
 import type { RankedClient } from './ranked/ranked-client';
+import { RankedScene } from './ranked/ranked-scene';
 import type { AccountControlsClient } from './account/account-controls-model';
 import type { RewardFlow } from './rewards/reward-flow';
 import type { SavedPendingClient } from './ranked/saved-pending-client';
@@ -141,7 +142,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
     () => null,
   );
   const { activate: activateMusic, awaitingGesture: musicAwaitingGesture } = useHomeSoundtrack(
-    !game && !(view === 'play' && rankedRunId) && bootPhase === 'ready',
+    !game && !(view === 'play' && rankedClient) && bootPhase === 'ready',
     !launchActive,
     settings.music,
   );
@@ -507,6 +508,23 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
       </>
     );
 
+  if (!confirmNew && view === 'play' && rankedClient)
+    return (
+      <RankedScene
+        client={rankedClient}
+        online={online}
+        music={settings.music}
+        reducedMotion={settings.reducedMotion}
+        autoStart
+        accountScope={accountScope}
+        onLeave={() => navigate('home')}
+        onPractice={canResumePractice(visibleSaved) ? resumePractice : requestNewPractice}
+        onViewRankings={() => navigate('rankings')}
+        rewardFlow={rewardFlow}
+        savedPendingClient={services?.savedPendingClient}
+      />
+    );
+
   const platform = Capacitor.getPlatform();
   const platformLabel = platform === 'ios' ? 'iOS' : platform === 'android' ? 'Android' : 'Web';
   const buildLabel = showBuildDetails ? platformLabel + ' · ' + build.version : undefined;
@@ -551,10 +569,11 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
           profileClient={accountScope ? services?.profileClient : null}
           leaderboardClient={services?.leaderboardClient}
           leaderboardCountries={services?.countries}
-          pendingPersonalResult={services?.pendingPersonalResult}
+          pendingPersonalResult={
+            services?.pendingPersonalResult || rankedClient?.snapshot().run?.rewardPending
+          }
           rankedClient={rankedClient}
-          rewardFlow={rewardFlow}
-          savedPendingClient={accountScope ? services?.savedPendingClient : null}
+
           accountControlsClient={accountScope ? services?.accountControlsClient : null}
           accountScope={accountScope}
           accountConnected={accountScope !== null}

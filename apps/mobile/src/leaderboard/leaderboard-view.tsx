@@ -14,6 +14,7 @@ import type {
   LeaderboardSnapshot,
 } from './leaderboard-client';
 import './leaderboard-view.css';
+import { ACCOUNT_COUNTRIES } from '../account/country-codes';
 import { NameReportButton } from './name-report';
 import type { NameReportClient } from './name-report-client';
 
@@ -185,7 +186,7 @@ export function LeaderboardView({
       ) : (
         <>
           <fieldset className="cpi-leaderboard-filters">
-            <legend>{t('menu.rankingsScope')}</legend>
+            <legend className="visually-hidden">{t('menu.rankingsScope')}</legend>
             {(['world', 'continent', 'country'] as const).map((value) => (
               <label key={value}>
                 <input
@@ -218,9 +219,12 @@ export function LeaderboardView({
                           {t(continentKeys[code])}
                         </option>
                       ))
-                    : countries.map((item) => (
-                        <option key={item.countryCode} value={item.countryCode}>
-                          {countryNames.of(item.countryCode) ?? item.countryCode}
+                    : (countries.length
+                        ? countries.map(({ countryCode }) => countryCode)
+                        : ACCOUNT_COUNTRIES
+                      ).map((code) => (
+                        <option key={code} value={code}>
+                          {countryNames.of(code) ?? code}
                         </option>
                       ))}
                 </select>
@@ -240,7 +244,7 @@ export function LeaderboardView({
                       ? t(data ? 'leaderboard.refreshing' : 'leaderboard.loading')
                       : null}
               </div>
-              {online && (
+              {online && current?.phase === 'error' && (
                 <button type="button" onClick={() => setAttempt((value) => value + 1)}>
                   {t('leaderboard.retry')}
                 </button>

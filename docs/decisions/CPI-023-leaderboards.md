@@ -47,3 +47,7 @@ The menu accepts an explicitly injected leaderboard client and the approved prof
 The server read route requires an explicit allowed ruleset/mapping list, public-read policy, origin policy and durable limiter. An optional verified bearer provides only that account's own position; a bad bearer cannot fall back to a public request. A single SQL snapshot supplies count, ranks, neighbors and metadata without a stale shared server cache.
 
 `backend/tests/leaderboard-integration.mjs` proves the positive path using actual ranked commands and the PostgreSQL adapter: hint, clear row1, device takeover, final end, guarded publication and guest/owner World, Europe and Bulgaria reads. It also verifies immutable publish retry and excludes auth IDs/private fields. The same scenario passed locally under service_role with PostgreSQL WASM; required PostgreSQL17 CI repeats it on actual independent connections.
+
+## 9 November 2026 · Active ranked board and scope controls
+
+The game menu queries `infinity-v11-live` for new verified crossings. Existing v1 results stay in their separate dataset. World, Continent and Country appear once as filter options, with a screen-reader legend. Country filtering falls back to the game's ISO country list when the account service has no narrower list. A pending reward attempt still has no published result.

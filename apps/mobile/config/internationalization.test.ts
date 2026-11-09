@@ -179,8 +179,9 @@ describe('CPI-016 internationalization contract', () => {
     const bridge = readFileSync(new URL('../src/prism-bridge.tsx', import.meta.url), 'utf8');
     expect(bridge).toContain('cpi-pane-caption');
     expect(bridge).toContain("'game.hintedTile'");
-    expect(scene).toContain("'game.spCritical'");
-    expect(scene).toContain("'game.spLow'");
+    const hud = readFileSync(new URL('../src/run-hud.tsx', import.meta.url), 'utf8');
+    expect(hud).toContain("'game.spCritical'");
+    expect(hud).toContain("'game.spLow'");
     expect(scene).toContain('dir="ltr"');
     const css = readFileSync(new URL('../src/global-accessibility.css', import.meta.url), 'utf8');
     expect(css).toContain("[dir='rtl']");

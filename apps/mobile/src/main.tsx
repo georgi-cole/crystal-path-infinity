@@ -1,6 +1,7 @@
 import './styles.css';
 import './brand-tokens.css';
 import { StrictMode } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { SIMULATED_STORE_ENABLED } from './app-profile';
@@ -23,6 +24,15 @@ void getGameplayLifecycle().ready;
 
 const root = document.getElementById('root');
 if (!root) throw new Error('The application root is missing.');
+if (Capacitor.isNativePlatform()) {
+  root.dataset.nativeShell = 'true';
+  document
+    .querySelector('meta[name="viewport"]')
+    ?.setAttribute(
+      'content',
+      'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover',
+    );
+}
 
 createRoot(root).render(
   <StrictMode>

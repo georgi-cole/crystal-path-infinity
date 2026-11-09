@@ -88,3 +88,9 @@ eligibility, production origin/rate-limit configuration, signed native device
 latency/interruption checks and live guest/A/B Data API checks remain required.
 Rewarded ads are unavailable in this scene until CPI-028/029 supply verified grants
 and the native ad/consent lifecycle. Local test fixtures are never ranked evidence.
+
+## 9 November 2026 · Full-screen ranked presentation
+
+Signed-in Play checks for the player's current run and recovers it on the same device, or starts a verified run if no active one exists. An explicit action is still required for another device's lease. The full-screen crossing shares the practice bridge renderer, HUD, world atmosphere and companion artwork. It projects only the confirmed current row and resolved history. Future rows are neutral visual scenery, and input stays locked while the server settles an action.
+
+Pause, death, rewards and recovery are displayed over the bridge. Pending ad attempts can be saved to the separate recovery list, which stays collapsed in the ranked lobby. Recovery, credit spending, reward verification and publication retain their existing server rules. The Rankings menu reads the live ruleset board, keeps earlier results on their original ruleset, and shows a retry action only when the read fails.

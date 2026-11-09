@@ -1,5 +1,4 @@
-import { DiscoveryIntroduction } from '../mystery-introduction';
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useLanguage } from '../language-context';
 import type { RankedClient, RankedClientState } from './ranked-client';
 import { RewardOffer } from '../rewards/reward-offer';
@@ -8,14 +7,15 @@ import { SavedPendingView } from './saved-pending-view';
 import type { SavedPendingClient } from './saved-pending-client';
 import './ranked-scene.css';
 import { operationMessageKeys } from '../operations/operation-failure';
-import type { EffectKind } from '@crystal-path-infinity/game-core';
-import { MysteryEffects, PactPanel, EffectGlyph } from '../mystery-effects';
-import { effectCopy } from '../mystery.messages';
-import { HintCounter } from '../resource-feedback';
-import { DeathClockBadge, MysteryRhythmBadge, MysteryCube } from '../mystery-box';
 import { useCommerce } from '../commerce/commerce-context';
 import { canUseCreditFromReward, leaveVerifiedRun } from './ranked-leave';
 import { useSoundtrack } from '../soundtrack';
+import { RankedBoard } from './ranked-board';
+import { useThemeId } from '../store-context';
+import { WorldOutcomeHero } from '../world-treasures';
+import type { PactOption } from '@crystal-path-infinity/game-core';
+
+import { enterRankedPlay } from './ranked-entry';
 
 const EMPTY: RankedClientState = {
   phase: 'unavailable',
@@ -30,6 +30,11 @@ export function RankedScene({
   client,
   online,
   music = false,
+  autoStart = false,
+  accountScope,
+  reducedMotion = false,
+  onViewRankings,
+  onPractice,
   recoverRunId,
   onLeave,
   rewardFlow = null,
@@ -38,18 +43,26 @@ export function RankedScene({
   client: RankedClient | null;
   online: boolean;
   music?: boolean;
+  autoStart?: boolean;
+  accountScope?: object | null;
+  reducedMotion?: boolean;
+  onViewRankings?: () => void;
+  onPractice?: () => void;
   /** Supplied by a trusted account recovery list, never a local practice checkpoint. */
   recoverRunId?: string;
   onLeave: () => void;
   rewardFlow?: RewardFlow | null;
   savedPendingClient?: SavedPendingClient | null;
 }) {
-  const { t, number, locale } = useLanguage();
+  const { t, number } = useLanguage();
+  const theme = useThemeId();
   const commerce = useCommerce();
   const [observed, setObserved] = useState<{
     client: RankedClient;
+    scope?: object | null;
     state: RankedClientState;
   } | null>(null);
+  const entry = useRef<object | null>(null);
   const [confirm, setConfirm] = useState(false);
   const [interrupted, setInterrupted] = useState(false);
   const subscribeReward = useCallback(
@@ -58,7 +71,10 @@ export function RankedScene({
   );
   const readReward = useCallback(() => rewardFlow?.snapshot() ?? null, [rewardFlow]);
   const rewardState = useSyncExternalStore(subscribeReward, readReward, readReward);
-  const state = observed?.client === client ? observed.state : (client?.snapshot() ?? EMPTY);
+  const state =
+    observed?.client === client && observed.scope === accountScope
+      ? observed.state
+      : (client?.snapshot() ?? EMPTY);
   const run = state.run;
   const currentRunId = run?.runId ?? recoverRunId;
   const ready = !!client && online && state.phase === 'ready' && !interrupted;
@@ -92,7 +108,7 @@ export function RankedScene({
     const update = () => {
       if (!active) return;
       const next = client.snapshot();
-      setObserved({ client, state: next });
+      setObserved({ client, scope: accountScope, state: next });
       if (next.run === null) {
         setInterrupted(false);
         setConfirm(false);
@@ -104,10 +120,20 @@ export function RankedScene({
       active = false;
       unsubscribe();
     };
-  }, [client]);
+  }, [accountScope, client]);
   useEffect(() => {
     client?.setOnline(online);
   }, [client, online]);
+  useEffect(() => {
+    if (!client) return;
+    const current = {};
+    entry.current = current;
+    if (autoStart)
+      void Promise.resolve().then(() => enterRankedPlay(client, () => entry.current === current));
+    return () => {
+      entry.current = null;
+    };
+  }, [accountScope, autoStart, client]);
   useEffect(() => {
     rewardFlow?.setOnline(online);
   }, [rewardFlow, online]);
@@ -127,7 +153,7 @@ export function RankedScene({
     if (!client) return;
     const pause = () => {
       const latest = client.snapshot();
-      if (latest.run && latest.run.status !== 'finished') {
+      if (latest.run?.status === 'playing' && !latest.run.paused) {
         setInterrupted(true);
         void client.command({ type: 'pause' });
       }
@@ -141,7 +167,8 @@ export function RankedScene({
       document.removeEventListener('visibilitychange', visibility);
       window.removeEventListener('pagehide', pause);
       // Leave preserves an authoritative checkpoint; it never sends End run.
-      void client.command({ type: 'pause' });
+      const latest = client.snapshot().run;
+      if (latest?.status === 'playing' && !latest.paused) void client.command({ type: 'pause' });
     };
   }, [client]);
   useEffect(() => {
@@ -225,384 +252,318 @@ export function RankedScene({
                     : run?.rewardPending
                       ? 'ranked.pendingReward'
                       : run?.status === 'dead'
-                        ? 'ranked.dead'
+                        ? 'game.noticeDead'
                         : run?.paused
                           ? 'ranked.paused'
                           : 'ranked.rules';
 
-  return (
-    <section className="cpi-ranked-scene" aria-labelledby="cpi-ranked-title" aria-busy={busy}>
-      <header className="cpi-ranked-heading">
-        <h2 id="cpi-ranked-title">{t('ranked.title')}</h2>
-        <button
-          type="button"
-          onClick={() => {
-            void leave();
-          }}
-        >
-          {t('ranked.leave')}
-        </button>
-      </header>
-      <p className="cpi-ranked-status" role="status" aria-live="polite">
-        {t(status)}
-      </p>
-      {state.rejected && <p role="alert">{t('ranked.rejected')}</p>}
-      {savedPendingClient && (
-        <SavedPendingView
-          client={savedPendingClient}
-          online={online}
-          canRecover={
-            (!run || run.status === 'finished') &&
-            !rewardState?.fullscreen &&
-            !busy &&
-            !state.problem
-          }
-          onRecover={recoverSaved}
-        />
-      )}
-      {client &&
-        ((!run && state.phase === 'idle') ||
-          (run?.status === 'finished' && state.phase === 'finished')) && (
-          <button
-            className="cpi-ranked-primary"
-            type="button"
-            disabled={!online || rewardState?.fullscreen === true}
-            onClick={() => {
-              void client.start();
-            }}
-          >
-            {t('ranked.start')}
-          </button>
-        )}
-      {state.canRetry && (
-        <button
-          type="button"
-          onClick={() => {
-            void client?.retry();
-          }}
-        >
-          {t(state.phase === 'blocked' ? 'operations.recheck' : 'ranked.retry')}
+  const needsRecovery =
+    interrupted ||
+    state.phase === 'recovery' ||
+    state.phase === 'lease_lost' ||
+    state.phase === 'retry' ||
+    state.phase === 'error';
+  const retry = state.canRetry && (
+    <button type="button" onClick={() => void client?.retry()}>
+      {t(state.phase === 'blocked' ? 'operations.recheck' : 'ranked.retry')}
+    </button>
+  );
+  const recovery = online && !busy && needsRecovery && !state.canRetry && (
+    <>
+      <button type="button" data-cpi-overlay-primary onClick={() => void recover()}>
+        {t('ranked.recover')}
+      </button>
+      {state.phase === 'lease_lost' && (
+        <button type="button" onClick={() => void recover(true)}>
+          {t('ranked.takeover')}
         </button>
       )}
-      {client &&
-        online &&
-        !busy &&
-        state.phase !== 'blocked' &&
-        state.phase !== 'unavailable' &&
-        (interrupted ||
-          state.phase === 'recovery' ||
-          state.phase === 'lease_lost' ||
-          state.phase === 'retry' ||
-          state.phase === 'error' ||
-          !run) && (
+    </>
+  );
+  const canStart =
+    !!client &&
+    online &&
+    !busy &&
+    !rewardState?.fullscreen &&
+    ((!run && state.phase === 'idle') ||
+      (run?.status === 'finished' && state.phase === 'finished'));
+  const start = canStart && (
+    <button
+      className="cpi-ranked-primary"
+      type="button"
+      data-cpi-overlay-primary
+      onClick={() => {
+        const current = entry.current;
+        if (client && current) void enterRankedPlay(client, () => entry.current === current);
+      }}
+    >
+      {t('ranked.start')}
+    </button>
+  );
+  const leaveButton = (
+    <button type="button" disabled={rewardState?.fullscreen} onClick={() => void leave()}>
+      {t(run?.status === 'finished' ? 'rewards.leave' : 'ranked.leave')}
+    </button>
+  );
+
+  if (!run) {
+    return (
+      <main className="cpi-ranked-lobby cps-shell" data-world={theme}>
+        <section
+          className="cpi-ranked-scene cpi-menu-panel"
+          aria-labelledby="cpi-ranked-title"
+          aria-busy={busy}
+        >
+          <h1 id="cpi-ranked-title">{t('ranked.title')}</h1>
+          <p role="status">{t(status)}</p>
           <div className="cpi-ranked-actions">
-            <button
-              type="button"
-              onClick={() => {
-                void recover();
-              }}
-            >
-              {t('ranked.recover')}
+            {start}
+            {retry}
+            {recovery}
+            {leaveButton}
+          </div>
+          {onPractice && !busy && (
+            <button type="button" onClick={onPractice}>
+              {t('menu.practiceInstead')}
             </button>
-            {state.phase === 'lease_lost' && (
-              <button
-                type="button"
-                onClick={() => {
-                  void recover(true);
-                }}
-              >
-                {t('ranked.takeover')}
-              </button>
-            )}
-          </div>
-        )}
-      {run && (
-        <>
-          <div className="cpi-ranked-resources">
-            {run.economy?.assisted && <p>{t('ranked.assisted')}</p>}
-            <p>{t('ranked.confirmed', { row: number(run.lastClearedRow) })}</p>
-            <p>{t('ranked.sp', { sp: number(run.sp) })}</p>
-            <p>
-              {t('ranked.hints', { count: number(run.hints) })}{' '}
-              <HintCounter count={run.hints} cue={{ id: `ranked:${run.hints}`, delta: 0 }} />
-            </p>
-          </div>
-          {resourceWindow && client?.spendResource && commerce.snapshot.wallet && (
-            <div className="cpi-ranked-actions">
-              {run.status === 'playing' && (
-                <>
-                  <button
-                    type="button"
-                    disabled={
-                      !ready ||
-                      busy ||
-                      commerce.snapshot.phase !== 'ready' ||
-                      !commerce.snapshot.wallet.sp ||
-                      run.economy.reserveSpent >= 200 ||
-                      !!run.discovery?.introduction ||
-                      run.pact?.phase === 'offered'
-                    }
-                    onClick={() =>
-                      void spend(
-                        'sp',
-                        Math.min(20, commerce.snapshot.wallet!.sp, 200 - run.economy!.reserveSpent),
-                      )
-                    }
-                  >
-                    {t('ranked.reserveSp', {
-                      amount: Math.min(
-                        20,
-                        commerce.snapshot.wallet.sp,
-                        200 - run.economy.reserveSpent,
-                      ),
-                    })}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={
-                      !ready ||
-                      busy ||
-                      commerce.snapshot.phase !== 'ready' ||
-                      !commerce.snapshot.wallet.hints ||
-                      !!run.discovery?.introduction ||
-                      run.pact?.phase === 'offered'
-                    }
-                    onClick={() => void spend('hints', 1)}
-                  >
-                    {t('ranked.reserveHint')}
-                  </button>
-                </>
-              )}
-              {run.status === 'dead' && (
-                <button
-                  type="button"
-                  disabled={
-                    !ready ||
-                    busy ||
-                    commerce.snapshot.phase !== 'ready' ||
-                    !commerce.snapshot.wallet.credits ||
-                    run.rewardPending ||
-                    run.revivesGranted !== run.revivesApplied ||
-                    !canUseCreditFromReward(rewardState)
-                  }
-                  onClick={() => void spend('credit', 1)}
-                >
-                  {t('ranked.creditContinue')}
-                </button>
-              )}
-            </div>
           )}
-          {run.status === 'playing' && (
-            <>
-              <h3 className="cpi-ranked-row">{t('ranked.row', { row: number(run.currentRow) })}</h3>
-              <MysteryRhythmBadge rhythm={run.mysteryRhythm} activeTimeMs={run.activeTimeMs} />
-              <DeathClockBadge
-                clock={run.deathClock}
-                activeTimeMs={run.activeTimeMs}
-                offered={run.pact?.phase === 'offered' || !!run.discovery?.introduction}
+          {savedPendingClient && (
+            <details className="cpi-ranked-saved">
+              <summary>{t('savedPending.title')}</summary>
+              <SavedPendingView
+                client={savedPendingClient}
+                online={online}
+                canRecover={!busy && !state.problem}
+                onRecover={recoverSaved}
               />
-              <DiscoveryIntroduction
-                discovery={run.discovery}
-                activeTimeMs={run.activeTimeMs}
-                rulesetVersion={run.rulesetVersion}
-              />
-              <PactPanel
-                sp={run.sp}
-                rulesetVersion={run.rulesetVersion}
-                activeTimeMs={run.activeTimeMs}
-                pact={run.pact}
-                hints={run.hints}
-                revealed={run.current.revealedSafeSide !== null || !!run.current.noSafeTile}
-                disabled={!playing}
-                onChoose={(option) => {
-                  if (
-                    !playing ||
-                    !client ||
-                    client.snapshot().run?.runId !== run.runId ||
-                    (rewardFlow?.runId === run.runId && rewardFlow.snapshot().inputBlocked)
-                  )
-                    return;
-                  void client.command({
-                    type: 'pact',
-                    row: run.currentRow,
-                    life: run.revivesApplied,
-                    option,
-                  });
-                }}
-              />
-              <div className="cpi-ranked-bridge" dir="ltr">
-                {(['left', 'right'] as const).map((side) => (
-                  <button
-                    type="button"
-                    key={side}
-                    className={
-                      'cpi-ranked-pane' +
-                      (run.current.revealedSafeSide === side ? ' cpi-ranked-pane-revealed' : '')
-                    }
-                    disabled={!playing || run.pact?.phase === 'offered'}
-                    onClick={() => action('choose', side)}
-                    aria-label={t(side === 'left' ? 'game.leftTile' : 'game.rightTile', {
-                      row: number(run.currentRow),
-                    })}
-                  >
-                    <span aria-hidden="true">◇</span>
-                    {t(side === 'left' ? 'ranked.left' : 'ranked.right')}
-                  </button>
-                ))}
-              </div>
-              {run.current.revealedSafeSide && (
-                <p>
-                  {t('ranked.reveal', {
-                    side: t(
-                      run.current.revealedSafeSide === 'left'
-                        ? 'tutorial.leftGlass'
-                        : 'tutorial.rightGlass',
-                    ),
-                  })}
-                </p>
-              )}
-              {run.current.noSafeTile && (
-                <p role="status">
-                  {locale === 'bg'
-                    ? 'И двете плочки са счупени. Подсказката е запазена.'
-                    : 'Both tiles are broken. Your hint was kept.'}
-                </p>
-              )}
-              <div className="cpi-ranked-actions">
-                <button
-                  type="button"
-                  disabled={
-                    !playing ||
-                    run.hints === 0 ||
-                    run.current.revealedSafeSide !== null ||
-                    run.current.noSafeTile ||
-                    run.pact?.phase === 'offered' ||
-                    (run.pact?.kind === 'false_oracle' && run.pact.phase === 'active')
-                  }
-                  onClick={() => action('hint')}
-                >
-                  {t('ranked.hint')}
-                </button>
-                {run.current.hasMystery && (
-                  <button
-                    type="button"
-                    disabled={
-                      !playing ||
-                      run.pact?.phase === 'offered' ||
-                      run.current.mysteryOutcome !== null
-                    }
-                    onClick={() => action('mystery')}
-                  >
-                    {t('ranked.mystery')}
-                    {run.current.mysteryTier && (
-                      <span style={{ display: 'inline-block', width: '2rem', height: '2rem' }}>
-                        <MysteryCube tier={run.current.mysteryTier} />
-                      </span>
-                    )}
-                  </button>
-                )}
-              </div>
-              {ready && (
-                <button
-                  type="button"
-                  disabled={confirm || rewardBlocked}
-                  onClick={() => {
-                    if (client?.snapshot().run?.runId !== run.runId) return;
-                    if (rewardFlow?.runId === run.runId && rewardFlow.snapshot().inputBlocked)
-                      return;
-                    void client?.command({ type: run.paused ? 'resume' : 'pause' });
-                  }}
-                >
-                  {t(run.paused ? 'ranked.resume' : 'ranked.pause')}
-                </button>
-              )}
-            </>
-          )}
-          <MysteryEffects
-            effects={run.effects}
-            activeTimeMs={run.activeTimeMs}
-            rulesetVersion={run.rulesetVersion}
-          />
-          {run.current.mysteryOutcome && !run.pact && (
-            <details className="cpi-force">
-              <summary>
-                <EffectGlyph kind={run.current.mysteryOutcome as EffectKind} />
-                <strong>
-                  {effectCopy(locale, run.current.mysteryOutcome as EffectKind).title}
-                </strong>
-              </summary>
-              <p>{effectCopy(locale, run.current.mysteryOutcome as EffectKind).detail}</p>
             </details>
           )}
-          {run.status === 'dead' && !confirm && (
-            <RewardOffer
-              flow={rewardBound ? rewardFlow : null}
-              online={online}
-              onLeave={() => {
-                void leave();
-              }}
-              onEnd={() => {
-                if (client?.snapshot().run?.runId !== run.runId) return;
-                if (!rewardFlow?.snapshot().canEnd) return;
-                setConfirm(true);
-                void client?.command({ type: 'pause' });
-              }}
-            />
-          )}
-          {ready &&
-            run.status !== 'finished' &&
-            !run.rewardPending &&
-            !confirm &&
-            !(run.status === 'dead' && rewardBound) &&
-            !rewardBlocked && (
-              <button
-                className="cpi-ranked-end"
-                type="button"
-                onClick={() => {
-                  if (client?.snapshot().run?.runId !== run.runId) return;
-                  setConfirm(true);
-                  void client?.command({ type: 'pause' });
-                }}
-              >
-                {t('ranked.end')}
-              </button>
-            )}
-          {confirm && run.status !== 'finished' && (
-            <div
-              className="cpi-ranked-confirm"
-              role="alertdialog"
-              aria-labelledby="cpi-ranked-end-title"
+        </section>
+      </main>
+    );
+  }
+
+  const pause = () => {
+    if (client?.snapshot().run?.runId !== run.runId || !ready || rewardBlocked) return;
+    void client.command({ type: run.paused ? 'resume' : 'pause' });
+  };
+  const requestEnd = () => {
+    if (
+      client?.snapshot().run?.runId !== run.runId ||
+      !ready ||
+      run.rewardPending ||
+      (rewardBlocked && rewardState?.canEnd !== true)
+    )
+      return;
+    setConfirm(true);
+    if (run.status === 'playing' && !run.paused) void client.command({ type: 'pause' });
+  };
+  const end = () => {
+    if (
+      client?.snapshot().run?.runId !== run.runId ||
+      !ready ||
+      run.rewardPending ||
+      (rewardBound && rewardFlow?.snapshot().inputBlocked && !rewardFlow.snapshot().canEnd)
+    )
+      return;
+    setConfirm(false);
+    void client.command({ type: 'end' });
+  };
+  const pact = (option: PactOption) => {
+    if (
+      playing &&
+      client?.snapshot().run?.runId === run.runId &&
+      !(rewardFlow?.runId === run.runId && rewardFlow.snapshot().inputBlocked)
+    )
+      void client.command({ type: 'pact', row: run.currentRow, life: run.revivesApplied, option });
+  };
+  const overlay =
+    run.status !== 'playing' ||
+    run.paused ||
+    confirm ||
+    needsRecovery ||
+    !online ||
+    state.phase === 'blocked' ||
+    state.phase === 'unavailable';
+  const outcomeTitle = confirm
+    ? 'game.confirmTitle'
+    : run.status === 'finished'
+      ? 'game.complete'
+      : run.status === 'dead'
+        ? 'game.deathTitle'
+        : run.paused
+          ? 'game.paused'
+          : 'ranked.title';
+  const rewardsVisible =
+    run.status === 'dead' && rewardBound && rewardState?.phase !== 'playing' && !confirm;
+  const outcomeHeading = <h2 id="cpi-ranked-outcome">{t(outcomeTitle)}</h2>;
+  const resources = resourceWindow &&
+    run?.economy &&
+    client?.spendResource &&
+    commerce.snapshot.wallet && (
+      <div className="cpi-ranked-actions">
+        {run.status === 'playing' && (
+          <>
+            <button
+              type="button"
+              disabled={
+                !ready ||
+                busy ||
+                commerce.snapshot.phase !== 'ready' ||
+                !commerce.snapshot.wallet.sp ||
+                run.economy.reserveSpent >= 200 ||
+                !!run.discovery?.introduction ||
+                run.pact?.phase === 'offered'
+              }
+              onClick={() =>
+                void spend(
+                  'sp',
+                  Math.min(20, commerce.snapshot.wallet!.sp, 200 - run.economy!.reserveSpent),
+                )
+              }
             >
-              <h3 id="cpi-ranked-end-title">{t('game.confirmTitle')}</h3>
-              <p>{t('game.confirmCleared', { row: number(run.lastClearedRow) })}</p>
-              <button type="button" disabled={busy} onClick={() => setConfirm(false)}>
-                {t('ranked.cancel')}
-              </button>
-              <button
-                type="button"
-                disabled={
-                  !ready ||
-                  run.rewardPending ||
-                  (rewardBound && rewardState?.canEnd !== true && rewardBlocked)
-                }
-                onClick={() => {
-                  if (client?.snapshot().run?.runId !== run.runId) return;
-                  if (
-                    rewardBound &&
-                    rewardFlow?.snapshot().inputBlocked &&
-                    !rewardFlow.snapshot().canEnd
-                  )
-                    return;
-                  setConfirm(false);
-                  void client?.command({ type: 'end' });
-                }}
-              >
-                {t('ranked.confirmEnd')}
-              </button>
-            </div>
-          )}
-        </>
-      )}
-    </section>
+              {t('ranked.reserveSp', {
+                amount: Math.min(20, commerce.snapshot.wallet.sp, 200 - run.economy.reserveSpent),
+              })}
+            </button>
+            <button
+              type="button"
+              disabled={
+                !ready ||
+                busy ||
+                commerce.snapshot.phase !== 'ready' ||
+                !commerce.snapshot.wallet.hints ||
+                !!run.discovery?.introduction ||
+                run.pact?.phase === 'offered'
+              }
+              onClick={() => void spend('hints', 1)}
+            >
+              {t('ranked.reserveHint')}
+            </button>
+          </>
+        )}
+        {run.status === 'dead' && (
+          <button
+            type="button"
+            disabled={
+              !ready ||
+              busy ||
+              commerce.snapshot.phase !== 'ready' ||
+              !commerce.snapshot.wallet.credits ||
+              run.rewardPending ||
+              run.revivesGranted !== run.revivesApplied ||
+              !canUseCreditFromReward(rewardState)
+            }
+            onClick={() => void spend('credit', 1)}
+          >
+            {t('ranked.creditContinue')}
+          </button>
+        )}
+      </div>
+    );
+
+  return (
+    <RankedBoard
+      run={run}
+      interactive={playing && !overlay}
+      canPause={ready && !confirm && !rewardBlocked && run.status === 'playing'}
+      reducedMotion={reducedMotion}
+      notice={t(status)}
+      onChoose={(side) => action('choose', side)}
+      onHint={() => action('hint')}
+      onMystery={() => action('mystery')}
+      onPause={pause}
+      onPact={pact}
+    >
+      {overlay ? (
+        <div className="cpi-overlay cpi-crossing-overlay">
+          <section
+            className="cpi-overlay-card cpi-run-outcome cpi-ranked-scene"
+            role={confirm ? 'alertdialog' : 'dialog'}
+            aria-modal="true"
+            aria-labelledby="cpi-ranked-outcome"
+            aria-busy={busy}
+          >
+            {theme !== 'obsidian' && !confirm && run.status !== 'playing' ? (
+              <WorldOutcomeHero theme={theme} finished={run.status === 'finished'}>
+                {outcomeHeading}
+              </WorldOutcomeHero>
+            ) : (
+              <header className="cpi-dialog-heading">{outcomeHeading}</header>
+            )}
+            {run.status !== 'playing' && (
+              <div className="cpi-result-score">
+                <span>{t('game.rowsCleared')}</span>
+                <strong>{number(run.lastClearedRow)}</strong>
+              </div>
+            )}
+            <p role="status">{t(status)}</p>
+            {state.rejected && <p role="alert">{t('ranked.rejected')}</p>}
+            {confirm ? (
+              <>
+                <p>{t('game.confirmCleared', { row: number(run.lastClearedRow) })}</p>
+                <div className="cpi-overlay-actions">
+                  <button
+                    type="button"
+                    data-cpi-overlay-primary
+                    disabled={busy}
+                    onClick={() => setConfirm(false)}
+                  >
+                    {t('ranked.cancel')}
+                  </button>
+                  <button
+                    type="button"
+                    className="cpi-run-danger-action"
+                    disabled={!ready || run.rewardPending}
+                    onClick={end}
+                  >
+                    {t('ranked.confirmEnd')}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {run.paused && run.status === 'playing' && ready && (
+                  <div className="cpi-overlay-actions">
+                    <button type="button" data-cpi-overlay-primary onClick={pause}>
+                      {t('ranked.resume')}
+                    </button>
+                  </div>
+                )}
+                {resources}
+                {rewardsVisible && (
+                  <RewardOffer
+                    flow={rewardFlow}
+                    online={online}
+                    onLeave={() => void leave()}
+                    onEnd={requestEnd}
+                  />
+                )}
+                <div className="cpi-overlay-actions">
+                  {retry}
+                  {recovery}
+                  {start}
+                  {run.status === 'finished' && onViewRankings && (
+                    <button type="button" onClick={onViewRankings}>
+                      {t('general.rankings')}
+                    </button>
+                  )}
+                  {!rewardsVisible && leaveButton}
+                  {ready &&
+                    run.status !== 'finished' &&
+                    !run.rewardPending &&
+                    !rewardBlocked &&
+                    !rewardsVisible && (
+                      <button type="button" className="cpi-run-danger-action" onClick={requestEnd}>
+                        {t('ranked.end')}
+                      </button>
+                    )}
+                </div>
+              </>
+            )}
+          </section>
+        </div>
+      ) : null}
+    </RankedBoard>
   );
 }

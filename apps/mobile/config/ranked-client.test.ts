@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { enterRankedPlay } from '../src/ranked/ranked-entry';
+import { describe, expect, it, vi } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { AccountSessionOwner } from '../src/account/session-owner';
@@ -872,6 +873,36 @@ describe('ranked scene confirmed-state presentation', () => {
       dispose: () => {},
     };
   }
+  it('opens an existing ranked run without a takeover, or starts a new one when clear', async () => {
+    const idle = {
+      phase: 'idle',
+      run: null,
+      online: true,
+      canRetry: false,
+      rejected: false,
+    } as const;
+    const start = vi.fn(() => Promise.resolve());
+    const recover = vi.fn(() => Promise.resolve());
+    const lookupActive = vi.fn(() => Promise.resolve<string | null>(RUN));
+    const subject = { ...client(idle), start, recover, lookupActive };
+
+    await enterRankedPlay(subject, () => true);
+    expect(recover).toHaveBeenCalledExactlyOnceWith(RUN);
+    expect(start).not.toHaveBeenCalled();
+
+    lookupActive.mockResolvedValue(null);
+    await enterRankedPlay(subject, () => true);
+    expect(start).toHaveBeenCalledOnce();
+
+    let current = true;
+    lookupActive.mockImplementationOnce(() => {
+      current = false;
+      return Promise.resolve(null);
+    });
+    await enterRankedPlay(subject, () => current);
+    expect(start).toHaveBeenCalledOnce();
+  });
+
   it('keeps the unavailable guest boundary and disables pending inputs without inventing progress', () => {
     const guest = renderToStaticMarkup(
       createElement(RankedScene, { client: null, online: true, onLeave: () => {} }),
@@ -892,6 +923,8 @@ describe('ranked scene confirmed-state presentation', () => {
         onLeave: () => {},
       }),
     );
+    expect(markup).toContain('data-testid="ranked-game"');
+    expect(markup).toContain('cpi-prism-bridge');
     expect(markup).toContain('Confirmed rows: 2');
     expect(markup).toContain('Current row 3');
     expect(markup).toContain('disabled=""');

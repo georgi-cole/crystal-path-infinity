@@ -39,7 +39,8 @@ describe('CPI-011 Midnight Prism identity', () => {
     }
     expect(scene).toContain('aria-label={INFINITY_SCENE_SKIN.title}');
     expect(scene).toContain('presented.currentRow');
-    expect(scene).toContain('value={state.sp}');
+    expect(scene).toContain('sp={state.sp}');
+    expect(read('src/run-hud.tsx')).toContain('value={sp}');
     expect(scene).not.toMatch(/The Big Eye|season feed|LOH|POS/);
     expect(app).toContain('<MainMenu');
     expect(menu).toContain('HubUtilityControls');
