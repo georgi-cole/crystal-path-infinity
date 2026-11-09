@@ -55,7 +55,9 @@ export const bg = {
   'account.linkGoogle': 'Свържи Google',
   'account.identityLinked': 'Начинът за вход е свързан.',
   'account.identityAlreadyLinked': 'Вече има свързан друг акаунт.',
-  'account.identityNeedsLink': 'Влез с имейл и свържи този начин за вход в Профил.',
+  'account.identityNeedsLink': 'Продължи с имейл, после свържи този начин за вход в Профил.',
+  'account.stagingLinkFirst':
+    'В тази тестова версия първо влез с имейл, за да свържеш Apple или Google в Профил.',
   'account.restoreFailed': 'Входът не можа да бъде възстановен.',
   'account.resend': 'Изпрати кода отново',
   'account.changeEmail': 'Смени имейла',
@@ -75,6 +77,8 @@ export const bg = {
   'accountControls.cancelCode': 'Отказ',
   'accountControls.done': 'Готово',
   'account.checkFirst': 'Преди вход проверяваме възрастта и държавата ти.',
+  'account.stagingCheckFirst':
+    'Тестовият вход е за пълнолетни, които живеят в България и се свързват оттам.',
   'account.checking': 'Проверка…',
   'account.check': 'Продължи',
   'account.age': 'Възраст',

@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { AccountEntry } from '../src/account/account-entry';
 import { createOtpGateway } from '../src/account/otp-gateway';
+import { AccountSessionOwner } from '../src/account/session-owner';
 
 describe('CPI-018 trusted OTP gateway boundary', () => {
   it('has no active email input or request route while account API is not configured', () => {
@@ -14,6 +15,42 @@ describe('CPI-018 trusted OTP gateway boundary', () => {
     expect(html).toContain('Sign-in is not available');
     expect(html).not.toContain('type="email"');
     expect(html).not.toContain('type="password"');
+  });
+
+  it('shows the beta instructions and limits only the staging country picker', () => {
+    const gateway = createOtpGateway('https://account.example.net/v1/account')!;
+    const unavailable = () => Promise.resolve({ status: 'unavailable' });
+    const session = new AccountSessionOwner(
+      {
+        supported: true,
+        read: () => Promise.resolve(null),
+        write: () => Promise.resolve(),
+        clear: () => Promise.resolve(),
+      },
+      { exchange: unavailable, refresh: unavailable, revoke: unavailable },
+    );
+    const render = (staging: boolean) =>
+      renderToStaticMarkup(
+        createElement(AccountEntry, { online: true, binding: { gateway, session, staging } }),
+      );
+
+    expect(render(true)).toContain('adults living in and connecting from Bulgaria');
+    expect(render(true)).toContain('value="BG"');
+    expect(render(true)).not.toContain('value="US"');
+    expect(render(false)).toContain('value="US"');
+    expect(render(false)).not.toContain('Test sign-in');
+
+    const identity = {
+      signIn: () => Promise.resolve({ status: 'cancelled' as const }),
+      link: () => Promise.resolve('cancelled' as const),
+    };
+    const methods = renderToStaticMarkup(
+      createElement(AccountEntry, {
+        online: true,
+        binding: { gateway, session, staging: true, identity },
+      }),
+    );
+    expect(methods).toMatch(/For this beta, sign in with email once.*Continue with Apple/);
   });
 
   it('sends no email to public Supabase Auth and never leaks it to URL or referrer', async () => {

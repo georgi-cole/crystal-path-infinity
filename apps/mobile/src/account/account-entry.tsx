@@ -16,6 +16,7 @@ export interface AccountEntryBinding {
   readonly gateway: OtpGateway;
   readonly session: AccountSessionOwner;
   readonly identity?: NativeIdentityClient | null;
+  readonly staging?: boolean;
 }
 
 /**
@@ -31,6 +32,8 @@ export function AccountEntry({
   binding?: AccountEntryBinding;
 }) {
   const { t, locale } = useLanguage();
+  const staging = binding?.staging === true;
+  const screeningMessage = staging ? 'account.stagingCheckFirst' : 'account.checkFirst';
   const sessionPhase = useSyncExternalStore(
     (listener) => binding?.session.subscribeAccountScope(listener) ?? (() => {}),
     () => binding?.session.snapshot().phase ?? 'guest',
@@ -38,10 +41,11 @@ export function AccountEntry({
   );
   const countries = useMemo(() => {
     const names = new Intl.DisplayNames([locale], { type: 'region' });
-    return ACCOUNT_COUNTRIES.map((code) => ({ code, name: names.of(code) ?? code })).sort((a, b) =>
-      a.name.localeCompare(b.name, locale),
-    );
-  }, [locale]);
+    const codes = staging ? ['BG'] : ACCOUNT_COUNTRIES;
+    return codes
+      .map((code) => ({ code, name: names.of(code) ?? code }))
+      .sort((a, b) => a.name.localeCompare(b.name, locale));
+  }, [locale, staging]);
   const configuredOrigin: unknown = import.meta.env.VITE_ACCOUNT_API_BASE_URL;
   const gateway = useMemo(
     () =>
@@ -257,6 +261,11 @@ export function AccountEntry({
         <>
           {showMethods && (
             <>
+              {needsLink ? (
+                <p role="status">{t('account.identityNeedsLink')}</p>
+              ) : (
+                staging && <p className="cpi-menu-fine-print">{t('account.stagingLinkFirst')}</p>
+              )}
               <IdentityButtons disabled={busy || !online} onChoose={chooseProvider} />
               <button
                 type="button"
@@ -272,7 +281,6 @@ export function AccountEntry({
               </button>
               {connecting && <p role="status">{t('account.signingIn')}</p>}
               {!online && <p role="status">{t('account.offline')}</p>}
-              {needsLink && <p role="status">{t('account.identityNeedsLink')}</p>}
             </>
           )}
           {screening && !showMethods && (
@@ -282,7 +290,7 @@ export function AccountEntry({
                 void evaluate();
               }}
             >
-              <p>{t(online ? 'account.checkFirst' : 'account.offline')}</p>
+              <p>{t(online ? screeningMessage : 'account.offline')}</p>
               <label htmlFor="cpi-account-age">{t('account.age')}</label>
               <input
                 id="cpi-account-age"

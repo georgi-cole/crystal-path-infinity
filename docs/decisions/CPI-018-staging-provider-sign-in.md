@@ -8,6 +8,10 @@ The staging gateway validates a short-lived, single-use challenge before accepti
 
 The client and hosted configuration require the specific staging gateway and isolated Supabase staging project. The staging iPhone review job verifies the current review commit and required checks, uses a separate branch-scoped signing environment, and exports to TestFlight Internal Only. The public web and production account routes remain on their existing sign-in configuration. Production provider rollout needs a separate decision and device and deletion acceptance. Device acceptance covers the native Apple and Google prompts. The local preview covers the layout.
 
+## 9 November 2026 · Build 29 tester feedback
+
+The tester reached the provider prompts with Bulgaria selected. Build 29 displayed other countries in the form, even though the staging account policy only allows adults with both residence and connection country in Bulgaria. The follow-up limits the staging form to Bulgaria and explains the requirement before submission. The beta sign-in screen also shows the one-time linking instructions before Apple and Google open. Direct provider sign-up for new players remains a separate production rollout.
+
 ## Review checks
 
 - Inspect Profile and the provider choice layout in the local preview.

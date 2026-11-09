@@ -245,6 +245,7 @@ export const en = {
   'account.parentalReview': 'Sign-in requires parent or guardian approval.',
   'account.offline': 'Connect to sign in.',
   'account.checkFirst': 'We check your age and country before sign-in.',
+  'account.stagingCheckFirst': 'Test sign-in is for adults living in and connecting from Bulgaria.',
   'account.check': 'Continue',
   'account.age': 'Your age',
   'account.country': 'Country of residence',
@@ -271,7 +272,9 @@ export const en = {
   'account.linkGoogle': 'Link Google',
   'account.identityLinked': 'Sign-in method linked.',
   'account.identityAlreadyLinked': 'A different account is already linked.',
-  'account.identityNeedsLink': 'Sign in with email once, then link this method in Profile.',
+  'account.identityNeedsLink': 'Continue with email, then link this sign-in method in Profile.',
+  'account.stagingLinkFirst':
+    'For this beta, sign in with email once to link Apple or Google in Profile.',
   'account.restoreFailed': 'Couldn’t restore sign-in.',
   'account.resend': 'Resend code',
   'account.changeEmail': 'Change email',
