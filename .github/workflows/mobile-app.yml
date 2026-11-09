@@ -496,6 +496,7 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261107000400_live_economy.sql
           psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261107000500_commerce_export.sql
           psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261107000600_reward_launch_reviews.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261109000100_native_provider_identity.sql
           psql -X -v ON_ERROR_STOP=1 -f backend/live-runtime-role.sql
           node --experimental-strip-types backend/tests/commerce-integration.mjs
           node --experimental-strip-types backend/tests/live-services-integration.mjs
