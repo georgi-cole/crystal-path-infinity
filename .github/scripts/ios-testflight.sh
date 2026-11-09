@@ -25,8 +25,9 @@ preflight() {
   xcodebuild -help > "$RUNNER_TEMP/cpi-xcodebuild-help.txt" 2>&1 || true
   grep -Fq testFlightInternalTestingOnly "$RUNNER_TEMP/cpi-xcodebuild-help.txt"
   if [[ "$CPI_NATIVE_ADS" != "$VITE_REWARDED_ADS_ENABLED" ||
-        "$VITE_ACCOUNT_API_BASE_URL" != https://crystal-path-staging-api.kolequant.workers.dev ]]; then
-    echo 'Internal TestFlight requires matching ad flags and the Crystal Path staging gateway.' >&2
+        "$VITE_ACCOUNT_SERVICES_ENABLED" != true ||
+        "$VITE_ACCOUNT_API_BASE_URL" != https://crystal-path-staging-api.kolequant.workers.dev/cpi ]]; then
+    echo 'Internal TestFlight requires matching ad flags and accounts on the Crystal Path staging /cpi gateway.' >&2
     exit 1
   fi
   if [[ "$CPI_IOS_UPLOAD" == true ]]; then
@@ -159,6 +160,8 @@ assert info["CFBundleShortVersionString"] == metadata["version"]
 assert info["CFBundleVersion"] == build
 assert info["UIDeviceFamily"] == [1]
 assert metadata["environment"] == "production" and not (public / "qa-info.json").exists()
+account_base = os.environ["VITE_ACCOUNT_API_BASE_URL"]
+assert any(account_base in asset.read_text(encoding="utf-8") for asset in (public / "assets").glob("*.js"))
 if os.environ["CPI_NATIVE_ADS"] == "true":
     assert info["GADApplicationIdentifier"] == "ca-app-pub-9243398419153145~7303584917"
 else:

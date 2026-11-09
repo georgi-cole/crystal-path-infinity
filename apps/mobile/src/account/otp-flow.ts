@@ -54,6 +54,9 @@ function isRecord(input: unknown): input is Record<string, unknown> {
   return !!input && typeof input === 'object' && !Array.isArray(input);
 }
 
+const MAX_PERMIT_LIFETIME_MS = 15 * 60_000;
+const PERMIT_CLOCK_SKEW_MS = 30_000;
+
 /** Unknown responses fail closed, even if an API inadvertently sends extra fields. */
 export function validateEligibility(input: unknown, now: number): EligibilityDecision {
   if (!isRecord(input)) return { status: 'unavailable' };
@@ -67,7 +70,8 @@ export function validateEligibility(input: unknown, now: number): EligibilityDec
     typeof input.expiresAt !== 'number' ||
     !Number.isSafeInteger(input.expiresAt) ||
     input.expiresAt <= now ||
-    input.expiresAt > now + 15 * 60_000
+    // The server enforces the permit expiry using its own clock.
+    input.expiresAt > now + MAX_PERMIT_LIFETIME_MS + PERMIT_CLOCK_SKEW_MS
   ) {
     return { status: 'unavailable' };
   }
@@ -172,7 +176,7 @@ export class AccountOtpFlow {
         this.permit = decision;
         this.update('eligible');
       } else {
-        this.update(decision.status);
+        this.update(decision.status, decision.status === 'unavailable' ? 'retry' : null);
       }
     } catch {
       if (current === this.revision) this.update('unavailable', 'retry');
