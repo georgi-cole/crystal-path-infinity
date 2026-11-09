@@ -47,7 +47,7 @@ public class CpiRewardedAds: CAPPlugin, CAPBridgedPlugin, FullScreenContentDeleg
                     value: self.localPractice || call.getBool("underAgeOfConsent") == true
                 )
             }
-            if self.localPractice { configuration.maxAdContentRating = GADMaxContentRating.general }
+            if self.localPractice { configuration.maxAdContentRating = GADMaxAdContentRating.general }
             let request = Request()
             if self.localPractice || (call.getBool("nonPersonalized") ?? true) {
                 let extras = Extras()
