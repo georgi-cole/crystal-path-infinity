@@ -72,6 +72,12 @@ describe('CPI-018 privacy-gated OTP pre-account flow', () => {
     expect(validateEligibility(eligible(), epoch).status).toBe('eligible');
   });
 
+  it('advances to email with a valid 15-minute permit when the device clock runs behind', async () => {
+    const { flow } = fixture({ ...eligible(), expiresAt: epoch + 15 * 60_000 + 2_000 });
+    await flow.checkEligibility(true);
+    expect(flow.snapshot()).toMatchObject({ step: 'eligible', problem: null });
+  });
+
   it('keeps review-required and unknown contexts out of email capture', async () => {
     const review = fixture({ status: 'parental_review' });
     await review.flow.checkEligibility(true);
@@ -80,6 +86,7 @@ describe('CPI-018 privacy-gated OTP pre-account flow', () => {
     expect(review.calls).toEqual(['eligibility']);
     const blocked = fixture({ status: 'unknown' });
     await blocked.flow.checkEligibility(true);
+    expect(blocked.flow.snapshot()).toMatchObject({ step: 'unavailable', problem: 'retry' });
     await blocked.flow.requestCode('someone@example.org', true);
     expect(blocked.calls).toEqual(['eligibility']);
   });
