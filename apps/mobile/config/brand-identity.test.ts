@@ -30,7 +30,10 @@ describe('CPI-011 Midnight Prism identity', () => {
     const tokens = read('src/brand-tokens.css');
     expect(app).toContain('brand/prism-mark.svg');
     expect(scene).toContain('cpi-run-status');
-    expect(html).toContain('%BASE_URL%brand/app-icon-preview.svg');
+    expect(html).toContain('%BASE_URL%brand/apple-touch-icon.png');
+    const icon = readFileSync(new URL('public/brand/apple-touch-icon.png', root));
+    expect(icon.readUInt32BE(16)).toBe(180);
+    expect(icon.readUInt32BE(20)).toBe(180);
     for (const token of ['--cpi-night', '--cpi-ice', '--cpi-iris', '--cpi-focus', '--cpi-risk']) {
       expect(tokens).toContain(token);
     }
