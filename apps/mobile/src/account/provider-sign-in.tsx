@@ -99,8 +99,7 @@ export function IdentityLinks({
   }
 
   return (
-    <details className="cpi-profile-details cpi-identity-links">
-      <summary>{t('account.signInMethods')}</summary>
+    <div className="cpi-identity-links">
       <p>{t('account.linkHelp')}</p>
       <IdentityButtons
         disabled={!online || pending}
@@ -119,6 +118,6 @@ export function IdentityLinks({
           )}
         </p>
       )}
-    </details>
+    </div>
   );
 }

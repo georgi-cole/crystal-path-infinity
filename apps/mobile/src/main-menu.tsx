@@ -8,7 +8,7 @@ import { AudioSettingsControls } from './audio-settings-controls';
 import { AccountEntry } from './account/account-entry';
 import type { AccountEntryBinding } from './account/account-entry';
 import { ProfileEditor } from './account/profile-editor';
-import { IdentityLinks } from './account/provider-sign-in';
+import { SignedInProfile } from './account/profile-menu';
 import type { OwnerProfile, ProfileClient } from './account/profile-client';
 import { LeaderboardView } from './leaderboard/leaderboard-view';
 import type { LeaderboardClient } from './leaderboard/leaderboard-client';
@@ -292,7 +292,13 @@ function MenuHeader({
       <div className="cpi-menu-status" aria-label={t('menu.status')}>
         {QA_TOOLS_ENABLED && <StatusPill>QA</StatusPill>}
         <StatusPill>
-          <bdi>{accountConnected ? (accountName ?? t('general.player')) : t('general.guest')}</bdi>
+          <bdi>
+            {accountConnected
+              ? view === 'profile'
+                ? t('general.profile')
+                : (accountName ?? t('general.player'))
+              : t('general.guest')}
+          </bdi>
         </StatusPill>
         {!online && <StatusPill tone="offline">{t('general.offline')}</StatusPill>}
       </div>
@@ -663,69 +669,50 @@ export function MainMenu({
             />
           </MenuPanel>
         ) : view === 'profile' ? (
-          <MenuPanel title={t(setupProfile ? 'profile.setupTitle' : 'general.profile')}>
-            {setupProfile ? (
-              <>
-                <ProfileEditor
-                  client={profileClient}
-                  online={online}
-                  setup
-                  onSaved={onProfileSaved}
-                />
-                <MenuAction
-                  label={t('profile.skipSetup')}
-                  icon="arrow"
-                  variant="quiet"
-                  onClick={() => onSkipProfile?.()}
-                />
-              </>
-            ) : accountConnected ? (
-              <>
-                <MenuAction
-                  label={t('general.play')}
-                  icon="play"
-                  variant="primary"
-                  onClick={
-                    rankedClient
-                      ? () => onOpen('play')
-                      : canResumePractice(saved)
-                        ? onResume
-                        : onNew
-                  }
-                />
-                <details className="cpi-profile-details">
-                  <summary>{t('profile.edit')}</summary>
-                  <ProfileEditor client={profileClient} online={online} onSaved={onProfileSaved} />
-                </details>
-                {accountEntry?.identity && (
-                  <IdentityLinks client={accountEntry.identity} online={online} />
-                )}
-                {savedRuns}
-                {onSignOut && (
-                  <MenuAction
-                    label={t('account.signOut')}
-                    icon="profile"
-                    variant="quiet"
-                    onClick={() => void onSignOut()}
+          accountConnected && !setupProfile ? (
+            <SignedInProfile
+              name={accountName}
+              profileClient={profileClient}
+              identity={accountEntry?.identity}
+              online={online}
+              savedRuns={savedRuns}
+              onSaved={onProfileSaved}
+              onSignOut={onSignOut}
+            />
+          ) : (
+            <MenuPanel title={t(setupProfile ? 'profile.setupTitle' : 'general.profile')}>
+              {setupProfile ? (
+                <>
+                  <ProfileEditor
+                    client={profileClient}
+                    online={online}
+                    setup
+                    onSaved={onProfileSaved}
                   />
-                )}
-              </>
-            ) : (
-              <>
-                <AccountEntry
-                  online={online}
-                  binding={accountEntry}
-                  onSignedIn={onAccountSignedIn}
-                />
-                <MenuAction
-                  label={t('menu.practiceUnsigned')}
-                  icon="practice"
-                  variant="quiet"
-                  onClick={canResumePractice(saved) ? onResume : onNew}
-                />
-              </>
-            )}
-          </MenuPanel>
+                  <MenuAction
+                    label={t('profile.skipSetup')}
+                    icon="arrow"
+                    variant="quiet"
+                    onClick={() => onSkipProfile?.()}
+                  />
+                </>
+              ) : (
+                <>
+                  <AccountEntry
+                    online={online}
+                    binding={accountEntry}
+                    onSignedIn={onAccountSignedIn}
+                  />
+                  <MenuAction
+                    label={t('menu.practiceUnsigned')}
+                    icon="practice"
+                    variant="quiet"
+                    onClick={canResumePractice(saved) ? onResume : onNew}
+                  />
+                </>
+              )}
+            </MenuPanel>
+          )
         ) : (
           <section className="cpi-settings-menu" aria-labelledby="cpi-settings-title">
             <header className="cpi-settings-title">

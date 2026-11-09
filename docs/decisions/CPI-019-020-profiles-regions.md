@@ -164,3 +164,7 @@ The production route adapter remains deliberately unconfigured until the approve
 ## 9 November 2026 · Optional profile setup in the iPhone beta
 
 An authenticated player can skip setup or save a country before choosing a unique game nickname. This country stays in the private profile until the player creates a public nickname. Saving a blank nickname keeps an existing nickname. The home header uses the game nickname first and can fall back to a private provider display name. Both private fields are included in the owner's data export and removed with the private profile on deletion. Provider names never become public nicknames. The existing age-band authorization, public nickname requirements for ranked play and historical region snapshots still apply.
+
+## 9 November 2026 · Signed-in profile presentation
+
+The iPhone review profile welcomes the player by their displayed name and shows a faceted initial using the current world's colors. Profile editing, sign-in methods and saved runs use compact expandable rows. Sign out sits below those controls. The signed-in Play action belongs in the home hub.

@@ -74,6 +74,9 @@ export const bg = {
   'account.signingOut': 'Излизане…',
   'account.signOutFailed': 'Излизането не завърши.',
   'profile.edit': 'Редактирай профила',
+  'profile.welcomeBack': 'Радваме се, че се върна',
+  'profile.editDescription': 'Прякор и държава за класацията',
+  'profile.signInDescription': 'Свържи Apple или Google',
   'profile.namePrompt': 'Избери прякор за класацията.',
   'profile.country': 'Държава за класацията',
   'accountControls.reauth':

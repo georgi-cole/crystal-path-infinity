@@ -109,6 +109,9 @@ export const en = {
   'leaderboard.continentAN': 'Antarctica',
   'profile.title': 'Player profile',
   'profile.edit': 'Edit profile',
+  'profile.welcomeBack': 'Welcome back',
+  'profile.editDescription': 'Nickname and ranking country',
+  'profile.signInDescription': 'Connect Apple or Google',
   'profile.pseudonym': 'Choose a nickname. Avoid your real name, email or other personal details.',
   'profile.signInFirst':
     'Profile editing becomes available after account setup is verified. Age analytics is optional. You can practice without a profile.',

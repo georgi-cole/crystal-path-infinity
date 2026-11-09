@@ -1,14 +1,3 @@
-.cpi-profile-details {
-  margin-block: 0.75rem;
-  border-block-end: 1px solid var(--cpi-glass-edge);
-}
-
-.cpi-profile-details > summary {
-  min-block-size: 44px;
-  padding-block: 0.65rem;
-  cursor: pointer;
-}
-
 .cpi-profile-editor {
   margin-block-end: 0.75rem;
 }
