@@ -104,16 +104,16 @@ describe('CPI-013 standalone menu and route model', () => {
     expect(rankedServiceState(true)).toBe('unconfigured');
     expect(rankedServiceState(true, true, true)).toBe('maintenance');
     expect(rankedServiceState(true, true)).toBe('ready');
-    expect(render('play', { online: false })).toContain('You are offline');
-    expect(render('play', { online: true })).toContain('Online services not connected');
+    expect(render('play', { online: false })).toContain(en['ranked.offline']);
+    expect(render('play', { online: true })).toContain(en['ranked.unavailable']);
     expect(render('rankings', { online: false })).toContain('Recheck connection');
     expect(render('rankings', { online: true })).toContain('Rankings not connected yet');
     expect(render('rankings')).not.toMatch(/<table|#1\s+Winner|World #1/);
   });
 
   it('renders the guest profile and real settings controls', () => {
-    expect(render('profile')).toContain('Playing as guest');
-    expect(render('profile')).toContain('optional');
+    expect(render('profile')).toContain('Play as guest');
+    expect(render('profile')).not.toContain('Edit profile');
     const html = render('settings');
     expect(html).toContain('Music');
     expect(html).toContain('Sound effects');

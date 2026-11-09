@@ -46,7 +46,8 @@ describe('approved account services remain separate from default guest play', ()
     ).not.toContain('<input');
   });
   it('keeps guest profile and data controls free of collection or deletion fields', () => {
-    expect(menu('profile')).toContain('practice without a profile');
+    expect(menu('profile')).toContain('Play as guest');
+    expect(menu('profile')).not.toContain('Edit profile');
     expect(menu('profile')).not.toContain('<input');
     const settings = menu('settings');
     expect(settings).toContain('No account is connected.');

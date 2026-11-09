@@ -19,7 +19,7 @@ public class CpiSecureSession: CAPPlugin, CAPBridgedPlugin {
     private func itemQuery() -> [String: Any] {
         return [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: (Bundle.main.bundleIdentifier ?? "cpi") + ".secure-session.v1",
+            kSecAttrService as String: (Bundle.main.bundleIdentifier ?? "cpi") + ".secure-session.v1__ACCOUNT_VAULT_SUFFIX__",
             kSecAttrAccount as String: "refresh"
         ]
     }
@@ -29,7 +29,7 @@ public class CpiSecureSession: CAPPlugin, CAPBridgedPlugin {
      * only this app's own service/account is touched.
      */
     private func prepareInstall() -> Bool {
-        let marker = "cpi.secure-session.installed.v1"
+        let marker = "cpi.secure-session.installed.v1__ACCOUNT_VAULT_SUFFIX__"
         if UserDefaults.standard.bool(forKey: marker) { return true }
         let status = SecItemDelete(itemQuery() as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else { return false }

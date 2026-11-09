@@ -166,7 +166,7 @@ describe('CPI-030 saved pending attempt discovery', () => {
       createElement(SavedPendingView, {
         client: null,
         online: true,
-        onRecover: () => Promise.resolve(),
+        onRecover: () => {},
       }),
     );
     expect(html).not.toContain('input');

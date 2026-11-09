@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { AccountOtpFlow } from './otp-flow';
 import { createOtpGateway } from './otp-gateway';
 import type { AccountFlowProblem } from './otp-flow';
@@ -28,7 +28,17 @@ export function AccountEntry({
   binding?: AccountEntryBinding;
 }) {
   const { t, locale } = useLanguage();
-  const countryNames = useMemo(() => new Intl.DisplayNames([locale], { type: 'region' }), [locale]);
+  const sessionPhase = useSyncExternalStore(
+    (listener) => binding?.session.subscribeAccountScope(listener) ?? (() => {}),
+    () => binding?.session.snapshot().phase ?? 'guest',
+    () => 'guest',
+  );
+  const countries = useMemo(() => {
+    const names = new Intl.DisplayNames([locale], { type: 'region' });
+    return ACCOUNT_COUNTRIES.map((code) => ({ code, name: names.of(code) ?? code })).sort((a, b) =>
+      a.name.localeCompare(b.name, locale),
+    );
+  }, [locale]);
   const configuredOrigin: unknown = import.meta.env.VITE_ACCOUNT_API_BASE_URL;
   const gateway = useMemo(
     () =>
@@ -82,6 +92,10 @@ export function AccountEntry({
     const pending = flow.checkEligibility(online, { age: Number(age), country });
     sync();
     await pending;
+    if (mounted.current && flow.snapshot().step === 'eligible') {
+      setAge('');
+      setCountry('');
+    }
     sync();
   }
   async function send() {
@@ -117,20 +131,13 @@ export function AccountEntry({
       }
     }
   }
-  async function restore() {
-    if (!binding || connecting) return;
-    setConnecting(true);
-    const active = await binding.session.restore();
-    if (mounted.current) {
-      setConnecting(false);
-      setSessionFailed(!active);
-    }
-  }
   function cancel() {
     if (binding?.session.snapshot().phase === 'connecting') void binding.session.signOut();
     flow?.cancel();
     setEmail('');
     setCode('');
+    setAge('');
+    setCountry('');
     setSessionFailed(false);
     setConnecting(false);
     sync();
@@ -145,151 +152,190 @@ export function AccountEntry({
     retry: t('account.retry'),
   };
 
+  const step = state?.step;
+  const screening =
+    step === 'guest' || step === 'checking' || step === 'unavailable' || step === 'offline';
+  const codeStep =
+    step === 'code' || step === 'verifying' || (step === 'sending' && state?.codeExpiresAt != null);
+  const busy = step === 'sending' || step === 'verifying' || connecting;
+  const sessionStatus =
+    sessionPhase === 'restoring' || sessionPhase === 'refreshing'
+      ? 'account.signingIn'
+      : sessionPhase === 'recovery_required'
+        ? 'account.restoreFailed'
+        : sessionPhase === 'signing_out'
+          ? 'account.signingOut'
+          : sessionPhase === 'revocation_unconfirmed'
+            ? 'account.signOutFailed'
+            : sessionPhase === 'blocked'
+              ? 'account.notReady'
+              : null;
+
   return (
     <section className="cpi-account-entry" aria-labelledby="cpi-account-entry-title">
-      <h2 id="cpi-account-entry-title">{t('account.title')}</h2>
-      <p>{t('account.privacyFirst')}</p>
-      <p>
-        <a href={playerInformationUrl('privacy', locale)} target="_blank" rel="noopener noreferrer">
-          {t('support.privacyPolicy')}
-        </a>
-      </p>
+      <h2 id="cpi-account-entry-title">{t(codeStep ? 'account.checkEmail' : 'account.title')}</h2>
       {!gateway ? (
         <p role="status">{t('account.notReady')}</p>
+      ) : sessionStatus ? (
+        <>
+          <p role="status">{t(sessionStatus)}</p>
+          {sessionPhase === 'recovery_required' && (
+            <button
+              type="button"
+              disabled={!online}
+              onClick={() => void binding?.session.restore()}
+            >
+              {t('ranked.retry')}
+            </button>
+          )}
+          {sessionPhase === 'revocation_unconfirmed' && (
+            <button
+              type="button"
+              disabled={!online}
+              onClick={() => void binding?.session.retryRevocation()}
+            >
+              {t('ranked.retry')}
+            </button>
+          )}
+        </>
       ) : (
         <>
-          {(state?.step === 'guest' ||
-            state?.step === 'unavailable' ||
-            state?.step === 'parental_review' ||
-            state?.step === 'offline') && (
-            <>
-              <p role="status">
-                {state?.step === 'parental_review'
-                  ? t('account.parentalReview')
-                  : state?.step === 'offline'
-                    ? t('account.offline')
-                    : t('account.checkFirst')}
-              </p>
-              <form
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  void evaluate();
-                }}
+          {screening && (
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void evaluate();
+              }}
+            >
+              <p>{t(online ? 'account.checkFirst' : 'account.offline')}</p>
+              <label htmlFor="cpi-account-age">{t('account.age')}</label>
+              <input
+                id="cpi-account-age"
+                type="number"
+                inputMode="numeric"
+                min="0"
+                max="120"
+                required
+                value={age}
+                disabled={step === 'checking' || connecting}
+                onChange={(event) => setAge(event.target.value)}
+                autoComplete="off"
+              />
+              <label htmlFor="cpi-account-country">{t('account.country')}</label>
+              <select
+                id="cpi-account-country"
+                required
+                value={country}
+                disabled={step === 'checking' || connecting}
+                onChange={(event) => setCountry(event.target.value)}
               >
-                <label htmlFor="cpi-account-age">{t('account.age')}</label>
-                <input
-                  id="cpi-account-age"
-                  type="number"
-                  inputMode="numeric"
-                  min="0"
-                  max="120"
-                  required
-                  value={age}
-                  onChange={(event) => setAge(event.target.value)}
-                  autoComplete="off"
-                />
-                <label htmlFor="cpi-account-country">{t('account.country')}</label>
-                <select
-                  id="cpi-account-country"
-                  required
-                  value={country}
-                  onChange={(event) => setCountry(event.target.value)}
-                >
-                  <option value="">{t('account.selectCountry')}</option>
-                  {ACCOUNT_COUNTRIES.map((code) => (
-                    <option key={code} value={code}>
-                      {countryNames.of(code) ?? code}
-                    </option>
-                  ))}
-                </select>
-                <p>{t('account.agePrivacy')}</p>
-                <button type="submit" disabled={!online}>
-                  {t('account.check')}
-                </button>
-              </form>
-            </>
+                <option value="">{t('account.selectCountry')}</option>
+                {countries.map(({ code, name }) => (
+                  <option key={code} value={code}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+              <p className="cpi-menu-fine-print">{t('account.agePrivacy')}</p>
+              <button type="submit" disabled={!online || step === 'checking' || connecting}>
+                {t(step === 'checking' ? 'account.checking' : 'account.check')}
+              </button>
+            </form>
           )}
-          {state?.step === 'checking' && <p role="status">{t('account.checking')}</p>}
-          {(state?.step === 'eligible' || state?.step === 'sending') && (
+          {step === 'parental_review' && <p role="status">{t('account.parentalReview')}</p>}
+          {(step === 'eligible' || (step === 'sending' && !codeStep)) && (
             <form
               onSubmit={(event) => {
                 event.preventDefault();
                 void send();
               }}
             >
+              <p>{t('account.privacyFirst')}</p>
               <label htmlFor="cpi-account-email">{t('account.email')}</label>
               <input
                 id="cpi-account-email"
                 type="email"
                 autoComplete="email"
                 inputMode="email"
+                autoCapitalize="none"
                 required
                 maxLength={254}
                 value={email}
-                disabled={state.step === 'sending'}
+                disabled={busy}
                 onChange={(event) => setEmail(event.target.value)}
               />
-              <button type="submit" disabled={state.step === 'sending' || !online}>
-                {t('account.sendCode')}
+              <button type="submit" disabled={busy || !online}>
+                {t(step === 'sending' ? 'account.sendingCode' : 'account.sendCode')}
               </button>
             </form>
           )}
-          {(state?.step === 'code' || state?.step === 'verifying') && (
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                void verify();
-              }}
-            >
-              <label htmlFor="cpi-account-code">{t('account.code')}</label>
-              <input
-                id="cpi-account-code"
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                maxLength={6}
-                pattern="[0-9]{6}"
-                required
-                value={code}
-                disabled={state.step === 'verifying'}
-                onChange={(event) => setCode(event.target.value)}
-              />
-              <button type="submit" disabled={state.step === 'verifying' || !online}>
-                {t('account.verify')}
-              </button>
-              <button
-                type="button"
-                disabled={state.step === 'verifying' || !online}
-                onClick={() => void send()}
+          {codeStep && (
+            <>
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void verify();
+                }}
               >
-                {t('account.resend')}
+                <label htmlFor="cpi-account-code">{t('account.code')}</label>
+                <input
+                  id="cpi-account-code"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  pattern="[0-9]{6}"
+                  required
+                  value={code}
+                  disabled={busy}
+                  onChange={(event) => setCode(event.target.value)}
+                />
+                <button type="submit" disabled={busy || !online}>
+                  {t(step === 'verifying' ? 'account.signingIn' : 'account.verify')}
+                </button>
+              </form>
+              <div className="cpi-account-links">
+                <button type="button" disabled={busy || !online} onClick={() => void send()}>
+                  {t(step === 'sending' ? 'account.sendingCode' : 'account.resend')}
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    flow?.changeEmail();
+                    setCode('');
+                    sync();
+                  }}
+                >
+                  {t('account.changeEmail')}
+                </button>
+              </div>
+            </>
+          )}
+          {step === 'verified_pending_session' && !sessionFailed && (
+            <p role="status">{t(connecting ? 'account.signingIn' : 'account.notSignedIn')}</p>
+          )}
+          {(sessionFailed || problem) && (
+            <p role="alert">{sessionFailed ? t('account.retry') : problem && errors[problem]}</p>
+          )}
+          <div className="cpi-account-links">
+            {!screening && !codeStep && !connecting && (
+              <button type="button" onClick={cancel}>
+                {t('account.cancel')}
               </button>
-            </form>
-          )}
-          {state?.step === 'verified_pending_session' && (
-            <p role="status">
-              {binding && connecting
-                ? locale === 'bg'
-                  ? 'Свързване…'
-                  : 'Signing in…'
-                : t('account.notSignedIn')}
-            </p>
-          )}
-          {binding && (state?.step === 'guest' || state?.step === 'unavailable') && (
-            <button type="button" disabled={!online || connecting} onClick={() => void restore()}>
-              {locale === 'bg' ? 'Възстанови входа' : 'Restore sign-in'}
-            </button>
-          )}
-          {sessionFailed && <p role="alert">{t('account.retry')}</p>}
-          {problem && <p role="alert">{errors[problem]}</p>}
-          {state?.step !== 'guest' && (
-            <button type="button" onClick={cancel}>
-              {t('account.cancel')}
-            </button>
-          )}
+            )}
+            {screening && (
+              <a
+                href={playerInformationUrl('privacy', locale)}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {t('support.privacyPolicy')}
+              </a>
+            )}
+          </div>
         </>
       )}
-      <p className="cpi-menu-fine-print">{t('account.guestSafe')}</p>
     </section>
   );
 }

@@ -68,3 +68,5 @@ Build 17 showed the clock and signal row above game screens, including Discoveri
 ## 9 November 2026 · Native touch behavior
 
 The native shell keeps a fixed page scale and disables the iPhone WebView's pinch recognizer. Form fields use a 16 CSS pixel minimum to avoid iOS focus zoom. The game surface suppresses selection and the long-press callout, with normal selection retained for editable fields. Browser accessibility zoom remains available outside the native shell.
+
+The 9 November test candidate also clips horizontal document overflow inside the native shell. The iPhone WebView stops at the page edge and hides its outer scroll indicators. Vertical scrolling stays available where the content is taller than the screen. Device acceptance uses side swipes on Profile, Rankings and Discoveries, then a vertical scroll on a long screen.

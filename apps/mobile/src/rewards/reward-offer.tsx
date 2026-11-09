@@ -18,17 +18,7 @@ const EMPTY: RewardFlowState = Object.freeze({
   canEnd: false,
   problem: null,
 });
-export function RewardOffer({
-  flow,
-  online,
-  onLeave,
-  onEnd,
-}: {
-  flow: RewardFlow | null;
-  online: boolean;
-  onLeave: () => void;
-  onEnd: () => void;
-}) {
+export function RewardOffer({ flow, online }: { flow: RewardFlow | null; online: boolean }) {
   const { t, number } = useLanguage();
   const subscribe = useCallback(
     (observer: () => void) => flow?.subscribe(observer) ?? (() => {}),
@@ -74,27 +64,7 @@ export function RewardOffer({
             : null;
   return (
     <section className="cpi-reward-offer" aria-label={t('rewards.title')}>
-      <h3>{t('rewards.title')}</h3>
-      {state.promise && (
-        <>
-          <p className="cpi-reward-promise">
-            {t('rewards.offer', {
-              ordinal: number(state.promise.ordinal),
-              sp: number(state.promise.restoreSp),
-            })}
-          </p>
-          <p>{t('rewards.set')}</p>
-        </>
-      )}
-      {state.revivesGranted !== null && (
-        <p>
-          {t('rewards.quota', {
-            granted: number(state.revivesGranted),
-            applied: number(state.revivesApplied),
-          })}
-        </p>
-      )}
-      {status && (
+      {status && !problem && (
         <p role="status" aria-live="polite">
           {t(status)}
         </p>
@@ -110,7 +80,9 @@ export function RewardOffer({
               void flow?.watch();
             }}
           >
-            {t('rewards.watch')}
+            {state.promise
+              ? t('rewards.watchRestore', { sp: number(state.promise.restoreSp) })
+              : t('rewards.watch')}
           </button>
         )}
         {state.phase === 'granted' && (
@@ -121,7 +93,9 @@ export function RewardOffer({
               void flow?.apply();
             }}
           >
-            {t('rewards.apply')}
+            {state.promise
+              ? t('rewards.resumeRestore', { sp: number(state.promise.restoreSp) })
+              : t('rewards.apply')}
           </button>
         )}
         {state.canRetry && (
@@ -135,14 +109,6 @@ export function RewardOffer({
             {t('rewards.retry')}
           </button>
         )}
-        {state.canEnd && (
-          <button type="button" onClick={onEnd}>
-            {t('rewards.end')}
-          </button>
-        )}
-        <button type="button" disabled={state.fullscreen} onClick={onLeave}>
-          {t('rewards.leave')}
-        </button>
       </div>
     </section>
   );

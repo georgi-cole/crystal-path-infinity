@@ -41,6 +41,9 @@ export interface AccountRequestLease {
   readonly signal: AbortSignal;
 }
 
+/** The configured gateway definitively rejected the saved refresh token. */
+export class RefreshCredentialRejected extends Error {}
+
 export class SessionNotAvailable extends Error {
   constructor() {
     super('Account session unavailable. Local practice is still available.');
@@ -140,6 +143,12 @@ export class AccountSessionOwner {
     }
   }
 
+  private settlePhase(generation: number, phase: SessionPhase): void {
+    if (generation !== this.revision) return;
+    this.phase = phase;
+    this.notifyAccountScope();
+  }
+
   private invalidate(phase: SessionPhase): number {
     this.revision++;
     this.phase = phase;
@@ -173,7 +182,7 @@ export class AccountSessionOwner {
     const cleanupGeneration = this.invalidate('blocked');
     try {
       await this.vaultOperation(() => this.vault.clear());
-      if (cleanupGeneration === this.revision) this.phase = 'guest';
+      this.settlePhase(cleanupGeneration, 'guest');
     } catch {
       // Persistent storage may still hold a token: never claim signed out.
     }
@@ -224,12 +233,12 @@ export class AccountSessionOwner {
     try {
       return await this.accept(await this.transport.exchange(ticket), generation);
     } catch {
-      if (generation === this.revision) this.phase = 'guest';
+      this.settlePhase(generation, 'guest');
       return false;
     }
   }
 
-  /** Explicit restoration, never part of the offline practice bootstrap. */
+  /** Called independently of the offline practice bootstrap. */
   async restore(): Promise<boolean> {
     if (!this.vault.supported || (this.phase !== 'guest' && this.phase !== 'recovery_required')) {
       return false;
@@ -239,12 +248,13 @@ export class AccountSessionOwner {
       const stored = await this.vaultOperation(() => this.vault.read());
       if (generation !== this.revision) return false;
       if (!stored) {
-        this.phase = 'guest';
+        this.settlePhase(generation, 'guest');
         return false;
       }
       return await this.accept(await this.transport.refresh(stored), generation, undefined, stored);
-    } catch {
-      if (generation === this.revision) this.phase = 'recovery_required';
+    } catch (error) {
+      if (error instanceof RefreshCredentialRejected) await this.failClosedStorage(generation);
+      else this.settlePhase(generation, 'recovery_required');
       return false;
     }
   }
@@ -270,8 +280,9 @@ export class AccountSessionOwner {
           existing.subject,
           existing.refreshToken,
         );
-      } catch {
-        if (generation === this.revision) this.invalidate('recovery_required');
+      } catch (error) {
+        if (error instanceof RefreshCredentialRejected) await this.failClosedStorage(generation);
+        else if (generation === this.revision) this.invalidate('recovery_required');
         return false;
       }
     })();
@@ -341,7 +352,7 @@ export class AccountSessionOwner {
         if (!token) token = saved;
         await this.vaultOperation(() => this.vault.clear());
       } catch {
-        if (generation === this.revision) this.phase = 'blocked';
+        this.settlePhase(generation, 'blocked');
         return false;
       }
       if (generation !== this.revision) return false;
@@ -350,13 +361,16 @@ export class AccountSessionOwner {
           const result: unknown = await this.transport.revoke(token);
           if (!isRecord(result) || result.status !== 'revoked') throw new Error();
         } catch {
-          this.failedRevocation = token;
-          this.phase = 'revocation_unconfirmed';
+          if (generation === this.revision) {
+            this.failedRevocation = token;
+            this.settlePhase(generation, 'revocation_unconfirmed');
+          }
           return false;
         }
       }
+      if (generation !== this.revision) return false;
       this.failedRevocation = null;
-      this.phase = 'guest';
+      this.settlePhase(generation, 'guest');
       return true;
     })();
     this.signingOut = work;
@@ -381,7 +395,7 @@ export class AccountSessionOwner {
         return false;
       }
       this.failedRevocation = null;
-      this.phase = 'guest';
+      this.settlePhase(generation, 'guest');
       return true;
     } catch {
       return false;

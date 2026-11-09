@@ -63,8 +63,3 @@
 .cpi-ranked-actions button {
   flex: 1 1 9rem;
 }
-
-.cpi-ranked-saved > summary {
-  cursor: pointer;
-  padding-block: 0.65rem;
-}

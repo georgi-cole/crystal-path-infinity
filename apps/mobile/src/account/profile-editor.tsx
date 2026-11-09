@@ -150,8 +150,9 @@ export function ProfileEditor({
   const names = new Intl.DisplayNames([locale], { type: 'region' });
   return (
     <section className="cpi-profile-editor" aria-labelledby="cpi-profile-title">
-      <h2 id="cpi-profile-title">{t('profile.title')}</h2>
-      <p>{t('profile.pseudonym')}</p>
+      <h2 id="cpi-profile-title" className="visually-hidden">
+        {t('profile.edit')}
+      </h2>
       {!client || !accountScope ? (
         <p role="status">{t('profile.signInFirst')}</p>
       ) : !online ? (
@@ -167,6 +168,7 @@ export function ProfileEditor({
             }}
           >
             <fieldset disabled={phase === 'saving'}>
+              {!owner.profile && <p>{t('profile.namePrompt')}</p>}
               <label htmlFor="cpi-profile-name">{t('profile.username')}</label>
               <input
                 id="cpi-profile-name"
@@ -176,7 +178,7 @@ export function ProfileEditor({
                 spellCheck={false}
                 required
                 minLength={3}
-                maxLength={48}
+                maxLength={24}
                 aria-describedby="cpi-profile-name-help"
                 onChange={(event) => setUsername(event.target.value)}
               />

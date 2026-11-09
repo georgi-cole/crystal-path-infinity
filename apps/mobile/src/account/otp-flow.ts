@@ -156,6 +156,13 @@ export class AccountOtpFlow {
     this.update('guest');
   }
 
+  changeEmail(): void {
+    if (this.snapshotValue.step !== 'code') return;
+    this.email = null;
+    this.otpExpiresAt = 0;
+    this.update('eligible');
+  }
+
   offline(): void {
     this.cancel();
     this.update('offline');

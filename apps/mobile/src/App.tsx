@@ -38,6 +38,7 @@ import { RankedScene } from './ranked/ranked-scene';
 import type { AccountControlsClient } from './account/account-controls-model';
 import type { RewardFlow } from './rewards/reward-flow';
 import type { SavedPendingClient } from './ranked/saved-pending-client';
+import { SavedRuns } from './ranked/saved-pending-view';
 import type { AccountEntryBinding } from './account/account-entry';
 
 /** Supplied only by an approved account host; shipped builds inject nothing. */
@@ -126,6 +127,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
   const [view, setView] = useState<MenuView>(() =>
     typeof window === 'undefined' ? 'home' : viewFromHash(window.location.hash, QA_TOOLS_ENABLED),
   );
+  const [savedRun, setSavedRun] = useState<{ scope: object; runId: string } | null>(null);
   const [confirmNew, setConfirmNew] = useState(false);
   const [storeEntry, setStoreEntry] = useState<'worlds' | 'essentials'>('worlds');
   const confirmingRef = useRef(false);
@@ -242,6 +244,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
         confirmingRef.current = false;
         setConfirmNew(false);
       }
+      setSavedRun(null);
       setView(viewFromHash(window.location.hash, QA_TOOLS_ENABLED));
     };
     window.addEventListener('online', onConnection);
@@ -272,9 +275,24 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
   const navigate = (next: MenuView) => {
     if (gameRef.current || confirmingRef.current || view === next) return;
     if (next === 'store') setStoreEntry('worlds');
+    setSavedRun(null);
     window.history.pushState({ cpiNavigation: true }, '', viewHash(next));
     setView(next);
     setStorageWarning(null);
+  };
+
+  const openSavedRun = (runId: string) => {
+    const active = rankedClient?.snapshot().run;
+    if (
+      !rankedClient ||
+      !accountScope ||
+      services?.session?.accountScope() !== accountScope ||
+      !online ||
+      (active && active.status !== 'finished')
+    )
+      return;
+    navigate('play');
+    setSavedRun({ scope: accountScope, runId });
   };
 
   const cancelNew = useCallback(() => {
@@ -521,13 +539,14 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
         onPractice={canResumePractice(visibleSaved) ? resumePractice : requestNewPractice}
         onViewRankings={() => navigate('rankings')}
         rewardFlow={rewardFlow}
-        savedPendingClient={services?.savedPendingClient}
+        recoverRunId={savedRun?.scope === accountScope ? savedRun.runId : undefined}
       />
     );
 
   const platform = Capacitor.getPlatform();
   const platformLabel = platform === 'ios' ? 'iOS' : platform === 'android' ? 'Android' : 'Web';
   const buildLabel = showBuildDetails ? platformLabel + ' · ' + build.version : undefined;
+  const activeRun = rankedClient?.snapshot().run;
 
   return (
     <>
@@ -569,11 +588,19 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
           profileClient={accountScope ? services?.profileClient : null}
           leaderboardClient={services?.leaderboardClient}
           leaderboardCountries={services?.countries}
-          pendingPersonalResult={
-            services?.pendingPersonalResult || rankedClient?.snapshot().run?.rewardPending
-          }
+          pendingPersonalResult={services?.pendingPersonalResult || activeRun?.rewardPending}
           rankedClient={rankedClient}
-
+          savedRuns={
+            rankedClient &&
+            services?.savedPendingClient && (
+              <SavedRuns
+                client={services.savedPendingClient}
+                online={online}
+                canRecover={!activeRun || activeRun.status === 'finished'}
+                onRecover={openSavedRun}
+              />
+            )
+          }
           accountControlsClient={accountScope ? services?.accountControlsClient : null}
           accountScope={accountScope}
           accountConnected={accountScope !== null}

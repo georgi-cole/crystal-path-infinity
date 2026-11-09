@@ -245,6 +245,7 @@ export interface MainMenuProps {
   leaderboardCountries?: readonly { countryCode: string; continentCode: string }[];
   pendingPersonalResult?: boolean;
   rankedClient?: RankedClient | null;
+  savedRuns?: ReactNode;
   accountControlsClient?: AccountControlsClient | null;
   accountScope?: object | null;
   accountConnected?: boolean;
@@ -256,14 +257,12 @@ function MenuHeader({
   online,
   onBack,
   accountConnected = false,
-  rankedAvailable = false,
   utilities,
 }: {
   view: MenuView;
   online: boolean;
   onBack: () => void;
   accountConnected?: boolean;
-  rankedAvailable?: boolean;
   utilities?: ReactNode;
 }) {
   const { t } = useLanguage();
@@ -287,13 +286,7 @@ function MenuHeader({
         <StatusPill>
           {t(accountConnected ? 'general.accountConnected' : 'general.guest')}
         </StatusPill>
-        {(!online || rankedAvailable) && (
-          <StatusPill tone={online ? 'neutral' : 'offline'}>
-            {online
-              ? t(rankedAvailable ? 'general.rankedReady' : 'general.rankedUnavailable')
-              : t('general.offline')}
-          </StatusPill>
-        )}
+        {!online && <StatusPill tone="offline">{t('general.offline')}</StatusPill>}
       </div>
     </header>
   );
@@ -481,6 +474,7 @@ export function MainMenu({
   leaderboardCountries = [],
   pendingPersonalResult = false,
   rankedClient = null,
+  savedRuns,
   accountControlsClient = null,
   accountScope = null,
   accountConnected = false,
@@ -506,7 +500,6 @@ export function MainMenu({
           online={online}
           onBack={onBack}
           accountConnected={accountConnected}
-          rankedAvailable={rankedClient !== null}
           utilities={
             view === 'home' ? (
               <HubUtilityControls
@@ -605,17 +598,10 @@ export function MainMenu({
             onReturnToRun={canResumePractice(saved) ? onResume : undefined}
           />
         ) : view === 'play' ? (
-          <MenuPanel title={t('general.play')} eyebrow={t('menu.playEyebrow')}>
-            <p>{t('menu.playUnavailable')}</p>
-            <div className="cpi-menu-notice" role="status">
-              <strong>
-                {service === 'offline' ? t('menu.youOffline') : t('menu.servicesMissing')}
-              </strong>
-              <span>{t('menu.noRankedHere')}</span>
-            </div>
+          <MenuPanel title={t('general.play')}>
+            <p role="status">{t(online ? 'ranked.unavailable' : 'ranked.offline')}</p>
             <MenuAction
-              label={t('menu.practiceInstead')}
-              description={t('menu.practiceNow')}
+              label={t('general.practice')}
               icon="practice"
               variant="primary"
               onClick={canResumePractice(saved) ? onResume : onNew}
@@ -663,30 +649,46 @@ export function MainMenu({
             />
           </MenuPanel>
         ) : view === 'profile' ? (
-          <MenuPanel title={t('general.profile')} eyebrow={t('menu.profileEyebrow')}>
-            {!accountConnected && (
+          <MenuPanel title={t('general.profile')}>
+            {accountConnected ? (
               <>
-                <div className="cpi-menu-notice" role="status">
-                  <strong>{t('menu.asGuest')}</strong>
-                  <span>{t('menu.noAccount')}</span>
-                </div>
+                <MenuAction
+                  label={t('general.play')}
+                  icon="play"
+                  variant="primary"
+                  onClick={
+                    rankedClient
+                      ? () => onOpen('play')
+                      : canResumePractice(saved)
+                        ? onResume
+                        : onNew
+                  }
+                />
+                <details className="cpi-profile-details">
+                  <summary>{t('profile.edit')}</summary>
+                  <ProfileEditor client={profileClient} online={online} />
+                </details>
+                {savedRuns}
+                {onSignOut && (
+                  <MenuAction
+                    label={t('account.signOut')}
+                    icon="profile"
+                    variant="quiet"
+                    onClick={() => void onSignOut()}
+                  />
+                )}
+              </>
+            ) : (
+              <>
                 <AccountEntry online={online} binding={accountEntry} />
+                <MenuAction
+                  label={t('menu.practiceUnsigned')}
+                  icon="practice"
+                  variant="quiet"
+                  onClick={canResumePractice(saved) ? onResume : onNew}
+                />
               </>
             )}
-            <ProfileEditor client={profileClient} online={online} />
-            {accountConnected && onSignOut && (
-              <MenuAction
-                label={t('account.signOut')}
-                icon="profile"
-                variant="quiet"
-                onClick={() => void onSignOut()}
-              />
-            )}
-            <MenuAction
-              label={t('menu.practiceUnsigned')}
-              icon="practice"
-              onClick={canResumePractice(saved) ? onResume : onNew}
-            />
           </MenuPanel>
         ) : (
           <section className="cpi-settings-menu" aria-labelledby="cpi-settings-title">

@@ -37,8 +37,15 @@ body {
   user-select: text;
 }
 
+/* Side swipes should move only a control that deliberately scrolls sideways. */
+:root:has(#root[data-native-shell]),
+body:has(> #root[data-native-shell]) {
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+}
+
 #root[data-native-shell] {
-  touch-action: pan-x pan-y;
+  touch-action: pan-y;
 }
 
 #root[data-native-shell] :is(input, textarea, select) {

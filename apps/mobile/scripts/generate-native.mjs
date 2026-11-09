@@ -3,6 +3,7 @@
 // Capacitor add + sync; repeat the build/generate sequence after web changes.
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import {
   copyFileSync,
   cpSync,
@@ -16,6 +17,7 @@ import {
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadEnv } from 'vite';
 import {
   assertBuiltEnvironment,
   getBuildInfo,
@@ -37,6 +39,7 @@ const capacitorVersion = '8.5.3';
 let buildNumber = 1;
 let release = null;
 let integrations;
+let accountVaultSuffix;
 const background = BRAND_BACKGROUND;
 const nativePackages = [
   '@capacitor/cli',
@@ -153,6 +156,22 @@ function runCap(environment, ...args) {
   if (result.error) throw result.error;
   assert.equal(result.status, 0, `Capacitor ${args.join(' ')} failed`);
 }
+function accountVaultFor(environment) {
+  const gateway = loadEnv(environment, appRoot, 'VITE_').VITE_ACCOUNT_API_BASE_URL?.replace(
+    /\/$/,
+    '',
+  );
+  // The registered bundle ID has already shipped to internal testers using this vault.
+  // Only the same staging gateway can reuse it.
+  if (gateway === 'https://crystal-path-staging-api.kolequant.workers.dev/cpi') return '';
+  return (
+    '.' +
+    createHash('sha256')
+      .update(gateway ?? '')
+      .digest('hex')
+      .slice(0, 24)
+  );
+}
 function configureAndroid(info) {
   // A disposable copy pins the upstream source and keeps node_modules pristine.
   const capacitorPackage = dirname(appRequire.resolve('@capacitor/android/package.json'));
@@ -185,6 +204,7 @@ function configureAndroid(info) {
       `${javaPath}/${name}`,
       read(`native-templates/android/${name}`)
         .replaceAll('__PACKAGE__', info.appId)
+        .replaceAll('__ACCOUNT_VAULT_SUFFIX__', accountVaultSuffix)
         .replaceAll('__DEVELOPMENT__', String(info.environment === 'development')),
     );
   }
@@ -363,7 +383,10 @@ function configureIOS(info) {
         String(info.environment === 'development'),
       ) +
       '\n' +
-      read('native-templates/ios/CpiSecureSession.swift'),
+      read('native-templates/ios/CpiSecureSession.swift').replaceAll(
+        '__ACCOUNT_VAULT_SUFFIX__',
+        accountVaultSuffix,
+      ),
   );
   write(
     'ios/App/App/SceneDelegate.swift',
@@ -613,6 +636,7 @@ function verifyNative(platform, info) {
     ]) {
       let expected = read(`native-templates/android/${name}`)
         .replaceAll('__PACKAGE__', info.appId)
+        .replaceAll('__ACCOUNT_VAULT_SUFFIX__', accountVaultSuffix)
         .replaceAll('__DEVELOPMENT__', String(info.environment === 'development'));
       if (integrations.ads && name === 'MainActivity.java')
         expected = expected.replace(
@@ -673,7 +697,10 @@ function verifyNative(platform, info) {
         String(info.environment === 'development'),
       ) +
       '\n' +
-      read('native-templates/ios/CpiSecureSession.swift');
+      read('native-templates/ios/CpiSecureSession.swift').replaceAll(
+        '__ACCOUNT_VAULT_SUFFIX__',
+        accountVaultSuffix,
+      );
     if (integrations.ads)
       expectedDelegate =
         expectedDelegate.replace(
@@ -727,6 +754,7 @@ function verifyNative(platform, info) {
 try {
   const { platform, environment, check } = options();
   integrations = readNativeIntegrations(process.env, environment);
+  accountVaultSuffix = accountVaultFor(environment);
   const manifest = verifyPackages();
   release = resolveUnsignedRelease(environment, manifest.version, process.env);
   buildNumber = release?.buildNumber ?? 1;
