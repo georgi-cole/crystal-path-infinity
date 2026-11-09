@@ -72,8 +72,8 @@ export function createAccountIssuer(options: {
   crypto: PrivateCryptography;
   directory: AccountDirectory;
   mailer: AccountMailer;
-  policy: AccountPolicy;
   identity?: NativeIdentity;
+  policy: AccountPolicy;
   stagingTestEmails?: readonly string[];
   now?: () => number;
 }) {
