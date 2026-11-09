@@ -34,6 +34,12 @@ physical network-payload verification remain release gates. An injected operatio
 gate can additionally stop fresh eligibility and new intent creation. Existing
 pending/status/callback/application operations do not depend on new-ad availability.
 
+**Native test follow-up · 9 November 2026.** An approved ten-minute server
+authorization could exceed the client's five-minute limit. The eligibility API
+caps the returned permit at four minutes and preserves any earlier expiry.
+The server still checks authorization before each intent and settles signed
+callbacks through the existing reward flow.
+
 ## Intent and reward lifecycle
 
 The native flow must load the approved ad before requesting an intent. A true

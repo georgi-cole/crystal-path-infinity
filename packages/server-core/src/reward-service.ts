@@ -18,6 +18,9 @@ import {
   OperationsPolicyError,
 } from './operations-policy.ts';
 
+// Leave clock headroom inside the native client's five-minute permit window.
+const CLIENT_REWARD_PERMIT_MS = 4 * 60_000;
+
 export interface RewardActor extends RankedActor {
   readonly clientBuild: number;
 }
@@ -226,7 +229,7 @@ export class RewardService {
     );
     return result.rows.length === 1 ? (result.rows[0] as PermitRow) : null;
   }
-  private publicPermit(row: PermitRow): RewardPermit {
+  private publicPermit(row: PermitRow, now: number): RewardPermit {
     const mediation = json(row.mediation);
     if (!Array.isArray(mediation) || mediation.length > 20) fail('invalid-reward-state');
     const adapters: { identifier: string; version: string }[] = [];
@@ -244,7 +247,7 @@ export class RewardService {
     return {
       id: row.id,
       policyVersion: row.policy_version,
-      expiresAt: date(row.valid_until),
+      expiresAt: Math.min(date(row.valid_until), now + CLIENT_REWARD_PERMIT_MS),
       inventory: {
         provider: 'admob',
         platform: row.platform,
@@ -291,9 +294,10 @@ export class RewardService {
         clientBuild: actor.clientBuild,
         rulesetVersion: run.state.rulesetVersion,
       });
-      const permit = await this.permit(connection, actor.subject, this.clock());
+      const now = this.clock();
+      const permit = await this.permit(connection, actor.subject, now);
       return permit
-        ? { schemaVersion: 1, status: 'allowed', permit: this.publicPermit(permit) }
+        ? { schemaVersion: 1, status: 'allowed', permit: this.publicPermit(permit, now) }
         : { schemaVersion: 1, status: 'unavailable' };
     });
   }
@@ -435,7 +439,7 @@ export class RewardService {
       if (run.leaseActive === false || run.deviceId !== actor.deviceId) fail('reward-lease-lost');
       const permit = await this.permit(connection, actor.subject, now);
       if (!permit) fail('reward-privacy-unavailable');
-      this.publicPermit(permit);
+      this.publicPermit(permit, now);
       await this.assertOperationStart(connection, {
         operation: 'ad',
         clientBuild: actor.clientBuild,

@@ -60,7 +60,13 @@ function grant(state: RunState, ordinal: number) {
     grantId: 'grant-' + ordinal,
   });
 }
-function fixture(state: RunState, leaseActive = true, deviceId = actor.deviceId) {
+const now = 1_800_000_000_000;
+function fixture(
+  state: RunState,
+  leaseActive = true,
+  deviceId = actor.deviceId,
+  authorizationMs?: number,
+) {
   const authorize = vi.fn().mockResolvedValue(undefined);
   const query = vi.fn<SqlConnection['query']>((text) => {
     if (text.startsWith('select user_id'))
@@ -79,17 +85,48 @@ function fixture(state: RunState, leaseActive = true, deviceId = actor.deviceId)
           },
         ],
       });
+    if (text.includes('reward_authorization_for') && authorizationMs !== undefined) {
+      return Promise.resolve({
+        rows: [
+          {
+            id: '00000000-0000-4000-8000-000000000773',
+            policy_version: 'test-policy',
+            valid_until: new Date(now + authorizationMs),
+            platform: 'android',
+            sdk_version: '25.4.0',
+            mediation: [],
+            child_directed: false,
+            under_age_of_consent: false,
+            max_ad_content_rating: 'G',
+            non_personalized: true,
+            privacy_context: 'adult',
+          },
+        ],
+      });
+    }
     return Promise.resolve({ rows: [] });
   });
   const service = new RewardService({
     database: { connect: () => Promise.resolve({ query, release: () => {} }) },
     environment: 'development',
     platform: 'android',
+    now: () => now,
     assertOperationStart: authorize,
   });
   return { authorize, query, read: () => service.eligibility(actor, { runId }) };
 }
 describe('new-ad permit eligibility boundary', () => {
+  it.each([
+    [10 * 60_000, 4 * 60_000],
+    [2 * 60_000, 2 * 60_000],
+  ])('caps a %i ms authorization at a %i ms client permit', async (authorizationMs, permitMs) => {
+    const f = fixture(dead(), true, actor.deviceId, authorizationMs);
+    expect(await f.read()).toMatchObject({
+      status: 'allowed',
+      permit: { expiresAt: now + permitMs },
+    });
+  });
+
   it('authorizes SDK prerequisites only for an attached dead attempt with an unused continuation offer', async () => {
     const f = fixture(dead());
     expect(await f.read()).toEqual({ schemaVersion: 1, status: 'unavailable' });
