@@ -42,7 +42,8 @@ describe('CPI-018 trusted OTP gateway boundary', () => {
 
     const identity = {
       signIn: () => Promise.resolve({ status: 'cancelled' as const }),
-      signUp: () => Promise.resolve({ status: 'cancelled' as const }),
+      requestLinkCode: () => Promise.resolve({ resendAt: 0 }),
+      verifyLinkCode: () => Promise.resolve({ status: 'cancelled' as const }),
       link: () => Promise.resolve('cancelled' as const),
     };
     const methods = renderToStaticMarkup(
@@ -52,7 +53,9 @@ describe('CPI-018 trusted OTP gateway boundary', () => {
       }),
     );
     expect(methods).toMatch(/Continue with Apple.*Continue with Google.*Continue with email/);
-    expect(methods).not.toContain('sign in with email once');
+    expect(methods).not.toContain('cpi-account-age');
+    expect(methods).not.toContain('cpi-account-country');
+    expect(methods).not.toContain('Create account');
   });
 
   it('sends no email to public Supabase Auth and never leaks it to URL or referrer', async () => {

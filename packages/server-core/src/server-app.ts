@@ -55,6 +55,8 @@ const routes: Readonly<Record<string, Route>> = {
   '/identity/begin': { handler: 'approvedAccountIssuer', metric: null },
   '/identity/complete': { handler: 'approvedAccountIssuer', metric: null },
   '/identity/signup': { handler: 'approvedAccountIssuer', metric: null },
+  '/identity/link/request': { handler: 'approvedAccountIssuer', metric: null },
+  '/identity/link/verify': { handler: 'approvedAccountIssuer', metric: null },
   '/session/exchange': { handler: 'approvedAccountIssuer', metric: null },
   '/session/refresh': { handler: 'approvedAccountIssuer', metric: null },
   '/session/revoke': { handler: 'approvedAccountIssuer', metric: null },

@@ -69,7 +69,7 @@ export function createLiveServices(values: Readonly<Record<string, unknown>>): L
         staging: base === STAGING_ACCOUNT_GATEWAY,
         identity:
           values.VITE_IOS_PROVIDER_SIGN_IN === 'true'
-            ? createNativeIdentityClient(base, session)
+            ? createNativeIdentityClient(base, session, Number(values.VITE_CLIENT_BUILD ?? 1))
             : null,
       },
       signOut: () => session.signOut(),

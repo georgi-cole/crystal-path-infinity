@@ -30,7 +30,7 @@ import { markDiagnosticReactReady } from './startup-diagnostics';
 import { settleStartup } from './startup-bootstrap';
 import { useLanguage } from './language-context';
 import type { AccountSessionOwner } from './account/session-owner';
-import type { ProfileClient } from './account/profile-client';
+import type { OwnerProfile, ProfileClient } from './account/profile-client';
 import type { LeaderboardClient } from './leaderboard/leaderboard-client';
 import type { NameReportClient } from './leaderboard/name-report-client';
 import type { RankedClient } from './ranked/ranked-client';
@@ -105,6 +105,12 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
     () => services?.session?.accountScope() ?? null,
     () => null,
   );
+  const profileClient = accountScope ? (services?.profileClient ?? null) : null;
+  const [menuProfile, setMenuProfile] = useState<{ scope: object; value: OwnerProfile } | null>(
+    null,
+  );
+  const [setupScope, setSetupScope] = useState<object | null>(null);
+  const profile = menuProfile?.scope === accountScope ? menuProfile?.value : null;
   const [game, setGame] = useState<GameOwner | null>(null);
   const gameRef = useRef<GameOwner | null>(null);
   const gameSequence = useRef(0);
@@ -136,7 +142,25 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
   const [online, setOnline] = useState(
     () => typeof navigator === 'undefined' || navigator.onLine !== false,
   );
-  const rankedClient = accountScope ? (services?.rankedClient ?? null) : null;
+  const rankedClient =
+    accountScope && profile?.profile !== null ? (services?.rankedClient ?? null) : null;
+  const setupProfile = view === 'profile' && accountScope !== null && setupScope === accountScope;
+  useEffect(() => {
+    if (!profileClient || !accountScope || !online) return;
+    const request = new AbortController();
+    void profileClient
+      .load(request.signal)
+      .then((result) => {
+        if (request.signal.aborted || !result.ok) return;
+        setMenuProfile((current) =>
+          current?.scope === accountScope ? current : { scope: accountScope, value: result.value },
+        );
+      })
+      .catch(() => {
+        // The account remains usable if the optional display name could not be read.
+      });
+    return () => request.abort();
+  }, [profileClient, accountScope, online]);
   const rewardFactory = accountScope ? (services?.rewardFlowFactory ?? null) : null;
   const rankedRunId = useSyncExternalStore(
     (listener) => rankedClient?.subscribe(listener) ?? (() => {}),
@@ -245,6 +269,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
         setConfirmNew(false);
       }
       setSavedRun(null);
+      setSetupScope(null);
       setView(viewFromHash(window.location.hash, QA_TOOLS_ENABLED));
     };
     window.addEventListener('online', onConnection);
@@ -270,7 +295,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
     } else {
       document.querySelector<HTMLElement>('[data-menu-heading]')?.focus();
     }
-  }, [bootPhase, game, view, confirmNew]);
+  }, [bootPhase, game, view, confirmNew, setupProfile]);
 
   const navigate = (next: MenuView) => {
     if (gameRef.current || confirmingRef.current || view === next) return;
@@ -279,6 +304,25 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
     window.history.pushState({ cpiNavigation: true }, '', viewHash(next));
     setView(next);
     setStorageWarning(null);
+  };
+
+  const finishProfileSetup = () => {
+    setSetupScope(null);
+    window.history.replaceState({ cpiNavigation: false }, '', viewHash('home'));
+    setView('home');
+  };
+
+  const onAccountSignedIn = (offerProfile: boolean) => {
+    const scope = services?.session?.accountScope();
+    if (!scope || window.location.hash !== viewHash('profile')) return;
+    if (offerProfile && services?.profileClient) setSetupScope(scope);
+    else finishProfileSetup();
+  };
+
+  const onProfileSaved = (value: OwnerProfile) => {
+    if (!accountScope || services?.session?.accountScope() !== accountScope) return;
+    setMenuProfile({ scope: accountScope, value });
+    if (setupProfile) finishProfileSetup();
   };
 
   const openSavedRun = (runId: string) => {
@@ -316,6 +360,10 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
   }, [confirmNew, cancelNew]);
 
   const back = () => {
+    if (setupProfile) {
+      finishProfileSetup();
+      return;
+    }
     if (confirmingRef.current) {
       cancelNew();
       return;
@@ -585,7 +633,12 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
           onTutorialProgress={onTutorialProgress}
           buildLabel={buildLabel}
           warning={storageWarning}
-          profileClient={accountScope ? services?.profileClient : null}
+          profileClient={profileClient}
+          accountName={profile?.profile?.username ?? profile?.providerDisplayName}
+          setupProfile={setupProfile}
+          onAccountSignedIn={onAccountSignedIn}
+          onProfileSaved={onProfileSaved}
+          onSkipProfile={finishProfileSetup}
           leaderboardClient={services?.leaderboardClient}
           leaderboardCountries={services?.countries}
           pendingPersonalResult={services?.pendingPersonalResult || activeRun?.rewardPending}

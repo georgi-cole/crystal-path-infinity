@@ -9,7 +9,7 @@ import { AccountEntry } from './account/account-entry';
 import type { AccountEntryBinding } from './account/account-entry';
 import { ProfileEditor } from './account/profile-editor';
 import { IdentityLinks } from './account/provider-sign-in';
-import type { ProfileClient } from './account/profile-client';
+import type { OwnerProfile, ProfileClient } from './account/profile-client';
 import { LeaderboardView } from './leaderboard/leaderboard-view';
 import type { LeaderboardClient } from './leaderboard/leaderboard-client';
 import type { RankedClient } from './ranked/ranked-client';
@@ -250,6 +250,11 @@ export interface MainMenuProps {
   accountControlsClient?: AccountControlsClient | null;
   accountScope?: object | null;
   accountConnected?: boolean;
+  accountName?: string | null;
+  setupProfile?: boolean;
+  onAccountSignedIn?: (offerProfile: boolean) => void;
+  onProfileSaved?: (owner: OwnerProfile) => void;
+  onSkipProfile?: () => void;
   nameReportClient?: NameReportClient | null;
 }
 
@@ -258,12 +263,14 @@ function MenuHeader({
   online,
   onBack,
   accountConnected = false,
+  accountName,
   utilities,
 }: {
   view: MenuView;
   online: boolean;
   onBack: () => void;
   accountConnected?: boolean;
+  accountName?: string | null;
   utilities?: ReactNode;
 }) {
   const { t } = useLanguage();
@@ -285,7 +292,7 @@ function MenuHeader({
       <div className="cpi-menu-status" aria-label={t('menu.status')}>
         {QA_TOOLS_ENABLED && <StatusPill>QA</StatusPill>}
         <StatusPill>
-          {t(accountConnected ? 'general.accountConnected' : 'general.guest')}
+          <bdi>{accountConnected ? (accountName ?? t('general.player')) : t('general.guest')}</bdi>
         </StatusPill>
         {!online && <StatusPill tone="offline">{t('general.offline')}</StatusPill>}
       </div>
@@ -479,6 +486,11 @@ export function MainMenu({
   accountControlsClient = null,
   accountScope = null,
   accountConnected = false,
+  accountName,
+  setupProfile = false,
+  onAccountSignedIn,
+  onProfileSaved,
+  onSkipProfile,
   nameReportClient = null,
 }: MainMenuProps) {
   const service = rankedServiceState(online);
@@ -501,6 +513,7 @@ export function MainMenu({
           online={online}
           onBack={onBack}
           accountConnected={accountConnected}
+          accountName={accountName}
           utilities={
             view === 'home' ? (
               <HubUtilityControls
@@ -650,8 +663,23 @@ export function MainMenu({
             />
           </MenuPanel>
         ) : view === 'profile' ? (
-          <MenuPanel title={t('general.profile')}>
-            {accountConnected ? (
+          <MenuPanel title={t(setupProfile ? 'profile.setupTitle' : 'general.profile')}>
+            {setupProfile ? (
+              <>
+                <ProfileEditor
+                  client={profileClient}
+                  online={online}
+                  setup
+                  onSaved={onProfileSaved}
+                />
+                <MenuAction
+                  label={t('profile.skipSetup')}
+                  icon="arrow"
+                  variant="quiet"
+                  onClick={() => onSkipProfile?.()}
+                />
+              </>
+            ) : accountConnected ? (
               <>
                 <MenuAction
                   label={t('general.play')}
@@ -667,7 +695,7 @@ export function MainMenu({
                 />
                 <details className="cpi-profile-details">
                   <summary>{t('profile.edit')}</summary>
-                  <ProfileEditor client={profileClient} online={online} />
+                  <ProfileEditor client={profileClient} online={online} onSaved={onProfileSaved} />
                 </details>
                 {accountEntry?.identity && (
                   <IdentityLinks client={accountEntry.identity} online={online} />
@@ -684,7 +712,11 @@ export function MainMenu({
               </>
             ) : (
               <>
-                <AccountEntry online={online} binding={accountEntry} />
+                <AccountEntry
+                  online={online}
+                  binding={accountEntry}
+                  onSignedIn={onAccountSignedIn}
+                />
                 <MenuAction
                   label={t('menu.practiceUnsigned')}
                   icon="practice"

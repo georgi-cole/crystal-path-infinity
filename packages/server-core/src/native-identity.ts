@@ -9,6 +9,7 @@ export function isNativeIdentityProvider(value: unknown): value is NativeIdentit
 export interface VerifiedNativeIdentity {
   readonly subject: string;
   readonly signupEmail?: string;
+  readonly displayName?: string;
   readonly appleRefresh?: () => Promise<string>;
 }
 export interface NativeIdentity {
@@ -31,6 +32,12 @@ const googleIssuer = 'https://accounts.google.com';
 const claimsSegment = /^[A-Za-z0-9_-]+$/;
 const authorizationCode = /^[!-~]{8,2048}$/;
 const pkceVerifier = /^[A-Za-z0-9._~-]{43,128}$/;
+
+function providerDisplayName(value: unknown): string | undefined {
+  if (typeof value !== 'string' || value.length > 160 || /[@\p{C}]/u.test(value)) return undefined;
+  const name = value.normalize('NFKC').trim().replace(/\s+/gu, ' ');
+  return name.length <= 48 && !name.includes('@') && /[\p{L}\p{N}]/u.test(name) ? name : undefined;
+}
 
 export function googleIosRedirect(clientId: string) {
   if (!/^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(clientId))
@@ -148,9 +155,12 @@ export function createNativeIdentity(options: {
       address?.toLowerCase().endsWith('@gmail.com') ||
       (typeof value.hd === 'string' && value.hd.length > 0);
     // A verified third-party Google address may have changed owners since it was verified.
-    return address && confirmed && providerOwnsEmail
-      ? { subject, signupEmail: address }
-      : { subject };
+    const displayName = provider === 'google' ? providerDisplayName(value.name) : undefined;
+    return {
+      subject,
+      ...(address && confirmed && providerOwnsEmail ? { signupEmail: address } : {}),
+      ...(displayName ? { displayName } : {}),
+    };
   }
 
   function appleSecret() {
@@ -202,11 +212,17 @@ export function createNativeIdentity(options: {
         if (!isObject(result)) throw new NativeIdentityRejected();
         return verifyToken('google', result.id_token, nonce);
       }
-      if (!exactObject(credential, ['identityToken', 'code'])) throw new NativeIdentityRejected();
+      if (
+        !exactObject(credential, ['identityToken', 'code']) &&
+        !exactObject(credential, ['identityToken', 'code', 'displayName'])
+      )
+        throw new NativeIdentityRejected();
       const proof = await verifyToken('apple', credential.identityToken, nonce);
       const code = requiredString(credential.code, authorizationCode);
+      const displayName = providerDisplayName(credential.displayName);
       return {
         ...proof,
+        ...(displayName ? { displayName } : {}),
         async appleRefresh() {
           const result = await exchange(appleIssuer + '/auth/token', {
             grant_type: 'authorization_code',

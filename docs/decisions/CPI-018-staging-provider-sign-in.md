@@ -20,12 +20,24 @@ Direct signup is enabled only in the isolated staging project and only for the v
 
 A signup confirmation expires after five minutes or when its eligibility permit expires. The server stores the temporary proof encrypted. A concurrent or interrupted Auth write can be recovered only by the same verified provider identity. The Apple refresh credential stays encrypted for account deletion. The app asks providers for email and keeps only the verified address and the identity data it needs for the account. Before public rollout, validate both providers, account export and deletion, and Apple relay email delivery on a device.
 
+## 9 November 2026 · Build 32 feedback and simpler beta entry
+
+Build 32 asked the tester to choose **Create account** after successful Google authentication. The Apple account already matched an existing Crystal Path account and the old flow sent the tester back to email sign-in and Profile.
+
+The next internal beta opens the Apple or Google picker directly. The staging server can admit an approved adult tester from a Bulgarian connection after verifying the provider proof. A fresh account opens one optional profile screen. **Skip for now** and **Save and continue** both return to the home screen. A linked provider signs in to the same account and goes home. Email sign-in still uses its eligibility and code steps. Guest play stays available.
+
+A matching address on an existing adult account prompts the player to request and enter a single code in the same flow. The code proves control of the existing account before the server links the verified provider to that owner. The account ID, worlds, purchases and saved runs stay with that owner. Later sign-ins with that provider skip the code. An unsupported provider address cannot create an account.
+
+The home header prefers the player's unique game nickname, then a private provider display name. The app uses **Player** when the provider supplies no name. Apple can supply the name during its initial consent only. Provider names are available in the owner's data export and stay out of public rankings. A country can be saved privately before choosing a public nickname. Optional age is shown only when the account is already eligible to provide an analytics age band. Ranked play still requires a public nickname.
+
+Direct admission is enabled by `CPI_STAGING_DIRECT_PROVIDER_ENTRY` only in the pinned adult-only Bulgaria staging project. Its provider lists represent individually approved adult testers. The server checks the trusted connection country, verifies a single-use challenge and provider proof, and only then issues a staging permit. Build 29 and build 32 keep their original contracts. Public signup still requires its reviewed eligibility policy.
+
 ## Review checks
 
 - Inspect Profile and the provider choice layout in the local preview.
 - In the internal iPhone build, link both providers from the existing staging account. Sign out and use each button. Confirm the same worlds, purchases and saved runs appear.
-- Cancel a provider prompt and check the other options are still available. Use an approved unused provider address and create an account without receiving a code. Sign out and verify the same account opens on the next provider sign-in.
-- Use the existing Apple email and confirm the account links only after signing into the existing profile. Check that the existing worlds and purchases are still there.
+- Cancel a provider prompt and check the other options are still available. Use an approved unused provider identity and verify that sign-in goes directly to the optional profile screen without receiving a code. Skip to home, then sign out and verify that the same identity returns home.
+- Use the existing Apple email, request and enter a code in the same flow, and verify that the existing worlds and purchases are still there. Sign out and sign in with Apple again to check that the code step is gone.
 - Swipe horizontally on Profile, Rankings and Discoveries. Check vertical scrolling on long content.
 - Check that Apple revocation completes before the staged account deletion finishes using an explicitly disposable account.
 

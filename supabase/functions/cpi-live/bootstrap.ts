@@ -59,7 +59,11 @@ export function createCpiLiveFunction(env: (name: string) => string | undefined)
         identity: config.nativeIdentity ? createNativeIdentity(config.nativeIdentity) : undefined,
         directory,
         nativeSignup: config.nativeIdentity?.signupEmails
-          ? { directory: directory.providerSignup, emails: config.nativeIdentity.signupEmails }
+          ? {
+              directory: directory.providerSignup,
+              emails: config.nativeIdentity.signupEmails,
+              directEntry: config.nativeIdentity.directEntry,
+            }
           : undefined,
         mailer: createResendAccountMailer({ apiKey: config.mailKey, from: config.mailFrom }),
       });

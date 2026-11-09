@@ -122,6 +122,11 @@ export function readLiveConfiguration(env: (name: string) => string | undefined)
         ? {
             googleClientId: require('CPI_IDENTITY_GOOGLE_IOS_CLIENT_ID'),
             signupEmails: providerSignupEmails(env('CPI_STAGING_PROVIDER_SIGNUP_EMAILS')),
+            directEntry:
+              env('CPI_STAGING_DIRECT_PROVIDER_ENTRY') === 'true' &&
+              Object.keys(policy.countries).length === 1 &&
+              policy.countries.BG?.minimumAge === 18 &&
+              policy.countries.BG.neutralAgeScreenAllowed,
             apple: {
               clientId: 'com.georgicole.crystalpath.infinity',
               teamId: 'C97T2A5255',

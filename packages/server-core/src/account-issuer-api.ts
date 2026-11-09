@@ -46,7 +46,7 @@ export function createAccountIssuerHandler(options: {
         return reply({ code: 'invalid_request' }, 400);
       if (
         !path ||
-        !/^\/(eligibility|otp\/(request|verify)|identity\/(begin|complete|signup)|session\/(exchange|refresh|revoke)|reauth\/(request|verify|proof))$/.test(
+        !/^\/(eligibility|otp\/(request|verify)|identity\/(begin|complete|signup|link\/(request|verify))|session\/(exchange|refresh|revoke)|reauth\/(request|verify|proof))$/.test(
           path,
         )
       )
@@ -61,6 +61,14 @@ export function createAccountIssuerHandler(options: {
       if (path === '/otp/verify') return reply(await options.issuer.verifyCode(input));
       if (path.startsWith('/identity/')) {
         const header = request.headers.get('authorization');
+        if (path === '/identity/link/request' || path === '/identity/link/verify') {
+          if (header) return reply({ code: 'invalid_request' }, 400);
+          return reply(
+            path.endsWith('/request')
+              ? await options.issuer.requestProviderLinkCode(input, context)
+              : await options.issuer.verifyProviderLinkCode(input, context),
+          );
+        }
         if (path === '/identity/signup') {
           if (header) return reply({ code: 'invalid_request' }, 400);
           return reply(await options.issuer.signupIdentity(input, context));

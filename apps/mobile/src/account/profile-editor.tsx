@@ -14,9 +14,13 @@ import './profile-editor.css';
 export function ProfileEditor({
   client,
   online,
+  setup = false,
+  onSaved,
 }: {
   client: ProfileClient | null;
   online: boolean;
+  setup?: boolean;
+  onSaved?: (owner: OwnerProfile) => void;
 }) {
   const { t, locale } = useLanguage();
   const readScope = useCallback(() => client?.accountScope?.() ?? null, [client]);
@@ -72,7 +76,7 @@ export function ProfileEditor({
       if (result.ok) {
         setLoaded({ client, accountScope, owner: result.value });
         setUsername(result.value.profile?.username ?? '');
-        setCountry(result.value.profile?.countryCode ?? '');
+        setCountry(result.value.profile?.countryCode ?? result.value.countryCode ?? '');
         setAnalytics('keep');
         setPhase('ready');
       } else {
@@ -108,7 +112,7 @@ export function ProfileEditor({
     try {
       result = await client.save(
         {
-          username,
+          username: username.trim() || null,
           countryCode: country || null,
           analyticsAction: analytics,
           analyticsAgeBand: band,
@@ -123,9 +127,10 @@ export function ProfileEditor({
     if (result.ok) {
       setLoaded({ client, accountScope, owner: result.value });
       setUsername(result.value.profile?.username ?? '');
-      setCountry(result.value.profile?.countryCode ?? '');
+      setCountry(result.value.profile?.countryCode ?? result.value.countryCode ?? '');
       setAnalytics('keep');
       setPhase('saved');
+      onSaved?.(result.value);
     } else {
       setAnalytics('keep');
       setProblem(result.problem);
@@ -168,22 +173,27 @@ export function ProfileEditor({
             }}
           >
             <fieldset disabled={phase === 'saving'}>
-              {!owner.profile && <p>{t('profile.namePrompt')}</p>}
-              <label htmlFor="cpi-profile-name">{t('profile.username')}</label>
+              {!owner.profile && !setup && <p>{t('profile.namePrompt')}</p>}
+              <label htmlFor="cpi-profile-name">
+                {t(setup ? 'profile.optionalNickname' : 'profile.username')}
+              </label>
               <input
                 id="cpi-profile-name"
                 value={username}
                 autoComplete="off"
                 autoCapitalize="none"
                 spellCheck={false}
-                required
                 minLength={3}
                 maxLength={24}
                 aria-describedby="cpi-profile-name-help"
                 onChange={(event) => setUsername(event.target.value)}
               />
-              <p id="cpi-profile-name-help">{t('profile.nameHelp')}</p>
-              <label htmlFor="cpi-profile-country">{t('profile.country')}</label>
+              <p id="cpi-profile-name-help">
+                {t(setup ? 'profile.nicknameHint' : 'profile.nameHelp')}
+              </p>
+              <label htmlFor="cpi-profile-country">
+                {t(setup ? 'profile.optionalCountry' : 'profile.country')}
+              </label>
               <select
                 id="cpi-profile-country"
                 value={country}
@@ -196,7 +206,7 @@ export function ProfileEditor({
                   </option>
                 ))}
               </select>
-              <p>{t('profile.countryHelp')}</p>
+              {!setup && <p>{t('profile.countryHelp')}</p>}
               {owner.countryChangeAvailableAt && (
                 <p>
                   {t('profile.nextCountryChange', {
@@ -207,41 +217,73 @@ export function ProfileEditor({
                   })}
                 </p>
               )}
-              <h3>{t('profile.optionalAnalytics')}</h3>
-              <p>{t('profile.agePurpose')}</p>
-              <label htmlFor="cpi-profile-analytics">{t('profile.ageChoice')}</label>
-              <select
-                id="cpi-profile-analytics"
-                value={analytics}
-                onChange={(event) => {
-                  setAge('');
-                  setAnalytics(event.target.value as ProfileEdit['analyticsAction']);
-                }}
-              >
-                <option value="keep">{t('profile.skip')}</option>
-                {owner.analyticsAllowed && <option value="answer">{t('profile.answer')}</option>}
-                <option value="withdraw">{t('profile.withdraw')}</option>
-              </select>
-              {analytics === 'answer' && owner.analyticsAllowed && (
+              {setup ? (
+                owner.analyticsAllowed && (
+                  <>
+                    <label htmlFor="cpi-profile-age">{t('profile.optionalAge')}</label>
+                    <input
+                      id="cpi-profile-age"
+                      value={age}
+                      inputMode="numeric"
+                      autoComplete="off"
+                      maxLength={3}
+                      pattern="[0-9]{1,3}"
+                      aria-describedby="cpi-profile-age-purpose"
+                      onChange={(event) => {
+                        setAge(event.target.value);
+                        setAnalytics(event.target.value ? 'answer' : 'keep');
+                      }}
+                    />
+                    <p id="cpi-profile-age-purpose">{t('profile.agePurpose')}</p>
+                  </>
+                )
+              ) : (
                 <>
-                  <label htmlFor="cpi-profile-age">{t('profile.age')}</label>
-                  <input
-                    id="cpi-profile-age"
-                    value={age}
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="off"
-                    maxLength={3}
-                    required
-                    pattern="[0-9]{1,3}"
-                    onChange={(event) => setAge(event.target.value)}
-                  />
+                  <h3>{t('profile.optionalAnalytics')}</h3>
+                  <p>{t('profile.agePurpose')}</p>
+                  <label htmlFor="cpi-profile-analytics">{t('profile.ageChoice')}</label>
+                  <select
+                    id="cpi-profile-analytics"
+                    value={analytics}
+                    onChange={(event) => {
+                      setAge('');
+                      setAnalytics(event.target.value as ProfileEdit['analyticsAction']);
+                    }}
+                  >
+                    <option value="keep">{t('profile.skip')}</option>
+                    {owner.analyticsAllowed && (
+                      <option value="answer">{t('profile.answer')}</option>
+                    )}
+                    <option value="withdraw">{t('profile.withdraw')}</option>
+                  </select>
+                  {analytics === 'answer' && owner.analyticsAllowed && (
+                    <>
+                      <label htmlFor="cpi-profile-age">{t('profile.age')}</label>
+                      <input
+                        id="cpi-profile-age"
+                        value={age}
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="off"
+                        maxLength={3}
+                        required
+                        pattern="[0-9]{1,3}"
+                        onChange={(event) => setAge(event.target.value)}
+                      />
+                    </>
+                  )}
+                  {!owner.analyticsAllowed && <p>{t('profile.analyticsUnavailable')}</p>}
+                  {owner.analyticsAgeBand && <p>{t('profile.bandSaved')}</p>}
                 </>
               )}
-              {!owner.analyticsAllowed && <p>{t('profile.analyticsUnavailable')}</p>}
-              {owner.analyticsAgeBand && <p>{t('profile.bandSaved')}</p>}
               <button type="submit">
-                {phase === 'saving' ? t('profile.saving') : t('profile.save')}
+                {t(
+                  phase === 'saving'
+                    ? 'profile.saving'
+                    : setup
+                      ? 'profile.saveAndPlay'
+                      : 'profile.save',
+                )}
               </button>
             </fieldset>
           </form>
