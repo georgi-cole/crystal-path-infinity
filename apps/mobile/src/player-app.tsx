@@ -3,18 +3,27 @@ import { App } from './App';
 import { createLiveServices } from './live-services';
 import { CommerceContext, useCommerce } from './commerce/commerce-context';
 import { ThemeScope } from './store-provider';
+import { nativeGuestAdMobAdapter } from './rewards/native-admob';
+import type { GuestRewardedAd } from './rewards/native-admob';
 
-function PlayerContent({ services }: { services: ReturnType<typeof createLiveServices> }) {
+function PlayerContent({
+  services,
+  guestRewardedAd,
+}: {
+  services: ReturnType<typeof createLiveServices>;
+  guestRewardedAd: GuestRewardedAd | null;
+}) {
   const { snapshot } = useCommerce();
   return (
     <ThemeScope theme={snapshot.wallet?.equipped ?? 'obsidian'}>
-      <App services={services?.account} />
+      <App services={services?.account} guestRewardedAd={guestRewardedAd} />
     </ThemeScope>
   );
 }
 export function PlayerApp() {
   // No network, credential restore, SDK initialization or ad request during construction.
   const [services] = useState(() => createLiveServices(import.meta.env));
+  const [guestRewardedAd] = useState(() => nativeGuestAdMobAdapter(import.meta.env));
   useEffect(() => {
     const session = services?.account.accountEntry?.session;
     if (!session) return;
@@ -27,7 +36,7 @@ export function PlayerApp() {
   }, [services]);
   return (
     <CommerceContext.Provider value={services?.commerce ?? null}>
-      <PlayerContent services={services} />
+      <PlayerContent services={services} guestRewardedAd={guestRewardedAd} />
     </CommerceContext.Provider>
   );
 }

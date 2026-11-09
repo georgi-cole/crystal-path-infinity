@@ -8,6 +8,8 @@ export const bg = {
   'rewards.limit': 'Рекламните продължавания свършиха.',
   'rewards.quota': 'Използвани продължавания: {applied}.',
   'rewards.leave': 'Към менюто',
+  'rewards.guestLeft': 'Остават рекламни продължавания · {count}',
+  'rewards.guestOffline': 'Свържи се с интернет, за да гледаш реклама.',
   'rewards.watchRestore': 'Гледай реклама · Възстанови {sp} SP',
   'rewards.resumeRestore': 'Продължи · Възстанови {sp} SP',
   'rewards.pending': 'Проверяваме наградата…',

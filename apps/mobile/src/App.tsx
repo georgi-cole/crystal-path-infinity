@@ -37,6 +37,7 @@ import type { RankedClient } from './ranked/ranked-client';
 import { RankedScene } from './ranked/ranked-scene';
 import type { AccountControlsClient } from './account/account-controls-model';
 import type { RewardFlow } from './rewards/reward-flow';
+import type { GuestRewardedAd } from './rewards/native-admob';
 import type { SavedPendingClient } from './ranked/saved-pending-client';
 import { SavedRuns } from './ranked/saved-pending-view';
 import type { AccountEntryBinding } from './account/account-entry';
@@ -96,7 +97,13 @@ interface GameOwner {
   token: number;
 }
 
-export function App({ services }: { services?: ApprovedAccountServices }) {
+export function App({
+  services,
+  guestRewardedAd = null,
+}: {
+  services?: ApprovedAccountServices;
+  guestRewardedAd?: GuestRewardedAd | null;
+}) {
   const { t } = useLanguage();
   const launchActive = useContext(BrandLaunchActive);
   const { store, snapshot: testSnapshot } = useTestStore();
@@ -563,6 +570,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
           exitRequest={exitRequest}
           onCheckpoint={game.trialTheme ? ignoreTrialCheckpoint : onCheckpoint}
           trialTheme={game.trialTheme}
+          guestRewardedAd={guestRewardedAd}
           settings={settings}
           onSettingsChange={changeSettings}
         />
@@ -602,7 +610,7 @@ export function App({ services }: { services?: ApprovedAccountServices }) {
         <MainMenu
           accountEntry={services?.accountEntry}
           onSignOut={services?.signOut}
-          onAdPrivacyOptions={services?.adPrivacyOptions}
+          onAdPrivacyOptions={services?.adPrivacyOptions ?? guestRewardedAd?.showPrivacyOptions}
           onTryTheme={(theme) => {
             if (gameRef.current) return;
             const next: GameOwner = {

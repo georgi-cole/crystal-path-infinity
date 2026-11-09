@@ -16,6 +16,7 @@ public class CpiRewardedAds: CAPPlugin, CAPBridgedPlugin, FullScreenContentDeleg
     private var presented: RewardedAd?
     private var key: String?
     private var generation = 0
+    private var localPractice = false
     private var showing = false
     private var presentingKey: String?
 
@@ -34,8 +35,21 @@ public class CpiRewardedAds: CAPPlugin, CAPBridgedPlugin, FullScreenContentDeleg
             let epoch = self.generation
             self.loaded = nil
             self.key = owner
+            self.localPractice = call.getBool("localPractice") ?? false
+            let configuration = MobileAds.shared.requestConfiguration
+            if self.localPractice || call.getBool("childDirected") != nil {
+                configuration.tagForChildDirectedTreatment = NSNumber(
+                    value: self.localPractice || call.getBool("childDirected") == true
+                )
+            }
+            if self.localPractice || call.getBool("underAgeOfConsent") != nil {
+                configuration.tagForUnderAgeOfConsent = NSNumber(
+                    value: self.localPractice || call.getBool("underAgeOfConsent") == true
+                )
+            }
+            if self.localPractice { configuration.maxAdContentRating = GADMaxContentRating.general }
             let request = Request()
-            if call.getBool("nonPersonalized") ?? true {
+            if self.localPractice || (call.getBool("nonPersonalized") ?? true) {
                 let extras = Extras()
                 extras.additionalParameters = ["npa": "1"]
                 request.register(extras)
@@ -55,23 +69,28 @@ public class CpiRewardedAds: CAPPlugin, CAPBridgedPlugin, FullScreenContentDeleg
         notifyListeners("state", data: ["type": type, "key": owner])
     }
     @objc func show(_ call: CAPPluginCall) {
-        guard let owner = call.getString("key"), let nonce = call.getString("customData"),
-              nonce.range(of: "^[A-Za-z0-9._~-]{24,1024}$", options: .regularExpression) != nil else {
-            call.reject("Unavailable"); return
-        }
+        guard let owner = call.getString("key") else { call.reject("Unavailable"); return }
+        let nonce = call.getString("customData")
         DispatchQueue.main.async {
-            guard !self.showing, owner == self.key, let ad = self.loaded, let view = self.bridge?.viewController else {
+            let validNonce = nonce?.range(of: "^[A-Za-z0-9._~-]{24,1024}$", options: .regularExpression) != nil
+            guard !self.showing, owner == self.key,
+                  (self.localPractice ? nonce == nil : validNonce),
+                  let ad = self.loaded, let view = self.bridge?.viewController else {
                 call.reject("Unavailable"); return
             }
-            let verification = ServerSideVerificationOptions()
-            verification.customRewardText = nonce
-            ad.serverSideVerificationOptions = verification
+            if let nonce = nonce {
+                let verification = ServerSideVerificationOptions()
+                verification.customRewardText = nonce
+                ad.serverSideVerificationOptions = verification
+            }
             ad.fullScreenContentDelegate = self
             self.loaded = nil
             self.presented = ad
             self.showing = true
             self.presentingKey = owner
-            ad.present(from: view) { self.event("earned") }
+            ad.present(from: view) {
+                if self.presentingKey == owner { self.event("earned") }
+            }
             call.resolve()
         }
     }
