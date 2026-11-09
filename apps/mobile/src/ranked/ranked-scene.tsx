@@ -15,6 +15,7 @@ import { HintCounter } from '../resource-feedback';
 import { DeathClockBadge, MysteryRhythmBadge, MysteryCube } from '../mystery-box';
 import { useCommerce } from '../commerce/commerce-context';
 import { canUseCreditFromReward, leaveVerifiedRun } from './ranked-leave';
+import { useSoundtrack } from '../soundtrack';
 
 const EMPTY: RankedClientState = {
   phase: 'unavailable',
@@ -28,6 +29,7 @@ const EMPTY: RankedClientState = {
 export function RankedScene({
   client,
   online,
+  music = false,
   recoverRunId,
   onLeave,
   rewardFlow = null,
@@ -35,6 +37,7 @@ export function RankedScene({
 }: {
   client: RankedClient | null;
   online: boolean;
+  music?: boolean;
   /** Supplied by a trusted account recovery list, never a local practice checkpoint. */
   recoverRunId?: string;
   onLeave: () => void;
@@ -63,6 +66,14 @@ export function RankedScene({
   const rewardBlocked = rewardBound && rewardState?.inputBlocked === true;
   const playing = ready && run?.status === 'playing' && !run.paused && !confirm && !rewardBlocked;
   const busy = state.phase === 'pending';
+  useSoundtrack(
+    run ? (run.status === 'playing' ? 'run' : 'ended') : null,
+    music &&
+      !!run &&
+      !rewardState?.fullscreen &&
+      (run.status !== 'playing' || (online && !run.paused && !confirm && !interrupted)),
+    music && run?.status === 'playing',
+  );
   const resourceWindow = !!run?.economy && (run.paused || run.status === 'dead');
   useEffect(() => {
     if (resourceWindow) void commerce.flow?.refreshWallet();

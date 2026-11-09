@@ -1,13 +1,75 @@
 import { describe, expect, it } from 'vitest';
 import {
   SOUNDTRACKS,
+  createStreamedSoundtrack,
   soundtrackOffset,
   soundtrackPlayback,
   softenLoopBoundary,
 } from '../src/soundtrack';
 import { statSync } from 'node:fs';
 
+class NativeAudio extends EventTarget {
+  src = '';
+  readyState = 0;
+  currentTime = 0;
+  paused = true;
+  play() {
+    this.paused = false;
+    return Promise.resolve();
+  }
+  pause() {
+    this.paused = true;
+  }
+  removeAttribute() {
+    this.src = '';
+  }
+  load() {
+    this.readyState = 0;
+  }
+  loaded() {
+    this.readyState = 1;
+    this.dispatchEvent(new Event('loadedmetadata'));
+  }
+  seek(time: number) {
+    this.currentTime = time;
+    this.dispatchEvent(new Event('timeupdate'));
+  }
+}
+
 describe('owner-supplied scene soundtrack', () => {
+  it('starts iPhone scene music at metadata readiness and hands off once to the end track', () => {
+    const players: NativeAudio[] = [];
+    const controller = createStreamedSoundtrack(() => {
+      const media = new NativeAudio();
+      players.push(media);
+      return media as unknown as HTMLAudioElement;
+    });
+    controller.update('run', true, true);
+    const [run, end] = players;
+    expect(run.paused).toBe(true);
+    run.loaded();
+    end.loaded();
+    expect(run.currentTime).toBe(14);
+    expect(run.paused).toBe(false);
+    expect(end.paused).toBe(true);
+    run.seek(181.25);
+    expect(run.currentTime).toBe(28.25);
+    controller.setForeground(false);
+    expect(run.paused).toBe(true);
+    controller.setForeground(true);
+    expect(run.paused).toBe(false);
+    expect(run.currentTime).toBe(28.25);
+    controller.update('ended', true, false);
+    expect(run.paused).toBe(true);
+    expect(end.currentTime).toBe(0);
+    expect(end.paused).toBe(false);
+    end.seek(47.02);
+    controller.sync();
+    expect(end.paused).toBe(true);
+    controller.dispose();
+    expect(end.src).toBe('');
+  });
+
   it('joins both stereo channels at the decoded loop boundary without altering the intro', () => {
     for (const sampleRate of [44100, 48000]) {
       const channels = [

@@ -1,5 +1,7 @@
 # CPI-010 — Owner-supplied scene music
 
+**9 November 2026 · TestFlight build 17.** The owner heard home music on iPhone but no crossing or ending track. The native iPhone app now streams these recordings through the media player used for the menu. The track starts when its metadata is ready. It seeks to the authored crossing cue and loops at the same cue points. The ending plays once. Muting, pause and app backgrounding stop playback. The verified crossing screen uses the same music selection, including pausing for full-screen ads. The original AAC assets and Web Audio playback on other platforms are unchanged. Physical iPhone listening remains the acceptance check.
+
 **8 November 2026 · phone review.** The menu track streams from the original AAC file. The splash can prepare the track silently, and playback starts when the splash has finished and the menu is ready. The crossing track prepares in the background and uses the same Web Audio loop when a run takes over. The music button retries playback on its first press when a browser has blocked autoplay. An ordinary tap or key press also retries. Native Capacitor playback is configured to allow autoplay on both platforms. The AAC recordings and the gameplay and ending cue times are retained.
 
 The owner supplied recordings from `Downloads/Crystal path audio` on

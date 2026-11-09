@@ -13,6 +13,8 @@ The following original assets are available for review, not native release claim
 - [Concept board](../brand/midnight-prism-board.svg) — schematic icon, menu and HUD; **not** an app screenshot.
 - [Color and type tokens](../../apps/mobile/src/brand-tokens.css) — offline system-font stack and semantic CSS.
 
+**9 November 2026 update.** The generated glass-tile bridge artwork is the default launcher icon. The SVG prism above records the earlier concept. [Native icon exports and launch behavior](CPI-012-native-launch.md#9-november-2026-approved-icon-and-launch-handoff).
+
 | Token | Hex | Use |
 | --- | --- | --- |
 | Night | `#060a18` | App/launch foundation |
