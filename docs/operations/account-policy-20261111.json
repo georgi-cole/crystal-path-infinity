@@ -1,0 +1,1003 @@
+{
+  "status": "reviewed",
+  "reviewReference": "owner-13-local-18-fallback-20261111",
+  "version": "cpi-web-accounts-20261111-v1",
+  "countries": {
+    "AD": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "AE": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "AF": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "AG": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "AI": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "AL": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "AM": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "AO": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "AQ": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "AR": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "AS": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "AT": {
+      "minimumAge": 14,
+      "neutralAgeScreenAllowed": true
+    },
+    "AU": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "AW": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "AX": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "AZ": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "BA": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "BB": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "BD": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "BE": {
+      "minimumAge": 13,
+      "neutralAgeScreenAllowed": true
+    },
+    "BF": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "BG": {
+      "minimumAge": 14,
+      "neutralAgeScreenAllowed": true
+    },
+    "BH": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "BI": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "BJ": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "BL": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "BM": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "BN": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "BO": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "BQ": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "BR": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "BS": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "BT": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "BV": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "BW": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "BY": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "BZ": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "CA": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "CC": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "CD": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "CF": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "CG": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "CH": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "CI": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "CK": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "CL": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "CM": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "CN": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": false
+    },
+    "CO": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "CR": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "CU": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "CV": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "CW": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "CX": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "CY": {
+      "minimumAge": 14,
+      "neutralAgeScreenAllowed": true
+    },
+    "CZ": {
+      "minimumAge": 15,
+      "neutralAgeScreenAllowed": true
+    },
+    "DE": {
+      "minimumAge": 16,
+      "neutralAgeScreenAllowed": true
+    },
+    "DJ": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "DK": {
+      "minimumAge": 13,
+      "neutralAgeScreenAllowed": true
+    },
+    "DM": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "DO": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "DZ": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "EC": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "EE": {
+      "minimumAge": 13,
+      "neutralAgeScreenAllowed": true
+    },
+    "EG": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "EH": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "ER": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "ES": {
+      "minimumAge": 14,
+      "neutralAgeScreenAllowed": true
+    },
+    "ET": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "FI": {
+      "minimumAge": 13,
+      "neutralAgeScreenAllowed": true
+    },
+    "FJ": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "FK": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "FM": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "FO": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "FR": {
+      "minimumAge": 15,
+      "neutralAgeScreenAllowed": true
+    },
+    "GA": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "GB": {
+      "minimumAge": 13,
+      "neutralAgeScreenAllowed": true
+    },
+    "GD": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "GE": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "GF": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "GG": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "GH": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "GI": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "GL": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "GM": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "GN": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "GP": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "GQ": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "GR": {
+      "minimumAge": 15,
+      "neutralAgeScreenAllowed": true
+    },
+    "GS": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "GT": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "GU": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "GW": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "GY": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "HK": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "HM": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "HN": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "HR": {
+      "minimumAge": 16,
+      "neutralAgeScreenAllowed": true
+    },
+    "HT": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "HU": {
+      "minimumAge": 16,
+      "neutralAgeScreenAllowed": true
+    },
+    "ID": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "IE": {
+      "minimumAge": 16,
+      "neutralAgeScreenAllowed": true
+    },
+    "IL": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "IM": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "IN": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "IO": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "IQ": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "IR": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "IS": {
+      "minimumAge": 13,
+      "neutralAgeScreenAllowed": true
+    },
+    "IT": {
+      "minimumAge": 14,
+      "neutralAgeScreenAllowed": true
+    },
+    "JE": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "JM": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "JO": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "JP": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "KE": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "KG": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "KH": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "KI": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "KM": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "KN": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "KP": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "KR": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "KW": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "KY": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "KZ": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "LA": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "LB": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "LC": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "LI": {
+      "minimumAge": 16,
+      "neutralAgeScreenAllowed": true
+    },
+    "LK": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "LR": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "LS": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "LT": {
+      "minimumAge": 14,
+      "neutralAgeScreenAllowed": true
+    },
+    "LU": {
+      "minimumAge": 16,
+      "neutralAgeScreenAllowed": true
+    },
+    "LV": {
+      "minimumAge": 13,
+      "neutralAgeScreenAllowed": true
+    },
+    "LY": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "MA": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "MC": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "MD": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "ME": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "MF": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "MG": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "MH": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "MK": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "ML": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "MM": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "MN": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "MO": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "MP": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "MQ": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "MR": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "MS": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "MT": {
+      "minimumAge": 13,
+      "neutralAgeScreenAllowed": true
+    },
+    "MU": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "MV": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "MW": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "MX": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "MY": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "MZ": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "NA": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "NC": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "NE": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "NF": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "NG": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "NI": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "NL": {
+      "minimumAge": 16,
+      "neutralAgeScreenAllowed": true
+    },
+    "NO": {
+      "minimumAge": 13,
+      "neutralAgeScreenAllowed": true
+    },
+    "NP": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "NR": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "NU": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "NZ": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "OM": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "PA": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "PE": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "PF": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "PG": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "PH": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "PK": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "PL": {
+      "minimumAge": 16,
+      "neutralAgeScreenAllowed": true
+    },
+    "PM": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "PN": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "PR": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "PS": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "PT": {
+      "minimumAge": 13,
+      "neutralAgeScreenAllowed": true
+    },
+    "PW": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "PY": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "QA": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "RE": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "RO": {
+      "minimumAge": 16,
+      "neutralAgeScreenAllowed": true
+    },
+    "RS": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "RU": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "RW": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "SA": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "SB": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "SC": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "SD": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "SE": {
+      "minimumAge": 13,
+      "neutralAgeScreenAllowed": true
+    },
+    "SG": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "SH": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "SI": {
+      "minimumAge": 15,
+      "neutralAgeScreenAllowed": true
+    },
+    "SJ": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "SK": {
+      "minimumAge": 16,
+      "neutralAgeScreenAllowed": true
+    },
+    "SL": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "SM": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "SN": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "SO": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "SR": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "SS": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "ST": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "SV": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "SX": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "SY": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "SZ": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "TC": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "TD": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "TF": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "TG": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "TH": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "TJ": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "TK": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "TL": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "TM": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "TN": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "TO": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "TR": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "TT": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "TV": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "TW": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "TZ": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "UA": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "UG": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "UM": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "US": {
+      "minimumAge": 13,
+      "neutralAgeScreenAllowed": true
+    },
+    "UY": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "UZ": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "VA": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "VC": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "VE": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "VG": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "VI": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "VN": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": false
+    },
+    "VU": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "WF": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "WS": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "YE": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "YT": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "ZA": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "ZM": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    },
+    "ZW": {
+      "minimumAge": 18,
+      "neutralAgeScreenAllowed": true
+    }
+  }
+}

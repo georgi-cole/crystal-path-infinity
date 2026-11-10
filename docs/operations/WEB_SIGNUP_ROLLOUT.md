@@ -1,6 +1,6 @@
 # Worldwide web signup review
 
-**11 November 2026:** The owner approved account signup starting at 13 with higher local age limits. The product decision is recorded; production policy and provider acceptance remain separate deployment steps. [Current browser provider preparation and activation record](PUBLIC_WEB_PROVIDER_SIGN_IN.md). The production service has not been opened by this branch.
+**11 November 2026:** The owner approved account signup starting at 13 with higher local age limits and a temporary 18+ fallback elsewhere. The production age policy, separate provider registrations and callback are deployed; Pages publication and real account acceptance remain pending. [Current browser provider preparation and activation record](PUBLIC_WEB_PROVIDER_SIGN_IN.md). The 10 November closed-policy record below remains historical.
 
 Updated 10 November 2026 for CPI-018. Worldwide availability is the product
 target. The production account service is deployed and currently approves no
