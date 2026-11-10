@@ -1,0 +1,106 @@
+name: Crystal Path Pawrachute store build 44
+
+on:
+  push:
+    branches: [codex/pawrachute-store-build-44]
+    paths: [.github/workflows/pawrachute-store-build.yml]
+
+permissions:
+  contents: read
+  checks: read
+  pull-requests: read
+
+concurrency:
+  group: cpi-pawrachute-store-44
+  cancel-in-progress: false
+
+env:
+  CPI_APPROVED_SHA: 7236bab9e74e83e4de70890ce48bb9e1234d7f38
+  CPI_APP_ENV: production
+  CPI_STORE_VERSION: '1.0.0'
+  CPI_STORE_BUILD_NUMBER: '44'
+  CPI_NATIVE_ADS: 'true'
+  VITE_GUEST_REWARDED_ADS_LIVE: 'true'
+
+jobs:
+  package:
+    name: Sign and verify ${{ matrix.platform }} 1.0.0 (44)
+    if: github.repository == 'georgi-cole/crystal-path-infinity' && github.ref == 'refs/heads/codex/pawrachute-store-build-44'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: android
+            runner: ubuntu-24.04
+          - platform: ios
+            runner: macos-26
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 35
+    environment: cpi-pawrachute-store-44
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.23.4'
+          cache: npm
+      - name: Verify approved source and isolated release configuration
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node --experimental-strip-types .github/scripts/pawrachute-store-source.mjs
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        if: matrix.platform == 'android'
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Generate and check the production native project
+        env:
+          CPI_PLATFORM: ${{ matrix.platform }}
+        run: |
+          npm ci --ignore-scripts
+          npm run build:production
+          npm run native:generate -- --platform "$CPI_PLATFORM" --environment production
+          npm run native:generate -- --platform "$CPI_PLATFORM" --environment production --check
+      - name: Compile the Android App Bundle
+        if: matrix.platform == 'android'
+        run: bash apps/mobile/android/gradlew -p apps/mobile/android --no-daemon --console=plain :app:bundleRelease
+      - name: Sign the Android bundle with the existing Play upload key
+        if: matrix.platform == 'android'
+        env:
+          CPI_PLAY_UPLOAD_P12_BASE64: ${{ secrets.CPI_PLAY_UPLOAD_P12_BASE64 }}
+          CPI_PLAY_UPLOAD_PASSWORD: ${{ secrets.CPI_PLAY_UPLOAD_PASSWORD }}
+        run: bash .github/scripts/pawrachute-android-store.sh
+      - name: Resolve the pinned iOS packages
+        if: matrix.platform == 'ios'
+        env:
+          DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+        run: >-
+          xcodebuild -resolvePackageDependencies
+          -project apps/mobile/ios/App/App.xcodeproj -scheme App
+          -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile
+      - name: Install the iOS distribution certificate and profile
+        if: matrix.platform == 'ios'
+        env:
+          CPI_IOS_DISTRIBUTION_P12_BASE64: ${{ secrets.CPI_IOS_DISTRIBUTION_P12_BASE64 }}
+          CPI_IOS_DISTRIBUTION_P12_PASSWORD: ${{ secrets.CPI_IOS_DISTRIBUTION_P12_PASSWORD }}
+          CPI_IOS_PROFILE_BASE64: ${{ secrets.CPI_IOS_PROFILE_BASE64 }}
+        run: bash .github/scripts/ios-testflight.sh install-signing
+      - name: Export and verify the signed iPhone package
+        if: matrix.platform == 'ios'
+        env:
+          DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+        run: bash .github/scripts/ios-store-candidate.sh
+      - name: Remove iOS signing material
+        if: always() && matrix.platform == 'ios'
+        run: bash .github/scripts/ios-testflight.sh cleanup
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: crystal-path-${{ matrix.platform }}-1.0.0-44-pawrachute
+          path: |
+            ${{ runner.temp }}/cpi-store-output/*.aab
+            ${{ runner.temp }}/cpi-store-output/*.ipa
+            ${{ runner.temp }}/cpi-store-output/receipt.txt
+          retention-days: 14
+          if-no-files-found: error
