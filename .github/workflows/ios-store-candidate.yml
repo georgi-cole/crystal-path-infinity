@@ -1,20 +1,9 @@
 name: Crystal Path iOS store candidate
 
 on:
-  workflow_dispatch:
-    inputs:
-      source_sha:
-        description: Exact current main commit with passing required checks
-        required: true
-        type: string
-      version:
-        description: Store version in major.minor.patch format
-        required: true
-        type: string
-      build_number:
-        description: Unused App Store build number
-        required: true
-        type: string
+  push:
+    branches: [codex/ios-store-export-20261110]
+    paths: [.github/workflows/ios-store-candidate.yml]
 
 permissions:
   contents: read
@@ -27,15 +16,15 @@ concurrency:
 jobs:
   archive:
     name: Sign the iOS live guest ad candidate
-    if: github.repository == 'georgi-cole/crystal-path-infinity' && github.ref == 'refs/heads/main'
+    if: github.repository == 'georgi-cole/crystal-path-infinity' && github.ref == 'refs/heads/codex/ios-store-export-20261110'
     runs-on: macos-26
     timeout-minutes: 40
     environment: cpi-ios-store-candidate
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
-      CPI_EXPECTED_SOURCE_SHA: ${{ inputs.source_sha }}
-      CPI_STORE_VERSION: ${{ inputs.version }}
-      CPI_STORE_BUILD_NUMBER: ${{ inputs.build_number }}
+      CPI_EXPECTED_SOURCE_SHA: 9bfccb69dd25259a2d7c5e7b61524ef297380b3e
+      CPI_STORE_VERSION: '1.0.0'
+      CPI_STORE_BUILD_NUMBER: '43'
       CPI_APP_ENV: production
       CPI_NATIVE_ADS: 'true'
       VITE_GUEST_REWARDED_ADS_LIVE: 'true'
@@ -43,24 +32,28 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22.23.4'
           cache: npm
-      - name: Verify current main and required checks
+      - name: Verify the checked game source and exact packaging overlay
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           [[ "$GITHUB_RUN_ATTEMPT" == 1 &&
-              "$CPI_EXPECTED_SOURCE_SHA" == "$GITHUB_SHA" &&
               "$(git rev-parse HEAD)" == "$GITHUB_SHA" &&
-              "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)" == "$GITHUB_SHA" ]]
-          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs" > "$RUNNER_TEMP/cpi-source-checks.json"
+              "$(git rev-parse HEAD^)" == 63074c0a2bcd26850b98196c18b1263fae78ba90 &&
+              "$(git diff --name-only HEAD^ HEAD)" == .github/workflows/ios-store-candidate.yml &&
+              "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)" == "$CPI_EXPECTED_SOURCE_SHA" &&
+              "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/codex/ios-store-export-20261110" --jq .object.sha)" == "$GITHUB_SHA" ]]
+          git diff --exit-code "$CPI_EXPECTED_SOURCE_SHA" HEAD -- apps/mobile/src apps/mobile/public apps/mobile/native-templates packages package.json package-lock.json
+          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/commits/$CPI_EXPECTED_SOURCE_SHA/check-runs" > "$RUNNER_TEMP/cpi-source-checks.json"
           node --experimental-strip-types --input-type=module - "$RUNNER_TEMP/cpi-source-checks.json" <<'JS'
           import { readFileSync } from 'node:fs';
           import { assertSourceChecks } from './.github/scripts/unsigned-beta.mjs';
-          assertSourceChecks(JSON.parse(readFileSync(process.argv[2], 'utf8')), process.env.GITHUB_SHA);
+          assertSourceChecks(JSON.parse(readFileSync(process.argv[2], 'utf8')), process.env.CPI_EXPECTED_SOURCE_SHA);
           JS
       - name: Build production assets and resolve pinned packages
         run: |
