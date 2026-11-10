@@ -26,6 +26,7 @@ import {
 import { patchAndroidLifecycle } from '../config/native-lifecycle-patch.ts';
 import { BRAND_BACKGROUND, syncNativeBrandAssets } from './brand-assets.mjs';
 import { assertUnsignedRelease, resolveUnsignedRelease } from '../config/release-build.ts';
+import { resolveStoreBuild } from '../config/store-build.ts';
 import {
   LIVE_NATIVE_PACKAGES,
   GOOGLE_ADS_SDK,
@@ -816,8 +817,10 @@ try {
   accountVaultSuffix = accountVaultFor(environment);
   const manifest = verifyPackages();
   release = resolveUnsignedRelease(environment, manifest.version, process.env);
-  buildNumber = release?.buildNumber ?? 1;
-  const info = release?.app ?? getBuildInfo(environment, manifest.version);
+  const store = resolveStoreBuild(environment, process.env);
+  assert.ok(!(release && store), 'Store and unsigned release metadata cannot be combined');
+  buildNumber = release?.buildNumber ?? store?.buildNumber ?? 1;
+  const info = release?.app ?? getBuildInfo(environment, store?.version ?? manifest.version);
   // This guard must run before rm/add/sync or any generated project mutation.
   assertBuiltEnvironment(json('dist/build-info.json'), environment, info.version);
   if (release) assertUnsignedRelease(json('dist/release-info.json'), release);

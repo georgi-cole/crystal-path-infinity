@@ -1,0 +1,91 @@
+name: Crystal Path iOS store candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Exact current main commit with passing required checks
+        required: true
+        type: string
+      version:
+        description: Store version in major.minor.patch format
+        required: true
+        type: string
+      build_number:
+        description: Unused App Store build number
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  checks: read
+
+concurrency:
+  group: cpi-ios-store-candidate
+  cancel-in-progress: false
+
+jobs:
+  archive:
+    name: Sign the iOS live guest ad candidate
+    if: github.repository == 'georgi-cole/crystal-path-infinity' && github.ref == 'refs/heads/main'
+    runs-on: macos-26
+    timeout-minutes: 40
+    environment: cpi-ios-store-candidate
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      CPI_EXPECTED_SOURCE_SHA: ${{ inputs.source_sha }}
+      CPI_STORE_VERSION: ${{ inputs.version }}
+      CPI_STORE_BUILD_NUMBER: ${{ inputs.build_number }}
+      CPI_APP_ENV: production
+      CPI_NATIVE_ADS: 'true'
+      VITE_GUEST_REWARDED_ADS_LIVE: 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.23.4'
+          cache: npm
+      - name: Verify current main and required checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_RUN_ATTEMPT" == 1 &&
+              "$CPI_EXPECTED_SOURCE_SHA" == "$GITHUB_SHA" &&
+              "$(git rev-parse HEAD)" == "$GITHUB_SHA" &&
+              "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)" == "$GITHUB_SHA" ]]
+          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs" > "$RUNNER_TEMP/cpi-source-checks.json"
+          node --experimental-strip-types --input-type=module - "$RUNNER_TEMP/cpi-source-checks.json" <<'JS'
+          import { readFileSync } from 'node:fs';
+          import { assertSourceChecks } from './.github/scripts/unsigned-beta.mjs';
+          assertSourceChecks(JSON.parse(readFileSync(process.argv[2], 'utf8')), process.env.GITHUB_SHA);
+          JS
+      - name: Build production assets and resolve pinned packages
+        run: |
+          npm ci --ignore-scripts
+          npm run build:production
+          npm run native:generate -- --platform ios --environment production
+          npm run native:generate -- --platform ios --environment production --check
+          xcodebuild -resolvePackageDependencies -project apps/mobile/ios/App/App.xcodeproj -scheme App \
+            -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile
+      - name: Install distribution certificate and provisioning profile
+        env:
+          CPI_IOS_DISTRIBUTION_P12_BASE64: ${{ secrets.CPI_IOS_DISTRIBUTION_P12_BASE64 }}
+          CPI_IOS_DISTRIBUTION_P12_PASSWORD: ${{ secrets.CPI_IOS_DISTRIBUTION_P12_PASSWORD }}
+          CPI_IOS_PROFILE_BASE64: ${{ secrets.CPI_IOS_PROFILE_BASE64 }}
+        run: bash .github/scripts/ios-testflight.sh install-signing
+      - name: Export and verify the signed App Store package
+        run: bash .github/scripts/ios-store-candidate.sh
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: crystal-path-ios-store-candidate
+          path: |
+            ${{ runner.temp }}/cpi-store-output/*.ipa
+            ${{ runner.temp }}/cpi-store-output/receipt.txt
+          retention-days: 7
+          if-no-files-found: error
+      - name: Remove signing material
+        if: always()
+        run: bash .github/scripts/ios-testflight.sh cleanup

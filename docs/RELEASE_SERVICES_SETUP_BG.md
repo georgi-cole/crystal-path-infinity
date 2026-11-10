@@ -292,4 +292,12 @@ npm run native:generate -- --platform android --environment production
 npm run native:generate -- --platform ios --environment production
 ```
 
+### Кандидат за магазините · 10 ноември 2026 г.
+
+За гост кандидат за Google Play добави `CPI_STORE_VERSION=1.0.0` и `CPI_STORE_BUILD_NUMBER` с неползван положителен номер до 9999 към live командите по-горе. След `native:generate --check` компилирай `:app:bundleRelease`, подпиши AAB с вече регистрирания Play upload key и провери подписа, манифеста и пакета чрез bundletool.
+
+За iPhone използвай ръчния workflow **Crystal Path iOS store candidate** на проверения текущ `main` с отделната среда `cpi-ios-store-candidate`. Той използва App Store профил за подписване, извежда IPA и SHA-256 и проверява live гост инвентара. Не използвай вътрешния TestFlight workflow за този пакет. Прегледът и качването в магазина са отделни стъпки.
+
+Този гост кандидат не активира профили, ranked реклами или покупки. Преди подаване на пълната версия провери производствения вход, обработката на реални покупки и точните store декларации за окончателния пакет. Не използвай staging gateway, тестови акаунти или demo реклами за публичната версия.
+
 Двете AdMob приложения показват Requires review и Limited ad serving. Публикуваните store записи трябва да бъдат свързани и прегледани. Точният запис на издателя е наличен в [app-ads.txt на developer сайта](https://georgi-cole.github.io/app-ads.txt). Черновата в App Store Connect използва [публичния сайт на играта](https://georgi-cole.github.io/crystal-path-infinity/) в Marketing URL. В Google Play полето Website вече води към поддръжката на същия хост. [AdMob app readiness](https://support.google.com/admob/answer/10564477).

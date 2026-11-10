@@ -66,6 +66,14 @@ The source retains guest practice without optional analytics, account or ad avai
 - [Privacy policy](https://georgi-cole.github.io/crystal-path-infinity/privacy.html), [support](https://georgi-cole.github.io/crystal-path-infinity/support.html) and [account deletion requests](https://georgi-cole.github.io/crystal-path-infinity/support.html#account-deletion) are packaged with the public web build. The pages are available in English and Bulgarian and identify Innovation Creativity Opportunities Ltd and `support@kolequant.xyz`.
 - The web release uses guest play. The policy identifies optional account and native features by availability. Confirm support receipt and handling, and match the store disclosures to the signed candidate and its enabled SDKs before submitting.
 
+## Live guest ad store candidates · 2026-11-10
+
+PR #104 adds separate production AdMob guest units for Android and iPhone. Build 42 remains the internal demo-ad acceptance evidence for ten continuations on the same guest run. The public web game remains separate.
+
+The manual iOS store-candidate job exports a signed App Store IPA from the exact checked commit on `main`. It uses a separate signing environment and verifies the exported signature, store identity, live guest inventory and absence of tester markers. It does not upload to a tester group or submit to App Review. Android can generate the same store version and build number for a Play upload-key-signed AAB. See [build inputs](../RELEASE_SERVICES_SETUP_BG.md#кандидат-за-магазините--10-ноември-2026-г).
+
+These candidates verify guest play and production ad packaging. Public account and checkout acceptance, matching store declarations and media, and AdMob app linkage and readiness review still determine public release readiness. Record the actual package hashes and store state when each check is completed.
+
 ## Capture and store-material handoff
 
 The [10 November store media set](store-media/README.md) provides the six English panels and the Play feature graphic in the required dimensions. The panels use the production player UI on a portrait browser viewport and are tracked separately from physical-device release evidence.
