@@ -4,14 +4,14 @@
     android:height="108dp"
     android:viewportWidth="256"
     android:viewportHeight="256">
-    <!-- Abstract glass stepping stones, centered in the adaptive safe zone. -->
+    <!-- The intact and falling panes share the launcher silhouette. -->
     <group
         android:pivotX="128"
         android:pivotY="128"
-        android:scaleX="0.72"
-        android:scaleY="0.72">
+        android:scaleX="0.70"
+        android:scaleY="0.70">
         <path
             android:fillColor="#FFFFFFFF"
-            android:pathData="M104,38 L151,38 L161,65 L95,65 Z M73,78 L129,78 L122,117 L60,117 Z M133,78 L190,78 L202,117 L140,117 Z M48,130 L118,130 L116,196 L39,196 Z M138,130 L178,130 L162,163 L175,178 L150,196 Z M184,131 L208,134 L224,196 L184,186 L176,173 L166,165 Z" />
+            android:pathData="M19,151 L142,59 L166,59 L125,207 Z M177,60 L203,60 L239,112 L226,123 L214,119 L202,139 L192,132 L178,154 L169,150 L145,180 Z M178,157 L212,176 L219,197 L189,183 Z M181,202 L197,192 L191,216 Z" />
     </group>
 </vector>

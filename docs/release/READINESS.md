@@ -68,6 +68,8 @@ The source retains guest practice without optional analytics, account or ad avai
 
 ## Capture and store-material handoff
 
+The [10 November store media set](store-media/README.md) provides the six English panels and the Play feature graphic in the required dimensions. The panels use the production player UI on a portrait browser viewport and are tracked separately from physical-device release evidence.
+
 Use the exact candidate named in a receipt. Record source SHA, app/bundle ID, marketing/native versions, ruleset, environment, device model/OS, locale and privacy/ad context before recording. Preserve original image/video files and their hashes. Remove account identifiers, tokens, emails and provider transaction data from shared captures.
 
 For the currently disabled-services build, capture only actual guest practice, settings/help and available navigation; describe those capabilities accurately. Do not stage a leaderboard, rewarded choice or successful sign-in as if live. The full CPI-036 package requires captures from the later accepted signed build with its approved services, including bridge/SP, actual leaderboard and the explicit rewarded choice where available.
