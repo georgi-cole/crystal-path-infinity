@@ -407,7 +407,7 @@ export function createLiveServer(options: LiveServerOptions) {
           },
         });
       }
-      if (url.pathname === basePath + '/identity/web-config') {
+      if (url.pathname === basePath + '/identity/config') {
         const response = reply(
           options.webIdentity ?? { code: 'service_unavailable' },
           options.webIdentity && request.method === 'GET' && !url.search ? 200 : 503,

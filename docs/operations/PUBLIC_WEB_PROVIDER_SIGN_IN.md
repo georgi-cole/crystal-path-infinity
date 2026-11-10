@@ -34,7 +34,7 @@ Evidence: [OECD government policy mapping, privacy section and Annex D](https://
 
 Before publication, complete the registrations; apply the approved account territory policy to production; verify email delivery, both provider ceremonies, existing account linking, export and Apple revocation/deletion using an explicitly disposable account. Review the privacy notice against the deployed data path. No production account was deleted as part of this preparation.
 
-Pages activation uses `CPI_PAGES_ACCOUNTS_ENABLED=true` and `CPI_PAGES_WEB_PROVIDER_SIGN_IN=true` on publication from main. The provider flag alone does not enable accounts. Only public client identifiers are fetched from `/identity/web-config`; secrets remain on the server. The API accepts the production web protocol only when the pinned production project enables it. Native staging keeps its original protocol and tester lists.
+Pages activation uses `CPI_PAGES_ACCOUNTS_ENABLED=true` and `CPI_PAGES_WEB_PROVIDER_SIGN_IN=true` on publication from main. The provider flag alone does not enable accounts. Only public client identifiers are fetched from `/identity/config`; secrets remain on the server. The API accepts the production web protocol only when the pinned production project enables it. Native staging keeps its original protocol and tester lists.
 
 This does not enable native production account sign-in, web ads, web billing, tester controls, demo ads or simulated purchases. Game rules, the ten-continuation contract and existing run rules do not change.
 

@@ -118,7 +118,7 @@ export function createWebIdentityClient(
     try {
       if ((!linking && (!permit || !opaque.test(permit))) || (linking && !scope))
         throw new AccountGatewayError('unavailable');
-      const config = await request('web-config', null, signal);
+      const config = await request('config', null, signal);
       const opened = await post('begin', {});
       if (
         !record(config) ||
