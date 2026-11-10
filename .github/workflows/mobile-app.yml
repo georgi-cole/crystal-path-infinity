@@ -79,7 +79,7 @@ jobs:
           npm exec --yes --package=deno@2.9.6 -- deno task --config supabase/functions/cpi-api/deno.json test
           npm exec --yes --package=deno@2.9.6 -- deno task --config supabase/functions/cpi-live/deno.json check
           npm exec --yes --package=deno@2.9.6 -- deno task --config supabase/functions/cpi-live/deno.json test
-          node --experimental-strip-types --test backend/tests/gateway.test.mjs
+          node --experimental-strip-types --test backend/tests/gateway.test.mjs backend/tests/web-identity-callback.test.mjs
       - name: Test unsigned packaging safeguards and artifact verification
         run: |
           node --experimental-strip-types --test .github/scripts/unsigned-beta.test.mjs

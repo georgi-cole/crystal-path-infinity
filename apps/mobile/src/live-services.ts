@@ -13,6 +13,7 @@ import {
   STAGING_ACCOUNT_GATEWAY,
 } from './account/native-identity-client';
 import { createProfileClient } from './account/profile-client';
+import { createWebIdentityClient } from './account/web-identity-client';
 import { createRankedClient } from './ranked/ranked-client';
 import { createSavedPendingClient } from './ranked/saved-pending-client';
 import { createLeaderboardClient } from './leaderboard/leaderboard-client';
@@ -58,7 +59,9 @@ export function createLiveServices(values: Readonly<Record<string, unknown>>): L
       identity:
         native && values.VITE_IOS_PROVIDER_SIGN_IN === 'true'
           ? createNativeIdentityClient(base, session, Number(values.VITE_CLIENT_BUILD ?? 1))
-          : null,
+          : !native && values.VITE_WEB_PROVIDER_SIGN_IN === 'true'
+            ? createWebIdentityClient(base, session)
+            : null,
     },
     signOut: () => session.signOut(),
     accountControlsClient: createAccountControlsClient(base, session),

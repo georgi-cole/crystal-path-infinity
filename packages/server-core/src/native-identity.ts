@@ -63,11 +63,14 @@ function decode(segment: string): Record<string, unknown> {
 export function createNativeIdentity(options: {
   apple: { clientId: string; teamId: string; keyId: string; privateKey: string };
   googleClientId: string;
+  web?: { redirectUri: string; googleClientSecret: string };
   fetcher?: typeof fetch;
   now?: () => number;
 }): NativeIdentity {
   const { apple, googleClientId, fetcher = fetch, now = Date.now } = options;
-  const redirect = googleIosRedirect(googleClientId);
+  const redirect = options.web?.redirectUri ?? googleIosRedirect(googleClientId);
+  if (options.web && redirect !== 'https://crystalpath-api.kolequant.xyz/cpi/identity/web-callback')
+    throw new Error('Invalid web identity redirect');
   if (!/^[A-Z0-9]{10}$/.test(apple.teamId) || !/^[A-Z0-9]{10}$/.test(apple.keyId))
     throw new Error('Invalid Apple sign-in configuration');
   const appleKey = createPrivateKey(apple.privateKey);
@@ -208,6 +211,7 @@ export function createNativeIdentity(options: {
           redirect_uri: redirect,
           code: requiredString(credential.code, authorizationCode),
           code_verifier: requiredString(credential.verifier, pkceVerifier),
+          ...(options.web ? { client_secret: options.web.googleClientSecret } : {}),
         });
         if (!isObject(result)) throw new NativeIdentityRejected();
         return verifyToken('google', result.id_token, nonce);
@@ -229,6 +233,7 @@ export function createNativeIdentity(options: {
             client_id: apple.clientId,
             client_secret: appleSecret(),
             code,
+            ...(options.web ? { redirect_uri: redirect } : {}),
           });
           if (
             !isObject(result) ||

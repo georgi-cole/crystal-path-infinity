@@ -58,6 +58,7 @@ export function createCpiLiveFunction(env: (name: string) => string | undefined)
         crypto,
         policy: config.policy,
         identity: config.nativeIdentity ? createNativeIdentity(config.nativeIdentity) : undefined,
+        publicWebEntry: config.publicWebEntry,
         directory,
         nativeSignup: config.nativeIdentity?.signupEmails
           ? {
@@ -138,6 +139,13 @@ export function createCpiLiveFunction(env: (name: string) => string | undefined)
       const live = createLiveServer({
         database,
         issuer,
+        webIdentity:
+          config.publicWebEntry && config.nativeIdentity
+            ? {
+                googleClientId: config.nativeIdentity.googleClientId,
+                appleClientId: config.nativeIdentity.apple.clientId,
+              }
+            : undefined,
         environment: config.environment,
         origins: config.origins,
         gatewayKey: config.gatewayKey,

@@ -1,5 +1,7 @@
 # Worldwide web signup review
 
+**11 November 2026:** The owner approved account signup starting at 13 with higher local age limits. The product decision is recorded; production policy and provider acceptance remain separate deployment steps. [Current browser provider preparation and activation record](PUBLIC_WEB_PROVIDER_SIGN_IN.md). The production service has not been opened by this branch.
+
 Updated 10 November 2026 for CPI-018. Worldwide availability is the product
 target. The production account service is deployed and currently approves no
 signup countries. The public game remains available in guest mode. This document

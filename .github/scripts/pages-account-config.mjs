@@ -35,5 +35,6 @@ export async function pagesAccountBuildEnv(env, request = fetch) {
   return {
     VITE_ACCOUNT_SERVICES_ENABLED: 'true',
     VITE_ACCOUNT_API_BASE_URL: productionApi,
+    ...(env.CPI_PAGES_WEB_PROVIDER_SIGN_IN === 'true' ? { VITE_WEB_PROVIDER_SIGN_IN: 'true' } : {}),
   };
 }
