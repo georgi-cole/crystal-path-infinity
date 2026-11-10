@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useLanguage } from '../language-context';
+import { PROFILE_SECTIONS, ProfileSectionLabel } from '../account/profile-menu';
 import { savedPendingForAccount } from './saved-pending-client';
 import type {
   SavedPendingClient,
@@ -13,21 +14,34 @@ interface Loaded {
   page: SavedPendingPage;
   phase: 'loading' | 'ready' | 'error';
 }
-export function SavedPendingView({
-  client,
-  online,
-  canRecover = true,
-  onRecover,
-}: {
+interface SavedRunsProps {
   client: SavedPendingClient | null;
   online: boolean;
   canRecover?: boolean;
-  onRecover: (runId: string) => Promise<void>;
-}) {
+  onRecover: (runId: string) => void;
+}
+
+export function SavedRuns(props: SavedRunsProps) {
+  const { t } = useLanguage();
+  const [open, setOpen] = useState(false);
+  return (
+    <details name={PROFILE_SECTIONS} onToggle={(event) => setOpen(event.currentTarget.open)}>
+      <summary>
+        <ProfileSectionLabel icon="saved" title={t('savedPending.title')} />
+      </summary>
+      {open && (
+        <div className="cpi-profile-row-panel">
+          <SavedPendingView {...props} />
+        </div>
+      )}
+    </details>
+  );
+}
+
+export function SavedPendingView({ client, online, canRecover = true, onRecover }: SavedRunsProps) {
   const { t, number } = useLanguage();
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [attempt, setAttempt] = useState(0);
-  const [recovering, setRecovering] = useState<{ scope: object; runId: string } | null>(null);
   const request = useRef<AbortController | null>(null);
   const generation = useRef<object>({});
   const getScope = useCallback(() => client?.accountScope() ?? null, [client]);
@@ -83,38 +97,28 @@ export function SavedPendingView({
   }, [client, online, scope, attempt, load]);
   const current = loaded?.client === client && loaded.scope === scope ? loaded : null;
   const page = savedPendingForAccount(current?.page ?? null, current?.scope ?? null, scope);
-  const busy = current?.phase === 'loading' || (recovering !== null && recovering.scope === scope);
-  const recover = async (runId: string) => {
-    if (!client || !scope || !online || !canRecover || busy || getScope() !== scope) return;
-    setRecovering({ scope, runId });
-    try {
-      await onRecover(runId);
-    } catch {
-      if (getScope() === scope)
-        setLoaded((old) => (old?.scope === scope ? { ...old, phase: 'error' } : old));
-    } finally {
-      setRecovering((old) => (old?.scope === scope && old.runId === runId ? null : old));
-    }
-  };
+  const busy = !current || current.phase === 'loading';
   return (
-    <section className="cpi-saved-pending" aria-labelledby="cpi-saved-pending-title">
-      <h3 id="cpi-saved-pending-title">{t('savedPending.title')}</h3>
-      <p>{t('savedPending.explanation')}</p>
+    <section className="cpi-saved-pending" aria-label={t('savedPending.title')}>
       {!client || !scope ? (
         <p role="status">{t('savedPending.unavailable')}</p>
       ) : !online ? (
         <p role="status">{t('savedPending.offline')}</p>
       ) : (
         <>
-          <button type="button" disabled={busy} onClick={() => setAttempt((value) => value + 1)}>
-            {t('savedPending.refresh')}
-          </button>
-          {current?.phase === 'loading' && <p role="status">{t('savedPending.loading')}</p>}
-          {current?.phase === 'error' && <p role="alert">{t('savedPending.error')}</p>}
+          {busy && <p role="status">{t('savedPending.loading')}</p>}
+          {current?.phase === 'error' && (
+            <>
+              <p role="alert">{t('savedPending.error')}</p>
+              <button type="button" onClick={() => setAttempt((value) => value + 1)}>
+                {t('savedPending.refresh')}
+              </button>
+            </>
+          )}
           {current?.phase === 'ready' && page?.runs.length === 0 && (
             <p>{t('savedPending.empty')}</p>
           )}
-          {!canRecover && <p>{t('savedPending.endCurrent')}</p>}
+          {!canRecover && !!page?.runs.length && <p>{t('savedPending.endCurrent')}</p>}
           <ul>
             {page?.runs.map((run) => (
               <li key={run.runId}>
@@ -128,17 +132,11 @@ export function SavedPendingView({
                         : 'savedPending.resolved',
                   )}
                 </p>
-                <p>
-                  {t('savedPending.counts', {
-                    granted: number(run.revivesGranted),
-                    applied: number(run.revivesApplied),
-                  })}
-                </p>
                 <button
                   type="button"
                   disabled={busy || !canRecover}
                   onClick={() => {
-                    void recover(run.runId);
+                    if (getScope() === scope) onRecover(run.runId);
                   }}
                 >
                   {t('savedPending.recover')}

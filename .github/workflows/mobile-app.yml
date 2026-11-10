@@ -10,6 +10,11 @@ on:
         description: Compile and launch AdMob + native purchases using Google demonstration inventory
         type: boolean
         default: false
+      ios_runner:
+        description: Standard Mac host for the full iOS simulator check
+        type: choice
+        options: [macos-26-intel, macos-26]
+        default: macos-26-intel
   # Scheduled regressions run the full multi-launch Android and iOS profile.
   # Keep required PR checks independent: a scheduled failure never becomes a PR skip.
   schedule:
@@ -274,10 +279,9 @@ jobs:
     name: Development iOS build and simulator launch
     needs: web
     if: ${{ needs.web.outputs.native_mode == 'smoke' || needs.web.outputs.native_mode == 'full' }}
-    # Use the 14 GB standard host and the current supported Xcode/iOS pair.
-    # OS control commands run asynchronously so attached native logs drain
-    # throughout every real foreground/background transition.
-    runs-on: macos-26-intel
+    # Keep the 14 GB Intel host by default. A manual run can use the standard
+    # Apple silicon host with the same Xcode, simulator runtime, and checks.
+    runs-on: ${{ inputs.ios_runner == 'macos-26' && 'macos-26' || 'macos-26-intel' }}
     timeout-minutes: 45
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
@@ -496,6 +500,9 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261107000400_live_economy.sql
           psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261107000500_commerce_export.sql
           psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261107000600_reward_launch_reviews.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261109000100_native_provider_identity.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261109000200_native_provider_signup.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261109000300_direct_provider_entry.sql
           psql -X -v ON_ERROR_STOP=1 -f backend/live-runtime-role.sql
           node --experimental-strip-types backend/tests/commerce-integration.mjs
           node --experimental-strip-types backend/tests/live-services-integration.mjs

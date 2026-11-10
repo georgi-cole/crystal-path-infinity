@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { createSessionTransport } from '../src/account/session-gateway';
 import {
   AccountSessionOwner,
   SessionNotAvailable,
@@ -306,6 +307,19 @@ describe('CPI-018 authenticated session ownership without a live account', () =>
     expect(vaultB.value()).toBe(NEXT);
     expect(accountB.snapshot().canUseAccount).toBe(true);
     await expect(accountA.withAccountRequest(() => Promise.resolve('stale'))).rejects.toThrow();
+  });
+
+  it('returns to email sign-in only after the gateway rejects the saved credential', async () => {
+    const vault = fakeVault(OLD);
+    const transport = createSessionTransport('https://example.org/cpi', () =>
+      Promise.resolve(Response.json({ code: 'invalid_code' }, { status: 401 })),
+    )!;
+    const session = new AccountSessionOwner(vault, transport, () => NOW);
+    const phases: string[] = [];
+    session.subscribeAccountScope(() => phases.push(session.snapshot().phase));
+    expect(await session.restore()).toBe(false);
+    expect(vault.value()).toBeNull();
+    expect(phases).toEqual(['restoring', 'blocked', 'guest']);
   });
 
   it('keeps recoverable credentials encrypted when a temporary network refresh fails', async () => {

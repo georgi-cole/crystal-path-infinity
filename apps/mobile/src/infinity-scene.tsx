@@ -7,7 +7,7 @@ import { readMysteryJournal } from './mystery-journal-model';
 import { mysteryFeedbackFromEvents, runCuesFromEvents } from './mystery-feedback';
 import type { MysteryFeedback, RunCues } from './mystery-feedback';
 import { MysteryEffects, MysteryFeedbackView, PactPanel, EffectGlyph } from './mystery-effects';
-import { EffectConsumption, HintCounter } from './resource-feedback';
+import { EffectConsumption } from './resource-feedback';
 import { MysteryRhythmBadge, DeathClockBadge } from './mystery-box';
 import { MysteryLab } from './mystery-lab';
 import { effectCopy } from './mystery.messages';
@@ -24,13 +24,13 @@ import type { ReactNode } from 'react';
 import { StageAtmosphere } from './stage-atmosphere';
 import { useSoundtrack } from './soundtrack';
 import { PrismBridge } from './prism-bridge';
+import { RunHud } from './run-hud';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   createPracticeCursor,
   createRun,
   getRuleset,
   parseTileExperiment,
-  STARTING_SP,
   getDeathClock,
   isPactKind,
   getMaxRevives,
@@ -59,6 +59,12 @@ import {
   upgradePracticePacing,
 } from './practice-save';
 import { presentRunOutcome } from './run-outcome';
+import type { GuestRewardedAd } from './rewards/native-admob';
+import {
+  earnedGuestContinuation,
+  guestAdOffer,
+  watchGuestContinuation,
+} from './rewards/guest-continuation';
 import { useLanguage } from './language-context';
 import type { PracticeSettings } from './practice-save';
 import { RunPauseMenu } from './run-pause-menu';
@@ -68,7 +74,7 @@ import { presentInfinityScene } from './infinity-presentation';
 import { createSceneDirector } from './scene-cinematics';
 import type { SceneCinematic, SceneFeedback } from './scene-cinematics';
 import { AnimatedResult } from './animated-result';
-import { DeathClock, SpCounter } from './scene-instruments';
+import { DeathClock } from './scene-instruments';
 import { collectRunSignals, EMPTY_RUN_SIGNALS, liveSignal } from './run-signals';
 import type { RunSignals } from './run-signals';
 import { createHintCaptionGate } from './hint-caption';
@@ -90,6 +96,7 @@ export const INFINITY_SCENE_SKIN = DEFAULT_VISUAL_SKIN;
 export type { SceneFeedback } from './scene-cinematics';
 export interface InfinitySceneViewProps {
   readonly resourcePanel?: ReactNode;
+  readonly guestContinuePanel?: ReactNode;
   readonly trial?: boolean;
   readonly state: RunState;
   readonly feedback: SceneFeedback | null;
@@ -125,6 +132,7 @@ export interface InfinitySceneViewProps {
 
 export function InfinitySceneView({
   resourcePanel,
+  guestContinuePanel,
   trial = false,
   state,
   feedback,
@@ -216,8 +224,6 @@ export function InfinitySceneView({
         mysteryFeedback.kind !== discoveryKind &&
         mysteryFeedback.kind !== rhythm?.kind &&
         !state.effects.some((effect) => effect.kind === mysteryFeedback.kind)));
-  const criticalSp = maxSp === null ? 10 : 60;
-  const warningSp = maxSp === null ? 30 : 140;
   const bonus = liveSignal(signals.bonus, state, 2400);
   const hintScan =
     liveSignal(signals.hint, state, HINT_SCAN_MS) ??
@@ -250,12 +256,6 @@ export function InfinitySceneView({
     !confirmEnd &&
     !error &&
     outcome.phase === 'playing';
-  const spClass =
-    state.sp <= criticalSp ? 'is-danger' : state.sp <= warningSp ? 'is-warn' : 'is-safe';
-  const spPct = Math.max(
-    0,
-    Math.min(100, (state.sp / (maxSp ?? Math.max(STARTING_SP, state.sp))) * 100),
-  );
   const experiment =
     import.meta.env.MODE !== 'production' ? parseTileExperiment(state.rulesetVersion) : null;
   const modeLabel = trial
@@ -341,94 +341,29 @@ export function InfinitySceneView({
       </p>
       <StageAtmosphere emergency={emergency || catastrophic} />
       <div className="cps-content" inert={overlayVisible}>
-        <header className="cpi-hud-header">
-          <div className="cpi-hud-position">
-            <span className="cpi-hud-wordmark">Infinity</span>
-            <strong className="cps-row-display">
-              {t('general.row', {
-                row: number(
-                  cinematic?.rows?.find((row) => row.phase === 'current')?.label ??
-                    presented.currentRow,
-                ),
-              })}
-            </strong>
-            <span className="cpi-hud-cleared">
-              {t('game.cleared')} <b>{clearedRows}</b>
-            </span>
-          </div>
-          <div className="cpi-hud-stability">
-            <div className="cps-sp-display">
-              <span className="cps-sp-label">{t('game.stabilityShort')}</span>
-              <span className={`cps-sp-value ${spClass}`}>
-                <SpCounter value={state.sp} bonus={bonus} reduced={settings.reducedMotion} />
-                {maxSp !== null && <small> / {maxSp}</small>}
-              </span>
-            </div>
-            <div
-              className={`cps-sp-bar-main cpi-energy-meter ${state.sp <= criticalSp ? 'is-low' : ''}`}
-              role={maxSp === null ? 'img' : 'meter'}
-              aria-label={
-                state.sp <= warningSp
-                  ? t(state.sp <= criticalSp ? 'game.spCritical' : 'game.spLow', {
-                      sp: number(state.sp),
-                    })
-                  : maxSp === null
-                    ? `${number(state.sp)} SP`
-                    : t('game.spAccessible')
-              }
-              aria-valuemin={maxSp === null ? undefined : 0}
-              aria-valuemax={maxSp ?? undefined}
-              aria-valuenow={maxSp === null ? undefined : state.sp}
-            >
-              <div className={`cps-sp-bar-fill ${spClass}`} style={{ width: `${spPct}%` }} />
-              <div className="cpi-energy-segments" aria-hidden="true">
-                {Array.from({ length: 14 }, (_, index) => (
-                  <span key={index} />
-                ))}
-              </div>
-              <span
-                className="cpi-energy-marker"
-                style={{ left: `${spPct}%` }}
-                aria-hidden="true"
-              />
-            </div>
-          </div>
-          <div className="cpi-scene-toolbar-actions">
-            <button
-              type="button"
-              className="cps-hint-btn cpi-hud-control cpi-hint-control"
-              onClick={onHint}
-              disabled={
-                !interactive ||
-                oracleActive ||
-                !!state.discovery?.introduction ||
-                state.hints === 0 ||
-                state.current.revealedSafeSide !== null
-              }
-              aria-label={t('game.hintButton', { count: number(state.hints) })}
-            >
-              <HintCounter count={state.hints} cue={resourceCues.hints} />
-            </button>
-            <button
-              type="button"
-              className="cpi-pause-control cpi-hud-control"
-              onClick={onPause}
-              disabled={!ready || busy || cinematicBlocks || !!error || state.status !== 'playing'}
-              aria-label={paused ? t('game.resumeGame') : t('game.pauseGame')}
-            >
-              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                {paused ? (
-                  <path d="m9 5 10 7-10 7V5Z" />
-                ) : (
-                  <>
-                    <rect x="6" y="5" width="4" height="14" rx="1" />
-                    <rect x="14" y="5" width="4" height="14" rx="1" />
-                  </>
-                )}
-              </svg>
-            </button>
-          </div>
-        </header>
+        <RunHud
+          row={
+            cinematic?.rows?.find((row) => row.phase === 'current')?.label ?? presented.currentRow
+          }
+          clearedRows={clearedRows}
+          sp={state.sp}
+          maxSp={maxSp}
+          hints={state.hints}
+          bonus={bonus}
+          hintCue={resourceCues.hints}
+          reducedMotion={settings.reducedMotion}
+          canHint={
+            interactive &&
+            !oracleActive &&
+            !state.discovery?.introduction &&
+            state.hints > 0 &&
+            state.current.revealedSafeSide === null
+          }
+          canPause={ready && !busy && !cinematicBlocks && !error && state.status === 'playing'}
+          paused={paused}
+          onHint={onHint}
+          onPause={onPause}
+        />
         <aside
           className={'cpi-run-status' + (pactOffered ? ' is-choosing' : '')}
           aria-label={t('game.effects')}
@@ -749,7 +684,9 @@ export function InfinitySceneView({
                   </p>
                 </div>
                 <div className="cpi-outcome-next">
-                  {outcome.offer && resourcePanel ? (
+                  {guestContinuePanel ? (
+                    guestContinuePanel
+                  ) : outcome.offer && resourcePanel ? (
                     resourcePanel
                   ) : outcome.offer && QA_TOOLS_ENABLED ? (
                     <div className="cpi-revive-offer">
@@ -777,7 +714,9 @@ export function InfinitySceneView({
                   <div className="cpi-overlay-actions cpi-result-navigation">
                     <button
                       type="button"
-                      data-cpi-overlay-primary={!(outcome.offer && resourcePanel) || undefined}
+                      data-cpi-overlay-primary={
+                        !(guestContinuePanel || (outcome.offer && resourcePanel)) || undefined
+                      }
                       disabled={busy}
                       onClick={outcome.phase === 'dead' ? onRestart : onRequestEnd}
                     >
@@ -845,6 +784,7 @@ interface InfinityRunProps {
   onExitCancelled: () => void;
   exitRequest: number;
   onRestart: () => void;
+  guestRewardedAd?: GuestRewardedAd | null;
   initialState: RunState | null;
   onCheckpoint: (state: RunState) => void;
   settings: PracticeSettings;
@@ -858,12 +798,13 @@ function InfinityRun({
   onExitCancelled,
   exitRequest,
   onRestart,
+  guestRewardedAd,
   initialState,
   onCheckpoint,
   settings,
   onSettingsChange,
 }: InfinityRunProps) {
-  const { t } = useLanguage();
+  const { t, number } = useLanguage();
   const { store } = useTestStore();
   const runTheme = useThemeId();
   const [resourceMessage, setResourceMessage] = useState('');
@@ -887,10 +828,14 @@ function InfinityRun({
   const [hintCaptionRow, setHintCaptionRow] = useState<string | null>(null);
   const [hintCaptionGate] = useState(() => createHintCaptionGate(() => practiceStorage()));
   const [confirmEnd, setConfirmEnd] = useState(false);
+  const [guestAdPhase, setGuestAdPhase] = useState<'idle' | 'watching' | 'offline' | 'unavailable'>(
+    'idle',
+  );
+  const guestAdRequest = useRef<AbortController | null>(null);
   useSoundtrack(
     state.status === 'playing' ? 'run' : cinematic?.fatal ? null : 'ended',
     settings.music && (state.status !== 'playing' || (ready && !paused && !confirmEnd && !error)),
-    settings.music && (!!cinematic?.fatal || confirmEnd),
+    settings.music && (!!cinematic?.fatal || confirmEnd || guestAdPhase === 'watching'),
   );
   const [personalBest, setPersonalBest] = useState<string | null>(null);
   const [newPersonalBest, setNewPersonalBest] = useState(false);
@@ -1031,6 +976,7 @@ function InfinityRun({
       });
     return () => {
       alive = false;
+      guestAdRequest.current?.abort();
       if (runtimeRef.current === runtime) runtimeRef.current = null;
       if (audioRef.current === audio) audioRef.current = null;
       if (directorRef.current === director) directorRef.current = null;
@@ -1235,6 +1181,44 @@ function InfinityRun({
     }
   }
 
+  async function watchPracticeAd() {
+    const runtime = runtimeRef.current;
+    if (
+      trial ||
+      !guestRewardedAd ||
+      !runtime ||
+      !ready ||
+      commandLock.current ||
+      exitLock.current ||
+      directorRef.current?.isBusy() ||
+      !guestAdOffer(runtime.getState())
+    )
+      return;
+    if (navigator.onLine === false) {
+      setGuestAdPhase('offline');
+      return;
+    }
+    const request = new AbortController();
+    guestAdRequest.current = request;
+    commandLock.current = true;
+    setBusy(true);
+    setGuestAdPhase('watching');
+    try {
+      const result = await watchGuestContinuation(runtime, guestRewardedAd, request.signal);
+      if (!request.signal.aborted && runtimeRef.current === runtime)
+        setGuestAdPhase(result === 'unavailable' ? 'unavailable' : 'idle');
+    } catch {
+      if (!request.signal.aborted && runtimeRef.current === runtime) setGuestAdPhase('unavailable');
+    } finally {
+      if (guestAdRequest.current === request) {
+        guestAdRequest.current = null;
+        commandLock.current = false;
+        setBusy(false);
+        if (request.signal.aborted) setGuestAdPhase('idle');
+      }
+    }
+  }
+
   const handledExitRequest = useRef(0);
   useEffect(() => {
     if (exitRequest === 0 || handledExitRequest.current === exitRequest) return;
@@ -1251,9 +1235,54 @@ function InfinityRun({
     );
   if (QA_TOOLS_ENABLED && labOpen)
     return <MysteryLab onClose={() => setLabOpen(false)} reducedMotion={settings.reducedMotion} />;
+  const savedGuestGrant = trial ? undefined : earnedGuestContinuation(state);
+  const adOffer = !trial && guestRewardedAd ? guestAdOffer(state) : null;
   return (
     <InfinitySceneView
       trial={trial}
+      guestContinuePanel={
+        savedGuestGrant || adOffer ? (
+          <div className="cpi-revive-offer cpi-overlay-actions">
+            {savedGuestGrant ? (
+              <button
+                type="button"
+                data-cpi-overlay-primary
+                disabled={!ready || busy}
+                onClick={() => {
+                  unlockAudio();
+                  void issue({
+                    type: 'apply-revive',
+                    deathId: savedGuestGrant.deathId,
+                    ordinal: savedGuestGrant.ordinal,
+                    grantId: savedGuestGrant.grantId,
+                  });
+                }}
+              >
+                {t('rewards.resumeRestore', { sp: number(savedGuestGrant.sp) })}
+              </button>
+            ) : adOffer ? (
+              <>
+                <span>{t('rewards.guestLeft', { count: number(adOffer.grantsRemaining) })}</span>
+                <button
+                  type="button"
+                  data-cpi-overlay-primary
+                  disabled={!ready || busy}
+                  onClick={() => void watchPracticeAd()}
+                >
+                  {guestAdPhase === 'watching'
+                    ? t('rewards.loading')
+                    : t('rewards.watchRestore', { sp: number(adOffer.restoreSp) })}
+                </button>
+                {(guestAdPhase === 'unavailable' || guestAdPhase === 'offline') && (
+                  <span role="status">
+                    {t(guestAdPhase === 'offline' ? 'rewards.guestOffline' : 'rewards.noFill')}
+                  </span>
+                )}
+              </>
+            ) : null}
+          </div>
+        ) : undefined
+      }
       resourcePanel={
         store && state.storeTest && !trial ? (
           <RunReserves
@@ -1358,6 +1387,7 @@ export function InfinityPractice({
   exitRequest = 0,
   initialState = null,
   onCheckpoint,
+  guestRewardedAd,
   settings,
   onSettingsChange,
 }: {
@@ -1369,6 +1399,7 @@ export function InfinityPractice({
   exitRequest?: number;
   initialState?: RunState | null;
   onCheckpoint: (state: RunState) => void;
+  guestRewardedAd?: GuestRewardedAd | null;
   settings: PracticeSettings;
   onSettingsChange: (next: PracticeSettings) => void;
 }) {
@@ -1385,6 +1416,7 @@ export function InfinityPractice({
         key={attempt}
         initialState={attempt === 0 ? initialState : null}
         onCheckpoint={onCheckpoint}
+        guestRewardedAd={guestRewardedAd}
         settings={settings}
         onSettingsChange={onSettingsChange}
         onExit={onExit}

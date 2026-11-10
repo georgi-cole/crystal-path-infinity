@@ -136,6 +136,8 @@ export function formatAccountExport(value: unknown): string {
             'ageResponseAt',
             'privacyContext',
             'contextUpdatedAt',
+            'providerDisplayName',
+            'pendingCountryCode',
           ]),
     consents: list('consents', [
       'id',

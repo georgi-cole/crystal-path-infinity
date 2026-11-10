@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { enterRankedPlay } from '../src/ranked/ranked-entry';
+import { describe, expect, it, vi } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { AccountSessionOwner } from '../src/account/session-owner';
@@ -872,11 +873,85 @@ describe('ranked scene confirmed-state presentation', () => {
       dispose: () => {},
     };
   }
+  it('opens an existing ranked run without a takeover, or starts a new one when clear', async () => {
+    const idle = {
+      phase: 'idle',
+      run: null,
+      online: true,
+      canRetry: false,
+      rejected: false,
+    } as const;
+    const start = vi.fn(() => Promise.resolve());
+    const recover = vi.fn(() => Promise.resolve());
+    const lookupActive = vi.fn(() => Promise.resolve<string | null>(RUN));
+    const subject = { ...client(idle), start, recover, lookupActive };
+
+    await enterRankedPlay(subject, () => true);
+    expect(recover).toHaveBeenCalledExactlyOnceWith(RUN);
+    expect(start).not.toHaveBeenCalled();
+
+    lookupActive.mockResolvedValue(null);
+    await enterRankedPlay(subject, () => true);
+    expect(start).toHaveBeenCalledOnce();
+
+    let current = true;
+    lookupActive.mockImplementationOnce(() => {
+      current = false;
+      return Promise.resolve(null);
+    });
+    await enterRankedPlay(subject, () => current);
+    expect(start).toHaveBeenCalledOnce();
+  });
+
+  it.each(['normal', 'saved', 'archive-failed', 'account-changed'] as const)(
+    'keeps the original ad reward recoverable on %s entry',
+    async (mode) => {
+      const idle: RankedClientState = {
+        phase: 'idle',
+        run: null,
+        online: true,
+        canRetry: false,
+        rejected: false,
+      };
+      const pending = {
+        ...parseRankedReply(reply())!.snapshot,
+        status: 'dead' as const,
+        rewardPending: true,
+      };
+      let state = idle;
+      let current = true;
+      const lookupActive = vi.fn(() => Promise.resolve(RUN));
+      const recover = vi.fn(() => {
+        state = { ...idle, phase: 'ready', run: pending };
+        return Promise.resolve();
+      });
+      const archivePending = vi.fn(() => {
+        if (mode === 'archive-failed') return Promise.resolve(false);
+        if (mode === 'account-changed') current = false;
+        state = idle;
+        return Promise.resolve(true);
+      });
+      const start = vi.fn(() => Promise.resolve());
+      await enterRankedPlay(
+        { ...client(idle), snapshot: () => state, lookupActive, recover, archivePending, start },
+        () => current,
+        mode === 'saved' ? RUN : undefined,
+      );
+
+      expect(recover).toHaveBeenCalledExactlyOnceWith(RUN);
+      if (mode === 'saved') {
+        expect(lookupActive).not.toHaveBeenCalled();
+        expect(archivePending).not.toHaveBeenCalled();
+      } else expect(archivePending).toHaveBeenCalledExactlyOnceWith(RUN);
+      expect(start).toHaveBeenCalledTimes(mode === 'normal' ? 1 : 0);
+    },
+  );
+
   it('keeps the unavailable guest boundary and disables pending inputs without inventing progress', () => {
     const guest = renderToStaticMarkup(
       createElement(RankedScene, { client: null, online: true, onLeave: () => {} }),
     );
-    expect(guest).toContain('Guest practice remains available');
+    expect(guest).toContain('Ranked play is unavailable.');
     expect(guest).not.toContain('Start verified run');
     const parsed = parseRankedReply(reply('3', '2', '1', false))!;
     const markup = renderToStaticMarkup(
@@ -892,6 +967,8 @@ describe('ranked scene confirmed-state presentation', () => {
         onLeave: () => {},
       }),
     );
+    expect(markup).toContain('data-testid="ranked-game"');
+    expect(markup).toContain('cpi-prism-bridge');
     expect(markup).toContain('Confirmed rows: 2');
     expect(markup).toContain('Current row 3');
     expect(markup).toContain('disabled=""');
@@ -914,7 +991,9 @@ describe('ranked scene confirmed-state presentation', () => {
         onLeave: () => {},
       }),
     );
-    expect(markup).toContain('Reward verification is pending');
+    expect(markup).toContain('Ad reward pending.');
+    expect(markup).toContain('>New run<');
+    expect(markup).not.toContain('Saved runs');
     expect(markup).not.toContain('>End run<');
     expect(markup).not.toContain('Watch ad');
   });

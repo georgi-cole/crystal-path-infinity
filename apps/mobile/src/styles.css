@@ -24,6 +24,34 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 
+/* Game controls and art are not document text. Keep native form editing available. */
+#root {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#root :is(input, textarea, [contenteditable='true']) {
+  -webkit-touch-callout: default;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Side swipes should move only a control that deliberately scrolls sideways. */
+:root:has(#root[data-native-shell]),
+body:has(> #root[data-native-shell]) {
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+}
+
+#root[data-native-shell] {
+  touch-action: pan-y;
+}
+
+#root[data-native-shell] :is(input, textarea, select) {
+  font-size: max(1em, 16px);
+}
+
 .launch-screen {
   position: relative;
   isolation: isolate;

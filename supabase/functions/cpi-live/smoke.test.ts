@@ -50,8 +50,9 @@ Deno.test(
         status: 'reviewed',
         reviewReference: 'synthetic-test',
         version: 'staging-test',
-        countries: {},
+        countries: { BG: { minimumAge: 18, neutralAgeScreenAllowed: true } },
       }),
+      CPI_STAGING_TEST_EMAILS: 'first@example.com,second@example.net',
       CPI_PURCHASES_ENABLED: 'false',
       CPI_REWARDS_ENABLED: 'false',
     };

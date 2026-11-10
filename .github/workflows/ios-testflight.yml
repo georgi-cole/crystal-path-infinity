@@ -8,15 +8,19 @@ on:
   workflow_dispatch:
     inputs:
       upload_to_testflight:
-        description: Sign and upload an internal-only staging beta from main
+        description: Sign and upload an internal-only staging beta
         type: boolean
         default: false
       rewarded_ads_test:
-        description: Enable rewarded ads against the staging gateway for AdMob test-mode devices
+        description: Enable guest demo ads and ranked rewarded ads in staging test mode
+        type: boolean
+        default: false
+      review_source:
+        description: Use an approved iPhone review branch and its separate staging signing environment
         type: boolean
         default: false
       source_sha:
-        description: Full main commit SHA to upload after its required checks pass
+        description: Full source commit SHA to upload after its required checks pass
         type: string
         default: ''
 
@@ -34,11 +38,14 @@ jobs:
     if: github.repository == 'georgi-cole/crystal-path-infinity'
     runs-on: macos-26
     timeout-minutes: 40
-    environment: ${{ inputs.upload_to_testflight && 'cpi-ios-testflight' || 'cpi-ios-compile' }}
+    environment: ${{ inputs.upload_to_testflight && (inputs.review_source && 'cpi-ios-staging-review' || 'cpi-ios-testflight') || 'cpi-ios-compile' }}
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
       CPI_IOS_UPLOAD: ${{ inputs.upload_to_testflight || false }}
       CPI_EXPECTED_SOURCE_SHA: ${{ inputs.source_sha }}
+      CPI_IOS_REVIEW_SOURCE: ${{ inputs.review_source || false }}
+      CPI_IOS_GOOGLE_CLIENT_ID: ${{ vars.CPI_IOS_GOOGLE_CLIENT_ID }}
+      VITE_IOS_PROVIDER_SIGN_IN: ${{ inputs.review_source && 'true' || 'false' }}
       CPI_APP_ENV: production
       CPI_NATIVE_PURCHASES: 'true'
       CPI_NATIVE_ADS: ${{ inputs.rewarded_ads_test && 'true' || 'false' }}
@@ -46,6 +53,7 @@ jobs:
       VITE_ACCOUNT_API_BASE_URL: https://crystal-path-staging-api.kolequant.workers.dev/cpi
       VITE_ACCOUNT_SERVICES_ENABLED: 'true'
       VITE_PURCHASES_ENABLED: 'true'
+      VITE_GUEST_REWARDED_ADS_TEST: ${{ inputs.rewarded_ads_test && 'true' || 'false' }}
       VITE_REWARDED_ADS_ENABLED: ${{ inputs.rewarded_ads_test && 'true' || 'false' }}
       VITE_CLIENT_BUILD: ${{ github.run_number }}
     steps:

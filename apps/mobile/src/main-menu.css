@@ -54,11 +54,19 @@
   align-items: center;
   gap: 0.65rem;
   flex-wrap: wrap;
+  min-inline-size: 0;
   justify-content: flex-end;
 }
 .cpi-menu-pill {
   font-size: 0.65rem;
   color: #aaaaaf;
+}
+.cpi-menu-pill bdi {
+  display: block;
+  max-inline-size: min(38vw, 12rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .cpi-menu-pill + .cpi-menu-pill {
   border-inline-start: 1px solid #fff2;
@@ -674,6 +682,11 @@
 .cpi-menu-panel h2 {
   font-weight: 500;
 }
+.cpi-menu-panel .cpi-account-entry--methods {
+  padding-block: 0;
+  border: 0;
+  background: transparent;
+}
 .cpi-menu-panel .cpi-account-entry h2 {
   font-size: 1rem;
 }
@@ -685,6 +698,21 @@
   color: #dfcae0;
   background: #ac54801a;
   font: 0.8rem var(--cpi-font-body);
+}
+.cpi-menu-panel .cpi-provider-button.cpi-provider-button--apple {
+  color: #fff;
+  background: #000;
+  border-color: #747775;
+}
+.cpi-menu-panel .cpi-provider-button.cpi-provider-button--google {
+  color: #1f1f1f;
+  background: #fff;
+  border-color: #747775;
+}
+.cpi-menu-panel .cpi-account-entry .cpi-account-secondary,
+.cpi-menu-panel .cpi-account-links button {
+  border-color: transparent;
+  background: transparent;
 }
 .cpi-menu-panel .cpi-leaderboard-filters input {
   accent-color: #ed69a3;

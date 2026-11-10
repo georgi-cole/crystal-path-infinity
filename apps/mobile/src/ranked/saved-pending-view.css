@@ -1,12 +1,8 @@
 .cpi-saved-pending {
   display: grid;
   gap: 0.75rem;
-  margin-block: 1rem;
-  padding: 1rem;
-  border: 1px solid rgb(130 210 255 / 25%);
-  border-radius: 1rem;
+  padding-block-end: 0.75rem;
 }
-.cpi-saved-pending h3,
 .cpi-saved-pending p {
   margin: 0;
 }
@@ -14,12 +10,16 @@
   display: grid;
   gap: 0.75rem;
   margin: 0;
-  padding-inline-start: 1.5rem;
+  padding: 0;
+  list-style: none;
 }
 .cpi-saved-pending li {
+  display: grid;
+  gap: 0.3rem;
   padding: 0.75rem;
+  border: 1px solid var(--cpi-glass-edge);
   border-radius: 0.75rem;
-  background: rgb(20 35 65 / 80%);
+  background: var(--cpi-glass);
 }
 .cpi-saved-pending button {
   min-block-size: 44px;

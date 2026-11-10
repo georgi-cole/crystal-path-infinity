@@ -400,12 +400,20 @@ export function createAccountLifecycleHandler(options: AccountLifecycleOptions) 
         );
         if (endpoint === 'export') {
           const result = await connection.query(
-            'select cpi_private.export_account_page($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid) as account_export',
+            `select cpi_private.export_account_page($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid) as account_export,
+              (select jsonb_strip_nulls(jsonb_build_object(
+                'providerDisplayName',to_jsonb(p)->>'provider_display_name',
+                'pendingCountryCode',to_jsonb(p)->>'pending_country_code'
+              )) from cpi_private.profiles_private p where user_id=$1::uuid) as account_details`,
             [actor.subject, cursor.consent, cursor.parental, cursor.run, cursor.result],
           );
           const data = json(result.rows[0]?.account_export);
           if (!object(data) || data.schemaVersion !== 1 || !object(data.next))
             throw new Error('Invalid account export');
+          const details = json(result.rows[0]?.account_details);
+          if (object(data.privateProfile) && object(details)) {
+            data.privateProfile = { ...data.privateProfile, ...details };
+          }
           // Mandatory after CPI-025: a missing/failed report export rolls the
           // whole page back instead of silently omitting user-owned data.
           const ownReports = await connection.query(

@@ -1,0 +1,155 @@
+{
+  "status": "confirmed-in-stores",
+  "products": [
+    {
+      "platform": "android",
+      "key": "credits.3",
+      "sku": "com.georgicole.crystalpath.infinity.credits.3",
+      "kind": "credit",
+      "quantity": 3,
+      "available": true
+    },
+    {
+      "platform": "android",
+      "key": "credits.5",
+      "sku": "com.georgicole.crystalpath.infinity.credits.5",
+      "kind": "credit",
+      "quantity": 5,
+      "available": true
+    },
+    {
+      "platform": "android",
+      "key": "credits.10",
+      "sku": "com.georgicole.crystalpath.infinity.credits.10",
+      "kind": "credit",
+      "quantity": 10,
+      "available": true
+    },
+    {
+      "platform": "android",
+      "key": "credits.25",
+      "sku": "com.georgicole.crystalpath.infinity.credits.25",
+      "kind": "credit",
+      "quantity": 25,
+      "available": true
+    },
+    {
+      "platform": "android",
+      "key": "sp.100",
+      "sku": "com.georgicole.crystalpath.infinity.sp.100",
+      "kind": "sp",
+      "quantity": 100,
+      "available": true
+    },
+    {
+      "platform": "android",
+      "key": "sp.500",
+      "sku": "com.georgicole.crystalpath.infinity.sp.500",
+      "kind": "sp",
+      "quantity": 500,
+      "available": true
+    },
+    {
+      "platform": "android",
+      "key": "sp.1000",
+      "sku": "com.georgicole.crystalpath.infinity.sp.1000",
+      "kind": "sp",
+      "quantity": 1000,
+      "available": true
+    },
+    {
+      "platform": "android",
+      "key": "sp.2500",
+      "sku": "com.georgicole.crystalpath.infinity.sp.2500",
+      "kind": "sp",
+      "quantity": 2500,
+      "available": true
+    },
+    {
+      "platform": "android",
+      "key": "sp.5000",
+      "sku": "com.georgicole.crystalpath.infinity.sp.5000",
+      "kind": "sp",
+      "quantity": 5000,
+      "available": true
+    },
+    {
+      "platform": "android",
+      "key": "sp.10000",
+      "sku": "com.georgicole.crystalpath.infinity.sp.10000",
+      "kind": "sp",
+      "quantity": 10000,
+      "available": true
+    },
+    {
+      "platform": "android",
+      "key": "hints.3",
+      "sku": "com.georgicole.crystalpath.infinity.hints.3",
+      "kind": "hints",
+      "quantity": 3,
+      "available": true
+    },
+    {
+      "platform": "android",
+      "key": "hints.10",
+      "sku": "com.georgicole.crystalpath.infinity.hints.10",
+      "kind": "hints",
+      "quantity": 10,
+      "available": true
+    },
+    {
+      "platform": "android",
+      "key": "theme.chaos",
+      "sku": "com.georgicole.crystalpath.infinity.theme.chaos",
+      "kind": "theme",
+      "quantity": 1,
+      "theme": "chaos",
+      "available": true
+    },
+    {
+      "platform": "android",
+      "key": "theme.jelly",
+      "sku": "com.georgicole.crystalpath.infinity.theme.jelly",
+      "kind": "theme",
+      "quantity": 1,
+      "theme": "jelly",
+      "available": true
+    },
+    {
+      "platform": "android",
+      "key": "theme.wilds",
+      "sku": "com.georgicole.crystalpath.infinity.theme.wilds",
+      "kind": "theme",
+      "quantity": 1,
+      "theme": "wilds",
+      "available": true
+    },
+    {
+      "platform": "android",
+      "key": "theme.league",
+      "sku": "com.georgicole.crystalpath.infinity.theme.league",
+      "kind": "theme",
+      "quantity": 1,
+      "theme": "league",
+      "available": true
+    },
+    {
+      "platform": "android",
+      "key": "theme.puppy",
+      "sku": "com.georgicole.crystalpath.infinity.theme.puppy",
+      "kind": "theme",
+      "quantity": 1,
+      "theme": "puppy",
+      "available": true
+    },
+    {
+      "platform": "android",
+      "key": "theme.kitten",
+      "sku": "com.georgicole.crystalpath.infinity.theme.kitten",
+      "kind": "theme",
+      "quantity": 1,
+      "theme": "kitten",
+      "available": true
+    }
+  ]
+}

@@ -9,13 +9,24 @@ signing="$RUNNER_TEMP/cpi-ios-signing"
 keychain="$signing/crystal-path.keychain-db"
 profile_dir="$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"
 
-require_current_main() {
+review_source_allowed() {
+  case "$GITHUB_REF" in
+    refs/heads/codex/ios-sign-in-staging | refs/heads/codex/guest-rewarded-continuations) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+require_current_source() {
+  local source=main
+  if [[ "${CPI_IOS_REVIEW_SOURCE:-false}" == true ]] && review_source_allowed; then
+    source=${GITHUB_REF#refs/heads/}
+  fi
   if [[ "$GITHUB_REPOSITORY" != georgi-cole/crystal-path-infinity ||
-        "$GITHUB_EVENT_NAME" != workflow_dispatch || "$GITHUB_REF" != refs/heads/main ||
+        "$GITHUB_EVENT_NAME" != workflow_dispatch || "$GITHUB_REF" != "refs/heads/$source" ||
         "$GITHUB_RUN_ATTEMPT" != 1 || "$CPI_EXPECTED_SOURCE_SHA" != "$GITHUB_SHA" ||
         "$(git rev-parse HEAD)" != "$GITHUB_SHA" ||
-        "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)" != "$GITHUB_SHA" ]]; then
-    echo 'Upload requires a new manual run on the supplied, current main commit.' >&2
+        "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$source" --jq .object.sha)" != "$GITHUB_SHA" ]]; then
+    echo 'Upload requires a new manual run on the supplied, current approved source commit.' >&2
     exit 1
   fi
 }
@@ -25,13 +36,22 @@ preflight() {
   xcodebuild -help > "$RUNNER_TEMP/cpi-xcodebuild-help.txt" 2>&1 || true
   grep -Fq testFlightInternalTestingOnly "$RUNNER_TEMP/cpi-xcodebuild-help.txt"
   if [[ "$CPI_NATIVE_ADS" != "$VITE_REWARDED_ADS_ENABLED" ||
+        "$CPI_NATIVE_ADS" != "${VITE_GUEST_REWARDED_ADS_TEST:-false}" ||
+        -n "${VITE_GUEST_REWARDED_AD_UNIT_ID:-}" ||
         "$VITE_ACCOUNT_SERVICES_ENABLED" != true ||
         "$VITE_ACCOUNT_API_BASE_URL" != https://crystal-path-staging-api.kolequant.workers.dev/cpi ]]; then
     echo 'Internal TestFlight requires matching ad flags and accounts on the Crystal Path staging /cpi gateway.' >&2
     exit 1
   fi
+  if [[ "${CPI_IOS_REVIEW_SOURCE:-false}" == true ]]; then
+    if ! review_source_allowed || [[ "$VITE_IOS_PROVIDER_SIGN_IN" != true ||
+          ! "$CPI_IOS_GOOGLE_CLIENT_ID" =~ ^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$ ]]; then
+      echo 'Provider sign-in requires the pinned iPhone review branch and staging OAuth client.' >&2
+      exit 1
+    fi
+  fi
   if [[ "$CPI_IOS_UPLOAD" == true ]]; then
-    require_current_main
+    require_current_source
     if [[ "$CPI_NATIVE_ADS" == true ]]; then
       local version
       version=$(node -p 'require("./apps/mobile/package.json").version')
@@ -74,6 +94,7 @@ PY
   security cms -D -i "$signing/profile.mobileprovision" > "$signing/profile.plist"
   python3 - "$signing" "$project/project.pbxproj" "$team_id" "$bundle_id" <<'PY'
 import datetime
+import os
 import pathlib
 import plistlib
 import re
@@ -94,6 +115,8 @@ if not (
     and profile["ExpirationDate"] > datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
 ):
     raise SystemExit("Expected an unexpired Crystal Path App Store provisioning profile")
+if os.environ.get("VITE_IOS_PROVIDER_SIGN_IN") == "true":
+    assert "Default" in entitlements.get("com.apple.developer.applesignin", []), "Missing Apple sign-in entitlement"
 
 project_settings = project.read_text()
 marker = "\t\t\t\tCODE_SIGNING_ALLOWED = NO;"
@@ -162,6 +185,13 @@ assert info["UIDeviceFamily"] == [1]
 assert metadata["environment"] == "production" and not (public / "qa-info.json").exists()
 account_base = os.environ["VITE_ACCOUNT_API_BASE_URL"]
 assert any(account_base in asset.read_text(encoding="utf-8") for asset in (public / "assets").glob("*.js"))
+if os.environ.get("VITE_IOS_PROVIDER_SIGN_IN") == "true":
+    google = os.environ["CPI_IOS_GOOGLE_CLIENT_ID"]
+    assert info["CpiGoogleSignInClientID"] == google
+    scheme = ".".join(reversed(google.split(".")))
+    assert any(scheme in entry["CFBundleURLSchemes"] for entry in info["CFBundleURLTypes"])
+else:
+    assert "CpiGoogleSignInClientID" not in info
 if os.environ["CPI_NATIVE_ADS"] == "true":
     assert info["GADApplicationIdentifier"] == "ca-app-pub-9243398419153145~7303584917"
 else:
@@ -170,6 +200,10 @@ PY
   if [[ "$CPI_IOS_UPLOAD" == true ]]; then
     codesign --verify --deep --strict "$app"
     codesign -d --verbose=4 "$app" 2>&1 | grep -Fx "TeamIdentifier=$team_id"
+    if [[ "${VITE_IOS_PROVIDER_SIGN_IN:-false}" == true ]]; then
+      codesign -d --entitlements :- "$app" > "$signing/app-entitlements.plist" 2>/dev/null
+      /usr/libexec/PlistBuddy -c 'Print :com.apple.developer.applesignin:0' "$signing/app-entitlements.plist" | grep -Fx Default
+    fi
   fi
   printf '### Crystal Path iOS archive\n\nBundle: %s\n\nBuild: %s\n\nSource: %s\n\nRewarded ads test: %s\n\n' \
     "$bundle_id" "$GITHUB_RUN_NUMBER" "$GITHUB_SHA" "$CPI_NATIVE_ADS" >> "$GITHUB_STEP_SUMMARY"
@@ -179,7 +213,7 @@ PY
 }
 
 upload() {
-  require_current_main
+  require_current_source
   umask 077
   local key="$signing/upload.p8"
   trap 'rm -f "$RUNNER_TEMP/cpi-ios-signing/upload.p8"' EXIT
@@ -213,7 +247,7 @@ cleanup() {
   fi
   if [[ -f "$keychain" ]]; then security delete-keychain "$keychain"; fi
   rm -f "$signing/distribution.p12" "$signing/profile.mobileprovision" "$signing/profile.plist" \
-    "$signing/profile-uuid" "$signing/upload.p8" "$signing/ExportOptions.plist"
+    "$signing/profile-uuid" "$signing/upload.p8" "$signing/ExportOptions.plist" "$signing/app-entitlements.plist"
 }
 
 case "$1" in

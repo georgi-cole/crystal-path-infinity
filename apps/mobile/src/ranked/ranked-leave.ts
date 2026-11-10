@@ -1,6 +1,14 @@
-import type { RankedClient } from './ranked-client';
+import type { RankedClient, RankedClientState } from './ranked-client';
 import type { RewardFlowState } from '../rewards/reward-flow';
+export function hasUnclaimedAd(run: NonNullable<RankedClientState['run']>) {
+  return run.status === 'dead' && (run.rewardPending || run.revivesGranted > run.revivesApplied);
+}
+
 export type RewardExitState = Pick<RewardFlowState, 'phase' | 'fullscreen' | 'waiting'>;
+export function canLeaveReward(reward: RewardExitState | null | undefined) {
+  return !reward?.fullscreen && !['loading', 'showing', 'reviving'].includes(reward?.phase ?? '');
+}
+
 export function canUseCreditFromReward(reward: RewardExitState | null | undefined) {
   return (
     !reward?.fullscreen &&
@@ -17,20 +25,9 @@ export async function leaveVerifiedRun(
   const state = client.snapshot(),
     run = state.run,
     reward = readReward();
-  if (
-    !run ||
-    run.runId !== runId ||
-    reward?.fullscreen ||
-    ['loading', 'showing', 'reviving'].includes(reward?.phase ?? '')
-  )
-    return false;
+  if (!run || run.runId !== runId || !canLeaveReward(reward)) return false;
   if (run.status === 'dead') {
-    if (
-      run.rewardPending ||
-      run.revivesGranted > run.revivesApplied ||
-      reward?.phase === 'earned_pending' ||
-      reward?.phase === 'granted'
-    )
+    if (hasUnclaimedAd(run) || reward?.phase === 'earned_pending' || reward?.phase === 'granted')
       return client.archivePending(runId);
     if (state.phase !== 'ready' || !state.online || reward?.waiting) return false;
     await client.command({ type: 'end' });

@@ -1,17 +1,32 @@
 import { Buffer } from 'node:buffer';
 import { randomInt, randomUUID } from 'node:crypto';
 import type { SqlConnection, SqlPool } from './database.ts';
-import type { AccountDirectory, AccountMailer } from './account-providers.ts';
+import type {
+  AccountDirectory,
+  AccountMailer,
+  ProviderSignupDirectory,
+} from './account-providers.ts';
 import type { AccountPolicy, AccountRequestContext } from './account-policy.ts';
 import { accountEligibility, validateAccountPolicy } from './account-policy.ts';
 import type { PrivateCryptography } from './private-services.ts';
 import { exactObject, isObject, sqlTransaction } from './private-services.ts';
 import { createDurableRateLimit } from './durable-rate-limit.ts';
+import { isNativeIdentityProvider, NativeIdentityRejected } from './native-identity.ts';
+import type { NativeIdentity, NativeIdentityProvider } from './native-identity.ts';
 
 const MINUTE = 60_000,
   DAY = 86400_000;
 const tokenPattern = /^[A-Za-z0-9_-]{43}$/;
 type Purpose = 'login' | 'export' | 'delete';
+interface ProviderLinkProof {
+  provider: NativeIdentityProvider;
+  identityHash: string;
+  subject: string;
+  address: string;
+  permit: string;
+  appleRefresh?: string;
+  displayName?: string;
+}
 export class AccountIssuerError extends Error {
   readonly status: number;
   constructor(status = 400) {
@@ -70,12 +85,32 @@ export function createAccountIssuer(options: {
   crypto: PrivateCryptography;
   directory: AccountDirectory;
   mailer: AccountMailer;
+  identity?: NativeIdentity;
   policy: AccountPolicy;
+  stagingTestEmails?: readonly string[];
+  nativeSignup?: {
+    directory: ProviderSignupDirectory;
+    emails: Readonly<Record<NativeIdentityProvider, readonly string[]>>;
+    directEntry?: boolean;
+  };
   now?: () => number;
 }) {
-  const { database, crypto } = options,
+  const { database, crypto, nativeSignup } = options,
     now = options.now ?? Date.now;
   const policy = validateAccountPolicy(options.policy);
+  const stagingTestEmails = new Set(
+    (options.stagingTestEmails ?? []).map((address) => email(address)),
+  );
+  const stagingSessionEmails = new Set([
+    ...stagingTestEmails,
+    ...(nativeSignup?.emails.apple ?? []),
+    ...(nativeSignup?.emails.google ?? []),
+  ]);
+  const directEntry =
+    nativeSignup?.directEntry === true &&
+    Object.keys(policy.countries).length === 1 &&
+    policy.countries.BG?.minimumAge === 18 &&
+    policy.countries.BG.neutralAgeScreenAllowed;
   const limit = createDurableRateLimit(database, crypto, now);
   const digest = (domain: string, value: string) => crypto.digest(domain, value);
   async function owner(connection: SqlConnection, subject: string) {
@@ -94,8 +129,7 @@ export function createAccountIssuer(options: {
     ).rows;
     if (deleted.length) throw new AccountIssuerError(401);
   }
-  async function permitted(connection: SqlConnection, value: unknown) {
-    const hash = digest('permit', token(value));
+  async function permittedHash(connection: SqlConnection, hash: string) {
     const row = (
       await connection.query(
         'select * from cpi_private.account_permits where token_hash=$1 and expires_at>$2 and not revoked',
@@ -106,9 +140,12 @@ export function createAccountIssuer(options: {
       throw new AccountIssuerError(410);
     return row;
   }
+  function permitted(connection: SqlConnection, value: unknown) {
+    return permittedHash(connection, digest('permit', token(value)));
+  }
   async function authenticate(access: string): Promise<IssuedAccountActor | null> {
     if (!tokenPattern.test(access)) return null;
-    return sqlTransaction(database, async (connection) => {
+    const authenticated = await sqlTransaction(database, async (connection) => {
       const row = (
         await connection.query(
           `select f.* from cpi_private.account_families f
@@ -123,6 +160,20 @@ export function createAccountIssuer(options: {
         ? actor(row)
         : null;
     });
+    if (
+      !authenticated ||
+      (stagingTestEmails.size && !(await isStagingTestAccount(authenticated.subject)))
+    )
+      return null;
+    return authenticated;
+  }
+  async function isStagingTestAccount(subject: string): Promise<boolean> {
+    if (!stagingTestEmails.size) return false;
+    try {
+      return stagingSessionEmails.has(email(await options.directory.emailForSubject(subject)));
+    } catch {
+      return false;
+    }
   }
   async function envelope(
     connection: SqlConnection,
@@ -236,6 +287,7 @@ export function createAccountIssuer(options: {
     input: unknown,
     context: AccountRequestContext,
     auth?: IssuedAccountActor,
+    providerLink?: ProviderLinkProof,
   ) {
     const reauth = !!auth;
     if (
@@ -260,7 +312,12 @@ export function createAccountIssuer(options: {
       );
     const address = auth
       ? email(await options.directory.emailForSubject(auth.subject))
-      : email(input.email);
+      : email(providerLink?.address ?? input.email);
+    if (
+      stagingTestEmails.size &&
+      !(auth || providerLink ? stagingSessionEmails : stagingTestEmails).has(address)
+    )
+      throw new AccountIssuerError(403);
     const emailHash = digest('email', address);
     if (
       !(await limit('mail-ip:' + context.rateKey, 12, 60 * MINUTE)) ||
@@ -309,7 +366,11 @@ export function createAccountIssuer(options: {
     await deliverMail(result.id);
     return { status: result.status, expiresAt: result.expiresAt, resendAt: result.resendAt };
   }
-  async function verifyCode(input: unknown, auth?: IssuedAccountActor) {
+  async function verifyCode(
+    input: unknown,
+    auth?: IssuedAccountActor,
+    providerLink?: ProviderLinkProof,
+  ) {
     const reauth = !!auth;
     if (
       !exactObject(
@@ -337,6 +398,11 @@ export function createAccountIssuer(options: {
     const address = auth
       ? email(await options.directory.emailForSubject(auth.subject))
       : email(input.email);
+    if (
+      stagingTestEmails.size &&
+      !(auth || providerLink ? stagingSessionEmails : stagingTestEmails).has(address)
+    )
+      throw new AccountIssuerError(403);
     const emailHash = digest('email', address);
     if (!(await limit('verify:' + emailHash, 30, 10 * MINUTE))) throw new AccountIssuerError(429);
     const challenge = await sqlTransaction(database, async (connection) => {
@@ -396,12 +462,14 @@ export function createAccountIssuer(options: {
         return result;
       });
     }
-    const subject = await options.directory.verifiedEmail(address);
+    const subject = providerLink?.subject ?? (await options.directory.verifiedEmail(address));
     return sqlTransaction(database, async (connection) => {
-      await connection.query(
-        'insert into cpi_private.profile_owners(user_id) values($1::uuid) on conflict do nothing',
-        [subject],
-      );
+      if (providerLink) await lockProvider(connection, providerLink.identityHash);
+      else
+        await connection.query(
+          'insert into cpi_private.profile_owners(user_id) values($1::uuid) on conflict do nothing',
+          [subject],
+        );
       await owner(connection, subject);
       const permit = await permitted(connection, input.eligibilityPermit);
       const prior = (
@@ -425,15 +493,36 @@ export function createAccountIssuer(options: {
       ).rows[0];
       if (locked?.ticket_encrypted)
         return crypto.open(str(locked.ticket_encrypted), 'challenge:' + str(challenge.id));
-      await connection.query(
-        `insert into cpi_private.profiles_private(user_id,privacy_context,context_updated_at) values($1::uuid,$2,now())
-        on conflict(user_id) do update set privacy_context=excluded.privacy_context,context_updated_at=excluded.context_updated_at`,
-        [subject, permit.privacy_context],
-      );
-      await connection.query(
-        "insert into cpi_private.consent_events(user_id,purpose,decision,policy_version,jurisdiction) values($1::uuid,'account','granted',$2,$3)",
-        [subject, policy.version, permit.country],
-      );
+      if (providerLink && nativeSignup) {
+        const existing = await nativeSignup.directory.lookup(
+          connection,
+          address,
+          providerLink.identityHash,
+        );
+        if (existing?.subject !== subject || prior?.privacy_context !== 'adult')
+          throw new AccountIssuerError(410);
+        if (
+          !(await attachProvider(
+            connection,
+            providerLink.provider,
+            providerLink.identityHash,
+            subject,
+            providerLink.appleRefresh,
+          ))
+        )
+          return { status: 'already_linked' };
+        await rememberDisplayName(connection, subject, providerLink.displayName);
+      } else {
+        await connection.query(
+          `insert into cpi_private.profiles_private(user_id,privacy_context,context_updated_at) values($1::uuid,$2,now())
+          on conflict(user_id) do update set privacy_context=excluded.privacy_context,context_updated_at=excluded.context_updated_at`,
+          [subject, permit.privacy_context],
+        );
+        await connection.query(
+          "insert into cpi_private.consent_events(user_id,purpose,decision,policy_version,jurisdiction) values($1::uuid,'account','granted',$2,$3)",
+          [subject, policy.version, permit.country],
+        );
+      }
       const verifiedTicket = crypto.token(),
         expiresAt = now() + 2 * MINUTE;
       await connection.query(
@@ -448,8 +537,453 @@ export function createAccountIssuer(options: {
       return response;
     });
   }
+  async function beginIdentity(
+    input: unknown,
+    context: AccountRequestContext,
+    auth: IssuedAccountActor | null,
+  ) {
+    if (!options.identity) throw new AccountIssuerError(503);
+    const direct = isObject(input) && input.schemaVersion === 2;
+    if (
+      !exactObject(
+        input,
+        direct
+          ? ['schemaVersion', 'provider', 'clientBuild']
+          : ['schemaVersion', 'provider', 'eligibilityPermit'],
+      ) ||
+      (!direct && input.schemaVersion !== 1) ||
+      !isNativeIdentityProvider(input.provider) ||
+      (direct &&
+        (typeof input.clientBuild !== 'number' ||
+          !Number.isInteger(input.clientBuild) ||
+          input.clientBuild < 1 ||
+          input.clientBuild > 2147483647))
+    )
+      throw new AccountIssuerError();
+    if (
+      !context.country ||
+      !policy.countries[context.country] ||
+      (direct && (!directEntry || auth)) ||
+      (auth && (auth.platform !== 'ios' || input.eligibilityPermit !== null))
+    )
+      throw new AccountIssuerError(403);
+    if (!(await limit('identity:' + context.rateKey, 20, 10 * MINUTE)))
+      throw new AccountIssuerError(429);
+    const country = context.country;
+    const nonce = crypto.token();
+    await sqlTransaction(database, async (connection) => {
+      const permit = auth || direct ? null : await permitted(connection, input.eligibilityPermit);
+      if (permit && permit.platform !== 'ios') throw new AccountIssuerError(403);
+      await connection.query(
+        'insert into cpi_private.account_provider_challenges(nonce_hash,provider,family_id,permit_hash,country,expires_at,direct_client_build) values($1,$2,$3::uuid,$4,$5,$6,$7)',
+        [
+          digest('identity-nonce', nonce),
+          input.provider,
+          auth?.familyId ?? null,
+          permit?.token_hash ?? null,
+          country,
+          Math.min(now() + 5 * MINUTE, permit ? number(permit.expires_at) : Infinity),
+          direct ? input.clientBuild : null,
+        ],
+      );
+    });
+    return { status: 'ready', nonce };
+  }
+  async function admitAdultTester(connection: SqlConnection, clientBuild: number) {
+    // Only a verified provider identity from the closed adult beta reaches this point.
+    const permit = crypto.token();
+    const hash = digest('permit', permit);
+    const expiresAt = now() + 15 * MINUTE;
+    await connection.query(
+      `insert into cpi_private.account_permits(token_hash,policy_version,country,privacy_context,platform,client_build,expires_at)
+      values($1,$2,'BG','adult','ios',$3,$4)`,
+      [hash, policy.version, clientBuild, expiresAt],
+    );
+    return { permit, hash, expiresAt };
+  }
+  async function rememberDisplayName(
+    connection: SqlConnection,
+    subject: string,
+    displayName?: string,
+  ) {
+    if (displayName)
+      await connection.query(
+        'update cpi_private.profiles_private set provider_display_name=$2 where user_id=$1::uuid',
+        [subject, displayName],
+      );
+  }
+  async function attachProvider(
+    connection: SqlConnection,
+    provider: NativeIdentityProvider,
+    identityHash: string,
+    subject: string,
+    appleRefresh?: string,
+  ) {
+    if (provider === 'apple' && !appleRefresh) throw new AccountIssuerError(503);
+    const refresh = appleRefresh ? crypto.seal(appleRefresh, 'apple-identity:' + subject) : null;
+    const linked = (
+      await connection.query(
+        'insert into cpi_private.account_provider_links(provider,identity_hash,user_id,apple_refresh_encrypted) values($1,$2,$3::uuid,$4) on conflict do nothing returning user_id',
+        [provider, identityHash, subject, refresh],
+      )
+    ).rows[0];
+    if (linked) return true;
+    if ((await linkedOwner(connection, provider, identityHash)) !== subject) return false;
+    if (refresh)
+      await connection.query(
+        'update cpi_private.account_provider_links set apple_refresh_encrypted=$3 where provider=$1 and identity_hash=$2',
+        [provider, identityHash, refresh],
+      );
+    return true;
+  }
+  async function providerTicket(
+    connection: SqlConnection,
+    subject: string,
+    permitHash: string,
+    nonceHash: string,
+  ) {
+    await owner(connection, subject);
+    const permit = await permittedHash(connection, permitHash);
+    const profile = (
+      await connection.query(
+        'select privacy_context from cpi_private.profiles_private where user_id=$1::uuid for update',
+        [subject],
+      )
+    ).rows[0];
+    if (!profile || profile.privacy_context !== permit.privacy_context)
+      throw new AccountIssuerError(403);
+    const verifiedTicket = crypto.token();
+    const expiresAt = Math.min(now() + 2 * MINUTE, number(permit.expires_at));
+    await connection.query(
+      'insert into cpi_private.account_tickets(token_hash,provider_nonce_hash,user_id,permit_hash,expires_at) values($1,$2,$3::uuid,$4,$5)',
+      [digest('ticket', verifiedTicket), nonceHash, subject, permit.token_hash, expiresAt],
+    );
+    return { status: 'verified', verifiedTicket, expiresAt };
+  }
+  async function lockProvider(connection: SqlConnection, identityHash: string) {
+    await connection.query('select pg_advisory_xact_lock(hashtextextended($1,0))', [identityHash]);
+  }
+  async function linkedOwner(
+    connection: SqlConnection,
+    provider: NativeIdentityProvider,
+    identityHash: string,
+  ) {
+    const row = (
+      await connection.query(
+        'select user_id from cpi_private.account_provider_links where provider=$1 and identity_hash=$2',
+        [provider, identityHash],
+      )
+    ).rows[0];
+    return row ? str(row.user_id) : null;
+  }
+  async function completeIdentity(
+    input: unknown,
+    context: AccountRequestContext,
+    auth: IssuedAccountActor | null,
+  ) {
+    const identity = options.identity;
+    if (!identity) throw new AccountIssuerError(503);
+    if (
+      !exactObject(input, ['schemaVersion', 'provider', 'nonce', 'credential']) ||
+      (input.schemaVersion !== 1 && input.schemaVersion !== 2 && input.schemaVersion !== 3) ||
+      !isNativeIdentityProvider(input.provider)
+    )
+      throw new AccountIssuerError();
+    const direct = input.schemaVersion === 3;
+    if (
+      !context.country ||
+      !policy.countries[context.country] ||
+      (direct && (!directEntry || auth))
+    )
+      throw new AccountIssuerError(403);
+    const provider = input.provider;
+    const nonce = token(input.nonce);
+    const nonceHash = digest('identity-nonce', nonce);
+    // Atomically consume the challenge before contacting the provider.
+    const challenge = await sqlTransaction(database, async (connection) => {
+      const row = (
+        await connection.query(
+          'delete from cpi_private.account_provider_challenges where nonce_hash=$1 and provider=$2 and expires_at>$3 and country=$4 and family_id is not distinct from $5::uuid returning permit_hash,direct_client_build',
+          [nonceHash, provider, now(), context.country, auth?.familyId ?? null],
+        )
+      ).rows[0];
+      if (!row || direct !== (row.direct_client_build !== null)) throw new AccountIssuerError(410);
+      if (!auth && !direct) await permittedHash(connection, str(row.permit_hash));
+      return row;
+    });
+    let verified: Awaited<ReturnType<NativeIdentity['verify']>>;
+    let linkRefresh: string | undefined;
+    try {
+      verified = await identity.verify(provider, input.credential, nonce);
+      if (auth) linkRefresh = await verified.appleRefresh?.();
+    } catch (error) {
+      if (error instanceof NativeIdentityRejected) throw new AccountIssuerError(401);
+      throw error;
+    }
+    const identityHash = digest('identity:' + provider, verified.subject);
+    const address = verified.signupEmail?.toLowerCase();
+    return sqlTransaction(database, async (connection) => {
+      if (nativeSignup) await lockProvider(connection, identityHash);
+      if (auth) {
+        await owner(connection, auth.subject);
+        const active = (
+          await connection.query(
+            'select 1 from cpi_private.account_families where id=$1::uuid and user_id=$2::uuid and revoked_at is null and expires_at>$3 and policy_version=$4 for update',
+            [auth.familyId, auth.subject, now(), policy.version],
+          )
+        ).rows[0];
+        if (!active) throw new AccountIssuerError(401);
+        if (nativeSignup && address) {
+          const existing = await nativeSignup.directory.lookup(connection, address, identityHash);
+          if (existing && existing.subject !== auth.subject) return { status: 'already_linked' };
+        }
+        if (!(await attachProvider(connection, provider, identityHash, auth.subject, linkRefresh)))
+          return { status: 'already_linked' };
+        return { status: 'linked' };
+      }
+
+      const linked = await linkedOwner(connection, provider, identityHash);
+      const clientBuild = direct ? number(challenge.direct_client_build) : null;
+      if (linked) {
+        const permitHash =
+          clientBuild === null
+            ? str(challenge.permit_hash)
+            : (await admitAdultTester(connection, clientBuild)).hash;
+        const result = await providerTicket(connection, linked, permitHash, nonceHash);
+        if (direct) await rememberDisplayName(connection, linked, verified.displayName);
+        return result;
+      }
+      // Older TestFlight builds keep their original sign-in and signup contract.
+      if (!nativeSignup || input.schemaVersion === 1 || !address)
+        return { status: 'link_required' };
+      if (!nativeSignup.emails[provider].includes(address)) return { status: 'signup_unavailable' };
+      const existing = await nativeSignup.directory.lookup(connection, address, identityHash);
+      const collision = existing && !existing.matchesProvider ? existing.subject : null;
+      if (collision && clientBuild === null) return { status: 'link_required' };
+      if (collision) {
+        const prior = (
+          await connection.query(
+            'select privacy_context from cpi_private.profiles_private where user_id=$1::uuid',
+            [collision],
+          )
+        ).rows[0];
+        if (prior?.privacy_context !== 'adult') return { status: 'link_required' };
+        await owner(connection, collision);
+      }
+      const appleRefresh = await verified.appleRefresh?.();
+      if (provider === 'apple' && !appleRefresh) throw new AccountIssuerError(503);
+      if (clientBuild !== null) {
+        const admission = await admitAdultTester(connection, clientBuild);
+        if (!collision)
+          return createProviderAccount(connection, {
+            provider,
+            identityHash,
+            address,
+            appleRefresh,
+            displayName: verified.displayName,
+            permitHash: admission.hash,
+            nonceHash,
+            offerProfile: true,
+          });
+        const linkToken = crypto.token();
+        const hash = digest('identity-link', linkToken);
+        await connection.query(
+          'insert into cpi_private.account_provider_signups(token_hash,provider,identity_hash,permit_hash,country,payload_encrypted,expires_at) values($1,$2,$3,$4,$5,$6,$7)',
+          [
+            hash,
+            provider,
+            identityHash,
+            admission.hash,
+            context.country,
+            crypto.seal(
+              {
+                subject: collision,
+                address,
+                permit: admission.permit,
+                appleRefresh,
+                displayName: verified.displayName,
+              },
+              'identity-link:' + hash,
+            ),
+            admission.expiresAt,
+          ],
+        );
+        return { status: 'verify_existing', linkToken };
+      }
+      const permitHash = str(challenge.permit_hash);
+      const permit = await permittedHash(connection, permitHash);
+      const signupToken = crypto.token();
+      const hash = digest('identity-signup', signupToken);
+      const expiresAt = Math.min(now() + 5 * MINUTE, number(permit.expires_at));
+      await connection.query(
+        'insert into cpi_private.account_provider_signups(token_hash,provider,identity_hash,permit_hash,country,payload_encrypted,expires_at) values($1,$2,$3,$4,$5,$6,$7)',
+        [
+          hash,
+          provider,
+          identityHash,
+          permitHash,
+          context.country,
+          crypto.seal({ address, appleRefresh: appleRefresh ?? null }, 'identity-signup:' + hash),
+          expiresAt,
+        ],
+      );
+      return { status: 'signup_available', signupToken };
+    });
+  }
+  async function createProviderAccount(
+    connection: SqlConnection,
+    proof: {
+      provider: NativeIdentityProvider;
+      identityHash: string;
+      address: string;
+      appleRefresh?: string;
+      displayName?: string;
+      permitHash: string;
+      nonceHash: string;
+      offerProfile?: boolean;
+    },
+  ) {
+    if (!nativeSignup) throw new AccountIssuerError(503);
+    const { provider, identityHash, address, appleRefresh, permitHash, nonceHash } = proof;
+    const permit = await permittedHash(connection, permitHash);
+    const subject = await nativeSignup.directory.create(connection, address, identityHash);
+    if (!subject) return { status: 'link_required' };
+    await connection.query(
+      'insert into cpi_private.profile_owners(user_id) values($1::uuid) on conflict do nothing',
+      [subject],
+    );
+    await owner(connection, subject);
+    const profile = (
+      await connection.query(
+        'insert into cpi_private.profiles_private(user_id,privacy_context,context_updated_at) values($1::uuid,$2,now()) on conflict do nothing returning user_id',
+        [subject, permit.privacy_context],
+      )
+    ).rows[0];
+    if (profile)
+      await connection.query(
+        "insert into cpi_private.consent_events(user_id,purpose,decision,policy_version,jurisdiction) values($1::uuid,'account','granted',$2,$3)",
+        [subject, policy.version, permit.country],
+      );
+    if (!(await attachProvider(connection, provider, identityHash, subject, appleRefresh)))
+      throw new AccountIssuerError(409);
+    await rememberDisplayName(connection, subject, proof.displayName);
+    const result = await providerTicket(connection, subject, permitHash, nonceHash);
+    return profile && proof.offerProfile ? { ...result, offerProfile: true } : result;
+  }
+  async function signupIdentity(input: unknown, context: AccountRequestContext) {
+    if (!nativeSignup) throw new AccountIssuerError(503);
+    if (!exactObject(input, ['schemaVersion', 'signupToken']) || input.schemaVersion !== 1)
+      throw new AccountIssuerError();
+    if (!context.country || !policy.countries[context.country]) throw new AccountIssuerError(403);
+    const hash = digest('identity-signup', token(input.signupToken));
+    return sqlTransaction(database, async (connection) => {
+      // A failed transaction leaves the proof available for retry. A successful one consumes it.
+      const row = (
+        await connection.query(
+          'delete from cpi_private.account_provider_signups where token_hash=$1 and country=$2 and expires_at>$3 returning *',
+          [hash, context.country, now()],
+        )
+      ).rows[0];
+      if (!row || !isNativeIdentityProvider(row.provider)) throw new AccountIssuerError(410);
+      const provider = row.provider;
+      const identityHash = str(row.identity_hash);
+      const permitHash = str(row.permit_hash);
+      await lockProvider(connection, identityHash);
+      const linked = await linkedOwner(connection, provider, identityHash);
+      if (linked) return providerTicket(connection, linked, permitHash, hash);
+
+      const data = crypto.open(str(row.payload_encrypted), 'identity-signup:' + hash);
+      if (
+        !isObject(data) ||
+        typeof data.address !== 'string' ||
+        (provider === 'apple' && typeof data.appleRefresh !== 'string')
+      )
+        throw new AccountIssuerError(503);
+      if (!nativeSignup.emails[provider].includes(data.address)) throw new AccountIssuerError(403);
+      return createProviderAccount(connection, {
+        provider,
+        identityHash,
+        address: data.address,
+        appleRefresh: provider === 'apple' ? str(data.appleRefresh) : undefined,
+        permitHash,
+        nonceHash: hash,
+      });
+    });
+  }
+  async function providerLinkProof(
+    linkToken: unknown,
+    context: AccountRequestContext,
+  ): Promise<ProviderLinkProof> {
+    if (!directEntry || !nativeSignup || context.country !== 'BG')
+      throw new AccountIssuerError(403);
+    const hash = digest('identity-link', token(linkToken));
+    return sqlTransaction(database, async (connection) => {
+      const row = (
+        await connection.query(
+          'select * from cpi_private.account_provider_signups where token_hash=$1 and country=$2 and expires_at>$3',
+          [hash, context.country, now()],
+        )
+      ).rows[0];
+      if (!row || !isNativeIdentityProvider(row.provider)) throw new AccountIssuerError(410);
+      const data = crypto.open(str(row.payload_encrypted), 'identity-link:' + hash);
+      if (
+        !isObject(data) ||
+        typeof data.address !== 'string' ||
+        typeof data.subject !== 'string' ||
+        !nativeSignup.emails[row.provider].includes(data.address)
+      )
+        throw new AccountIssuerError(410);
+      const identityHash = str(row.identity_hash);
+      const existing = await nativeSignup.directory.lookup(connection, data.address, identityHash);
+      if (existing?.subject !== data.subject) throw new AccountIssuerError(410);
+      return {
+        provider: row.provider,
+        identityHash,
+        address: data.address,
+        subject: data.subject,
+        permit: token(data.permit),
+        appleRefresh: row.provider === 'apple' ? str(data.appleRefresh) : undefined,
+        displayName: typeof data.displayName === 'string' ? data.displayName : undefined,
+      };
+    });
+  }
+  async function requestProviderLinkCode(input: unknown, context: AccountRequestContext) {
+    if (!exactObject(input, ['schemaVersion', 'linkToken']) || input.schemaVersion !== 1)
+      throw new AccountIssuerError();
+    const link = await providerLinkProof(input.linkToken, context);
+    return requestCode(
+      { schemaVersion: 1, email: link.address, eligibilityPermit: link.permit },
+      context,
+      undefined,
+      link,
+    );
+  }
+  async function verifyProviderLinkCode(input: unknown, context: AccountRequestContext) {
+    if (!exactObject(input, ['schemaVersion', 'linkToken', 'code']) || input.schemaVersion !== 1)
+      throw new AccountIssuerError();
+    const link = await providerLinkProof(input.linkToken, context);
+    return verifyCode(
+      { schemaVersion: 1, email: link.address, eligibilityPermit: link.permit, code: input.code },
+      undefined,
+      link,
+    );
+  }
   async function exchange(value: unknown) {
     const hash = digest('ticket', token(value));
+    if (stagingTestEmails.size) {
+      const subject = await sqlTransaction(
+        database,
+        async (connection) =>
+          (
+            await connection.query(
+              'select user_id from cpi_private.account_tickets where token_hash=$1',
+              [hash],
+            )
+          ).rows[0]?.user_id,
+      );
+      if (typeof subject !== 'string' || !(await isStagingTestAccount(subject)))
+        throw new AccountIssuerError(403);
+    }
     return sqlTransaction(database, async (connection) => {
       const subject = (
         await connection.query(
@@ -519,6 +1053,20 @@ export function createAccountIssuer(options: {
   }
   async function refresh(value: unknown) {
     const hash = digest('refresh', token(value));
+    if (stagingTestEmails.size) {
+      const subject = await sqlTransaction(
+        database,
+        async (connection) =>
+          (
+            await connection.query(
+              'select f.user_id from cpi_private.account_families f join cpi_private.account_refresh_tokens r on r.family_id=f.id where r.token_hash=$1',
+              [hash],
+            )
+          ).rows[0]?.user_id,
+      );
+      if (typeof subject !== 'string' || !(await isStagingTestAccount(subject)))
+        throw new AccountIssuerError(403);
+    }
     const result = await sqlTransaction(database, async (connection) => {
       const found = (
         await connection.query(
@@ -658,11 +1206,40 @@ export function createAccountIssuer(options: {
         [input.subject, now()],
       );
     });
+    if (options.identity) {
+      const row = await sqlTransaction(
+        database,
+        async (connection) =>
+          (
+            await connection.query(
+              "select apple_refresh_encrypted from cpi_private.account_provider_links where user_id=$1::uuid and provider='apple'",
+              [input.subject],
+            )
+          ).rows[0],
+      );
+      if (row) {
+        const refresh = crypto.open(
+          str(row.apple_refresh_encrypted),
+          'apple-identity:' + input.subject,
+        );
+        await options.identity.revokeApple(str(refresh), input.signal);
+      }
+    }
     return { status: 'revoked', subject: input.subject, operationId: input.operationId };
   }
   async function maintenance() {
     await sqlTransaction(database, async (connection) => {
       // Only brief retry envelopes survive rotation. Remove expired PII payloads promptly.
+      if (options.identity)
+        await connection.query(
+          'delete from cpi_private.account_provider_challenges where expires_at<$1',
+          [now()],
+        );
+      if (nativeSignup)
+        await connection.query(
+          'delete from cpi_private.account_provider_signups where expires_at<$1',
+          [now()],
+        );
       await connection.query('delete from cpi_private.account_challenges where expires_at<$1', [
         now(),
       ]);
@@ -689,12 +1266,18 @@ export function createAccountIssuer(options: {
   }
   return {
     eligibility,
+    beginIdentity,
+    completeIdentity,
+    signupIdentity,
+    requestProviderLinkCode,
+    verifyProviderLinkCode,
     requestCode,
     verifyCode,
     exchange,
     refresh,
     revoke,
     authenticate,
+    isStagingTestAccount,
     reauthProof,
     verifyReauthentication,
     revokeAllSessions,

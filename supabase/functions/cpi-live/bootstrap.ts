@@ -1,9 +1,11 @@
 import pg from 'pg';
+import { createAppleSandboxVerifier } from '../../../packages/server-core/src/apple-sandbox-verifier.ts';
 import { createBoundedAppleApiClient } from '../../../packages/server-core/src/apple-api-client.ts';
 import { readLiveConfiguration } from '../../../packages/server-core/src/live-configuration.ts';
 import { createProjectSqlPool } from '../../../packages/server-core/src/supabase-database.ts';
 import { privateCryptography } from '../../../packages/server-core/src/private-services.ts';
 import { createAccountIssuer } from '../../../packages/server-core/src/account-issuer.ts';
+import { createNativeIdentity } from '../../../packages/server-core/src/native-identity.ts';
 import {
   createResendAccountMailer,
   createSupabaseAccountDirectory,
@@ -46,18 +48,28 @@ export function createCpiLiveFunction(env: (name: string) => string | undefined)
         config.databaseCa,
       );
       const crypto = privateCryptography(config.pepper, config.encryptionKey);
+      const directory = createSupabaseAccountDirectory({
+        url: config.url,
+        serviceKey: config.serviceKey,
+        database,
+      });
       const issuer = createAccountIssuer({
         database,
         crypto,
         policy: config.policy,
-        directory: createSupabaseAccountDirectory({
-          url: config.url,
-          serviceKey: config.serviceKey,
-          database,
-        }),
+        identity: config.nativeIdentity ? createNativeIdentity(config.nativeIdentity) : undefined,
+        directory,
+        nativeSignup: config.nativeIdentity?.signupEmails
+          ? {
+              directory: directory.providerSignup,
+              emails: config.nativeIdentity.signupEmails,
+              directEntry: config.nativeIdentity.directEntry,
+            }
+          : undefined,
         mailer: createResendAccountMailer({ apiKey: config.mailKey, from: config.mailFrom }),
+        stagingTestEmails: config.stagingTestEmails,
       });
-      const googleToken = config.purchasesEnabled
+      const googleToken = config.purchasePlatforms.includes('android')
         ? createGooglePlayAccessToken({
             clientEmail: config.googleClientEmail!,
             privateKey: config.googlePrivateKey!,
@@ -70,7 +82,7 @@ export function createCpiLiveFunction(env: (name: string) => string | undefined)
             accessToken: googleToken,
           })
         : undefined;
-      const appleApi = config.purchasesEnabled
+      const appleApi = config.purchasePlatforms.includes('ios')
         ? createBoundedAppleApiClient({
             signingKey: config.applePrivateKey!,
             keyId: config.appleKeyId!,
@@ -79,9 +91,13 @@ export function createCpiLiveFunction(env: (name: string) => string | undefined)
             environment: config.purchaseEnvironment,
           })
         : null;
+      const appleSignedVerifier = config.appleSandboxVerifierKey
+        ? createAppleSandboxVerifier(config.appleSandboxVerifierKey)
+        : undefined;
       const appleJobs = appleApi
         ? createApplePurchaseJobs({
             roots: [APPLE_ROOT_G3],
+            signedVerifier: appleSignedVerifier,
             bundleId: 'com.georgicole.crystalpath.infinity',
             appleAppId: 6831790531,
             environment: config.purchaseEnvironment,
@@ -98,6 +114,7 @@ export function createCpiLiveFunction(env: (name: string) => string | undefined)
       const appleVerify = appleApi
         ? createApplePurchaseVerifier({
             roots: [APPLE_ROOT_G3],
+            signedVerifier: appleSignedVerifier,
             bundleId: 'com.georgicole.crystalpath.infinity',
             appleAppId: 6831790531,
             environment: config.purchaseEnvironment,
@@ -128,6 +145,7 @@ export function createCpiLiveFunction(env: (name: string) => string | undefined)
         rateLimit: createDurableRateLimit(database, crypto),
         rewardsEnabled: config.rewardsEnabled,
         purchasesEnabled: config.purchasesEnabled,
+        purchasePlatforms: config.purchasePlatforms,
         commerce: createCommerceService({
           database,
           products: config.products,

@@ -1,5 +1,5 @@
 /** Public console identifiers confirmed by the owner on 7 November 2026. No credentials. */
-export const PUBLISHER = Object.freeze({
+export const PUBLISHER = /* @__PURE__ */ Object.freeze({
   applicationId: 'com.georgicole.crystalpath.infinity',
   appleTeamId: 'C97T2A5255',
   appleAppId: '6831790531',
@@ -16,7 +16,7 @@ export const PUBLISHER = Object.freeze({
   },
 });
 /** Google's official demonstration inventory; used for every non-production build. */
-export const DEMO_ADMOB = Object.freeze({
+export const DEMO_ADMOB = /* @__PURE__ */ Object.freeze({
   android: {
     appId: 'ca-app-pub-3940256099942544~3347511713',
     rewarded: 'ca-app-pub-3940256099942544/5224354917',

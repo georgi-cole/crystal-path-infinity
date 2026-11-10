@@ -1,4 +1,4 @@
-import type { SessionTransport } from './session-owner';
+import { RefreshCredentialRejected, type SessionTransport } from './session-owner';
 
 type Fetcher = typeof fetch;
 
@@ -37,28 +37,38 @@ export function createSessionTransport(
     endpoint: 'exchange' | 'refresh' | 'revoke',
     payload: object,
   ): Promise<unknown> {
-    let response: Response;
+    const controller = new AbortController();
+    const timeout = endpoint === 'refresh' ? setTimeout(() => controller.abort(), 10_000) : null;
     try {
-      response = await fetcher(base.origin + path + '/session/' + endpoint, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', accept: 'application/json' },
-        body: JSON.stringify({ schemaVersion: 1, ...payload }),
-        credentials: 'omit',
-        redirect: 'error',
-        referrerPolicy: 'no-referrer',
-        cache: 'no-store',
-      });
-    } catch {
+      let response: Response;
+      try {
+        response = await fetcher(base.origin + path + '/session/' + endpoint, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', accept: 'application/json' },
+          body: JSON.stringify({ schemaVersion: 1, ...payload }),
+          credentials: 'omit',
+          redirect: 'error',
+          referrerPolicy: 'no-referrer',
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+      } catch {
+        throw new Error('Account session service unavailable.');
+      }
+      if (endpoint === 'refresh' && response.status === 401) {
+        const failure = (await response.json().catch(() => null)) as { code?: unknown } | null;
+        if (failure?.code === 'invalid_code') throw new RefreshCredentialRejected();
+      }
+      if (response.ok) {
+        try {
+          return (await response.json()) as unknown;
+        } catch {
+          // Malformed responses share the same redacted error as a failed request.
+        }
+      }
       throw new Error('Account session service unavailable.');
-    }
-    if (!response.ok) {
-      // Do not forward response text, account existence, tokens, or raw provider errors.
-      throw new Error('Account session service unavailable.');
-    }
-    try {
-      return (await response.json()) as unknown;
-    } catch {
-      throw new Error('Account session service unavailable.');
+    } finally {
+      if (timeout !== null) clearTimeout(timeout);
     }
   }
 

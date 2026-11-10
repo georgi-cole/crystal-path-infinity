@@ -1,10 +1,18 @@
-import type { SqlPool } from './database.ts';
+import type { SqlConnection, SqlPool } from './database.ts';
 import { isObject, providerJson, sqlTransaction } from './private-services.ts';
 
 export interface AccountDirectory {
   /** Called only after the server has checked an unexpired OTP. */
   verifiedEmail(this: void, email: string): Promise<string>;
   emailForSubject(this: void, subject: string): Promise<string>;
+}
+export interface ProviderSignupDirectory {
+  lookup(
+    connection: SqlConnection,
+    email: string,
+    marker: string,
+  ): Promise<{ subject: string; matchesProvider: boolean } | null>;
+  create(connection: SqlConnection, email: string, marker: string): Promise<string | null>;
 }
 export interface AccountMailer {
   send(
@@ -18,7 +26,7 @@ export function createSupabaseAccountDirectory(options: {
   serviceKey: string;
   database: SqlPool;
   fetcher?: typeof fetch;
-}): AccountDirectory {
+}): AccountDirectory & { providerSignup: ProviderSignupDirectory } {
   const url = new URL(options.url);
   if (
     url.protocol !== 'https:' ||
@@ -46,7 +54,45 @@ export function createSupabaseAccountDirectory(options: {
       return typeof row?.id === 'string' && uuid.test(row.id) ? row.id : null;
     });
   }
+  const providerSignup: ProviderSignupDirectory = {
+    async lookup(connection, email, marker) {
+      const { rows } = await connection.query(
+        'select subject, matches_provider from cpi_private.account_provider_signup_owner($1,$2)',
+        [email, marker],
+      );
+      const [row] = rows;
+      if (!row) return null;
+      if (rows.length !== 1 || typeof row.subject !== 'string' || !uuid.test(row.subject))
+        throw new Error('Ambiguous account directory result');
+      return { subject: row.subject, matchesProvider: row.matches_provider === true };
+    },
+    async create(connection, email, marker) {
+      const existing = await providerSignup.lookup(connection, email, marker);
+      if (existing) return existing.matchesProvider ? existing.subject : null;
+      try {
+        await providerJson(
+          url.origin + '/auth/v1/admin/users',
+          {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              email,
+              email_confirm: true,
+              app_metadata: { cpi_provider_signup: marker },
+            }),
+          },
+          options.fetcher,
+        );
+      } catch {
+        // A lost response or concurrent email signup is resolved by the protected lookup.
+      }
+      const resolved = await providerSignup.lookup(connection, email, marker);
+      if (resolved) return resolved.matchesProvider ? resolved.subject : null;
+      throw new Error('Account directory unavailable');
+    },
+  };
   return {
+    providerSignup,
     async verifiedEmail(email) {
       const existing = await lookup(email);
       if (existing) return existing;

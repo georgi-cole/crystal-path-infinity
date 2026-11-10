@@ -1,129 +1,65 @@
+.cpi-ranked-lobby {
+  display: grid;
+  place-items: center;
+  padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+    max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+}
+
 .cpi-ranked-scene {
   display: grid;
-  gap: 1rem;
-  width: 100%;
+  gap: 0.65rem;
   color: var(--cpi-text);
-  padding-block-end: max(1rem, env(safe-area-inset-bottom, 0px));
 }
+
+.cpi-ranked-lobby .cpi-ranked-scene {
+  width: min(100%, 28rem);
+  margin: 0;
+}
+
+.cpi-ranked-game .cps-content {
+  min-height: 0;
+  height: 100dvh;
+}
+
+.cpi-ranked-game .cps-board {
+  min-height: 0;
+}
+
+.cpi-ranked-scene p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.cpi-ranked-scene h1 {
+  margin: 0;
+}
+
 .cpi-ranked-scene button {
-  min-height: 3rem;
+  min-height: 2.75rem;
   border: 1px solid var(--cpi-glass-edge);
-  border-radius: 0.85rem;
-  padding: 0.75rem 1rem;
+  border-radius: 0.65rem;
+  padding: 0.55rem 0.8rem;
   background: var(--cpi-glass);
   color: var(--cpi-text);
   font: inherit;
-  line-height: 1.35;
   cursor: pointer;
 }
+
 .cpi-ranked-scene button:disabled {
   opacity: 0.48;
   cursor: default;
 }
-.cpi-ranked-scene button:focus-visible {
-  outline: 3px solid var(--cpi-focus);
-  outline-offset: 3px;
-}
-.cpi-ranked-heading {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-.cpi-ranked-heading h2 {
-  margin: 0;
-  font-family: var(--cpi-font-display);
-}
-.cpi-ranked-scene p {
-  margin: 0;
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-}
-.cpi-ranked-status {
-  border-inline-start: 3px solid var(--cpi-ice);
-  padding: 0.65rem 0.9rem;
-  background: var(--cpi-surface);
-}
-.cpi-ranked-resources {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem 1.1rem;
-  font-variant-numeric: tabular-nums;
-}
-.cpi-ranked-row {
-  margin: 0;
-  text-align: center;
-  overflow-wrap: anywhere;
-}
-.cpi-ranked-bridge {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 1rem;
-  perspective: 30rem;
-  padding-block: 0.5rem;
-}
-.cpi-ranked-scene .cpi-ranked-pane {
-  display: grid;
-  place-items: center;
-  gap: 1rem;
-  min-height: 9rem;
-  border-radius: 1rem;
-  background: linear-gradient(135deg, rgb(130 223 241 / 15%), rgb(172 154 255 / 12%));
-  border-color: var(--cpi-ice);
-  box-shadow: inset 0 0 2rem rgb(130 223 241 / 6%);
-}
-.cpi-ranked-pane span {
-  font-size: 2rem;
-  color: var(--cpi-ice);
-}
-.cpi-ranked-scene .cpi-ranked-pane-revealed {
-  border-color: var(--cpi-safe);
-  box-shadow: inset 0 0 1.5rem rgb(103 239 197 / 18%);
-}
-.cpi-ranked-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.65rem;
-}
-.cpi-ranked-actions button {
-  flex: 1 1 10rem;
-}
+
 .cpi-ranked-scene .cpi-ranked-primary {
   border-color: var(--cpi-ice);
 }
-.cpi-ranked-scene .cpi-ranked-end {
-  color: var(--cpi-risk);
+
+.cpi-ranked-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
-.cpi-ranked-effects h3 {
-  font-size: 1rem;
-  margin: 0 0 0.4rem;
-}
-.cpi-ranked-effects ul {
-  margin: 0;
-  padding-inline-start: 1.3rem;
-}
-.cpi-ranked-confirm {
-  display: grid;
-  gap: 0.75rem;
-  padding: 1rem;
-  border: 1px solid var(--cpi-warning);
-  border-radius: 1rem;
-  background: var(--cpi-surface);
-}
-.cpi-ranked-confirm h3 {
-  margin: 0;
-}
-@media (max-width: 340px) {
-  .cpi-ranked-bridge {
-    gap: 0.5rem;
-  }
-  .cpi-ranked-scene .cpi-ranked-pane {
-    padding-inline: 0.4rem;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .cpi-ranked-bridge {
-    perspective: none;
-  }
+
+.cpi-ranked-actions button {
+  flex: 1 1 9rem;
 }

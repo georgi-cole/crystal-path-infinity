@@ -129,8 +129,8 @@ export function createProfileHandler(options: ProfileApiOptions) {
         return reply({ code: 'invalid_request' }, 400);
       if (
         endpoint === 'save' &&
-        (typeof input.username !== 'string' ||
-          input.username.length > 96 ||
+        ((input.username !== null &&
+          (typeof input.username !== 'string' || input.username.length > 96)) ||
           (input.countryCode !== null &&
             (typeof input.countryCode !== 'string' || !/^[A-Z]{2}$/.test(input.countryCode))) ||
           typeof input.analyticsAction !== 'string' ||

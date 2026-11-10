@@ -30,3 +30,13 @@ Issue: [#18](https://github.com/georgi-cole/crystal-path-infinity/issues/18). De
 ## Reference
 
 Supabase Auth docs: https://supabase.com/docs/guides/auth/auth-email-passwordless, https://supabase.com/docs/guides/auth/rate-limits, https://supabase.com/docs/guides/auth/auth-hooks/before-user-created-hook.
+
+## 9 November 2026 · Sign-in and Profile test candidate
+
+The live account client uses one flow for account creation and sign-in. It asks for age and country, then email, then the six-digit code. A corrected email can reuse the valid eligibility permit and still observes the resend delay. A signed-in player can tap Play from Profile. Nickname, ranking country and optional analytics are separate from sign-in under Edit profile. Guest play remains available before and during account setup.
+
+The native app tries to restore an existing protected session after the app mounts or first goes online. A temporary failure leaves the credential protected and offers a retry. A definite refresh rejection from the configured gateway lets the player sign in again. The native build selects its protected storage using the account gateway. The existing TestFlight staging gateway keeps its earlier storage key. Other gateways have separate storage, including the production gateway. The public account portal continues to use a temporary session in memory.
+
+The short account flow follows the separation of play, online save and nickname editing in [Subway Surfers](https://sybo.helpshift.com/hc/en/5-subway-surfers/faq/161-transfer-my-game-progress-to-another-device/) and the remembered email-code pattern in [Supercell ID](https://ingame.support.supercell.com/boom-beach/en/articles/supercell-id-about.html). The existing server continues to check age and jurisdiction before email collection.
+
+The iPhone review candidate adds Apple and Google under the same eligibility check. [Staging provider sign-in](CPI-018-staging-provider-sign-in.md).

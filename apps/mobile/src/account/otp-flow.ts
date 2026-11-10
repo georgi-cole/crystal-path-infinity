@@ -137,6 +137,14 @@ export class AccountOtpFlow {
     return ticket;
   }
 
+  identityPermit(): string | null {
+    return this.snapshotValue.step === 'eligible' &&
+      this.permit &&
+      this.permit.expiresAt > this.now()
+      ? this.permit.permit
+      : null;
+  }
+
   private update(step: AccountFlowStep, problem: AccountFlowProblem = null): void {
     this.snapshotValue = {
       step,
@@ -154,6 +162,13 @@ export class AccountOtpFlow {
     this.cooldownUntil = 0;
     this.otpExpiresAt = 0;
     this.update('guest');
+  }
+
+  changeEmail(): void {
+    if (this.snapshotValue.step !== 'code') return;
+    this.email = null;
+    this.otpExpiresAt = 0;
+    this.update('eligible');
   }
 
   offline(): void {

@@ -143,6 +143,12 @@ Team ID `C97T2A5255` не замества Issuer ID. Следвай [Apple: Gen
 
 Подписването изисква Apple Distribution сертификат с частния му ключ във формат P12, App Store Connect provisioning profile за Crystal Path и отделен App Store Connect ключ за качване. Записват се като CPI_IOS_DISTRIBUTION_P12_BASE64, CPI_IOS_DISTRIBUTION_P12_PASSWORD, CPI_IOS_PROFILE_BASE64, CPI_ASC_UPLOAD_KEY_BASE64, CPI_ASC_UPLOAD_KEY_ID и CPI_ASC_UPLOAD_ISSUER_ID в средата cpi-ios-testflight, ограничена до main. Ключът за проверка на покупки остава в Supabase staging. Workflow не публикува подписани артефакти в публичното GitHub хранилище.
 
+**Директна регистрация в iPhone beta · 9 ноември 2026 г.** Настрой `CPI_STAGING_PROVIDER_SIGNUP_EMAILS` само в изолирания staging проект. Стойността е JSON обект с масиви `apple` и `google` за одобрените тестови адреси. Приложи миграцията `20261109000200_native_provider_signup.sql` преди разгръщане на Edge Function. Съществуващите акаунти запазват връзките и покупките си. [Поток и проверки](decisions/CPI-018-staging-provider-sign-in.md).
+
+**Опростен iPhone beta вход · 9 ноември 2026 г.** Приложи и `20261109000300_direct_provider_entry.sql`. Активирай `CPI_STAGING_DIRECT_PROVIDER_ENTRY=true` само за изолирания staging проект, когато списъците съдържат индивидуално одобрени пълнолетни тестери. Apple и Google се отварят веднага. Новият акаунт може да пропусне профила. При съвпадащ имейл един код потвърждава съществуващия акаунт в същия поток, преди да се свърже доставчикът. Публичната политика за допустимост остава отделна.
+
+**Вход с Apple и Google · 9 ноември 2026 г.** iPhone review сборката използва отделна среда за подписване `cpi-ios-staging-review`, достъпна само от `codex/ios-sign-in-staging`. Включи `review_source=true` и подай точния SHA след успешните проверки на PR. Архивът проверява Apple entitlement и Google callback. Експортът е TestFlight Internal Only, а акаунтите и StoreKit използват staging gateway. [Условия и проверки](decisions/CPI-018-staging-provider-sign-in.md).
+
 **Проверка на 8 ноември 2026 г.** [GitHub Actions](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/42490556975) успешно компилира и провери неподписан iPhone архив за PR #87. Създадена е групата [Crystal Path Internal QA](https://appstoreconnect.apple.com/teams/784da51c-4744-46ce-83d3-dfca3ce1152c/apps/6831790531/testflight/groups/5bfefb85-8274-4d40-a4f8-0b34d935159c) с ръчно добавяне на сборки. Отделната задължителна iOS Simulator проверка на PR #87 не премина при отваряне на Settings поради изтекло време за преминаване на приложението във фонов режим. Подписването, качването и тестът на телефон предстоят след успешни проверки на готовия main и настройването на Apple ключовете.
 
 Apple показва приет Developer Program License Agreement и активни Paid Apps и Free Apps договори. Запазени са английски текстове за двата магазина. Apple 1.0 е с ръчно пускане и категории Games, Puzzle и Casual. Категорията Puzzle в Google Play е запазена и чака подаване за преглед. Първият пакет кредити и първият свят имат бележки за App Review. Снимките на финалната версия, review достъпът до покупките и декларациите за privacy и възраст остават преди подаване.
@@ -160,6 +166,22 @@ Apple показва приет Developer Program License Agreement и акти�
 Временният 24-часов Supabase токен беше ограничен до Edge Functions и Edge Function Secrets на Crystal Path staging. Диагностичните функции са премахнати, а API потвърди отнемането на токена.
 
 **Автоматично Google сверяване · 8 ноември 2026 г.** След първоначалната ръчна проверка срокът на сверяването изтече. Cloudflare отчете, че минутният cron спира преди заявката заради неподдържания режим `redirect: 'error'`. Worker-ът използва `manual` и отхвърля неуспешния HTTP отговор. Версия `f938c86c-bf3f-4ea9-bbca-c57d40b32ad5` е внедрена само в Crystal Path staging. Две поредни автоматични изпълнения обновиха `google.staging` без ръчно извикване. Android и iOS preflight заявките върнаха HTTP 204. Временното логване е изключено. [Режими за пренасочване в Cloudflare Workers](https://developers.cloudflare.com/workers/runtime-apis/request/#properties).
+
+#### Apple Sandbox проверка · 9 ноември 2026 г.
+
+Staging `cpi-live` включва потвърдените 18 Apple и 18 Google Play SKU за двата одобрени пълнолетни акаунта в България. Отделният `crystal-path-staging-apple-verifier` изпълнява Apple SDK 3.1.0 с Apple Root CA G3 и онлайн OCSP. Използва се GET форматът на RFC 5019 за OCSP, защото Apple отказа POST от Workers. Проверка на подписа и срока на отговора остава в Apple SDK. Apple In-App Purchase ключът остава в staging Supabase и подписва Apple API заявките чрез P-256 Web Crypto.
+
+- Worker версия `bcfbb105-4a2f-4b28-b7e1-15b47c698186` прие истински Sandbox `TEST`, отхвърли променен подпис и отказа достъп без отделния сървърен ключ.
+- Apple Sandbox отчете `SUCCESS` за нова подписана `TEST` нотификация към staging gateway. След обновяването периодичната задача обнови `apple.staging` и `google.staging`. Гостът получава `account_required`.
+- В 11:56 ч. българско време TestFlight `0.1.0 (17)` записа една потвърдена Sandbox доставка на Rockmallow. Staging портфейлът потвърди собствеността. Това покрива checkout и доставка на свят. Консуматив и Restore Purchases чакат отделна проверка.
+- Съхранявай различен 32-byte hex `CPI_APPLE_SANDBOX_VERIFIER_KEY` в Worker и staging Supabase. Разгърни `backend/apple-receipt-verifier/wrangler.json` с Wrangler 4.158.0, потвърди Apple `TEST`, после качи `cpi-live` в staging и потвърди успешното сверяване. При нужда върни потвърдения Android-only каталог. iOS checkout изчаква прясна Apple синхронизация, а Android проверява своята независимо.
+- За приемане отвори `0.1.0 (17)` или по-нова вътрешна TestFlight сборка от България и влез с одобрения Crystal Path email. В The Vault купи свят и консуматив и провери доставката след повторно отваряне. Провери Restore Purchases за света и че повторна обработка не добавя втори комплект ресурси. Apple изпълнява TestFlight покупки в Sandbox. [Apple TestFlight покупки](https://developer.apple.com/help/app-store-connect/test-a-beta-version/testing-subscriptions-and-in-app-purchases-in-testflight).
+
+<a id="testflight-build-35"></a>
+
+**TestFlight 0.1.0 (35) · 9 ноември 2026 г.** В 21:59 ч. българско време App Store Connect показа активна вътрешна сборка и 18 продукта с локализация, цена и наличност. Сверяването в staging беше успешно. Ledger-ът съдържаше една потвърдена доставка на свят, който остава отключен, и нула iOS доставки на консумативи.
+
+Впиши се с одобрения staging акаунт в сборка 35. От The Vault отвори заключен свят и направи тестова покупка. В Essentials избери малък пакет, например три подсказки, и провери еднократното начисляване. Използвай Restore Purchases със същия акаунт и потвърди, че светът остава достъпен, а ресурсите не се начисляват отново. Това са проверки на iPhone с Apple Sandbox. [TestFlight покупки](https://developer.apple.com/help/app-store-connect/test-a-beta-version/testing-subscriptions-and-in-app-purchases-in-testflight/).
 
 ### 9. Разгърни сървъра и периодичните задачи
 
@@ -232,3 +254,13 @@ Apple показва приет Developer Program License Agreement и акти�
 **Проверен код `8628bba` · 7 ноември:** [всички CI проверки са успешни](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/42326459276) — 688 mobile, 310 core и 185 server теста; независими конкурентни PostgreSQL заявки; компилация/стартиране на Android и iOS с включени SDK пакети. Снимките са прегледани. Това са development тестове и синтетични provider събития; реални имейли, награди и плащания не са активирани.
 
 Нужно остава действителното настройване на проектите, DNS/mail, store продукти и ключове, country/privacy преглед, родителски/assurance доставчик за контекстите, които го изискват, и реалното приемане на телефони. Тези задачи не се заменят от успешен build.
+
+## Гост реклами в мобилните сборки
+
+**Кандидат за вътрешен тест · 9 ноември 2026 г.** При `rewarded_ads_test=true` TestFlight включва официалната демонстрационна rewarded единица на Google за гостите. За Android тестов APK или iOS тестова сборка в staging използвай `CPI_NATIVE_ADS=true` при генериране и `VITE_GUEST_REWARDED_ADS_TEST=true` при web build. Гост тестът използва локалния опит, докато одобренията за ranked тестови акаунти принадлежат на отделния сървърен поток.
+
+На устройството отвори **Play** като гост, премини ред и изчакай загуба. Провери, че ранно затваряне на рекламата запазва броя. Изгледай демонстрационна реклама и потвърди връщане на същия ред. Повтори до десет награди в един опит. Първите пет задават 200 SP, следващите пет 150 SP. След десетата награда следващата загуба приключва опита. Запиши устройството и номера на сборката. Автоматичните тестове проверяват правилата и записа на наградата, а устройството проверява действителното показване и callback-а на SDK.
+
+**Потвърден iPhone тест · 10 ноември 2026 г.** Собственикът потвърди десетте продължавания като гост в TestFlight 0.1.0 (42) от ревизия 50e1df6. Публичният пакет на GitHub Pages използва профила за играчи с изключени live услуги. Проверката на пакета отхвърля демонстрационните рекламни идентификатори, менюто за тест на мистерии и симулирания портфейл. Отделният QA пакет се изгражда за проверка.
+
+Публичната мобилна конфигурация изисква отделна rewarded единица за всяка платформа от Crystal Path AdMob акаунта. При одобрен release задай идентификатора ѝ в `VITE_GUEST_REWARDED_AD_UNIT_ID` за съответната native сборка, остави `VITE_GUEST_REWARDED_ADS_TEST` изключен и включи native SDK. Гост единицата използва Google инвентар без mediation и локалния callback. Запази SSV единицата и сървърната проверка за официалните опити. Провери ограниченията за неперсонализирани реклами, неизвестна възраст и разрешеното рекламно съдържание за публичната аудитория преди активиране.

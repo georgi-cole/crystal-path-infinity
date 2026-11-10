@@ -64,3 +64,9 @@ TestFlight `0.1.0 (17)` still used the old prism icon and showed a prism on the 
 The iOS storyboard contains a black background. Android uses a transparent icon over its black starting window. The existing Kolequant animation follows on the same background and owns the visible splash. On-device acceptance uses a cold launch and a check of the launcher icon on the new build.
 
 Build 17 showed the clock and signal row above game screens, including Discoveries. The iPhone shell now starts with the status bar hidden and opts into Game Mode through the launch metadata. Safe-area spacing still protects content around the camera cutout and edges. The phone controls Game Mode availability and system gestures. [Apple Game Mode](https://developer.apple.com/documentation/bundleresources/information-property-list/lssupportsgamemode).
+
+## 9 November 2026 · Native touch behavior
+
+The native shell keeps a fixed page scale and disables the iPhone WebView's pinch recognizer. Form fields use a 16 CSS pixel minimum to avoid iOS focus zoom. The game surface suppresses selection and the long-press callout, with normal selection retained for editable fields. Browser accessibility zoom remains available outside the native shell.
+
+The 9 November test candidate also clips horizontal document overflow inside the native shell. The iPhone WebView stops at the page edge and hides its outer scroll indicators. Vertical scrolling stays available where the content is taller than the screen. Device acceptance uses side swipes on Profile, Rankings and Discoveries, then a vertical scroll on a long screen.

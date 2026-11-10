@@ -1,7 +1,30 @@
-import { isObject } from './private-services.ts';
+import { exactObject, isObject } from './private-services.ts';
 import { validateAccountPolicy } from './account-policy.ts';
 import type { AccountPolicy } from './account-policy.ts';
 import type { CommerceProduct } from './commerce-service.ts';
+
+function providerSignupEmails(configured: string | undefined) {
+  if (!configured) return undefined;
+  const value: unknown = JSON.parse(configured);
+  if (!exactObject(value, ['apple', 'google']))
+    throw new Error('Invalid staging provider signup list');
+  function addresses(input: unknown): string[] {
+    if (!Array.isArray(input) || input.length > 4)
+      throw new Error('Invalid staging provider signup list');
+    return (input as unknown[]).map((address) => {
+      if (
+        typeof address !== 'string' ||
+        address.length > 254 ||
+        !/^[A-Za-z0-9.!#$%&'*+/=?^`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?\.[A-Za-z]{2,}$/.test(
+          address,
+        )
+      )
+        throw new Error('Invalid staging provider signup address');
+      return address.toLowerCase();
+    });
+  }
+  return { apple: addresses(value.apple), google: addresses(value.google) };
+}
 
 export function readLiveConfiguration(env: (name: string) => string | undefined) {
   if (env('CPI_LIVE_ENABLED') !== 'true') return null;
@@ -42,6 +65,13 @@ export function readLiveConfiguration(env: (name: string) => string | undefined)
     version: raw.version,
     countries: raw.countries,
   } as AccountPolicy);
+  if (
+    environment === 'staging' &&
+    (Object.keys(policy.countries).length !== 1 ||
+      !policy.countries.BG ||
+      policy.countries.BG.minimumAge < 18)
+  )
+    throw new Error('Staging account policy must be limited to Bulgaria and age 18+');
   const origins = require('CPI_ALLOWED_ORIGINS').split(',');
   if (
     origins.length > 8 ||
@@ -72,7 +102,23 @@ export function readLiveConfiguration(env: (name: string) => string | undefined)
   for (const flag of ['CPI_PURCHASES_ENABLED', 'CPI_REWARDS_ENABLED'])
     if (env(flag) !== 'false' && env(flag) !== 'true')
       throw new Error('Explicit service flags are required');
-  let products: readonly CommerceProduct[] = [];
+  let products: readonly CommerceProduct[] = [],
+    purchasePlatforms: readonly ('android' | 'ios')[] = [],
+    stagingTestEmails: readonly string[] = [];
+  if (environment === 'staging') {
+    const emails = require('CPI_STAGING_TEST_EMAILS')
+      .split(',')
+      .map((address) => address.trim().toLowerCase());
+    const emailPattern =
+      /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\.[a-z]{2,}$/;
+    if (
+      emails.length !== 2 ||
+      new Set(emails).size !== 2 ||
+      emails.some((address) => !emailPattern.test(address))
+    )
+      throw new Error('Staging requires exactly two test accounts');
+    stagingTestEmails = emails;
+  }
   if (purchasesEnabled) {
     const value: unknown = JSON.parse(require('CPI_COMMERCE_PRODUCTS'));
     if (
@@ -84,19 +130,66 @@ export function readLiveConfiguration(env: (name: string) => string | undefined)
     )
       throw new Error('Confirmed store mappings are required');
     products = value.products as CommerceProduct[];
+    const platforms = new Set<string>();
+    for (const product of value.products) {
+      if (!isObject(product) || (product.platform !== 'android' && product.platform !== 'ios'))
+        throw new Error('Invalid purchase platform mapping');
+      platforms.add(product.platform);
+    }
+    if (!platforms.size || (environment === 'production' && platforms.size !== 2))
+      throw new Error('Production purchases require both store platforms');
+    if (environment === 'staging') {
+      if (!platforms.has('android')) throw new Error('Staging purchases require Google Play');
+    } else if (environment !== 'production') {
+      throw new Error('Purchases may only be enabled in staging or production');
+    }
+    purchasePlatforms = [...platforms] as ('android' | 'ios')[];
   }
+  const appleSandboxVerifierKey =
+    environment === 'staging' && purchasePlatforms.includes('ios')
+      ? require('CPI_APPLE_SANDBOX_VERIFIER_KEY')
+      : undefined;
+  if (
+    appleSandboxVerifierKey &&
+    (!/^[a-f0-9]{64}$/.test(appleSandboxVerifierKey) || keys.includes(appleSandboxVerifierKey))
+  )
+    throw new Error('Independent Apple Sandbox verifier key is required');
   const purchaseEnvironment =
     environment === 'production' ? ('production' as const) : ('sandbox' as const);
   return {
     projectRef,
     url,
     environment,
+    // Staging is opt-in and this project is pinned independently of client flags.
+    nativeIdentity:
+      environment === 'staging' &&
+      projectRef === 'yfntwewvfsvljxcztoyp' &&
+      env('CPI_NATIVE_IDENTITY_ENABLED') === 'true'
+        ? {
+            googleClientId: require('CPI_IDENTITY_GOOGLE_IOS_CLIENT_ID'),
+            signupEmails: providerSignupEmails(env('CPI_STAGING_PROVIDER_SIGNUP_EMAILS')),
+            directEntry:
+              env('CPI_STAGING_DIRECT_PROVIDER_ENTRY') === 'true' &&
+              Object.keys(policy.countries).length === 1 &&
+              policy.countries.BG?.minimumAge === 18 &&
+              policy.countries.BG.neutralAgeScreenAllowed,
+            apple: {
+              clientId: 'com.georgicole.crystalpath.infinity',
+              teamId: 'C97T2A5255',
+              keyId: require('CPI_IDENTITY_APPLE_KEY_ID'),
+              privateKey: require('CPI_IDENTITY_APPLE_PRIVATE_KEY').replaceAll('\\n', '\n'),
+            },
+          }
+        : undefined,
     policy,
     origins,
     products,
+    purchasePlatforms,
+    stagingTestEmails,
     purchasesEnabled,
     rewardsEnabled,
     purchaseEnvironment,
+    appleSandboxVerifierKey,
     databaseUrl: require('CPI_DATABASE_URL'),
     databaseCa: env('CPI_DATABASE_CA')?.replaceAll('\\n', '\n'),
     serviceKey: require('SUPABASE_SERVICE_ROLE_KEY'),
@@ -106,10 +199,14 @@ export function readLiveConfiguration(env: (name: string) => string | undefined)
     workerKey: keys[3],
     mailKey: require('CPI_RESEND_API_KEY'),
     mailFrom: require('CPI_MAIL_FROM'),
-    ...(purchasesEnabled
+    ...(purchasesEnabled && purchasePlatforms.includes('android')
       ? {
           googleClientEmail: require('CPI_GOOGLE_CLIENT_EMAIL'),
           googlePrivateKey: require('CPI_GOOGLE_PRIVATE_KEY').replaceAll('\\n', '\n'),
+        }
+      : {}),
+    ...(purchasesEnabled && purchasePlatforms.includes('ios')
+      ? {
           appleIssuerId: require('CPI_APPLE_ISSUER_ID'),
           appleKeyId: require('CPI_APPLE_KEY_ID'),
           applePrivateKey: require('CPI_APPLE_PRIVATE_KEY').replaceAll('\\n', '\n'),

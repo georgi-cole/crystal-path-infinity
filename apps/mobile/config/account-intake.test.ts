@@ -135,6 +135,21 @@ describe('CPI-018 privacy-gated OTP pre-account flow', () => {
     expect(calls).toHaveLength(3);
   });
 
+  it('fixes a mistyped email without rechecking age or bypassing the resend delay', async () => {
+    const { flow, clock, calls } = fixture();
+    await flow.checkEligibility(true);
+    await flow.requestCode('typo@example.org', true);
+    flow.changeEmail();
+    expect(flow.snapshot()).toMatchObject({ step: 'eligible', codeExpiresAt: null });
+    await flow.requestCode('player@example.org', true);
+    expect(flow.snapshot().problem).toBe('cooldown');
+    expect(calls).toEqual(['eligibility', 'request:typo@example.org:' + permit]);
+    clock(61_000);
+    await flow.requestCode('player@example.org', true);
+    expect(flow.snapshot().step).toBe('code');
+    expect(calls.at(-1)).toBe('request:player@example.org:' + permit);
+  });
+
   it('fails closed when the eligibility grant or code expires', async () => {
     const { flow, clock } = fixture();
     await flow.checkEligibility(true);

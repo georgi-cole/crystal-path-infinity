@@ -1,3 +1,4 @@
+import { LIVE_RULESET_VERSION } from '@crystal-path-infinity/game-core';
 import { BalanceTuner } from './balance-tuner';
 import { MysteryJournal } from './mystery-discovery';
 import type { ReactNode } from 'react';
@@ -7,13 +8,11 @@ import { AudioSettingsControls } from './audio-settings-controls';
 import { AccountEntry } from './account/account-entry';
 import type { AccountEntryBinding } from './account/account-entry';
 import { ProfileEditor } from './account/profile-editor';
-import type { ProfileClient } from './account/profile-client';
+import { SignedInProfile } from './account/profile-menu';
+import type { OwnerProfile, ProfileClient } from './account/profile-client';
 import { LeaderboardView } from './leaderboard/leaderboard-view';
 import type { LeaderboardClient } from './leaderboard/leaderboard-client';
-import { RankedScene } from './ranked/ranked-scene';
 import type { RankedClient } from './ranked/ranked-client';
-import type { RewardFlow } from './rewards/reward-flow';
-import type { SavedPendingClient } from './ranked/saved-pending-client';
 import { AccountControls } from './account/account-controls';
 import type { AccountControlsClient } from './account/account-controls-model';
 import type { NameReportClient } from './leaderboard/name-report-client';
@@ -247,11 +246,15 @@ export interface MainMenuProps {
   leaderboardCountries?: readonly { countryCode: string; continentCode: string }[];
   pendingPersonalResult?: boolean;
   rankedClient?: RankedClient | null;
-  rewardFlow?: RewardFlow | null;
-  savedPendingClient?: SavedPendingClient | null;
+  savedRuns?: ReactNode;
   accountControlsClient?: AccountControlsClient | null;
   accountScope?: object | null;
   accountConnected?: boolean;
+  accountName?: string | null;
+  setupProfile?: boolean;
+  onAccountSignedIn?: (offerProfile: boolean) => void;
+  onProfileSaved?: (owner: OwnerProfile) => void;
+  onSkipProfile?: () => void;
   nameReportClient?: NameReportClient | null;
 }
 
@@ -260,14 +263,14 @@ function MenuHeader({
   online,
   onBack,
   accountConnected = false,
-  rankedAvailable = false,
+  accountName,
   utilities,
 }: {
   view: MenuView;
   online: boolean;
   onBack: () => void;
   accountConnected?: boolean;
-  rankedAvailable?: boolean;
+  accountName?: string | null;
   utilities?: ReactNode;
 }) {
   const { t } = useLanguage();
@@ -289,15 +292,15 @@ function MenuHeader({
       <div className="cpi-menu-status" aria-label={t('menu.status')}>
         {QA_TOOLS_ENABLED && <StatusPill>QA</StatusPill>}
         <StatusPill>
-          {t(accountConnected ? 'general.accountConnected' : 'general.guest')}
+          <bdi>
+            {accountConnected
+              ? view === 'profile'
+                ? t('general.profile')
+                : (accountName ?? t('general.player'))
+              : t('general.guest')}
+          </bdi>
         </StatusPill>
-        {(!online || rankedAvailable) && (
-          <StatusPill tone={online ? 'neutral' : 'offline'}>
-            {online
-              ? t(rankedAvailable ? 'general.rankedReady' : 'general.rankedUnavailable')
-              : t('general.offline')}
-          </StatusPill>
-        )}
+        {!online && <StatusPill tone="offline">{t('general.offline')}</StatusPill>}
       </div>
     </header>
   );
@@ -406,12 +409,12 @@ function MenuPanel({
   children,
 }: {
   title: string;
-  eyebrow: string;
+  eyebrow?: string;
   children: ReactNode;
 }) {
   return (
     <section className="cpi-menu-panel" aria-labelledby="cpi-panel-title">
-      <p className="cpi-menu-eyebrow">{eyebrow}</p>
+      {eyebrow && <p className="cpi-menu-eyebrow">{eyebrow}</p>}
       <h1 id="cpi-panel-title" tabIndex={-1} data-menu-heading>
         {title}
       </h1>
@@ -485,11 +488,15 @@ export function MainMenu({
   leaderboardCountries = [],
   pendingPersonalResult = false,
   rankedClient = null,
-  rewardFlow = null,
-  savedPendingClient = null,
+  savedRuns,
   accountControlsClient = null,
   accountScope = null,
   accountConnected = false,
+  accountName,
+  setupProfile = false,
+  onAccountSignedIn,
+  onProfileSaved,
+  onSkipProfile,
   nameReportClient = null,
 }: MainMenuProps) {
   const service = rankedServiceState(online);
@@ -512,7 +519,7 @@ export function MainMenu({
           online={online}
           onBack={onBack}
           accountConnected={accountConnected}
-          rankedAvailable={rankedClient !== null}
+          accountName={accountName}
           utilities={
             view === 'home' ? (
               <HubUtilityControls
@@ -611,41 +618,22 @@ export function MainMenu({
             onReturnToRun={canResumePractice(saved) ? onResume : undefined}
           />
         ) : view === 'play' ? (
-          <MenuPanel title={t('general.play')} eyebrow={t('menu.playEyebrow')}>
-            {rankedClient ? (
-              <RankedScene
-                client={rankedClient}
-                online={online}
-                music={settings.music}
-                onLeave={() => onOpen('home')}
-                rewardFlow={rewardFlow}
-                savedPendingClient={savedPendingClient}
-              />
-            ) : (
-              <>
-                <p>{t('menu.playUnavailable')}</p>
-                <div className="cpi-menu-notice" role="status">
-                  <strong>
-                    {service === 'offline' ? t('menu.youOffline') : t('menu.servicesMissing')}
-                  </strong>
-                  <span>{t('menu.noRankedHere')}</span>
-                </div>
-                <MenuAction
-                  label={t('menu.practiceInstead')}
-                  description={t('menu.practiceNow')}
-                  icon="practice"
-                  variant="primary"
-                  onClick={canResumePractice(saved) ? onResume : onNew}
-                />
-              </>
-            )}
+          <MenuPanel title={t('general.play')}>
+            <p role="status">{t(online ? 'ranked.unavailable' : 'ranked.offline')}</p>
+            <MenuAction
+              label={t('general.practice')}
+              icon="practice"
+              variant="primary"
+              onClick={canResumePractice(saved) ? onResume : onNew}
+            />
           </MenuPanel>
         ) : view === 'rankings' ? (
-          <MenuPanel title={t('general.rankings')} eyebrow={t('menu.rankingsScope')}>
+          <MenuPanel title={t('general.rankings')}>
             {leaderboardClient && (
               <LeaderboardView
                 client={leaderboardClient}
                 online={online}
+                rulesetVersion={LIVE_RULESET_VERSION}
                 countries={leaderboardCountries}
                 pendingPersonalResult={pendingPersonalResult}
                 reportClient={nameReportClient}
@@ -681,31 +669,50 @@ export function MainMenu({
             />
           </MenuPanel>
         ) : view === 'profile' ? (
-          <MenuPanel title={t('general.profile')} eyebrow={t('menu.profileEyebrow')}>
-            {!accountConnected && (
-              <>
-                <div className="cpi-menu-notice" role="status">
-                  <strong>{t('menu.asGuest')}</strong>
-                  <span>{t('menu.noAccount')}</span>
-                </div>
-                <AccountEntry online={online} binding={accountEntry} />
-              </>
-            )}
-            <ProfileEditor client={profileClient} online={online} />
-            {accountConnected && onSignOut && (
-              <MenuAction
-                label={t('account.signOut')}
-                icon="profile"
-                variant="quiet"
-                onClick={() => void onSignOut()}
-              />
-            )}
-            <MenuAction
-              label={t('menu.practiceUnsigned')}
-              icon="practice"
-              onClick={canResumePractice(saved) ? onResume : onNew}
+          accountConnected && !setupProfile ? (
+            <SignedInProfile
+              name={accountName}
+              profileClient={profileClient}
+              identity={accountEntry?.identity}
+              online={online}
+              savedRuns={savedRuns}
+              onSaved={onProfileSaved}
+              onSignOut={onSignOut}
             />
-          </MenuPanel>
+          ) : (
+            <MenuPanel title={t(setupProfile ? 'profile.setupTitle' : 'general.profile')}>
+              {setupProfile ? (
+                <>
+                  <ProfileEditor
+                    client={profileClient}
+                    online={online}
+                    setup
+                    onSaved={onProfileSaved}
+                  />
+                  <MenuAction
+                    label={t('profile.skipSetup')}
+                    icon="arrow"
+                    variant="quiet"
+                    onClick={() => onSkipProfile?.()}
+                  />
+                </>
+              ) : (
+                <>
+                  <AccountEntry
+                    online={online}
+                    binding={accountEntry}
+                    onSignedIn={onAccountSignedIn}
+                  />
+                  <MenuAction
+                    label={t('menu.practiceUnsigned')}
+                    icon="practice"
+                    variant="quiet"
+                    onClick={canResumePractice(saved) ? onResume : onNew}
+                  />
+                </>
+              )}
+            </MenuPanel>
+          )
         ) : (
           <section className="cpi-settings-menu" aria-labelledby="cpi-settings-title">
             <header className="cpi-settings-title">

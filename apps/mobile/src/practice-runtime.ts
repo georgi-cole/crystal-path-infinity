@@ -198,7 +198,9 @@ export function createPracticeRuntime(options: PracticeRuntimeOptions): Practice
         enqueue(async () => {
           const ignored = blocked();
           if (ignored) return ignored;
-          await read();
+          // Earning an ad while dead never advances the clock. Commit the grant
+          // even if the ad temporarily covers the native game view.
+          if (command.type !== 'grant-revive') await read();
           const result = emit(blocked() ?? bound());
           if (!disposed) syncResources();
           return result;

@@ -23,8 +23,8 @@ import javax.crypto.spec.GCMParameterSpec;
  */
 @CapacitorPlugin(name = "CpiSecureSession")
 public final class CpiSecureSession extends Plugin {
-    private static final String KEY_ALIAS = "CpiSecureSessionV1";
-    private static final String PREFS = "cpi_secure_session_v1";
+    private static final String KEY_ALIAS = "CpiSecureSessionV1__ACCOUNT_VAULT_SUFFIX__";
+    private static final String PREFS = "cpi_secure_session_v1__ACCOUNT_VAULT_SUFFIX__";
     private static final String REFRESH = "encrypted_refresh";
     private static final Object LOCK = new Object();
 

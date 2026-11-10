@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createCommerceHandler } from '../src/commerce-api.ts';
 import { createMvpServer } from '../src/server-app.ts';
 const user = 'fa000000-0000-4000-8000-000000000001';
-function fixture(allowed = true) {
+function fixture(allowed = true, checkoutReady = vi.fn(() => Promise.resolve(true))) {
   const service = {
     catalog: vi.fn(() => []),
     wallet: vi.fn(() => Promise.reject(new Error('private-db-credential'))),
@@ -12,11 +12,12 @@ function fixture(allowed = true) {
   };
   const handler = createCommerceHandler({
     basePath: '/cpi',
+    checkoutReady,
     service,
     authenticate: (token) =>
       Promise.resolve(
         token === 'valid-account-token-012345'
-          ? { subject: user, purchasesAllowed: allowed }
+          ? { subject: user, purchasesAllowed: allowed, platform: 'android' as const }
           : null,
       ),
     allowOrigin: (origin) => origin === 'capacitor://localhost',
@@ -57,8 +58,38 @@ describe('authenticated commerce routes', () => {
       ).status,
     ).toBe(400);
     expect(f.service.begin).not.toHaveBeenCalled();
+    expect((await f.request('catalog', { schemaVersion: 1, platform: 'ios' })).status).toBe(400);
+    expect(f.service.catalog).not.toHaveBeenCalledWith(user, 'ios');
     expect((await fixture(false).request('catalog')).status).toBe(401);
   });
+  it('blocks new checkout for the affected store and lets verified receipts be restored', async () => {
+    const checkoutReady = vi.fn(() => Promise.resolve(false));
+    const f = fixture(true, checkoutReady);
+    expect((await f.request('catalog')).status).toBe(503);
+    expect(
+      (await f.request('begin', { schemaVersion: 1, platform: 'android', key: 'credits.3' }))
+        .status,
+    ).toBe(503);
+    expect(f.service.begin).not.toHaveBeenCalled();
+    expect(checkoutReady).toHaveBeenCalledWith('android');
+    expect(
+      (
+        await f.request('verify', {
+          schemaVersion: 1,
+          platform: 'android',
+          proof: {
+            platform: 'android',
+            accountToken: user,
+            transactionId: 'test-order',
+            purchaseToken: 'test-receipt',
+            sku: 'com.example.credits3',
+          },
+        })
+      ).status,
+    ).toBe(200);
+    expect(checkoutReady).toHaveBeenCalledTimes(2);
+  });
+
   it('keeps unknown routes, credentials in queries, malformed receipts and provider details out', async () => {
     const f = fixture();
     expect((await f.request('begin?token=secret')).status).toBe(400);
