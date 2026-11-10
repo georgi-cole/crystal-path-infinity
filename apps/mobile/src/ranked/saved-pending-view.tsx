@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useLanguage } from '../language-context';
+import { PROFILE_SECTIONS, ProfileSectionLabel } from '../account/profile-menu';
 import { savedPendingForAccount } from './saved-pending-client';
 import type {
   SavedPendingClient,
@@ -24,9 +25,15 @@ export function SavedRuns(props: SavedRunsProps) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   return (
-    <details className="cpi-saved-runs" onToggle={(event) => setOpen(event.currentTarget.open)}>
-      <summary>{t('savedPending.title')}</summary>
-      {open && <SavedPendingView {...props} />}
+    <details name={PROFILE_SECTIONS} onToggle={(event) => setOpen(event.currentTarget.open)}>
+      <summary>
+        <ProfileSectionLabel icon="saved" title={t('savedPending.title')} />
+      </summary>
+      {open && (
+        <div className="cpi-profile-row-panel">
+          <SavedPendingView {...props} />
+        </div>
+      )}
     </details>
   );
 }

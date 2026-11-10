@@ -5,6 +5,8 @@ export const rewardMessages = {
   'rewards.quota': 'Continuations used: {applied}.',
   'rewards.limit': 'No ad continues left.',
   'rewards.watch': 'Watch an ad',
+  'rewards.guestLeft': 'Ad continues left · {count}',
+  'rewards.guestOffline': 'Go online to watch an ad.',
   'rewards.watchRestore': 'Watch ad · Restore {sp} SP',
   'rewards.resumeRestore': 'Resume · Restore {sp} SP',
   'rewards.end': 'End run',

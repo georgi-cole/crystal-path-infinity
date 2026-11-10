@@ -32,16 +32,17 @@ public final class CpiIdentity: CAPPlugin, CAPBridgedPlugin,
             }
             self.pending = call
             switch provider {
-            case "apple": self.authorizeApple(nonce)
-            case "google": self.authorizeGoogle(nonce)
+            case "apple": self.authorizeApple(nonce, requestName: call.getBool("requestName") == true)
+            case "google": self.authorizeGoogle(nonce, requestName: call.getBool("requestName") == true)
             default: self.fail()
             }
         }
     }
 
-    private func authorizeApple(_ nonce: String) {
+    private func authorizeApple(_ nonce: String, requestName: Bool) {
         let request = ASAuthorizationAppleIDProvider().createRequest()
         request.nonce = nonce
+        request.requestedScopes = requestName ? [.email, .fullName] : [.email]
         let controller = ASAuthorizationController(authorizationRequests: [request])
         controller.delegate = self
         controller.presentationContextProvider = self
@@ -67,7 +68,11 @@ public final class CpiIdentity: CAPPlugin, CAPBridgedPlugin,
             fail()
             return
         }
-        resolve(["status": "authorized", "credential": ["identityToken": token, "code": code]])
+        var proof = ["identityToken": token, "code": code]
+        if let name = credential.fullName?.givenName, !name.isEmpty {
+            proof["displayName"] = name
+        }
+        resolve(["status": "authorized", "credential": proof])
     }
 
     public func authorizationController(
@@ -96,7 +101,7 @@ public final class CpiIdentity: CAPPlugin, CAPBridgedPlugin,
         return base64Url(Data(bytes))
     }
 
-    private func authorizeGoogle(_ nonce: String) {
+    private func authorizeGoogle(_ nonce: String, requestName: Bool) {
         guard let clientId = Bundle.main.object(forInfoDictionaryKey: "CpiGoogleSignInClientID") as? String,
               clientId.range(of: #"^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$"#, options: .regularExpression) != nil,
               let verifier = randomToken(), let state = randomToken(),
@@ -111,7 +116,8 @@ public final class CpiIdentity: CAPPlugin, CAPBridgedPlugin,
             URLQueryItem(name: "client_id", value: clientId),
             URLQueryItem(name: "redirect_uri", value: scheme + ":" + path),
             URLQueryItem(name: "response_type", value: "code"),
-            URLQueryItem(name: "scope", value: "openid"),
+            URLQueryItem(name: "scope", value: requestName ? "openid email profile" : "openid email"),
+            URLQueryItem(name: "prompt", value: "select_account"),
             URLQueryItem(name: "nonce", value: nonce),
             URLQueryItem(name: "state", value: state),
             URLQueryItem(name: "code_challenge", value: challenge),

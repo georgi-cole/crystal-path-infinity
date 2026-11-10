@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { randomUUID, createHash } from 'node:crypto';
 import { Pool } from 'pg';
 import { createAccountIssuer } from '../../packages/server-core/src/account-issuer.ts';
+import { createSupabaseAccountDirectory } from '../../packages/server-core/src/account-providers.ts';
 import { createCommerceService } from '../../packages/server-core/src/commerce-service.ts';
 import { createPurchaseMaintenance } from '../../packages/server-core/src/purchase-maintenance.ts';
 import { createResourceService } from '../../packages/server-core/src/resource-service.ts';
@@ -23,6 +24,13 @@ const admin = new Pool({ max: 2 }),
 const original = (await admin.query('select cpi_private.get_operations_policy() as policy')).rows[0]
   .policy;
 let lastMail;
+const providerAccounts = [];
+const googleNew = user + '.google@example.invalid';
+const googleRace = user + '.race@example.invalid';
+const appleNew = user + '@private.icloud.com';
+const directGoogle = user + '.direct@example.invalid';
+const directApple = user + '.direct@privaterelay.appleid.com';
+const existingEmail = user + '@example.invalid';
 try {
   assert.equal(
     (await runtime.query('select session_user as login,current_user as role')).rows[0].login,
@@ -41,21 +49,64 @@ try {
   await admin.query("select cpi_private.save_profile($1,'ParallelTester','BG','keep',null)", [
     user,
   ]);
+  const directory = createSupabaseAccountDirectory({
+    url: 'https://abcdefghijklmnopqrst.supabase.co',
+    serviceKey: 's'.repeat(40),
+    database: runtime,
+    async fetcher(url, init) {
+      assert.equal(url, 'https://abcdefghijklmnopqrst.supabase.co/auth/v1/admin/users');
+      assert.equal(init.method, 'POST');
+      const input = JSON.parse(init.body);
+      const subject = randomUUID();
+      assert.equal(input.email_confirm, true);
+      assert.match(input.app_metadata.cpi_provider_signup, /^[a-f0-9]{64}$/);
+      await admin.query(
+        'insert into auth.users(id,email,email_confirmed_at,raw_app_meta_data) values($1,$2,now(),$3)',
+        [subject, input.email, input.app_metadata],
+      );
+      providerAccounts.push(subject);
+      // Exercise recovery when the Auth write commits but the caller loses its response.
+      return new Response(null, { status: 503 });
+    },
+  });
   const issuer = createAccountIssuer({
     database: runtime,
     crypto,
     policy: {
       version: 'fixture-live',
-      countries: { BG: { minimumAge: 16, neutralAgeScreenAllowed: true } },
+      countries: { BG: { minimumAge: 18, neutralAgeScreenAllowed: true } },
     },
     identity: {
-      verify: (_provider, credential) => Promise.resolve({ subject: credential }),
+      verify: (provider, credential) =>
+        Promise.resolve(
+          typeof credential === 'string'
+            ? { subject: credential }
+            : {
+                subject: credential.subject,
+                signupEmail: credential.email,
+                displayName: credential.displayName,
+                ...(provider === 'apple'
+                  ? { appleRefresh: () => Promise.resolve('fixture-apple-refresh') }
+                  : {}),
+              },
+        ),
       revokeApple: () => Promise.resolve(),
     },
     stagingTestEmails: [user + '@example.invalid', 'backup@example.invalid'],
+    nativeSignup: {
+      directory: directory.providerSignup,
+      emails: {
+        google: [googleNew, googleRace, directGoogle, existingEmail],
+        apple: [appleNew, directApple, existingEmail],
+      },
+      directEntry: true,
+    },
     directory: {
       verifiedEmail: () => Promise.resolve(user),
-      emailForSubject: (subject) => Promise.resolve(subject + '@example.invalid'),
+      async emailForSubject(subject) {
+        const result = await admin.query('select email from auth.users where id=$1', [subject]);
+        return result.rows[0]?.email ?? '';
+      },
     },
     mailer: {
       send: (message) => {
@@ -72,6 +123,14 @@ try {
     context,
   );
   assert.equal(permit.status, 'eligible');
+  await assert.rejects(
+    () =>
+      issuer.requestCode(
+        { schemaVersion: 1, email: directGoogle, eligibilityPermit: permit.permit },
+        context,
+      ),
+    (error) => error.status === 403,
+  );
   await issuer.requestCode(
     { schemaVersion: 1, email: user + '@example.invalid', eligibilityPermit: permit.permit },
     context,
@@ -156,6 +215,214 @@ try {
   assert.equal((await issuer.authenticate(linkedSession.accessToken)).platform, 'ios');
   await assert.rejects(() => issuer.completeIdentity(signInProof, context, null), { status: 410 });
   await issuer.revoke(linkedSession.refreshToken);
+
+  async function offer(provider, subject, email, schemaVersion = 2) {
+    const challenge = await issuer.beginIdentity(
+      { schemaVersion: 1, provider, eligibilityPermit: iphonePermit.permit },
+      context,
+      null,
+    );
+    return issuer.completeIdentity(
+      { schemaVersion, provider, nonce: challenge.nonce, credential: { subject, email } },
+      context,
+      null,
+    );
+  }
+  const confirm = (signupToken) =>
+    issuer.signupIdentity({ schemaVersion: 1, signupToken }, context);
+  const noSignupMail = lastMail;
+  assert.equal((await offer('google', 'old-client', googleNew, 1)).status, 'link_required');
+  assert.equal(
+    (await offer('google', 'unapproved', 'unauthorized@example.invalid')).status,
+    'signup_unavailable',
+  );
+  assert.equal(
+    (await offer('google', 'existing-email-claim', user + '@example.invalid')).status,
+    'link_required',
+  );
+  assert.equal(providerAccounts.length, 0);
+
+  const drafts = await Promise.all([
+    offer('google', 'fresh-google', googleNew),
+    offer('google', 'fresh-google', googleNew),
+  ]);
+  assert.ok(drafts.every((draft) => draft.status === 'signup_available'));
+  assert.equal(providerAccounts.length, 0);
+  const tickets = await Promise.all(drafts.map((draft) => confirm(draft.signupToken)));
+  assert.ok(tickets.every((ticket) => ticket.status === 'verified'));
+  const newSessions = await Promise.all(
+    tickets.map((ticket) => issuer.exchange(ticket.verifiedTicket)),
+  );
+  assert.ok(newSessions.every((session) => session.subject === providerAccounts[0]));
+  assert.notEqual(newSessions[0].subject, user);
+  assert.equal(providerAccounts.length, 1);
+  await assert.rejects(() => confirm(drafts[0].signupToken), { status: 410 });
+  const next = await offer('google', 'fresh-google', googleNew);
+  assert.equal((await issuer.exchange(next.verifiedTicket)).subject, newSessions[0].subject);
+
+  const raceDraft = await offer('google', 'email-race', googleRace);
+  assert.equal(raceDraft.status, 'signup_available');
+  const earlierOwner = randomUUID();
+  await admin.query('insert into auth.users(id,email,email_confirmed_at) values($1,$2,now())', [
+    earlierOwner,
+    googleRace,
+  ]);
+  providerAccounts.push(earlierOwner);
+  assert.equal((await confirm(raceDraft.signupToken)).status, 'link_required');
+
+  const appleDraft = await offer('apple', 'fresh-apple', appleNew);
+  assert.equal(appleDraft.status, 'signup_available');
+  const appleTicket = await confirm(appleDraft.signupToken);
+  const appleSession = await issuer.exchange(appleTicket.verifiedTicket);
+  const appleLink = (
+    await runtime.query(
+      "select apple_refresh_encrypted from cpi_private.account_provider_links where user_id=$1 and provider='apple'",
+      [appleSession.subject],
+    )
+  ).rows[0];
+  assert.equal(
+    crypto.open(appleLink.apple_refresh_encrypted, 'apple-identity:' + appleSession.subject),
+    'fixture-apple-refresh',
+  );
+  const googleActor = await issuer.authenticate(newSessions[0].accessToken);
+  assert.ok(googleActor);
+  const crossLink = await issuer.beginIdentity(
+    { schemaVersion: 1, provider: 'apple', eligibilityPermit: null },
+    context,
+    googleActor,
+  );
+  assert.equal(
+    (
+      await issuer.completeIdentity(
+        {
+          schemaVersion: 2,
+          provider: 'apple',
+          nonce: crossLink.nonce,
+          credential: { subject: 'unlinked-apple', email: appleNew },
+        },
+        context,
+        googleActor,
+      )
+    ).status,
+    'already_linked',
+  );
+  assert.equal(lastMail, noSignupMail);
+
+  const directBegin = (provider, location = context) =>
+    issuer.beginIdentity({ schemaVersion: 2, provider, clientBuild: 33 }, location, null);
+  async function directSignIn(provider, subject, email, displayName) {
+    const challenge = await directBegin(provider);
+    return issuer.completeIdentity(
+      {
+        schemaVersion: 3,
+        provider,
+        nonce: challenge.nonce,
+        credential: { subject, email, displayName },
+      },
+      context,
+      null,
+    );
+  }
+  await assert.rejects(() => directBegin('google', { ...context, country: 'US' }), { status: 403 });
+  const wrongVersion = await directBegin('google');
+  await assert.rejects(
+    () =>
+      issuer.completeIdentity(
+        {
+          schemaVersion: 2,
+          provider: 'google',
+          nonce: wrongVersion.nonce,
+          credential: { subject: 'direct-test', email: directGoogle },
+        },
+        context,
+        null,
+      ),
+    { status: 410 },
+  );
+  assert.equal(
+    (await directSignIn('google', 'unapproved-direct', 'unapproved@example.invalid')).status,
+    'signup_unavailable',
+  );
+  const directCount = providerAccounts.length;
+  const [googleEntry, repeatEntry] = await Promise.all([
+    directSignIn('google', 'direct-google', directGoogle, 'Crystal Tester'),
+    directSignIn('google', 'direct-google', directGoogle),
+  ]);
+  const directSession = await issuer.exchange(googleEntry.verifiedTicket);
+  assert.equal((await issuer.exchange(repeatEntry.verifiedTicket)).subject, directSession.subject);
+  assert.equal(
+    [googleEntry, repeatEntry].filter((ticket) => ticket.offerProfile === true).length,
+    1,
+  );
+  assert.equal((await issuer.authenticate(directSession.accessToken)).clientBuild, 33);
+  assert.equal(providerAccounts.length, directCount + 1);
+  const privateGoogle = (
+    await runtime.query('select cpi_private.get_profile_owner($1) as owner', [
+      directSession.subject,
+    ])
+  ).rows[0].owner;
+  assert.equal(privateGoogle.profile, null);
+  assert.equal(privateGoogle.providerDisplayName, 'Crystal Tester');
+  await runtime.query("select cpi_private.save_profile($1,null,'BG','keep',null)", [
+    directSession.subject,
+  ]);
+  const countryOnly = (
+    await runtime.query('select cpi_private.get_profile_owner($1) as owner', [
+      directSession.subject,
+    ])
+  ).rows[0].owner;
+  assert.equal(countryOnly.profile, null);
+  assert.equal(countryOnly.countryCode, 'BG');
+  const appleEntry = await directSignIn('apple', 'direct-apple', directApple, 'Apple Tester');
+  assert.equal(appleEntry.status, 'verified');
+  assert.equal(appleEntry.offerProfile, true);
+  assert.notEqual((await issuer.exchange(appleEntry.verifiedTicket)).subject, user);
+  assert.equal(lastMail, noSignupMail);
+
+  // A matched address requires one explicit email proof before the provider is attached.
+  const existingApple = await directSignIn(
+    'apple',
+    'existing-apple',
+    existingEmail,
+    'Existing Tester',
+  );
+  assert.equal(existingApple.status, 'verify_existing');
+  assert.equal(Object.hasOwn(existingApple, 'verifiedTicket'), false);
+  await assert.rejects(() => confirm(existingApple.linkToken), { status: 410 });
+  await runtime.query(
+    'update cpi_private.account_challenges set resend_at=0 where user_id=$1 and verified_at is not null',
+    [user],
+  );
+  const linkRequest = { schemaVersion: 1, linkToken: existingApple.linkToken };
+  await assert.rejects(
+    () => issuer.requestProviderLinkCode(linkRequest, { ...context, country: 'US' }),
+    { status: 403 },
+  );
+  assert.equal((await issuer.requestProviderLinkCode(linkRequest, context)).status, 'accepted');
+  const correct = lastMail.code;
+  await assert.rejects(
+    () =>
+      issuer.verifyProviderLinkCode(
+        { ...linkRequest, code: correct === '000000' ? '000001' : '000000' },
+        context,
+      ),
+    { status: 401 },
+  );
+  const verifiedApple = await issuer.verifyProviderLinkCode(
+    { ...linkRequest, code: correct },
+    context,
+  );
+  const existingAppleSession = await issuer.exchange(verifiedApple.verifiedTicket);
+  assert.equal(existingAppleSession.subject, user);
+  assert.equal(
+    (await issuer.verifyProviderLinkCode({ ...linkRequest, code: correct }, context))
+      .verifiedTicket,
+    verifiedApple.verifiedTicket,
+  );
+  const returnApple = await directSignIn('apple', 'existing-apple');
+  assert.equal((await issuer.exchange(returnApple.verifiedTicket)).subject, user);
+  assert.equal(providerAccounts.length, directCount + 2);
+
   const rate = createDurableRateLimit(runtime, crypto),
     limited = await Promise.all(Array.from({ length: 32 }, () => rate('ci:' + user, 12, 60_000)));
   assert.equal(limited.filter(Boolean).length, 12);
@@ -185,14 +452,24 @@ try {
         },
       }),
   });
-  const wallet = await commerce.wallet(linkedSession.subject),
-    proof = {
-      platform: 'android',
-      sku: 'fixture.live.sp500',
-      transactionId: randomUUID(),
-      accountToken: wallet.accountToken,
-      purchaseToken: randomUUID(),
-    };
+  const wallet = await commerce.wallet(user);
+  assert.equal((await commerce.wallet(linkedSession.subject)).accountToken, wallet.accountToken);
+  assert.equal(
+    (await commerce.wallet(existingAppleSession.subject)).accountToken,
+    wallet.accountToken,
+  );
+  assert.notEqual((await commerce.wallet(directSession.subject)).accountToken, wallet.accountToken);
+  assert.notEqual(
+    (await commerce.wallet(newSessions[0].subject)).accountToken,
+    wallet.accountToken,
+  );
+  const proof = {
+    platform: 'android',
+    sku: 'fixture.live.sp500',
+    transactionId: randomUUID(),
+    accountToken: wallet.accountToken,
+    purchaseToken: randomUUID(),
+  };
   await commerce.verify(user, proof);
   const authority = new RankedAuthority({
       repository: new PostgresRankedRepository(runtime),
@@ -259,7 +536,9 @@ try {
   try {
     // Disposable fixture only: remove its active live run before restoring the old recovery allowlist.
     // Production's ACTIVE_RULESET guard remains unchanged.
-    await admin.query('delete from auth.users where id=$1', [user]);
+    await admin.query('delete from auth.users where id=any($1::uuid[])', [
+      [user, ...providerAccounts],
+    ]);
     const current = (await admin.query('select cpi_private.get_operations_policy() as policy'))
       .rows[0].policy;
     await admin.query('select cpi_private.set_operations_policy($1,$2,$3,$4,$5,$6,$7,$8,$9)', [

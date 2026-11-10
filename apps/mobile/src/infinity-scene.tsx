@@ -59,6 +59,12 @@ import {
   upgradePracticePacing,
 } from './practice-save';
 import { presentRunOutcome } from './run-outcome';
+import type { GuestRewardedAd } from './rewards/native-admob';
+import {
+  earnedGuestContinuation,
+  guestAdOffer,
+  watchGuestContinuation,
+} from './rewards/guest-continuation';
 import { useLanguage } from './language-context';
 import type { PracticeSettings } from './practice-save';
 import { RunPauseMenu } from './run-pause-menu';
@@ -90,6 +96,7 @@ export const INFINITY_SCENE_SKIN = DEFAULT_VISUAL_SKIN;
 export type { SceneFeedback } from './scene-cinematics';
 export interface InfinitySceneViewProps {
   readonly resourcePanel?: ReactNode;
+  readonly guestContinuePanel?: ReactNode;
   readonly trial?: boolean;
   readonly state: RunState;
   readonly feedback: SceneFeedback | null;
@@ -125,6 +132,7 @@ export interface InfinitySceneViewProps {
 
 export function InfinitySceneView({
   resourcePanel,
+  guestContinuePanel,
   trial = false,
   state,
   feedback,
@@ -676,7 +684,9 @@ export function InfinitySceneView({
                   </p>
                 </div>
                 <div className="cpi-outcome-next">
-                  {outcome.offer && resourcePanel ? (
+                  {guestContinuePanel ? (
+                    guestContinuePanel
+                  ) : outcome.offer && resourcePanel ? (
                     resourcePanel
                   ) : outcome.offer && QA_TOOLS_ENABLED ? (
                     <div className="cpi-revive-offer">
@@ -704,7 +714,9 @@ export function InfinitySceneView({
                   <div className="cpi-overlay-actions cpi-result-navigation">
                     <button
                       type="button"
-                      data-cpi-overlay-primary={!(outcome.offer && resourcePanel) || undefined}
+                      data-cpi-overlay-primary={
+                        !(guestContinuePanel || (outcome.offer && resourcePanel)) || undefined
+                      }
                       disabled={busy}
                       onClick={outcome.phase === 'dead' ? onRestart : onRequestEnd}
                     >
@@ -772,6 +784,7 @@ interface InfinityRunProps {
   onExitCancelled: () => void;
   exitRequest: number;
   onRestart: () => void;
+  guestRewardedAd?: GuestRewardedAd | null;
   initialState: RunState | null;
   onCheckpoint: (state: RunState) => void;
   settings: PracticeSettings;
@@ -785,12 +798,13 @@ function InfinityRun({
   onExitCancelled,
   exitRequest,
   onRestart,
+  guestRewardedAd,
   initialState,
   onCheckpoint,
   settings,
   onSettingsChange,
 }: InfinityRunProps) {
-  const { t } = useLanguage();
+  const { t, number } = useLanguage();
   const { store } = useTestStore();
   const runTheme = useThemeId();
   const [resourceMessage, setResourceMessage] = useState('');
@@ -814,10 +828,14 @@ function InfinityRun({
   const [hintCaptionRow, setHintCaptionRow] = useState<string | null>(null);
   const [hintCaptionGate] = useState(() => createHintCaptionGate(() => practiceStorage()));
   const [confirmEnd, setConfirmEnd] = useState(false);
+  const [guestAdPhase, setGuestAdPhase] = useState<'idle' | 'watching' | 'offline' | 'unavailable'>(
+    'idle',
+  );
+  const guestAdRequest = useRef<AbortController | null>(null);
   useSoundtrack(
     state.status === 'playing' ? 'run' : cinematic?.fatal ? null : 'ended',
     settings.music && (state.status !== 'playing' || (ready && !paused && !confirmEnd && !error)),
-    settings.music && (!!cinematic?.fatal || confirmEnd),
+    settings.music && (!!cinematic?.fatal || confirmEnd || guestAdPhase === 'watching'),
   );
   const [personalBest, setPersonalBest] = useState<string | null>(null);
   const [newPersonalBest, setNewPersonalBest] = useState(false);
@@ -958,6 +976,7 @@ function InfinityRun({
       });
     return () => {
       alive = false;
+      guestAdRequest.current?.abort();
       if (runtimeRef.current === runtime) runtimeRef.current = null;
       if (audioRef.current === audio) audioRef.current = null;
       if (directorRef.current === director) directorRef.current = null;
@@ -1162,6 +1181,44 @@ function InfinityRun({
     }
   }
 
+  async function watchPracticeAd() {
+    const runtime = runtimeRef.current;
+    if (
+      trial ||
+      !guestRewardedAd ||
+      !runtime ||
+      !ready ||
+      commandLock.current ||
+      exitLock.current ||
+      directorRef.current?.isBusy() ||
+      !guestAdOffer(runtime.getState())
+    )
+      return;
+    if (navigator.onLine === false) {
+      setGuestAdPhase('offline');
+      return;
+    }
+    const request = new AbortController();
+    guestAdRequest.current = request;
+    commandLock.current = true;
+    setBusy(true);
+    setGuestAdPhase('watching');
+    try {
+      const result = await watchGuestContinuation(runtime, guestRewardedAd, request.signal);
+      if (!request.signal.aborted && runtimeRef.current === runtime)
+        setGuestAdPhase(result === 'unavailable' ? 'unavailable' : 'idle');
+    } catch {
+      if (!request.signal.aborted && runtimeRef.current === runtime) setGuestAdPhase('unavailable');
+    } finally {
+      if (guestAdRequest.current === request) {
+        guestAdRequest.current = null;
+        commandLock.current = false;
+        setBusy(false);
+        if (request.signal.aborted) setGuestAdPhase('idle');
+      }
+    }
+  }
+
   const handledExitRequest = useRef(0);
   useEffect(() => {
     if (exitRequest === 0 || handledExitRequest.current === exitRequest) return;
@@ -1178,9 +1235,54 @@ function InfinityRun({
     );
   if (QA_TOOLS_ENABLED && labOpen)
     return <MysteryLab onClose={() => setLabOpen(false)} reducedMotion={settings.reducedMotion} />;
+  const savedGuestGrant = trial ? undefined : earnedGuestContinuation(state);
+  const adOffer = !trial && guestRewardedAd ? guestAdOffer(state) : null;
   return (
     <InfinitySceneView
       trial={trial}
+      guestContinuePanel={
+        savedGuestGrant || adOffer ? (
+          <div className="cpi-revive-offer cpi-overlay-actions">
+            {savedGuestGrant ? (
+              <button
+                type="button"
+                data-cpi-overlay-primary
+                disabled={!ready || busy}
+                onClick={() => {
+                  unlockAudio();
+                  void issue({
+                    type: 'apply-revive',
+                    deathId: savedGuestGrant.deathId,
+                    ordinal: savedGuestGrant.ordinal,
+                    grantId: savedGuestGrant.grantId,
+                  });
+                }}
+              >
+                {t('rewards.resumeRestore', { sp: number(savedGuestGrant.sp) })}
+              </button>
+            ) : adOffer ? (
+              <>
+                <span>{t('rewards.guestLeft', { count: number(adOffer.grantsRemaining) })}</span>
+                <button
+                  type="button"
+                  data-cpi-overlay-primary
+                  disabled={!ready || busy}
+                  onClick={() => void watchPracticeAd()}
+                >
+                  {guestAdPhase === 'watching'
+                    ? t('rewards.loading')
+                    : t('rewards.watchRestore', { sp: number(adOffer.restoreSp) })}
+                </button>
+                {(guestAdPhase === 'unavailable' || guestAdPhase === 'offline') && (
+                  <span role="status">
+                    {t(guestAdPhase === 'offline' ? 'rewards.guestOffline' : 'rewards.noFill')}
+                  </span>
+                )}
+              </>
+            ) : null}
+          </div>
+        ) : undefined
+      }
       resourcePanel={
         store && state.storeTest && !trial ? (
           <RunReserves
@@ -1285,6 +1387,7 @@ export function InfinityPractice({
   exitRequest = 0,
   initialState = null,
   onCheckpoint,
+  guestRewardedAd,
   settings,
   onSettingsChange,
 }: {
@@ -1296,6 +1399,7 @@ export function InfinityPractice({
   exitRequest?: number;
   initialState?: RunState | null;
   onCheckpoint: (state: RunState) => void;
+  guestRewardedAd?: GuestRewardedAd | null;
   settings: PracticeSettings;
   onSettingsChange: (next: PracticeSettings) => void;
 }) {
@@ -1312,6 +1416,7 @@ export function InfinityPractice({
         key={attempt}
         initialState={attempt === 0 ? initialState : null}
         onCheckpoint={onCheckpoint}
+        guestRewardedAd={guestRewardedAd}
         settings={settings}
         onSettingsChange={onSettingsChange}
         onExit={onExit}

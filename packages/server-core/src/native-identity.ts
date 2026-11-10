@@ -6,13 +6,18 @@ export type NativeIdentityProvider = 'apple' | 'google';
 export function isNativeIdentityProvider(value: unknown): value is NativeIdentityProvider {
   return value === 'apple' || value === 'google';
 }
+export interface VerifiedNativeIdentity {
+  readonly subject: string;
+  readonly signupEmail?: string;
+  readonly displayName?: string;
+  readonly appleRefresh?: () => Promise<string>;
+}
 export interface NativeIdentity {
   verify(
     provider: NativeIdentityProvider,
     credential: unknown,
     nonce: string,
-    linking: boolean,
-  ): Promise<{ subject: string; appleRefreshToken?: string }>;
+  ): Promise<VerifiedNativeIdentity>;
   revokeApple(refreshToken: string, signal: AbortSignal): Promise<void>;
 }
 
@@ -27,6 +32,12 @@ const googleIssuer = 'https://accounts.google.com';
 const claimsSegment = /^[A-Za-z0-9_-]+$/;
 const authorizationCode = /^[!-~]{8,2048}$/;
 const pkceVerifier = /^[A-Za-z0-9._~-]{43,128}$/;
+
+function providerDisplayName(value: unknown): string | undefined {
+  if (typeof value !== 'string' || value.length > 160 || /[@\p{C}]/u.test(value)) return undefined;
+  const name = value.normalize('NFKC').trim().replace(/\s+/gu, ' ');
+  return name.length <= 48 && !name.includes('@') && /[\p{L}\p{N}]/u.test(name) ? name : undefined;
+}
 
 export function googleIosRedirect(clientId: string) {
   if (!/^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(clientId))
@@ -79,7 +90,7 @@ export function createNativeIdentity(options: {
     provider: NativeIdentityProvider,
     input: unknown,
     expectedNonce: string | null,
-  ): Promise<string> {
+  ): Promise<VerifiedNativeIdentity> {
     if (typeof input !== 'string' || input.length > 8192) throw new NativeIdentityRejected();
     const parts = input.split('.');
     if (parts.length !== 3 || !parts.every((part) => claimsSegment.test(part)))
@@ -136,7 +147,20 @@ export function createNativeIdentity(options: {
       ))
     )
       throw new NativeIdentityRejected();
-    return subject;
+    const address = typeof value.email === 'string' ? value.email : null;
+    const confirmed =
+      value.email_verified === true || (provider === 'apple' && value.email_verified === 'true');
+    const providerOwnsEmail =
+      provider === 'apple' ||
+      address?.toLowerCase().endsWith('@gmail.com') ||
+      (typeof value.hd === 'string' && value.hd.length > 0);
+    // A verified third-party Google address may have changed owners since it was verified.
+    const displayName = provider === 'google' ? providerDisplayName(value.name) : undefined;
+    return {
+      subject,
+      ...(address && confirmed && providerOwnsEmail ? { signupEmail: address } : {}),
+      ...(displayName ? { displayName } : {}),
+    };
   }
 
   function appleSecret() {
@@ -175,7 +199,7 @@ export function createNativeIdentity(options: {
   }
 
   return {
-    async verify(provider, credential, nonce, linking) {
+    async verify(provider, credential, nonce) {
       if (provider === 'google') {
         if (!exactObject(credential, ['code', 'verifier'])) throw new NativeIdentityRejected();
         const result = await exchange('https://oauth2.googleapis.com/token', {
@@ -186,23 +210,33 @@ export function createNativeIdentity(options: {
           code_verifier: requiredString(credential.verifier, pkceVerifier),
         });
         if (!isObject(result)) throw new NativeIdentityRejected();
-        return { subject: await verifyToken('google', result.id_token, nonce) };
+        return verifyToken('google', result.id_token, nonce);
       }
-      if (!exactObject(credential, ['identityToken', 'code'])) throw new NativeIdentityRejected();
-      const subject = await verifyToken('apple', credential.identityToken, nonce);
-      if (!linking) return { subject };
-
-      const result = await exchange(appleIssuer + '/auth/token', {
-        grant_type: 'authorization_code',
-        client_id: apple.clientId,
-        client_secret: appleSecret(),
-        code: requiredString(credential.code, authorizationCode),
-      });
-      if (!isObject(result) || (await verifyToken('apple', result.id_token, null)) !== subject)
+      if (
+        !exactObject(credential, ['identityToken', 'code']) &&
+        !exactObject(credential, ['identityToken', 'code', 'displayName'])
+      )
         throw new NativeIdentityRejected();
+      const proof = await verifyToken('apple', credential.identityToken, nonce);
+      const code = requiredString(credential.code, authorizationCode);
+      const displayName = providerDisplayName(credential.displayName);
       return {
-        subject,
-        appleRefreshToken: requiredString(result.refresh_token, /^[!-~]{8,4096}$/),
+        ...proof,
+        ...(displayName ? { displayName } : {}),
+        async appleRefresh() {
+          const result = await exchange(appleIssuer + '/auth/token', {
+            grant_type: 'authorization_code',
+            client_id: apple.clientId,
+            client_secret: appleSecret(),
+            code,
+          });
+          if (
+            !isObject(result) ||
+            (await verifyToken('apple', result.id_token, null)).subject !== proof.subject
+          )
+            throw new NativeIdentityRejected();
+          return requiredString(result.refresh_token, /^[!-~]{8,4096}$/);
+        },
       };
     },
     async revokeApple(refreshToken, signal) {

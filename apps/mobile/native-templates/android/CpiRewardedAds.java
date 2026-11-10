@@ -12,11 +12,12 @@ import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.FullScreenContentCallback;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.MobileAds;
+import com.google.android.gms.ads.RequestConfiguration;
 import com.google.android.gms.ads.rewarded.RewardedAd;
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback;
 import com.google.android.gms.ads.rewarded.ServerSideVerificationOptions;
 
-/** One preloaded ad. The server nonce is bound after loading, immediately before show. */
+/** One preloaded ad. Verified play binds its server nonce immediately before show. */
 @CapacitorPlugin(name = "CpiRewardedAds")
 public class CpiRewardedAds extends Plugin {
     private RewardedAd loaded;
@@ -24,6 +25,7 @@ public class CpiRewardedAds extends Plugin {
     private String key;
     private int generation;
     private boolean showing;
+    private boolean localPractice;
 
     @PluginMethod public void inventory(PluginCall call) {
         JSObject result = new JSObject();
@@ -43,8 +45,16 @@ public class CpiRewardedAds extends Plugin {
             final int epoch = ++generation;
             loaded = null;
             key = nextKey;
+            localPractice = Boolean.TRUE.equals(call.getBoolean("localPractice", false));
+            if (localPractice) {
+                MobileAds.setRequestConfiguration(MobileAds.getRequestConfiguration().toBuilder()
+                    .setTagForChildDirectedTreatment(RequestConfiguration.TAG_FOR_CHILD_DIRECTED_TREATMENT_TRUE)
+                    .setTagForUnderAgeOfConsent(RequestConfiguration.TAG_FOR_UNDER_AGE_OF_CONSENT_TRUE)
+                    .setMaxAdContentRating(RequestConfiguration.MAX_AD_CONTENT_RATING_G)
+                    .build());
+            }
             Bundle extras = new Bundle();
-            if (Boolean.TRUE.equals(call.getBoolean("nonPersonalized", true))) extras.putString("npa", "1");
+            if (localPractice || Boolean.TRUE.equals(call.getBoolean("nonPersonalized", true))) extras.putString("npa", "1");
             AdRequest request = new AdRequest.Builder().addNetworkExtrasBundle(AdMobAdapter.class, extras).build();
             RewardedAd.load(getContext(), unit, request, new RewardedAdLoadCallback() {
                 @Override public void onAdLoaded(RewardedAd ad) {
@@ -74,15 +84,19 @@ public class CpiRewardedAds extends Plugin {
     @PluginMethod public void show(PluginCall call) {
         if (getActivity() == null) { call.reject("Unavailable"); return; }
         String owner = call.getString("key", "");
-        String nonce = call.getString("customData", "");
-        if (!nonce.matches("[A-Za-z0-9._~-]{24,1024}")) { call.reject("Unavailable"); return; }
+        String nonce = call.getString("customData");
         getActivity().runOnUiThread(() -> {
             RewardedAd ad = loaded;
-            if (showing || ad == null || !owner.equals(key)) { call.reject("Unavailable"); return; }
+            boolean validNonce = nonce != null && nonce.matches("[A-Za-z0-9._~-]{24,1024}");
+            if (showing || ad == null || !owner.equals(key) || (localPractice ? nonce != null : !validNonce)) {
+                call.reject("Unavailable"); return;
+            }
             loaded = null;
             showing = true;
             presented = ad;
-            ad.setServerSideVerificationOptions(new ServerSideVerificationOptions.Builder().setCustomData(nonce).build());
+            if (nonce != null) {
+                ad.setServerSideVerificationOptions(new ServerSideVerificationOptions.Builder().setCustomData(nonce).build());
+            }
             ad.setFullScreenContentCallback(new FullScreenContentCallback() {
                 @Override public void onAdDismissedFullScreenContent() { showing = false; presented = null; event("closed", owner); }
                 @Override public void onAdFailedToShowFullScreenContent(AdError error) { showing = false; presented = null; event("failed", owner); }

@@ -66,9 +66,9 @@ describe('staging native provider proof', () => {
   it('exchanges an iPhone Google code with PKCE and verifies the expected identity', async () => {
     const { service, fetcher } = fixture();
     const verifier = 'x'.repeat(43);
-    expect(
-      await service.verify('google', { code: 'google-test-code', verifier }, nonce, false),
-    ).toEqual({ subject: 'subject-from-provider' });
+    expect(await service.verify('google', { code: 'google-test-code', verifier }, nonce)).toEqual({
+      subject: 'subject-from-provider',
+    });
     expect(fetcher).toHaveBeenNthCalledWith(
       1,
       'https://oauth2.googleapis.com/token',
@@ -90,15 +90,41 @@ describe('staging native provider proof', () => {
     async (claims) => {
       const { service } = fixture(claims);
       await expect(
-        service.verify(
-          'google',
-          { code: 'google-test-code', verifier: 'x'.repeat(43) },
-          nonce,
-          false,
-        ),
+        service.verify('google', { code: 'google-test-code', verifier: 'x'.repeat(43) }, nonce),
       ).rejects.toBeInstanceOf(NativeIdentityRejected);
     },
   );
+
+  it('uses only provider-verified signup addresses and keeps Apple relay addresses', async () => {
+    const credential = { code: 'google-test-code', verifier: 'x'.repeat(43) };
+    const gmail = fixture({ email: 'tester@gmail.com', email_verified: true });
+    expect((await gmail.service.verify('google', credential, nonce)).signupEmail).toBe(
+      'tester@gmail.com',
+    );
+    for (const claims of [
+      { email: 'tester@gmail.com', email_verified: false },
+      { email: 'old-mail@example.invalid', email_verified: true },
+    ]) {
+      const thirdParty = fixture(claims);
+      expect(
+        (await thirdParty.service.verify('google', credential, nonce)).signupEmail,
+      ).toBeUndefined();
+    }
+    const apple = fixture();
+    const signedRelay = jwt(bundle, 'https://appleid.apple.com', {
+      email: 'relay@private.icloud.com',
+      email_verified: 'true',
+    });
+    expect(
+      (
+        await apple.service.verify(
+          'apple',
+          { identityToken: signedRelay, code: 'apple-test-code' },
+          nonce,
+        )
+      ).signupEmail,
+    ).toBe('relay@private.icloud.com');
+  });
 
   it('validates Apple’s code and keeps its refresh credential only for account deletion', async () => {
     const { service, fetcher } = fixture();
@@ -107,28 +133,28 @@ describe('staging native provider proof', () => {
       'apple',
       { identityToken, code: 'apple-test-code' },
       nonce,
-      true,
     );
-    expect(verified).toEqual({
-      subject: 'subject-from-provider',
-      appleRefreshToken: 'apple-test-refresh',
-    });
-    await service.revokeApple(verified.appleRefreshToken!, new AbortController().signal);
+    expect(verified.subject).toBe('subject-from-provider');
+    expect(fetcher).not.toHaveBeenCalledWith(
+      'https://appleid.apple.com/auth/token',
+      expect.anything(),
+    );
+    const refresh = await verified.appleRefresh?.();
+    expect(refresh).toBe('apple-test-refresh');
+    await service.revokeApple(refresh!, new AbortController().signal);
     const revoked = fetcher.mock.calls.at(-1);
     expect(revoked?.[0]).toBe('https://appleid.apple.com/auth/revoke');
     expect((revoked?.[1]?.body as URLSearchParams).get('token')).toBe('apple-test-refresh');
-    await expect(
-      service.verify(
-        'apple',
-        {
-          identityToken: jwt(bundle, 'https://appleid.apple.com', {
-            sub: 'different-provider-account',
-          }),
-          code: 'apple-test-code',
-        },
-        nonce,
-        true,
-      ),
-    ).rejects.toBeInstanceOf(NativeIdentityRejected);
+    const another = await service.verify(
+      'apple',
+      {
+        identityToken: jwt(bundle, 'https://appleid.apple.com', {
+          sub: 'different-provider-account',
+        }),
+        code: 'apple-test-code',
+      },
+      nonce,
+    );
+    await expect(another.appleRefresh?.()).rejects.toBeInstanceOf(NativeIdentityRejected);
   });
 });

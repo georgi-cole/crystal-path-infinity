@@ -19,6 +19,8 @@ export interface PublicProfile {
 }
 export interface OwnerProfile {
   profile: PublicProfile | null;
+  providerDisplayName?: string | null;
+  countryCode?: string | null;
   analyticsAgeBand: AgeBand | null;
   ageResponseAt: string | null;
   analyticsAllowed: boolean;
@@ -27,7 +29,7 @@ export interface OwnerProfile {
   countries: readonly { countryCode: string; continentCode: string }[];
 }
 export interface ProfileEdit {
-  username: string;
+  username: string | null;
   countryCode: string | null;
   analyticsAction: 'keep' | 'answer' | 'withdraw';
   analyticsAgeBand: AgeBand | null;
@@ -136,8 +138,20 @@ export function parseOwnerProfile(value: unknown): OwnerProfile | null {
       countryCode: item.country_code,
     };
   }
+  const providerName = owner.providerDisplayName;
+  const savedCountry = owner.countryCode;
   return {
     profile,
+    ...(typeof providerName === 'string' &&
+    providerName.length <= 48 &&
+    !/[@\p{C}]/u.test(providerName) &&
+    /[\p{L}\p{N}]/u.test(providerName)
+      ? { providerDisplayName: providerName }
+      : {}),
+    ...(typeof savedCountry === 'string' &&
+    countries.some((entry) => entry.countryCode === savedCountry)
+      ? { countryCode: savedCountry }
+      : {}),
     analyticsAgeBand: owner.analyticsAgeBand as AgeBand | null,
     ageResponseAt: owner.ageResponseAt,
     analyticsAllowed: owner.analyticsAllowed,

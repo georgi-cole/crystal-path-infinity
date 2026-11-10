@@ -62,7 +62,7 @@ beforeAll(async () => {
   database = await PGlite.create();
   await database.exec(`create schema auth;
     create role anon; create role authenticated; create role service_role;
-    create table auth.users(id uuid primary key,email text unique,email_confirmed_at timestamptz);`);
+    create table auth.users(id uuid primary key,email text unique,email_confirmed_at timestamptz,raw_app_meta_data jsonb);`);
   const migrations = new URL('../../../supabase/migrations/', import.meta.url);
   for (const name of readdirSync(migrations)
     .filter((name) => name.endsWith('.sql'))

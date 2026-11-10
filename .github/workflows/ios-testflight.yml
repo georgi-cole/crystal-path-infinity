@@ -12,11 +12,11 @@ on:
         type: boolean
         default: false
       rewarded_ads_test:
-        description: Enable rewarded ads against the staging gateway for AdMob test-mode devices
+        description: Enable guest demo ads and ranked rewarded ads in staging test mode
         type: boolean
         default: false
       review_source:
-        description: Use the checked iPhone sign-in review branch and its separate signing environment
+        description: Use an approved iPhone review branch and its separate staging signing environment
         type: boolean
         default: false
       source_sha:
@@ -53,6 +53,7 @@ jobs:
       VITE_ACCOUNT_API_BASE_URL: https://crystal-path-staging-api.kolequant.workers.dev/cpi
       VITE_ACCOUNT_SERVICES_ENABLED: 'true'
       VITE_PURCHASES_ENABLED: 'true'
+      VITE_GUEST_REWARDED_ADS_TEST: ${{ inputs.rewarded_ads_test && 'true' || 'false' }}
       VITE_REWARDED_ADS_ENABLED: ${{ inputs.rewarded_ads_test && 'true' || 'false' }}
       VITE_CLIENT_BUILD: ${{ github.run_number }}
     steps:

@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build, loadEnv } from 'vite';
 import { assertBuiltEnvironment } from '../../apps/mobile/config/environments.ts';
 import { assertUnsignedPublicVariables } from '../../apps/mobile/config/release-build.ts';
-import { STORE_PAYMENT_MODE } from '../../apps/mobile/src/store-catalog.ts';
+import { DEMO_ADMOB } from '../../apps/mobile/config/publisher.ts';
+import { STORE_KEY, STORE_PAYMENT_MODE } from '../../apps/mobile/src/store-catalog.ts';
 
 const repository = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const app = join(repository, 'apps/mobile');
@@ -48,6 +49,15 @@ assert(playerAppAsset, 'Missing player application bundle.');
 const playerApp = readFileSync(join(output, playerAppAsset.slice(base.length)), 'utf8');
 for (const price of ['testBuyPrice', 'previewBuyPrice']) {
   assert(!playerApp.includes(price), 'Player app must not include simulated store prices.');
+}
+
+const demoIds = Object.values(DEMO_ADMOB).flatMap(({ appId, rewarded }) => [appId, rewarded]);
+const publicScripts = readdirSync(join(output, 'assets')).filter((name) => name.endsWith('.js'));
+for (const name of publicScripts) {
+  const script = readFileSync(join(output, 'assets', name), 'utf8');
+  assert(!demoIds.some((id) => script.includes(id)), 'Demo ad inventory in the public bundle.');
+  assert(!script.includes('cpi-mystery-lab'), 'Tester controls in the public bundle.');
+  assert(!script.includes(STORE_KEY), 'Simulated wallet in the public bundle.');
 }
 
 // Validate QA separately. The workflow only uploads the production directory.

@@ -48,16 +48,24 @@ export function createCpiLiveFunction(env: (name: string) => string | undefined)
         config.databaseCa,
       );
       const crypto = privateCryptography(config.pepper, config.encryptionKey);
+      const directory = createSupabaseAccountDirectory({
+        url: config.url,
+        serviceKey: config.serviceKey,
+        database,
+      });
       const issuer = createAccountIssuer({
         database,
         crypto,
         policy: config.policy,
         identity: config.nativeIdentity ? createNativeIdentity(config.nativeIdentity) : undefined,
-        directory: createSupabaseAccountDirectory({
-          url: config.url,
-          serviceKey: config.serviceKey,
-          database,
-        }),
+        directory,
+        nativeSignup: config.nativeIdentity?.signupEmails
+          ? {
+              directory: directory.providerSignup,
+              emails: config.nativeIdentity.signupEmails,
+              directEntry: config.nativeIdentity.directEntry,
+            }
+          : undefined,
         mailer: createResendAccountMailer({ apiKey: config.mailKey, from: config.mailFrom }),
         stagingTestEmails: config.stagingTestEmails,
       });
