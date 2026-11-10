@@ -132,10 +132,23 @@ describe('live purchase configuration', () => {
   });
 
   it('keeps production purchases closed unless both stores are mapped', () => {
+    const productionProjectRef = 'c'.repeat(20);
     expect(() =>
       readLiveConfiguration(
-        (name) => config({ CPI_ENVIRONMENT: 'production', CPI_STAGING_TEST_EMAILS: '' })[name],
+        (name) =>
+          config({
+            CPI_ENVIRONMENT: 'production',
+            CPI_PROJECT_REF: productionProjectRef,
+            SUPABASE_URL: 'https://' + productionProjectRef + '.supabase.co',
+            CPI_STAGING_TEST_EMAILS: '',
+          })[name],
       ),
     ).toThrow('Production purchases require both store platforms');
+  });
+
+  it('rejects the staging Supabase project when configured as production', () => {
+    expect(() =>
+      readLiveConfiguration((name) => config({ CPI_ENVIRONMENT: 'production' })[name]),
+    ).toThrow('Production requires a Supabase project separate from Crystal Path staging');
   });
 });

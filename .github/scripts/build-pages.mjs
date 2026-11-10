@@ -8,6 +8,7 @@ import { assertBuiltEnvironment } from '../../apps/mobile/config/environments.ts
 import { assertUnsignedPublicVariables } from '../../apps/mobile/config/release-build.ts';
 import { DEMO_ADMOB } from '../../apps/mobile/config/publisher.ts';
 import { STORE_KEY, STORE_PAYMENT_MODE } from '../../apps/mobile/src/store-catalog.ts';
+import { pagesAccountBuildEnv } from './pages-account-config.mjs';
 
 const repository = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const app = join(repository, 'apps/mobile');
@@ -16,8 +17,8 @@ const base = '/crystal-path-infinity/';
 const qaBase = `${base}tester/`;
 const qaOutput = join(app, 'dist-qa');
 
-// This public preview must not inherit account/ad configuration from env files
-// or the runner. Reuse the existing strict no-public-service-variable guard.
+// Pages inherits no public services from env files or the runner. Production
+// accounts can only be added below after the exact gateway check succeeds.
 assertUnsignedPublicVariables(loadEnv('production', app, 'VITE_'));
 assertUnsignedPublicVariables(loadEnv('qa', app, 'VITE_'));
 assertUnsignedPublicVariables(process.env);
@@ -25,7 +26,13 @@ assert.equal(STORE_PAYMENT_MODE, 'test', 'QA purchases must remain simulated.');
 if (Object.keys(process.env).some((name) => name.startsWith('CPI_RELEASE_')))
   throw new Error('Pages preview is separate from unsigned native release preparation.');
 
-await build({ root: app, mode: 'production', base, build: { outDir: output } });
+const accountEnv = await pagesAccountBuildEnv(process.env);
+Object.assign(process.env, accountEnv);
+try {
+  await build({ root: app, mode: 'production', base, build: { outDir: output } });
+} finally {
+  for (const name of Object.keys(accountEnv)) delete process.env[name];
+}
 
 const manifest = JSON.parse(readFileSync(join(app, 'package.json'), 'utf8'));
 const built = JSON.parse(readFileSync(join(output, 'build-info.json'), 'utf8'));
@@ -50,6 +57,11 @@ const playerApp = readFileSync(join(output, playerAppAsset.slice(base.length)), 
 for (const price of ['testBuyPrice', 'previewBuyPrice']) {
   assert(!playerApp.includes(price), 'Player app must not include simulated store prices.');
 }
+if (accountEnv.VITE_ACCOUNT_API_BASE_URL)
+  assert(
+    playerApp.includes(accountEnv.VITE_ACCOUNT_API_BASE_URL),
+    'Player account host is missing.',
+  );
 
 const demoIds = Object.values(DEMO_ADMOB).flatMap(({ appId, rewarded }) => [appId, rewarded]);
 const publicScripts = readdirSync(join(output, 'assets')).filter((name) => name.endsWith('.js'));
@@ -89,6 +101,11 @@ const qaAppAsset = qaAssets.find((asset) => /\/assets\/index-[^/]+\.js$/.test(as
 assert(qaAppAsset, 'Missing QA application bundle.');
 const qaApp = readFileSync(join(qaOutput, qaAppAsset.slice(qaBase.length)), 'utf8');
 assert(qaApp.includes('testBuyPrice'), 'Tester app must include simulated test-store prices.');
+if (accountEnv.VITE_ACCOUNT_API_BASE_URL)
+  assert(
+    !qaApp.includes(accountEnv.VITE_ACCOUNT_API_BASE_URL),
+    'Production account configuration leaked into the tester app.',
+  );
 
 writeFileSync(join(output, '.nojekyll'), '');
 const sourceSha = execFileSync('git', ['rev-parse', 'HEAD'], {
@@ -100,7 +117,11 @@ const deployment = {
   kind: 'guest-web-preview',
   sourceSha,
   base,
-  liveServices: { accounts: 'disabled', ranked: 'disabled', ads: 'disabled' },
+  liveServices: {
+    accounts: accountEnv.VITE_ACCOUNT_SERVICES_ENABLED === 'true' ? 'enabled' : 'disabled',
+    ranked: 'disabled',
+    ads: 'disabled',
+  },
   purchases: 'unavailable-no-live-billing',
 };
 writeFileSync(join(output, 'deployment-info.json'), JSON.stringify(deployment, null, 2) + '\n');
