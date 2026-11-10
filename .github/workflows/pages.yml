@@ -29,9 +29,11 @@ jobs:
           cache-dependency-path: package-lock.json
       - run: npm ci --ignore-scripts
       - name: Verify the Pages publication scope
-        run: node --test .github/scripts/pages-policy.test.mjs
+        run: node --test .github/scripts/pages-policy.test.mjs .github/scripts/pages-account-config.test.mjs
       - run: npm run typecheck
       - name: Build and verify guest assets for the project URL
+        env:
+          CPI_PAGES_ACCOUNTS_ENABLED: ${{ github.ref == 'refs/heads/main' && vars.CPI_PAGES_ACCOUNTS_ENABLED || 'false' }}
         run: node --experimental-strip-types .github/scripts/build-pages.mjs
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:

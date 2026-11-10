@@ -70,3 +70,9 @@ Build 17 showed the clock and signal row above game screens, including Discoveri
 The native shell keeps a fixed page scale and disables the iPhone WebView's pinch recognizer. Form fields use a 16 CSS pixel minimum to avoid iOS focus zoom. The game surface suppresses selection and the long-press callout, with normal selection retained for editable fields. Browser accessibility zoom remains available outside the native shell.
 
 The 9 November test candidate also clips horizontal document overflow inside the native shell. The iPhone WebView stops at the page edge and hides its outer scroll indicators. Vertical scrolling stays available where the content is taller than the screen. Device acceptance uses side swipes on Profile, Rankings and Discoveries, then a vertical scroll on a long screen.
+
+## 10 November 2026 store icon candidate
+
+Pawrachute jumps above a mint glass pane with the rooftop world behind him. His raised ear, teal scarf and orange rescue pack carry the identity at phone size. The opaque iPhone export and five Android density sets use the same artwork. Android also has a matching monochrome silhouette for themed launchers. The web home-screen shortcut uses the corresponding 180px export. The Kolequant splash still has its own asset and presentation.
+
+The signed live guest builds 1.0.0 (43) predate this artwork. Generate fresh native packages and check the installed icon before using the candidate for a store submission.

@@ -3,6 +3,8 @@ import { validateAccountPolicy } from './account-policy.ts';
 import type { AccountPolicy } from './account-policy.ts';
 import type { CommerceProduct } from './commerce-service.ts';
 
+const stagingProjectRef = 'yfntwewvfsvljxcztoyp';
+
 function providerSignupEmails(configured: string | undefined) {
   if (!configured) return undefined;
   const value: unknown = JSON.parse(configured);
@@ -43,6 +45,8 @@ export function readLiveConfiguration(env: (name: string) => string | undefined)
   const environment = require('CPI_ENVIRONMENT');
   if (environment !== 'development' && environment !== 'staging' && environment !== 'production')
     throw new Error('Invalid live environment');
+  if (environment === 'production' && projectRef === stagingProjectRef)
+    throw new Error('Production requires a Supabase project separate from Crystal Path staging');
   const keys = [
     'CPI_PRIVATE_PEPPER',
     'CPI_ENCRYPTION_KEY',
