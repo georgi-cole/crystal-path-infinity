@@ -16,7 +16,8 @@ assert.equal(env.GITHUB_RUN_ATTEMPT, '1', 'Dispatch a new candidate for a differ
 assert.equal(git('rev-parse', 'HEAD'), env.GITHUB_SHA);
 
 const request = api(`repos/${repo}/pulls/106`);
-const source = git('rev-parse', 'HEAD^');
+const source = env.CPI_GAME_SOURCE_SHA;
+git('merge-base', '--is-ancestor', source, 'HEAD');
 assert.equal(request.merged, true);
 assert.equal(request.base.ref, 'main');
 assert.equal(request.head.sha, env.CPI_APPROVED_SHA);

@@ -46,7 +46,7 @@ assert info["GADApplicationIdentifier"] == "ca-app-pub-9243398419153145~73035849
 assert "CpiGoogleSignInClientID" not in info and info["UIDeviceFamily"] == [1]
 assert info["CFBundleIcons"]["CFBundlePrimaryIcon"]["CFBundleIconName"] == "AppIcon"
 assert metadata["environment"] == "production"
-assert (public / "brand/apple-touch-icon.png").read_bytes() == pathlib.Path(
+assert (public / "brand/apple-touch-icon.png").read_bytes() == Path(
     "apps/mobile/public/brand/apple-touch-icon.png"
 ).read_bytes()
 assert "NativePurchases" not in (app / "capacitor.config.json").read_text()

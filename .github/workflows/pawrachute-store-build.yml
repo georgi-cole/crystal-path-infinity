@@ -16,6 +16,7 @@ concurrency:
 
 env:
   CPI_APPROVED_SHA: 7236bab9e74e83e4de70890ce48bb9e1234d7f38
+  CPI_GAME_SOURCE_SHA: d88fefa553ecdc958c7703b8b3a2c6b33fabd052
   CPI_APP_ENV: production
   CPI_STORE_VERSION: '1.0.0'
   CPI_STORE_BUILD_NUMBER: '44'
@@ -30,8 +31,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: android
-            runner: ubuntu-24.04
           - platform: ios
             runner: macos-26
     runs-on: ${{ matrix.runner }}
