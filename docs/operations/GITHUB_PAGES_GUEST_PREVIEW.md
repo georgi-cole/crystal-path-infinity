@@ -9,7 +9,8 @@ release. The policy drafts remain private review documents.
 The game URL is <https://georgi-cole.github.io/crystal-path-infinity/>. GitHub
 Pages must use **GitHub Actions** as its publishing source, replacing the legacy
 main-root README publication. The Pages workflow builds the actual Vite app and
-uploads only `apps/mobile/dist`, with the `/crystal-path-infinity/` asset base.
+uploads only `apps/mobile/dist-pages`, with the `/crystal-path-infinity/` asset
+base. A QA build is checked separately and is not included in that artifact.
 Native builds retain their existing asset paths and environment identities.
 
 ## Verification and deployment
@@ -26,20 +27,28 @@ npm run typecheck
 node --experimental-strip-types .github/scripts/build-pages.mjs
 ```
 
-The build rejects nonempty public `VITE_*` configuration, including local env
-files and inherited runner variables. It uses the existing production identity
-and the default app entry point, which injects no account, leaderboard, ranked,
-or rewarded-ad services. It verifies the compiled entry point, project asset
-paths, existing files and build identity before upload. No backend credentials
-or repository source directory is published. `deployment-info.json` records the
-source SHA and the guest-only service scope.
+The build rejects public `VITE_*` configuration from local env files and the
+runner. By default, the player build receives no account, leaderboard, ranked,
+or rewarded-ad service configuration. Production email accounts are an explicit
+opt-in through the `CPI_PAGES_ACCOUNTS_ENABLED` repository variable. That option
+works only for a main publication and the build must first verify that the fixed
+production gateway allows the exact Pages origin. It passes only the public API
+URL and enable flag to the player build; no credentials are published. The QA
+build receives none of that production account configuration. The script also
+checks the output for demo ad IDs, tester controls and the simulated wallet, and
+`deployment-info.json` records the source SHA and account-service state.
+
+The production signup policy currently approves no countries, so accounts stay
+unavailable and guest play remains the public default until policy and real
+mailbox acceptance are complete. Public rankings, ads and web purchases remain
+disabled.
 
 After deployment, verify the main menu, new practice, gameplay input, settings,
-profile/account-unavailable state, hash navigation and reload. Saved practice is
-local to that browser and origin; it is not a verified online result. Browser
-testing does not replace native-device acceptance. Public signups, anonymous
-sign-ins, ranked starts and ads remain disabled in Supabase.
+profile/account state, hash navigation and reload. Saved practice is local to
+that browser and origin; it is not a verified online result. Browser testing
+does not replace native-device acceptance. Supabase anonymous sign-ins, ranked
+starts and ad rewards remain disabled.
 
 For rollback, rerun the Pages workflow from a reviewed revert on main. To stop
 publication, disable the Pages workflow and unpublish the site in repository
-Pages settings; do not re-enable account or ad services as a workaround.
+Pages settings; do not enable account or ad services as a workaround.

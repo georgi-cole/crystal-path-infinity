@@ -1,7 +1,10 @@
 import { Capacitor } from '@capacitor/core';
 import type { ApprovedAccountServices } from './App';
 import { AccountSessionOwner } from './account/session-owner';
-import { protectedRefreshTokenStore } from './account/secure-session';
+import {
+  createInMemoryRefreshTokenStore,
+  protectedRefreshTokenStore,
+} from './account/secure-session';
 import { createSessionTransport } from './account/session-gateway';
 import { createAccountControlsClient } from './account/account-controls-client';
 import { createOtpGateway } from './account/otp-gateway';
@@ -21,6 +24,7 @@ import { nativeBillingAdapter } from './commerce/native-billing';
 import { createCommerceGateway } from './commerce/commerce-gateway';
 import { CommerceFlow } from './commerce/commerce-flow';
 import { PUBLISHER, DEMO_ADMOB } from '../config/publisher';
+import { SIMULATED_STORE_ENABLED } from './app-profile';
 
 export interface LiveServices {
   readonly account: ApprovedAccountServices;
@@ -28,8 +32,7 @@ export interface LiveServices {
 }
 /** Configuration alone never authorizes an account or ad: the server checks each operation. */
 export function createLiveServices(values: Readonly<Record<string, unknown>>): LiveServices | null {
-  if (values.VITE_ACCOUNT_SERVICES_ENABLED !== 'true' || !protectedRefreshTokenStore.supported)
-    return null;
+  if (SIMULATED_STORE_ENABLED || values.VITE_ACCOUNT_SERVICES_ENABLED !== 'true') return null;
   const base =
     typeof values.VITE_ACCOUNT_API_BASE_URL === 'string'
       ? values.VITE_ACCOUNT_API_BASE_URL
@@ -41,7 +44,28 @@ export function createLiveServices(values: Readonly<Record<string, unknown>>): L
     }),
     transport = createSessionTransport(base);
   if (!base || !gateway || !transport) return null;
-  const session = new AccountSessionOwner(protectedRefreshTokenStore, transport);
+  const native = protectedRefreshTokenStore.supported;
+  const session = new AccountSessionOwner(
+    native ? protectedRefreshTokenStore : createInMemoryRefreshTokenStore(),
+    transport,
+  );
+  const account: ApprovedAccountServices = {
+    session,
+    accountEntry: {
+      gateway,
+      session,
+      staging: base === STAGING_ACCOUNT_GATEWAY,
+      identity:
+        native && values.VITE_IOS_PROVIDER_SIGN_IN === 'true'
+          ? createNativeIdentityClient(base, session, Number(values.VITE_CLIENT_BUILD ?? 1))
+          : null,
+    },
+    signOut: () => session.signOut(),
+    accountControlsClient: createAccountControlsClient(base, session),
+    profileClient: createProfileClient(base, session),
+  };
+  if (!native) return { account, commerce: null };
+
   const ranked = createRankedClient({ baseUrl: base, session });
   const platform = Capacitor.getPlatform();
   const inventory = import.meta.env.MODE === 'production' ? PUBLISHER.admob : DEMO_ADMOB;
@@ -62,20 +86,8 @@ export function createLiveServices(values: Readonly<Record<string, unknown>>): L
     : null;
   return {
     account: {
-      session,
-      accountEntry: {
-        gateway,
-        session,
-        staging: base === STAGING_ACCOUNT_GATEWAY,
-        identity:
-          values.VITE_IOS_PROVIDER_SIGN_IN === 'true'
-            ? createNativeIdentityClient(base, session, Number(values.VITE_CLIENT_BUILD ?? 1))
-            : null,
-      },
-      signOut: () => session.signOut(),
-      accountControlsClient: createAccountControlsClient(base, session),
+      ...account,
       adPrivacyOptions: ad?.available ? () => ad.showPrivacyOptions() : undefined,
-      profileClient: createProfileClient(base, session),
       rankedClient: ranked,
       leaderboardClient: createLeaderboardClient(base, session),
       nameReportClient: createNameReportClient(base, session),
