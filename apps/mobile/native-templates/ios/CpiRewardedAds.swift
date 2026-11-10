@@ -42,10 +42,10 @@ public class CpiRewardedAds: CAPPlugin, CAPBridgedPlugin, FullScreenContentDeleg
                     value: self.localPractice || call.getBool("childDirected") == true
                 )
             }
-            if self.localPractice || call.getBool("underAgeOfConsent") != nil {
-                configuration.tagForUnderAgeOfConsent = NSNumber(
-                    value: self.localPractice || call.getBool("underAgeOfConsent") == true
-                )
+            if self.localPractice {
+                configuration.tagForUnderAgeOfConsent = nil
+            } else if let underAgeOfConsent = call.getBool("underAgeOfConsent") {
+                configuration.tagForUnderAgeOfConsent = NSNumber(value: underAgeOfConsent)
             }
             if self.localPractice { configuration.maxAdContentRating = GADMaxAdContentRating.general }
             let request = Request()

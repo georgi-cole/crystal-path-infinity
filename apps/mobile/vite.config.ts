@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 import { loadEnv } from 'vite';
 import { getBuildInfo, requireEnvironment } from './config/environments.ts';
+import { selectGuestAdUnits } from './config/guest-ad-inventory.ts';
 import { assertUnsignedPublicVariables, resolveUnsignedRelease } from './config/release-build.ts';
 
 const appRoot = fileURLToPath(new URL('.', import.meta.url));
@@ -21,9 +22,10 @@ export default defineConfig(({ mode }) => {
     mode === 'test' ? null : resolveUnsignedRelease(environment, manifest.version, process.env);
   if (preview && release)
     throw new Error('Web review profiles cannot be included in an unsigned release candidate.');
-  if (release || mode === 'player-preview')
-    assertUnsignedPublicVariables(loadEnv(mode, appRoot, 'VITE_'));
+  const values = loadEnv(mode, appRoot, 'VITE_');
+  if (release || mode === 'player-preview') assertUnsignedPublicVariables(values);
   const buildInfo = release?.app ?? getBuildInfo(environment, manifest.version);
+  const guestAdUnits = selectGuestAdUnits({ ...process.env, ...values }, environment);
   return {
     root: appRoot,
     plugins: [
@@ -58,7 +60,10 @@ export default defineConfig(({ mode }) => {
         },
       },
     ],
-    define: { __CPI_BUILD_INFO__: JSON.stringify(buildInfo) },
+    define: {
+      __CPI_BUILD_INFO__: JSON.stringify(buildInfo),
+      __CPI_GUEST_AD_UNITS__: JSON.stringify(guestAdUnits),
+    },
     server: { host: '127.0.0.1', port: 5174, strictPort: true },
     preview: { host: '127.0.0.1', port: 4174, strictPort: true },
     test: { environment: 'node', include: ['config/**/*.test.ts'] },

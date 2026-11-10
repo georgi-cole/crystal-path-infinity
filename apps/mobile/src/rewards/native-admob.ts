@@ -2,9 +2,7 @@ import { Capacitor, registerPlugin } from '@capacitor/core';
 import type { PluginListenerHandle } from '@capacitor/core';
 import { AdMob, AdmobConsentStatus, MaxAdContentRating } from '@capacitor-community/admob';
 import { GOOGLE_ADS_SDK } from '../../config/native-integrations';
-import type { AppEnvironment } from '../../config/environments';
-import { DEMO_ADMOB, PUBLISHER } from '../../config/publisher';
-import { STAGING_ACCOUNT_GATEWAY } from '../account/native-identity-client';
+import type { GuestAdUnits } from '../../config/guest-ad-inventory';
 import { permitMatchesAdapter } from './reward-flow';
 import type { NativeRewardedAdapter } from './reward-flow';
 import type { RewardPermit } from './reward-client';
@@ -59,14 +57,19 @@ const unitPattern = /^ca-app-pub-[0-9]{16}\/[0-9]{10}$/;
 const noncePattern = /^[A-Za-z0-9._~-]{24,1024}$/;
 const guestPrivacy: AdPrivacy = {
   childDirected: true,
-  underAgeOfConsent: true,
+  underAgeOfConsent: false,
   nonPersonalized: true,
   maxAdContentRating: 'G',
 };
 
-async function initializeAdMob(sdk: ConsentSdk, privacy: AdPrivacy, check: () => void) {
+async function initializeAdMob(
+  sdk: ConsentSdk,
+  privacy: AdPrivacy,
+  check: () => void,
+  consentUnderAge = privacy.underAgeOfConsent,
+) {
   let consent = await sdk.requestConsentInfo({
-    tagForUnderAgeOfConsent: privacy.underAgeOfConsent,
+    tagForUnderAgeOfConsent: consentUnderAge,
   });
   check();
   if (consent.status === AdmobConsentStatus.REQUIRED) consent = await sdk.showConsentForm();
@@ -272,7 +275,8 @@ export function createGuestAdMobAdapter(options: AdMobOptions): GuestRewardedAd 
         const inventory = await native.inventory();
         check();
         if (inventory.sdkVersion !== GOOGLE_ADS_SDK[options.platform]) return 'error';
-        await initializeAdMob(sdk, guestPrivacy, check);
+        // UMP protects guests of unknown age. Ad requests use the child-directed tag.
+        await initializeAdMob(sdk, guestPrivacy, check, true);
         const loaded = await loadRewardedAd(
           native,
           options.adUnitId,
@@ -329,35 +333,10 @@ export function createGuestAdMobAdapter(options: AdMobOptions): GuestRewardedAd 
   };
 }
 
-export function resolveGuestAdUnit(
-  values: Readonly<Record<string, unknown>>,
-  environment: AppEnvironment,
-  platform: AdMobOptions['platform'],
-): string | null {
-  const base = values.VITE_ACCOUNT_API_BASE_URL;
-  const staging = typeof base === 'string' && base.replace(/\/+$/, '') === STAGING_ACCOUNT_GATEWAY;
-  const test = values.VITE_GUEST_REWARDED_ADS_TEST;
-  const unit = values.VITE_GUEST_REWARDED_AD_UNIT_ID;
-  if (test === 'true')
-    return !unit && (staging || environment !== 'production')
-      ? DEMO_ADMOB[platform].rewarded
-      : null;
-  if (
-    (test !== undefined && test !== 'false') ||
-    staging ||
-    environment !== 'production' ||
-    typeof unit !== 'string' ||
-    !unitPattern.test(unit)
-  )
-    return null;
-  const rankedUnit = PUBLISHER.admob[platform].rewarded;
-  return unit !== rankedUnit && unit.split('/')[0] === rankedUnit.split('/')[0] ? unit : null;
-}
-
-export function nativeGuestAdMobAdapter(values: Readonly<Record<string, unknown>>) {
+export function nativeGuestAdMobAdapter(units: GuestAdUnits) {
   const platform = Capacitor.getPlatform();
   if (platform !== 'android' && platform !== 'ios') return null;
-  const adUnitId = resolveGuestAdUnit(values, __CPI_BUILD_INFO__.environment, platform);
+  const adUnitId = units[platform];
   return adUnitId
     ? createGuestAdMobAdapter({
         platform,

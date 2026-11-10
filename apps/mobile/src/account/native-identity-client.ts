@@ -1,4 +1,5 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
+import { STAGING_ACCOUNT_GATEWAY } from '../../config/environments';
 import { AccountGatewayError } from './otp-flow';
 import type { AccountSessionOwner } from './session-owner';
 
@@ -23,7 +24,7 @@ interface CpiIdentityPlugin {
   }): Promise<unknown>;
 }
 const bridge = registerPlugin<CpiIdentityPlugin>('CpiIdentity');
-export const STAGING_ACCOUNT_GATEWAY = 'https://crystal-path-staging-api.kolequant.workers.dev/cpi';
+export { STAGING_ACCOUNT_GATEWAY };
 const opaqueToken = /^[A-Za-z0-9_-]{43}$/;
 
 function record(value: unknown): value is Record<string, unknown> {

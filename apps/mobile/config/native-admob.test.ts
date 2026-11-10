@@ -1,12 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { AdmobConsentStatus, MaxAdContentRating } from '@capacitor-community/admob';
-import {
-  createGuestAdMobAdapter,
-  createNativeAdMobAdapter,
-  resolveGuestAdUnit,
-} from '../src/rewards/native-admob';
-import { STAGING_ACCOUNT_GATEWAY } from '../src/account/native-identity-client';
-import { DEMO_ADMOB, PUBLISHER } from './publisher';
+import { createGuestAdMobAdapter, createNativeAdMobAdapter } from '../src/rewards/native-admob';
+import { STAGING_ACCOUNT_GATEWAY } from './environments';
+import { selectGuestAdUnits } from './guest-ad-inventory';
+import { DEMO_ADMOB, LIVE_GUEST_ADMOB, PUBLISHER } from './publisher';
 import type { RewardedBridge } from '../src/rewards/native-admob';
 import type { RewardPermit } from '../src/rewards/reward-client';
 const now = 1800000000000,
@@ -167,33 +164,48 @@ describe('native rewarded adapter and privacy boundary', () => {
 });
 
 describe('native guest ad inventory', () => {
-  it('allows demonstration units only in test builds and excludes live units from staging', () => {
-    const flags = { VITE_GUEST_REWARDED_ADS_TEST: 'true' };
-    const staging = { VITE_ACCOUNT_API_BASE_URL: STAGING_ACCOUNT_GATEWAY };
-    const live = { VITE_GUEST_REWARDED_AD_UNIT_ID: 'ca-app-pub-9243398419153145/0000000001' };
-    expect(resolveGuestAdUnit(flags, 'staging', 'android')).toBe(DEMO_ADMOB.android.rewarded);
-    expect(resolveGuestAdUnit({ ...flags, ...staging }, 'production', 'ios')).toBe(
-      DEMO_ADMOB.ios.rewarded,
+  const demo = { VITE_GUEST_REWARDED_ADS_TEST: 'true' };
+  const staging = { VITE_ACCOUNT_API_BASE_URL: STAGING_ACCOUNT_GATEWAY + '/' };
+  const live = { VITE_GUEST_REWARDED_ADS_LIVE: 'true', CPI_NATIVE_ADS: 'true' };
+  const demoUnits = { android: DEMO_ADMOB.android.rewarded, ios: DEMO_ADMOB.ios.rewarded };
+
+  it('keeps demo units in internal builds and fails on mixed inventory', () => {
+    expect(selectGuestAdUnits({}, 'production')).toBeNull();
+    expect(selectGuestAdUnits(demo, 'staging')).toEqual(demoUnits);
+    expect(selectGuestAdUnits({ ...demo, ...staging }, 'production')).toEqual(demoUnits);
+    expect(() => selectGuestAdUnits(demo, 'production')).toThrow(/demo ads require/);
+    expect(() => selectGuestAdUnits(live, 'staging')).toThrow(/production mobile build/);
+    expect(() => selectGuestAdUnits({ ...live, ...staging }, 'production')).toThrow(
+      /production mobile build/,
     );
-    expect(resolveGuestAdUnit(flags, 'production', 'ios')).toBeNull();
-    expect(resolveGuestAdUnit({ ...flags, ...staging, ...live }, 'production', 'ios')).toBeNull();
-    expect(resolveGuestAdUnit(live, 'staging', 'android')).toBeNull();
-    expect(resolveGuestAdUnit({ ...staging, ...live }, 'production', 'ios')).toBeNull();
-    expect(resolveGuestAdUnit(live, 'production', 'ios')).toBe(live.VITE_GUEST_REWARDED_AD_UNIT_ID);
-    expect(
-      resolveGuestAdUnit(
-        { VITE_GUEST_REWARDED_AD_UNIT_ID: PUBLISHER.admob.ios.rewarded },
+    expect(() => selectGuestAdUnits({ ...demo, ...live }, 'production')).toThrow(
+      /test ads disabled/,
+    );
+  });
+
+  it('selects the registered live units for each platform and checks the native SDK', () => {
+    expect(selectGuestAdUnits(live, 'production')).toEqual(LIVE_GUEST_ADMOB);
+    expect(() => selectGuestAdUnits({ ...live, CPI_NATIVE_ADS: 'false' }, 'production')).toThrow(
+      /native SDK/,
+    );
+    expect(() =>
+      selectGuestAdUnits(
+        { ...live, CPI_ADMOB_IOS_APP_ID: PUBLISHER.admob.android.appId },
         'production',
-        'ios',
       ),
-    ).toBeNull();
-    expect(
-      resolveGuestAdUnit(
-        { VITE_GUEST_REWARDED_AD_UNIT_ID: DEMO_ADMOB.ios.rewarded },
+    ).toThrow(/registered Crystal Path AdMob apps/);
+  });
+
+  it('limits the existing one-unit override to the registered guest unit for its platform', () => {
+    const override = (id: string) =>
+      selectGuestAdUnits(
+        { CPI_NATIVE_ADS: 'true', VITE_GUEST_REWARDED_AD_UNIT_ID: id },
         'production',
-        'ios',
-      ),
-    ).toBeNull();
+      );
+    expect(override(LIVE_GUEST_ADMOB.ios)).toEqual({ ios: LIVE_GUEST_ADMOB.ios });
+    expect(override(LIVE_GUEST_ADMOB.android)).toEqual({ android: LIVE_GUEST_ADMOB.android });
+    expect(() => override(PUBLISHER.admob.android.rewarded)).toThrow(/registered guest ad unit/);
+    expect(() => override(DEMO_ADMOB.ios.rewarded)).toThrow(/registered guest ad unit/);
   });
 
   it('loads protected inventory with consent, sends no verification nonce, and waits for dismissal', async () => {
@@ -208,7 +220,7 @@ describe('native guest ad inventory', () => {
     expect(f.sdk.showConsentForm).toHaveBeenCalledOnce();
     expect(f.sdk.initialize).toHaveBeenCalledWith({
       tagForChildDirectedTreatment: true,
-      tagForUnderAgeOfConsent: true,
+      tagForUnderAgeOfConsent: false,
       maxAdContentRating: MaxAdContentRating.General,
     });
     expect(f.native.load).toHaveBeenCalledWith({
@@ -216,7 +228,7 @@ describe('native guest ad inventory', () => {
       key,
       localPractice: true,
       childDirected: true,
-      underAgeOfConsent: true,
+      underAgeOfConsent: false,
       nonPersonalized: true,
     });
     f.emit('earned', 'previous-ad');
