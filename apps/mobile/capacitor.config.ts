@@ -8,6 +8,7 @@ import {
   assertUnsignedRelease,
   resolveUnsignedRelease,
 } from './config/release-build';
+import { resolveStoreBuild } from './config/store-build';
 
 const CPI_BRAND_BACKGROUND = '#000000';
 
@@ -17,10 +18,11 @@ const mobilePackage = JSON.parse(readFileSync(join(__dirname, 'package.json'), '
   version: string;
 };
 const release = resolveUnsignedRelease(environment, mobilePackage.version, process.env);
+const store = resolveStoreBuild(environment, process.env);
 const integrations = readNativeIntegrations(process.env, environment);
 if (release && (integrations.ads || integrations.purchases))
   throw new Error('The existing unsigned preparation profile does not activate native services.');
-const build = release?.app ?? getBuildInfo(environment, mobilePackage.version);
+const build = release?.app ?? getBuildInfo(environment, store?.version ?? mobilePackage.version);
 const metadataPath = join(__dirname, 'dist', 'build-info.json');
 const copiesAssets = process.argv
   .slice(2)
