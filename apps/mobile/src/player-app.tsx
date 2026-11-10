@@ -28,10 +28,7 @@ export function PlayerApp() {
       : null,
   );
   const [guestRewardedAd] = useState(() =>
-    import.meta.env.VITE_GUEST_REWARDED_ADS_TEST === 'true' ||
-    import.meta.env.VITE_GUEST_REWARDED_AD_UNIT_ID
-      ? nativeGuestAdMobAdapter(import.meta.env)
-      : null,
+    __CPI_GUEST_AD_UNITS__ ? nativeGuestAdMobAdapter(__CPI_GUEST_AD_UNITS__) : null,
   );
   useEffect(() => {
     const session = services?.account.accountEntry?.session;

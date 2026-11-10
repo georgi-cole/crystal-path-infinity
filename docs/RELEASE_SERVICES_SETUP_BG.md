@@ -264,3 +264,22 @@ Staging `cpi-live` включва потвърдените 18 Apple и 18 Google
 **Потвърден iPhone тест · 10 ноември 2026 г.** Собственикът потвърди десетте продължавания като гост в TestFlight 0.1.0 (42) от ревизия 50e1df6. Публичният пакет на GitHub Pages използва профила за играчи с изключени live услуги. Проверката на пакета отхвърля демонстрационните рекламни идентификатори, менюто за тест на мистерии и симулирания портфейл. Отделният QA пакет се изгражда за проверка.
 
 Публичната мобилна конфигурация изисква отделна rewarded единица за всяка платформа от Crystal Path AdMob акаунта. При одобрен release задай идентификатора ѝ в `VITE_GUEST_REWARDED_AD_UNIT_ID` за съответната native сборка, остави `VITE_GUEST_REWARDED_ADS_TEST` изключен и включи native SDK. Гост единицата използва Google инвентар без mediation и локалния callback. Запази SSV единицата и сървърната проверка за официалните опити. Провери ограниченията за неперсонализирани реклами, неизвестна възраст и разрешеното рекламно съдържание за публичната аудитория преди активиране.
+
+**Живи единици за гости · 10 ноември 2026 г.** В AdMob са създадени две отделни rewarded единици за Crystal Path. Всяка дава едно продължаване. И двете използват Google инвентар и оставят приложението да налага квотата от десет награди. AdMob показва без лимит на ниво единица и приложение. Гост потокът обработва локалния callback за спечелена награда. Сървърният SSV поток има свои единици.
+
+| Платформа | Производствена единица за гости |
+| --- | --- |
+| Android | `ca-app-pub-9243398419153145/2271422535` |
+| iPhone | `ca-app-pub-9243398419153145/8645259199` |
+
+За сборка за публично мобилно разпространение включи `CPI_NATIVE_ADS=true` и `VITE_GUEST_REWARDED_ADS_LIVE=true`. Една компилация на web активите избира отделния идентификатор на всяка платформа. Ръчният `VITE_GUEST_REWARDED_AD_UNIT_ID` приема само един от двата регистрирани идентификатора за съответната платформа. Използвай само един от двата начина за избор. Остави флага за демонстрационни реклами изключен. iPhone изисква Mac за Xcode компилацията.
+
+```sh
+export CPI_NATIVE_ADS=true
+export VITE_GUEST_REWARDED_ADS_LIVE=true
+npm run build:production
+npm run native:generate -- --platform android --environment production
+npm run native:generate -- --platform ios --environment production
+```
+
+Двете AdMob приложения показват Requires review и Limited ad serving. Публикуваните store записи трябва да бъдат свързани и прегледани. Точният запис на издателя е наличен в [app-ads.txt на developer сайта](https://georgi-cole.github.io/app-ads.txt). Черновата в App Store Connect използва [публичния сайт на играта](https://georgi-cole.github.io/crystal-path-infinity/) в Marketing URL. В Google Play полето Website вече води към поддръжката на същия хост. [AdMob app readiness](https://support.google.com/admob/answer/10564477).

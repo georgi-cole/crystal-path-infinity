@@ -103,3 +103,7 @@ Unit/contract тестовете покриват разписка без доб
 - [AdMob SDK](https://github.com/capacitor-community/admob), [Native Purchases SDK](https://github.com/Cap-go/capacitor-native-purchases), [Supabase account settings](https://supabase.com/docs/guides/auth/general-configuration).
 
 Историческите симулации, ценови ориентири и бизнес цели не са променяни. Никакви симулирани рекламни или платежни събития не се отчитат като реални приходи.
+
+## Живи rewarded единици за гостите · 10 ноември 2026 г.
+
+Android и iPhone имат отделни производствени guest rewarded единици. Изборът е част от компилацията и изисква изричния live флаг и регистрирания native SDK. Вътрешният TestFlight използва демонстрационните единици. [Идентификатори, команди и статус на прегледа](../RELEASE_SERVICES_SETUP_BG.md#гост-реклами-в-мобилните-сборки).

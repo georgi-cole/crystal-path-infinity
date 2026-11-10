@@ -44,7 +44,7 @@ export function createLiveServices(values: Readonly<Record<string, unknown>>): L
   const session = new AccountSessionOwner(protectedRefreshTokenStore, transport);
   const ranked = createRankedClient({ baseUrl: base, session });
   const platform = Capacitor.getPlatform();
-  const inventory = __CPI_BUILD_INFO__.environment === 'production' ? PUBLISHER.admob : DEMO_ADMOB;
+  const inventory = import.meta.env.MODE === 'production' ? PUBLISHER.admob : DEMO_ADMOB;
   const ad =
     values.VITE_REWARDED_ADS_ENABLED === 'true' && (platform === 'android' || platform === 'ios')
       ? nativeAdMobAdapter(inventory[platform].rewarded)

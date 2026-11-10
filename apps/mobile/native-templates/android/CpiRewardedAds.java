@@ -49,7 +49,7 @@ public class CpiRewardedAds extends Plugin {
             if (localPractice) {
                 MobileAds.setRequestConfiguration(MobileAds.getRequestConfiguration().toBuilder()
                     .setTagForChildDirectedTreatment(RequestConfiguration.TAG_FOR_CHILD_DIRECTED_TREATMENT_TRUE)
-                    .setTagForUnderAgeOfConsent(RequestConfiguration.TAG_FOR_UNDER_AGE_OF_CONSENT_TRUE)
+                    .setTagForUnderAgeOfConsent(RequestConfiguration.TAG_FOR_UNDER_AGE_OF_CONSENT_UNSPECIFIED)
                     .setMaxAdContentRating(RequestConfiguration.MAX_AD_CONTENT_RATING_G)
                     .build());
             }

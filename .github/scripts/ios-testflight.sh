@@ -37,6 +37,7 @@ preflight() {
   grep -Fq testFlightInternalTestingOnly "$RUNNER_TEMP/cpi-xcodebuild-help.txt"
   if [[ "$CPI_NATIVE_ADS" != "$VITE_REWARDED_ADS_ENABLED" ||
         "$CPI_NATIVE_ADS" != "${VITE_GUEST_REWARDED_ADS_TEST:-false}" ||
+        "${VITE_GUEST_REWARDED_ADS_LIVE:-false}" != false ||
         -n "${VITE_GUEST_REWARDED_AD_UNIT_ID:-}" ||
         "$VITE_ACCOUNT_SERVICES_ENABLED" != true ||
         "$VITE_ACCOUNT_API_BASE_URL" != https://crystal-path-staging-api.kolequant.workers.dev/cpi ]]; then

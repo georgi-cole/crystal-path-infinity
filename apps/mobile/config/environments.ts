@@ -1,5 +1,7 @@
 export type AppEnvironment = 'development' | 'staging' | 'production';
 
+export const STAGING_ACCOUNT_GATEWAY = 'https://crystal-path-staging-api.kolequant.workers.dev/cpi';
+
 export interface BuildInfo {
   schemaVersion: 1;
   environment: AppEnvironment;

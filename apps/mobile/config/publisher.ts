@@ -15,7 +15,12 @@ export const PUBLISHER = /* @__PURE__ */ Object.freeze({
     },
   },
 });
-/** Google's official demonstration inventory; used for every non-production build. */
+/** Production guest continuation units created on 10 November 2026. */
+export const LIVE_GUEST_ADMOB = /* @__PURE__ */ Object.freeze({
+  android: 'ca-app-pub-9243398419153145/2271422535',
+  ios: 'ca-app-pub-9243398419153145/8645259199',
+});
+/** Google's official demonstration inventory for internal builds. */
 export const DEMO_ADMOB = /* @__PURE__ */ Object.freeze({
   android: {
     appId: 'ca-app-pub-3940256099942544~3347511713',
