@@ -11,6 +11,8 @@ English portrait series, 10 November 2026. The numbered files use the same order
 | 05 · Meet Pawrachute | Pawrachute's rooftop preview in the Vault |
 | 06 · Go one row farther | Home screen after a 33-row practice crossing |
 
-The [Google Play set](google-play) includes six 1080 × 1920 screenshots, a 512px listing icon and a 1024 × 500 feature graphic. The [App Store set](app-store) includes six 1320 × 2868 screenshots. The listing icon and banner share the mint and orchid bridge artwork with the new native launcher icon.
+The [Google Play set](google-play) includes six 1080 × 1920 screenshots, a 512px listing icon and a 1024 × 500 feature graphic. The [App Store set](app-store) includes six 1206 × 2622 screenshots for Apple's medium iPhone display slot. The listing and native launcher icons feature Pawrachute jumping over the glass bridge. The Play banner shows the mint and orchid bridge choice.
 
 The panels frame captures from the production player UI on the game tree merged by PR #104, at a portrait mobile viewport. The lettering, frames, and lighting around the captures are marketing artwork. The two Vault panels crop to the existing preview dialogs. These are store design assets. The signed 1.0.0 (43) packages predate the launcher change, so the final store package still needs a fresh build and a device check with the chosen icon.
+
+The English drafts in Google Play Console and App Store Connect contain the six panels in order. The Play draft also contains the Pawrachute icon and feature graphic. Apple takes the installed icon from the selected signed build.

@@ -4,14 +4,14 @@
     android:height="108dp"
     android:viewportWidth="256"
     android:viewportHeight="256">
-    <!-- The intact and falling panes share the launcher silhouette. -->
+    <!-- Pawrachute's raised ears, scarf, and leading paw stay readable when tinted. -->
     <group
         android:pivotX="128"
         android:pivotY="128"
-        android:scaleX="0.70"
-        android:scaleY="0.70">
+        android:scaleX="0.74"
+        android:scaleY="0.74">
         <path
             android:fillColor="#FFFFFFFF"
-            android:pathData="M19,151 L142,59 L166,59 L125,207 Z M177,60 L203,60 L239,112 L226,123 L214,119 L202,139 L192,132 L178,154 L169,150 L145,180 Z M178,157 L212,176 L219,197 L189,183 Z M181,202 L197,192 L191,216 Z" />
+            android:pathData="M81,112 L90,93 Q83,79 87,65 L99,23 Q118,37 128,69 Q140,63 153,71 Q169,53 181,58 Q199,67 207,101 L179,91 Q181,107 204,115 Q211,122 198,130 L184,132 Q182,143 168,147 L183,154 Q196,144 210,149 Q223,153 221,164 Q219,174 205,176 L172,169 Q156,171 148,186 Q137,191 128,181 L124,167 Q111,177 94,181 L74,199 Q60,201 58,190 L68,170 Q51,166 39,151 Q29,138 30,125 Q43,140 57,144 Q68,143 72,135 L54,122 L60,112 L91,124 Z M67,215 L152,202 L184,218 L103,234 Z" />
     </group>
 </vector>
