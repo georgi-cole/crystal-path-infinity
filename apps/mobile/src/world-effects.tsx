@@ -18,7 +18,8 @@ import { WorldAvatarAura } from './world-treasures';
 import { GuardianShield } from './guardian-shield';
 import { WORLD_ASSETS, worldAsset } from './world-assets';
 import { WorldRescueRig } from './world-props';
-import { CompanionSeasonGear, CompanionTrailGear } from './journey-atmosphere';
+import { CompanionSeasonGear } from './journey-atmosphere';
+import { equippedCompanionAsset, EQUIPPED_SPRITE } from './equipped-companions';
 
 /** Brief material feedback uses only a choice that has already resolved. */
 export function WorldStepEffect({
@@ -149,14 +150,8 @@ export function WorldPathCompanion({
       ? motion.anchor
       : motion.end;
   const frame =
-    theme === 'obsidian'
-      ? 0
-      : motion.action === 'rescue' || reaction === 'happy'
-        ? 1
-        : reaction === 'panic'
-          ? 2
-          : 0;
-  const registration = companionPreviewRegistration(skin, gear);
+    motion.action === 'rescue' || reaction === 'happy' ? 1 : reaction === 'panic' ? 2 : 0;
+  const registration = gear ? { x: 0, y: 0 } : companionPreviewRegistration(skin);
   return (
     <svg
       ref={ref}
@@ -173,6 +168,14 @@ export function WorldPathCompanion({
       <defs>
         <clipPath id={id}>
           <rect x="-48" y="-96" width="96" height="96" />
+        </clipPath>
+        <clipPath id={`${id}-equipped`}>
+          <rect
+            x={-EQUIPPED_SPRITE.cell / 2}
+            y={-EQUIPPED_SPRITE.foot}
+            width={EQUIPPED_SPRITE.cell}
+            height={EQUIPPED_SPRITE.cell}
+          />
         </clipPath>
       </defs>
       <g key={`${cinematic?.id ?? 'idle'}-${cinematic?.phase ?? 'idle'}`}>
@@ -209,16 +212,17 @@ export function WorldPathCompanion({
             >
               <WorldAvatarAura theme={skin} effects={effects} />
               <g transform={preview ? `translate(${registration.x} ${registration.y})` : undefined}>
-                {gear && (
-                  <CompanionTrailGear
-                    world={theme}
-                    item={gear}
-                    weather={weather}
-                    frame={frame}
-                    layer="rear"
+                {gear ? (
+                  <image
+                    className="cpi-equipped-character"
+                    href={worldAsset(equippedCompanionAsset(theme, gear))}
+                    x={-EQUIPPED_SPRITE.cell / 2 - frame * EQUIPPED_SPRITE.cell}
+                    y={-EQUIPPED_SPRITE.foot}
+                    width={EQUIPPED_SPRITE.cell * EQUIPPED_SPRITE.frames}
+                    height={EQUIPPED_SPRITE.cell}
+                    clipPath={`url(#${id}-equipped)`}
                   />
-                )}
-                {theme === 'obsidian' ? (
+                ) : theme === 'obsidian' ? (
                   <image
                     className="cpi-glass-traveller"
                     href={blackMetalTraveller}
@@ -238,7 +242,7 @@ export function WorldPathCompanion({
                     clipPath={`url(#${id})`}
                   />
                 )}
-                {season && theme !== 'obsidian' && (
+                {season && !gear && theme !== 'obsidian' && (
                   <CompanionSeasonGear
                     world={skin}
                     season={season}
@@ -246,9 +250,6 @@ export function WorldPathCompanion({
                     frame={frame}
                     gear={gear}
                   />
-                )}
-                {gear && (
-                  <CompanionTrailGear world={theme} item={gear} weather={weather} frame={frame} />
                 )}
                 <GuardianShield
                   charges={shieldCharges}
