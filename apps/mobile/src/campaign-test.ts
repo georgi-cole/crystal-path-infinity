@@ -1,3 +1,4 @@
+import { adventurePrice } from './adventure-prices';
 import {
   assertJourneyRoute,
   assertRunState,
@@ -59,10 +60,10 @@ const SEASON_ORDER = ['spring', 'summer', 'autumn', 'winter'] as const satisfies
 export type CampaignResource = 'sp' | 'hint' | 'shield' | 'continue';
 export type CampaignApproach = 'main' | 'ridge';
 export const EXTRA_SUPPLY_OFFERS = {
-  'shield-pack': { title: '10 Shields', price: '€0.99' },
-  'season-change-pack': { title: '10 Season Changes', price: '€1.99' },
-  'all-seasons': { title: 'Unlock All Seasons', price: '€4.99' },
-  'clock-free': { title: 'No Clock', price: '€7.99' },
+  'shield-pack': { title: '10 Shields', price: adventurePrice('shield-pack') },
+  'season-change-pack': { title: '10 Season Changes', price: adventurePrice('season-change-pack') },
+  'all-seasons': { title: 'Unlock All Seasons', price: adventurePrice('all-seasons') },
+  'clock-free': { title: 'No Clock', price: adventurePrice('clock-free') },
 } as const;
 type ExtraSupplyOffer = keyof typeof EXTRA_SUPPLY_OFFERS;
 export type CampaignOffer =

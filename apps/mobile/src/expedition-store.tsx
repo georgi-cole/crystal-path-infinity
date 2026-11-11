@@ -1,3 +1,4 @@
+import { adventurePrice } from './adventure-prices';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { GEAR_IDS, journeyGearEffect } from '@crystal-path-infinity/game-core';
@@ -765,19 +766,19 @@ const supplyOffers = {
   'sp-pack': {
     icon: 'stability',
     title: '500 Stability',
-    price: '€1.49',
+    price: adventurePrice('sp-pack'),
     note: 'Add 500 reserve SP for Infinity. Restore 25 SP each time you use it.',
   },
   'hint-pack': {
     icon: 'hint',
     title: '10 Hints',
-    price: '€2.49',
+    price: adventurePrice('hint-pack'),
     note: 'Reveal a safe tile in Infinity. Stored hints join your two starting hints; one is used per reveal.',
   },
   'continue-pack': {
     icon: 'continue',
     title: '3 Continues',
-    price: '€0.99',
+    price: adventurePrice('continue-pack'),
     note: 'Continue your Infinity crossing from the row where you fell, with 150 SP.',
   },
   'shield-pack': {

@@ -1,0 +1,168 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-11",
+  "currency": "EUR",
+  "status": "catalog-registration-not-purchase-integration",
+  "products": [
+    {
+      "offerId": "clock-free",
+      "productId": "com.georgicole.crystalpath.infinity.unlock.no_clock",
+      "title": "No Clock",
+      "description": "Remove the Infinity timer forever. Campaign keeps it.",
+      "referenceEur": 2.99,
+      "type": "non-consumable",
+      "quantity": 1,
+      "newProduct": true
+    },
+    {
+      "offerId": "all-seasons",
+      "productId": "com.georgicole.crystalpath.infinity.unlock.all_seasons",
+      "title": "Unlock All Seasons",
+      "description": "Unlock every season for Infinity. Keep them forever.",
+      "referenceEur": 3.99,
+      "type": "non-consumable",
+      "quantity": 1,
+      "newProduct": true
+    },
+    {
+      "offerId": "shield-pack",
+      "productId": "com.georgicole.crystalpath.infinity.shields.10",
+      "title": "10 Shields",
+      "description": "Block 10 broken-tile hits in Infinity.",
+      "referenceEur": 0.99,
+      "type": "consumable",
+      "quantity": 10,
+      "newProduct": true
+    },
+    {
+      "offerId": "season-change-pack",
+      "productId": "com.georgicole.crystalpath.infinity.season_changes.10",
+      "title": "10 Season Changes",
+      "description": "10 Infinity season changes. Unlock two seasons first.",
+      "referenceEur": 1.49,
+      "type": "consumable",
+      "quantity": 10,
+      "newProduct": true
+    },
+    {
+      "offerId": "aurora",
+      "productId": "com.georgicole.crystalpath.infinity.bridge.bounce",
+      "title": "Bounce Boulevard",
+      "description": "Keep a bouncy trampoline bridge style forever.",
+      "referenceEur": 1.99,
+      "type": "non-consumable",
+      "quantity": 1,
+      "newProduct": true
+    },
+    {
+      "offerId": "cookie-bridge",
+      "productId": "com.georgicole.crystalpath.infinity.bridge.cookie",
+      "title": "Cookie Crossing",
+      "description": "Keep a sweet waffle-cookie bridge style forever.",
+      "referenceEur": 1.99,
+      "type": "non-consumable",
+      "quantity": 1,
+      "newProduct": true
+    },
+    {
+      "offerId": "prism-kit",
+      "productId": "com.georgicole.crystalpath.infinity.style.cosmic_kit",
+      "title": "Cosmic Style Kit",
+      "description": "Keep cosmic tiles, lights and a matching trail.",
+      "referenceEur": 2.99,
+      "type": "non-consumable",
+      "quantity": 1,
+      "newProduct": true
+    },
+    {
+      "offerId": "gear:umbrella",
+      "productId": "com.georgicole.crystalpath.infinity.gear.umbrella",
+      "title": "Glasswing Umbrella",
+      "description": "Rain gear. Save 3 SP per break; avoid strong winds.",
+      "referenceEur": 1.49,
+      "type": "non-consumable",
+      "quantity": 1,
+      "newProduct": true
+    },
+    {
+      "offerId": "gear:sunshades",
+      "productId": "com.georgicole.crystalpath.infinity.gear.sunshades",
+      "title": "Sunshades",
+      "description": "See true sun signals. Keep these sunglasses forever.",
+      "referenceEur": 1.49,
+      "type": "non-consumable",
+      "quantity": 1,
+      "newProduct": true
+    },
+    {
+      "offerId": "gear:sun-balm",
+      "productId": "com.georgicole.crystalpath.infinity.gear.sun_balm",
+      "title": "Sun Cream",
+      "description": "Keep sun protection. Save SP in summer sunlight.",
+      "referenceEur": 1.49,
+      "type": "non-consumable",
+      "quantity": 1,
+      "newProduct": true
+    },
+    {
+      "offerId": "gear:frost-runners",
+      "productId": "com.georgicole.crystalpath.infinity.gear.frost_runners",
+      "title": "Frost Runners",
+      "description": "Keep snow skates. Save SP in snow; avoid wet weather.",
+      "referenceEur": 1.49,
+      "type": "non-consumable",
+      "quantity": 1,
+      "newProduct": true
+    },
+    {
+      "offerId": "gear:storm-boots",
+      "productId": "com.georgicole.crystalpath.infinity.gear.storm_boots",
+      "title": "Storm Boots",
+      "description": "Keep rain boots. Save SP in storms; avoid snow.",
+      "referenceEur": 1.49,
+      "type": "non-consumable",
+      "quantity": 1,
+      "newProduct": true
+    },
+    {
+      "offerId": "gear:trail-scarf",
+      "productId": "com.georgicole.crystalpath.infinity.gear.trail_scarf",
+      "title": "Trail Scarf",
+      "description": "Keep a winter scarf. Save SP in cold; avoid rain.",
+      "referenceEur": 1.49,
+      "type": "non-consumable",
+      "quantity": 1,
+      "newProduct": true
+    },
+    {
+      "offerId": "sp-pack",
+      "productId": "com.georgicole.crystalpath.infinity.sp.500",
+      "title": "500 Stability Points",
+      "description": "Add 500 SP to your Infinity supplies.",
+      "referenceEur": 1.49,
+      "type": "consumable",
+      "quantity": 500,
+      "newProduct": false
+    },
+    {
+      "offerId": "hint-pack",
+      "productId": "com.georgicole.crystalpath.infinity.hints.10",
+      "title": "10 Hints",
+      "description": "Reveal 10 safe tiles in Infinity. Use one per hint.",
+      "referenceEur": 1.49,
+      "type": "consumable",
+      "quantity": 10,
+      "newProduct": false
+    },
+    {
+      "offerId": "continue-pack",
+      "productId": "com.georgicole.crystalpath.infinity.credits.3",
+      "title": "3 Continues",
+      "description": "Continue after a fall in Infinity, up to 3 times.",
+      "referenceEur": 0.99,
+      "type": "consumable",
+      "quantity": 3,
+      "newProduct": false
+    }
+  ]
+}

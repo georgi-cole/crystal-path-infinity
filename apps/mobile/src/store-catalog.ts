@@ -96,7 +96,7 @@ export const STORE_PRODUCTS: readonly StoreProduct[] = [
     price: [0.49, 1.49, 2.49, 4.99, 8.99, 14.99][i],
   })),
   { id: 'test.hints.3', kind: 'hints', quantity: 3, name: 'vault.foresight', price: 0.99 },
-  { id: 'test.hints.10', kind: 'hints', quantity: 10, name: 'vault.clearer', price: 2.49 },
+  { id: 'test.hints.10', kind: 'hints', quantity: 10, name: 'vault.clearer', price: 1.49 },
   {
     id: 'test.theme.chaos',
     kind: 'theme',

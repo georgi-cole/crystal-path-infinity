@@ -1,3 +1,4 @@
+import { adventurePrice } from './adventure-prices';
 import type { GearId, Season, Weather } from '@crystal-path-infinity/game-core';
 
 export const INFINITY_WEATHER_NAMES: Record<Season | 'plain', string> = {
@@ -47,7 +48,7 @@ export const WEATHER_COPY: Record<Weather, { title: string; remark: string }> = 
 export const GEAR_COPY = {
   'trail-scarf': {
     name: 'Trail Scarf',
-    price: '€1.99',
+    price: adventurePrice('gear:trail-scarf'),
     glyph: '❧',
     look: 'A thick knitted scarf with a tiny golden leaf clasp.',
     helps: 'In winter, broken tiles cost 2 fewer SP. During a thaw, they cost 1 fewer SP.',
@@ -57,7 +58,7 @@ export const GEAR_COPY = {
   },
   umbrella: {
     name: 'Glasswing Umbrella',
-    price: '€1.99',
+    price: adventurePrice('gear:umbrella'),
     glyph: '☂',
     look: 'A strong little umbrella in your character’s colors.',
     helps: 'In rain, lose 3 fewer SP when a tile breaks.',
@@ -67,7 +68,7 @@ export const GEAR_COPY = {
   },
   sunshades: {
     name: 'Sunshades',
-    price: '€1.99',
+    price: adventurePrice('gear:sunshades'),
     glyph: '◒',
     look: 'Sunglasses shaped for your character.',
     helps: 'In strong sunlight, the light shows the correct tile. Broken tiles cost 2 fewer SP.',
@@ -77,7 +78,7 @@ export const GEAR_COPY = {
   },
   'sun-balm': {
     name: 'Sun Cream',
-    price: '€1.49',
+    price: adventurePrice('gear:sun-balm'),
     glyph: '☀',
     look: 'Sun cream and a tiny sun-shaped tin.',
     helps:
@@ -88,7 +89,7 @@ export const GEAR_COPY = {
   },
   'frost-runners': {
     name: 'Frost Runners',
-    price: '€2.49',
+    price: adventurePrice('gear:frost-runners'),
     glyph: '⌁',
     look: 'Ice skates made for snowy crossings.',
     helps: 'In snow, broken tiles cost 2 fewer SP and safe steps give 1 SP.',
@@ -99,7 +100,7 @@ export const GEAR_COPY = {
   },
   'storm-boots': {
     name: 'Storm Boots',
-    price: '€2.49',
+    price: adventurePrice('gear:storm-boots'),
     glyph: '◈',
     look: 'Strong rain boots in your character’s colors.',
     helps:
