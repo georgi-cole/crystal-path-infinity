@@ -14,6 +14,7 @@ import {
 } from './account/native-identity-client';
 import { createProfileClient } from './account/profile-client';
 import { createWebIdentityClient } from './account/web-identity-client';
+import { createMobileIdentityClient } from './account/mobile-identity-client';
 import { createRankedClient } from './ranked/ranked-client';
 import { createSavedPendingClient } from './ranked/saved-pending-client';
 import { createLeaderboardClient } from './leaderboard/leaderboard-client';
@@ -57,11 +58,13 @@ export function createLiveServices(values: Readonly<Record<string, unknown>>): L
       session,
       staging: base === STAGING_ACCOUNT_GATEWAY,
       identity:
-        native && values.VITE_IOS_PROVIDER_SIGN_IN === 'true'
-          ? createNativeIdentityClient(base, session, Number(values.VITE_CLIENT_BUILD ?? 1))
-          : !native && values.VITE_WEB_PROVIDER_SIGN_IN === 'true'
-            ? createWebIdentityClient(base, session)
-            : null,
+        native && values.VITE_NATIVE_PROVIDER_SIGN_IN === 'true'
+          ? createMobileIdentityClient(base, session)
+          : native && values.VITE_IOS_PROVIDER_SIGN_IN === 'true'
+            ? createNativeIdentityClient(base, session, Number(values.VITE_CLIENT_BUILD ?? 1))
+            : !native && values.VITE_WEB_PROVIDER_SIGN_IN === 'true'
+              ? createWebIdentityClient(base, session)
+              : null,
     },
     signOut: () => session.signOut(),
     accountControlsClient: createAccountControlsClient(base, session),
@@ -69,7 +72,12 @@ export function createLiveServices(values: Readonly<Record<string, unknown>>): L
   };
   if (!native) return { account, commerce: null };
 
-  const ranked = createRankedClient({ baseUrl: base, session });
+  // Enabling production accounts must not silently activate ranked admission.
+  const ranked =
+    base !== 'https://crystalpath-api.kolequant.xyz/cpi' ||
+    values.VITE_RANKED_SERVICES_ENABLED === 'true'
+      ? createRankedClient({ baseUrl: base, session })
+      : null;
   const platform = Capacitor.getPlatform();
   const inventory = import.meta.env.MODE === 'production' ? PUBLISHER.admob : DEMO_ADMOB;
   const ad =

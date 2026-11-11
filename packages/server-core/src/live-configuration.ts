@@ -169,6 +169,7 @@ export function readLiveConfiguration(env: (name: string) => string | undefined)
     url,
     environment,
     publicWebEntry,
+    publicMobileEntry: publicWebEntry && env('CPI_MOBILE_IDENTITY_ENABLED') === 'true',
     // Staging is opt-in and this project is pinned independently of client flags.
     nativeIdentity:
       environment === 'staging' &&

@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { assertBuiltEnvironment, getBuildInfo, requireEnvironment } from './config/environments';
 import { readNativeIntegrations } from './config/native-integrations';
+import { resolveStoreBuild } from './config/store-build';
 import {
   assertUnsignedPublicVariables,
   assertUnsignedRelease,
@@ -17,10 +18,12 @@ const mobilePackage = JSON.parse(readFileSync(join(__dirname, 'package.json'), '
   version: string;
 };
 const release = resolveUnsignedRelease(environment, mobilePackage.version, process.env);
+const store = resolveStoreBuild(environment, process.env);
+if (release && store) throw new Error('Store and unsigned release metadata cannot be combined.');
 const integrations = readNativeIntegrations(process.env, environment);
 if (release && (integrations.ads || integrations.purchases))
   throw new Error('The existing unsigned preparation profile does not activate native services.');
-const build = release?.app ?? getBuildInfo(environment, mobilePackage.version);
+const build = release?.app ?? getBuildInfo(environment, store?.version ?? mobilePackage.version);
 const metadataPath = join(__dirname, 'dist', 'build-info.json');
 const copiesAssets = process.argv
   .slice(2)

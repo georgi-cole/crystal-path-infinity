@@ -1,5 +1,9 @@
 # First-version release evidence ledger
 
+**11 November 2026 · Native production-login preview 45:** Required checks passed on `f792e37`. Android `1.0.0 (45)` is available to the existing internal testers. The signed internal-only iPhone `1.0.0 (45)` shows Testing in Crystal Path Internal QA after processing and export details, with France excluded. Temporary review-branch signing access was removed. Physical-device login/email acceptance and subsequent public store distribution remain pending; PR #108 is held for phone testing. [Receipts and limits](../operations/NATIVE_PRODUCTION_SIGN_IN.md#signed-preview-distribution--11-november-2026).
+
+**11 November 2026 · Native production login preparation:** Apple, Google and email are being connected to the production account service for both platforms. New signed packages and real device acceptance are still required. Guest ads remain live-only; staging identities, simulated purchases and tester controls remain separate. [Implementation and current evidence](../operations/NATIVE_PRODUCTION_SIGN_IN.md).
+
 **Decision on 2026-11-04: NO GO for live services and public distribution.** The user explicitly requested that live services remain disabled. Source implementation and reviewable PRs continue; the remaining acceptance gates below are not represented as completed. Nothing in this ledger authorizes deployment, account/ad activation, paid registration or store submission.
 
 ## Reviewable source

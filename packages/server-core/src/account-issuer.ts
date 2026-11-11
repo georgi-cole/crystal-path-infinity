@@ -88,6 +88,8 @@ export function createAccountIssuer(options: {
   identity?: NativeIdentity;
   /** Production browser proofs use a separate OAuth audience and screened permits. */
   publicWebEntry?: boolean;
+  /** Screened production mobile proofs use the server's separate mobile callback. */
+  mobileIdentity?: NativeIdentity;
   policy: AccountPolicy;
   stagingTestEmails?: readonly string[];
   nativeSignup?: {
@@ -114,8 +116,10 @@ export function createAccountIssuer(options: {
     policy.countries.BG?.minimumAge === 18 &&
     policy.countries.BG.neutralAgeScreenAllowed;
   const publicWebEntry = options.publicWebEntry === true && stagingTestEmails.size === 0;
+  const publicMobileEntry = !!options.mobileIdentity && stagingTestEmails.size === 0;
+  const publicProviderEntry = publicWebEntry || publicMobileEntry;
   const signupAllowed = (provider: NativeIdentityProvider, address: string) =>
-    publicWebEntry || nativeSignup?.emails[provider].includes(address) === true;
+    publicProviderEntry || nativeSignup?.emails[provider].includes(address) === true;
   const limit = createDurableRateLimit(database, crypto, now);
   const digest = (domain: string, value: string) => crypto.digest(domain, value);
   async function owner(connection: SqlConnection, subject: string) {
@@ -550,6 +554,7 @@ export function createAccountIssuer(options: {
     if (!options.identity) throw new AccountIssuerError(503);
     const direct = isObject(input) && input.schemaVersion === 2;
     const web = isObject(input) && input.schemaVersion === 4;
+    const mobile = isObject(input) && input.schemaVersion === 5;
     if (
       !exactObject(
         input,
@@ -557,8 +562,10 @@ export function createAccountIssuer(options: {
           ? ['schemaVersion', 'provider', 'clientBuild']
           : ['schemaVersion', 'provider', 'eligibilityPermit'],
       ) ||
-      (!direct && !web && input.schemaVersion !== 1) ||
-      web !== publicWebEntry ||
+      (!direct && !web && !mobile && input.schemaVersion !== 1) ||
+      (web && !publicWebEntry) ||
+      (mobile && !publicMobileEntry) ||
+      (!web && !mobile && publicProviderEntry) ||
       !isNativeIdentityProvider(input.provider) ||
       (direct &&
         (typeof input.clientBuild !== 'number' ||
@@ -571,7 +578,13 @@ export function createAccountIssuer(options: {
       !context.country ||
       !policy.countries[context.country] ||
       (direct && (!directEntry || auth)) ||
-      (auth && (auth.platform !== (web ? 'web' : 'ios') || input.eligibilityPermit !== null))
+      (auth &&
+        ((web
+          ? auth.platform !== 'web'
+          : mobile
+            ? auth.platform === 'web'
+            : auth.platform !== 'ios') ||
+          input.eligibilityPermit !== null))
     )
       throw new AccountIssuerError(403);
     if (!(await limit('identity:' + context.rateKey, 20, 10 * MINUTE)))
@@ -580,7 +593,15 @@ export function createAccountIssuer(options: {
     const nonce = crypto.token();
     await sqlTransaction(database, async (connection) => {
       const permit = auth || direct ? null : await permitted(connection, input.eligibilityPermit);
-      if (permit && permit.platform !== (web ? 'web' : 'ios')) throw new AccountIssuerError(403);
+      if (
+        permit &&
+        (web
+          ? permit.platform !== 'web'
+          : mobile
+            ? permit.platform === 'web'
+            : permit.platform !== 'ios')
+      )
+        throw new AccountIssuerError(403);
       await connection.query(
         'insert into cpi_private.account_provider_challenges(nonce_hash,provider,family_id,permit_hash,country,expires_at,direct_client_build) values($1,$2,$3::uuid,$4,$5,$6,$7)',
         [
@@ -688,20 +709,24 @@ export function createAccountIssuer(options: {
     context: AccountRequestContext,
     auth: IssuedAccountActor | null,
   ) {
-    const identity = options.identity;
+    const mobile = isObject(input) && input.schemaVersion === 5;
+    const identity = mobile ? options.mobileIdentity : options.identity;
     if (!identity) throw new AccountIssuerError(503);
     if (
       !exactObject(
         input,
-        isObject(input) && input.schemaVersion === 4
+        isObject(input) && (input.schemaVersion === 4 || mobile)
           ? ['schemaVersion', 'provider', 'nonce', 'credential', 'eligibilityPermit']
           : ['schemaVersion', 'provider', 'nonce', 'credential'],
       ) ||
       (input.schemaVersion !== 1 &&
         input.schemaVersion !== 2 &&
         input.schemaVersion !== 3 &&
-        input.schemaVersion !== 4) ||
-      (input.schemaVersion === 4) !== publicWebEntry ||
+        input.schemaVersion !== 4 &&
+        input.schemaVersion !== 5) ||
+      (input.schemaVersion === 4 && !publicWebEntry) ||
+      (mobile && !publicMobileEntry) ||
+      (input.schemaVersion !== 4 && !mobile && publicProviderEntry) ||
       !isNativeIdentityProvider(input.provider)
     )
       throw new AccountIssuerError();
@@ -725,11 +750,22 @@ export function createAccountIssuer(options: {
       ).rows[0];
       if (!row || direct !== (row.direct_client_build !== null)) throw new AccountIssuerError(410);
       if (!auth && !direct) {
-        await permittedHash(connection, str(row.permit_hash));
-        if (publicWebEntry && digest('permit', token(input.eligibilityPermit)) !== row.permit_hash)
+        const permit = await permittedHash(connection, str(row.permit_hash));
+        if (mobile && permit.platform === 'web') throw new AccountIssuerError(403);
+        if (input.schemaVersion === 4 && permit.platform !== 'web')
+          throw new AccountIssuerError(403);
+        if (
+          publicProviderEntry &&
+          digest('permit', token(input.eligibilityPermit)) !== row.permit_hash
+        )
           throw new AccountIssuerError(403);
       }
-      if (publicWebEntry && auth && (auth.platform !== 'web' || input.eligibilityPermit !== null))
+      if (
+        publicProviderEntry &&
+        auth &&
+        ((mobile ? auth.platform === 'web' : auth.platform !== 'web') ||
+          input.eligibilityPermit !== null)
+      )
         throw new AccountIssuerError(403);
       return row;
     });
@@ -781,7 +817,8 @@ export function createAccountIssuer(options: {
       if (!signupAllowed(provider, address)) return { status: 'signup_unavailable' };
       const existing = await nativeSignup.directory.lookup(connection, address, identityHash);
       const collision = existing && !existing.matchesProvider ? existing.subject : null;
-      if (collision && clientBuild === null && !publicWebEntry) return { status: 'link_required' };
+      if (collision && clientBuild === null && !publicProviderEntry)
+        return { status: 'link_required' };
       if (collision) {
         const prior = (
           await connection.query(
@@ -789,7 +826,7 @@ export function createAccountIssuer(options: {
             [collision],
           )
         ).rows[0];
-        const expectedContext = publicWebEntry
+        const expectedContext = publicProviderEntry
           ? (await permittedHash(connection, str(challenge.permit_hash))).privacy_context
           : 'adult';
         if (prior?.privacy_context !== expectedContext) return { status: 'link_required' };
@@ -797,7 +834,7 @@ export function createAccountIssuer(options: {
       }
       const appleRefresh = await verified.appleRefresh?.();
       if (provider === 'apple' && !appleRefresh) throw new AccountIssuerError(503);
-      if (publicWebEntry && !collision)
+      if (publicProviderEntry && !collision)
         return createProviderAccount(connection, {
           provider,
           identityHash,
@@ -808,7 +845,7 @@ export function createAccountIssuer(options: {
           nonceHash,
           offerProfile: true,
         });
-      if (publicWebEntry && collision) {
+      if (publicProviderEntry && collision) {
         const permit = await permittedHash(connection, str(challenge.permit_hash));
         const linkToken = crypto.token();
         const hash = digest('identity-link', linkToken);
@@ -978,9 +1015,9 @@ export function createAccountIssuer(options: {
     context: AccountRequestContext,
   ): Promise<ProviderLinkProof> {
     if (
-      (!directEntry && !publicWebEntry) ||
+      (!directEntry && !publicProviderEntry) ||
       !nativeSignup ||
-      (publicWebEntry
+      (publicProviderEntry
         ? !context.country || !policy.countries[context.country]
         : context.country !== 'BG')
     )

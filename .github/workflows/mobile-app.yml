@@ -82,7 +82,7 @@ jobs:
           node --experimental-strip-types --test backend/tests/gateway.test.mjs backend/tests/web-identity-callback.test.mjs
       - name: Test unsigned packaging safeguards and artifact verification
         run: |
-          node --experimental-strip-types --test .github/scripts/unsigned-beta.test.mjs
+          node --experimental-strip-types --test .github/scripts/unsigned-beta.test.mjs .github/scripts/native-account-source.test.mjs
           python3 .github/scripts/test_unsigned_artifacts.py
       - name: Build all three web environments
         run: |
