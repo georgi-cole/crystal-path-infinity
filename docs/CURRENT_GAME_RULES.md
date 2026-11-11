@@ -1,5 +1,7 @@
 # Текущи правила и икономика
 
+**11 November 2026 · current store references · CPI-043.** The [dated catalog](decisions/CPI-043-adventure-store-catalog.md) supersedes older proposed prices for future purchases. Both stores now contain 31 registered products; the 13 new products remain draft/inactive. Offline claims remain free simulations and historical economy results are unchanged.
+
 **Подготовка за TestFlight · 11 ноември 2026 · CPI-042.** Изричният `campaign-beta` профил включва същия offline Campaign/Infinity playtest 0.7.4 в подписана тестова iPhone сборка. Всички shop claims остават безплатни локални симулации, live accounts/ads/purchases и native commerce plugins са изключени. Профилът има отделен beta manifest със source SHA и не се използва от нормален production build. Подготовката/компилацията не означава качена или одобрена от Apple сборка; реалният статус се записва след разпространение. Игровите шансове, награди, цени и legacy snapshots не се променят.
 
 **Black Metal Store preview · 0.7.4.** Мостът в World картата е статичен с фини метални отблясъци, лека мъгла и прашинки; движещият се път остава на home. Материалът винаги е Black Metal, независимо от оборудвания World. Reduced motion и неактивните карти спират атмосферните анимации. Това е само представяне и не променя gameplay.
@@ -203,3 +205,7 @@
 **Магазин и продължаване:** световете остават началният изглед, с предварителен преглед. Ресурсите започват с по два малки пакета; по-големите са под „Още пакети“. Началните препоръки са 3 кредита, 500 SP и 10 подсказки при същите тестови цени. В QA още при първата загуба са видими симулираното рекламно продължаване, използване/вземане на кредит и безплатен нов опит. Посещението в магазина запазва опита; „Обратно към твоя опит“ връща към същия ред, без автоматично харчене на кредит. Изричното Return to menu от финалния екран приключва опита, ако няма чакаща/неизползвана спечелена награда.
 
 Целевите времена и търговските показатели в [бизнес плана](BUSINESS_PLAN.md) остават хипотези за измерване; не са задължителен край на сесия или нов рекламен лимит. Поддържаме този документ с всяка промяна към `main`, както изискват [AGENTS.md](../AGENTS.md) и [CONTRIBUTING.md](../CONTRIBUTING.md).
+
+## 11 November 2026 · CPI-043 · Lower adventure reference prices
+
+The dated [adventure catalog](decisions/CPI-043-adventure-store-catalog.md) supersedes earlier proposed prices for new purchases: gear €1.49; Bounce/Cookie €1.99; Cosmic Kit and permanent No Clock €2.99; All Seasons €3.99; ten hints/season changes €1.49; ten shields €0.99. Worlds remain €2.99. Campaign-earned rewards stay earned-only. Consumables remain repeatable and Infinity stock stays separate from Campaign. Existing runs and historical simulations are unchanged. Catalog registration is separate from checkout/server fulfilment; the current beta uses free simulated claims. See the detailed document for verified store status and remaining activation checks.

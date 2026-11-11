@@ -1,3 +1,4 @@
+import { adventurePrice } from './adventure-prices';
 import type { JourneyMark, JourneyRoute, Season, TileSide } from '@crystal-path-infinity/game-core';
 
 export const CHAPTERS = {
@@ -116,28 +117,28 @@ export const STYLES = {
     name: 'Bounce Boulevard',
     note: 'Springy trampolines with a soft landing bounce',
     unlock: null,
-    price: '€1.99',
+    price: adventurePrice('aurora'),
   },
   'prism-glass': {
     slot: 'tiles',
     name: 'Cosmic Tiles',
     note: 'Deep space tiles filled with stars and tiny galaxies',
     unlock: null,
-    price: '€4.99',
+    price: adventurePrice('prism-kit'),
   },
   'prism-lights': {
     slot: 'lighting',
     name: 'Starlight LEDs',
     note: 'Pink and blue light along the rail',
     unlock: null,
-    price: '€4.99',
+    price: adventurePrice('prism-kit'),
   },
   'prism-trail': {
     slot: 'trail',
     name: 'Stardust Trail',
     note: 'A scatter of light behind each step',
     unlock: null,
-    price: '€4.99',
+    price: adventurePrice('prism-kit'),
   },
   'lily-pads': {
     slot: 'tiles',
@@ -158,7 +159,7 @@ export const STYLES = {
     name: 'Cookie Crossing',
     note: 'Golden biscuits with cream filling and chocolate chips',
     unlock: null,
-    price: '€1.99',
+    price: adventurePrice('cookie-bridge'),
   },
 } as const;
 export type StyleId = keyof typeof STYLES;
@@ -218,11 +219,15 @@ export function bridgeModel(style?: BridgeStyle): BridgeModel {
 }
 export type StyleOffer = 'aurora' | 'prism-kit' | 'cookie-bridge';
 export const STYLE_OFFERS = {
-  aurora: { name: 'Bounce Boulevard', price: '€1.99', items: ['aurora'] },
-  'cookie-bridge': { name: 'Cookie Crossing', price: '€1.99', items: ['cookie-tiles'] },
+  aurora: { name: 'Bounce Boulevard', price: adventurePrice('aurora'), items: ['aurora'] },
+  'cookie-bridge': {
+    name: 'Cookie Crossing',
+    price: adventurePrice('cookie-bridge'),
+    items: ['cookie-tiles'],
+  },
   'prism-kit': {
     name: 'Cosmic Style Kit',
-    price: '€4.99',
+    price: adventurePrice('prism-kit'),
     items: ['prism-glass', 'prism-lights', 'prism-trail'],
   },
 } as const satisfies Record<StyleOffer, { name: string; price: string; items: readonly StyleId[] }>;

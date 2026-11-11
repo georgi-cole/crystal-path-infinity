@@ -442,3 +442,7 @@ Final served-preview check: port 4178 reports playtest 0.7 on `be3e3e7`. The upd
 ### 0.7.1 integration validation · 11 November 2026
 
 Node 22.23.4: mobile tests 779/779, game-core 315/315, server-core 211/211 and balance 6/6 passed. Workspace typechecking, lint and formatting passed, as did the Campaign build, the 13 planning/bootstrap tests and 15 required-check routing tests. The 54-case Campaign suite covers guaranteed hint charges/landings, reserve consumption, checkpoint restore, pre-guarantee compatibility, fresh default entropy and explicit deterministic fixtures. A browser check observed distinct signature/calm and cheerful/happy selection states. Native development build/launch acceptance is performed by the required PR workflow and recorded on the PR; no local browser result is presented as a native pass.
+
+## 11 November 2026 · CPI-043 · Price/catalog supersession
+
+Earlier offer prices in this proposal remain historical. The [launch catalog decision](CPI-043-adventure-store-catalog.md) defines lower current EUR references, permanent/consumable types and the 13 new store products. Earned-only bridges and torches stay rewards. Registration does not turn simulated beta claims into real purchases or extend the server's grant contract.
