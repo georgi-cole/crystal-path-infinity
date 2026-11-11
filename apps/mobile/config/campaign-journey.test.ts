@@ -3,6 +3,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import {
   createPracticeCursor,
+  createRunSession,
   createRowStream,
   getCurrentRow,
   hintSafeSide,
@@ -25,6 +26,8 @@ import {
   advanceInfinityCycle,
   campaignFailureReason,
   campaignProgressFromEvents,
+  infinityProgressFromEvents,
+  canUseInfinitySupply,
   claimTestOffer,
   createCampaignInfinityRun,
   createCampaignRun,
@@ -154,48 +157,165 @@ describe('Beacon Route playtest', () => {
     expect(view.cue).toBeUndefined();
   });
 
-  it('debits one reserve hint for a guaranteed landing and preserves it through save/resume', () => {
-    const mission = {
-      ...newMissionSnapshot('first-steps'),
-      assist: true as const,
-      startingHints: 0,
-      marks: [{ row: 1, bothBroken: true as const }],
-    };
-    const attempt = {
-      ...startCampaignAttempt({ ...EMPTY_CAMPAIGN_PROGRESS, reserveHints: 2 }, 'first-steps'),
-      activeMissionSnapshot: mission,
-    };
-    const initial = seededCampaignRun(mission);
-    const hinted = step(initial, { type: 'journey-hint', row: '1', life: 0 });
-    const progress = campaignProgressFromEvents(
-      attempt,
-      mission,
-      hinted.events,
-      hinted.state.currentRow,
+  it('debits one Infinity reserve hint atomically with its protected landing and preserves both slots', () => {
+    const attempt = startCampaignAttempt(
+      claimTestOffer(EMPTY_CAMPAIGN_PROGRESS, 'hint-pack'),
+      'first-steps',
     );
-    expect(progress.reserveHints).toBe(1);
-    let stored = '';
-    writeCampaignSave(
-      {
-        setItem: (_, v) => {
-          stored = v;
+    const campaign = seededCampaignRun(attempt.activeMissionSnapshot!);
+    const initial = {
+      ...seededCampaignRun({
+        ...newMissionSnapshot('first-steps'),
+        startingHints: 0,
+        rulesetVersion: journeyRuleset('spring') + '-supplies',
+        marks: [{ row: 1, bothBroken: true as const }],
+      }),
+      runId: 'practice-campaign-infinity-inventory-test',
+    };
+    const session = createRunSession(initial, PRACTICE_RNG);
+    let progress = attempt,
+      stored = '';
+    const use = session.bind({ type: 'journey-hint' }, (result, previous) => {
+      const next = infinityProgressFromEvents(progress, previous, result.events);
+      writeCampaignSave(
+        {
+          setItem: (_, value) => {
+            stored = value;
+          },
         },
-      },
-      progress,
-      hinted.state,
-    );
+        next,
+        campaign,
+        result.state,
+      );
+      progress = next;
+    });
+    const hinted = use({ activeTimeMs: 0, achievedAt: initial.lastObservedAt });
+    expect(hinted.accepted).toBe(true);
+    expect(progress.reserveHints).toBe(9);
+    expect(use({ activeTimeMs: 0, achievedAt: initial.lastObservedAt }).accepted).toBe(false);
+    expect(progress.reserveHints).toBe(9);
     const loaded = readCampaignSave({ getItem: () => stored });
-    expect(loaded.checkpoint).toEqual(hinted.state);
-    const next = step(loaded.checkpoint!, {
+    expect(loaded.infinityCheckpoint).toEqual(hinted.state);
+    expect(loaded.checkpoint).toEqual(campaign);
+    expect(loaded.progress.reserveHints).toBe(9);
+    const landed = step(loaded.infinityCheckpoint!, {
       type: 'choose',
       row: '1',
       life: 0,
       side: hinted.state.current.revealedSafeSide!,
     });
-    expect(next.events.find((e) => e.type === 'choice-resolved')).toMatchObject({ wrong: false });
-    expect(takeRows(loaded.checkpoint!.stream, 8, PRACTICE_RNG)).toEqual(
+    expect(landed.events.find((e) => e.type === 'choice-resolved')).toMatchObject({ wrong: false });
+    expect(takeRows(loaded.infinityCheckpoint!.stream, 8, PRACTICE_RNG)).toEqual(
       takeRows(hinted.state.stream, 8, PRACTICE_RNG),
     );
+  });
+
+  it('keeps stored hints until the two free Infinity hints are spent, including new starts', () => {
+    let progress = claimTestOffer(EMPTY_CAMPAIGN_PROGRESS, 'hint-pack');
+    let state = createCampaignInfinityRun(progress);
+    expect(state.hints + progress.reserveHints).toBe(12);
+    expect(canUseInfinitySupply(progress, state, 'hint')).toBe(false);
+    for (let n = 0; n < 2; n++) {
+      const hint = step(state, { type: 'hint', row: state.currentRow, life: 0 });
+      progress = infinityProgressFromEvents(progress, state, hint.events);
+      state = step(hint.state, {
+        type: 'choose',
+        row: state.currentRow,
+        life: 0,
+        side: hint.state.current.revealedSafeSide!,
+      }).state;
+    }
+    expect(progress.reserveHints).toBe(10);
+    expect(canUseInfinitySupply(progress, state, 'hint')).toBe(true);
+    const hint = step(state, { type: 'journey-hint', row: state.currentRow, life: 0 });
+    progress = infinityProgressFromEvents(progress, state, hint.events);
+    expect(progress.reserveHints).toBe(9);
+    expect(createCampaignInfinityRun(progress).hints + progress.reserveHints).toBe(11);
+  });
+
+  it('rolls back Infinity supply use when its atomic save fails', () => {
+    const progress = claimTestOffer(EMPTY_CAMPAIGN_PROGRESS, 'hint-pack');
+    const initial = { ...createCampaignInfinityRun(progress), hints: 0 };
+    const session = createRunSession(initial, PRACTICE_RNG);
+    const use = session.bind({ type: 'journey-hint' }, (result, previous) => {
+      writeCampaignSave(
+        {
+          setItem: () => {
+            throw new Error('storage full');
+          },
+        },
+        infinityProgressFromEvents(progress, previous, result.events),
+        null,
+        result.state,
+      );
+    });
+    expect(() => use({ activeTimeMs: 0, achievedAt: initial.lastObservedAt })).toThrow(
+      'storage full',
+    );
+    expect(session.getState()).toEqual(initial);
+    expect(progress.reserveHints).toBe(10);
+  });
+
+  it('spends Infinity Stability, shields and continues only when their effect is accepted', () => {
+    let progress = { ...EMPTY_CAMPAIGN_PROGRESS, reserveSp: 500, shields: 10, continues: 3 };
+    let state = createCampaignInfinityRun(progress);
+    const boost = step(state, { type: 'journey-resource', resource: 'sp' });
+    expect(boost.state.sp).toBe(state.sp + 25);
+    progress = infinityProgressFromEvents(progress, state, boost.events);
+    expect(progress.reserveSp).toBe(475);
+    state = boost.state;
+    const shield = step(state, { type: 'journey-resource', resource: 'shield' });
+    progress = infinityProgressFromEvents(progress, state, shield.events);
+    expect(progress.shields).toBe(9);
+    expect(canUseInfinitySupply(progress, shield.state, 'shield')).toBe(false);
+    expect(step(shield.state, { type: 'journey-resource', resource: 'shield' }).accepted).toBe(
+      false,
+    );
+    state = { ...state, sp: 1 };
+    for (let n = 0; n < 2; n++) {
+      const fallen = step(state, { type: 'tick' }, 3_600_000).state;
+      expect(fallen.status).toBe('dead');
+      expect(canUseInfinitySupply(progress, fallen, 'continue')).toBe(true);
+      const resumed = step(fallen, { type: 'journey-resource', resource: 'continue' });
+      expect(resumed.accepted).toBe(true);
+      expect(resumed.state.sp).toBe(150);
+      expect(resumed.state.currentRow).toBe(fallen.currentRow);
+      progress = infinityProgressFromEvents(progress, fallen, resumed.events);
+      state = resumed.state;
+    }
+    expect(progress.continues).toBe(1);
+    expect(canUseInfinitySupply(progress, state, 'continue')).toBe(false);
+  });
+
+  it('gives every new Campaign only its mission kit despite a fully stocked shop', () => {
+    const stocked = {
+      ...EMPTY_CAMPAIGN_PROGRESS,
+      cleared: CAMPAIGN_MISSIONS.map((m) => m.id),
+      reserveSp: 500,
+      reserveHints: 10,
+      shields: 10,
+      continues: 3,
+      clockFree: true,
+      gear: 'umbrella' as const,
+    };
+    for (const { id } of CAMPAIGN_MISSIONS) {
+      const progress = startCampaignAttempt(stocked, id);
+      const mission = progress.activeMissionSnapshot!;
+      const state = seededCampaignRun(mission);
+      expect(state.hints).toBe(mission.startingHints);
+      expect(state.sp).toBe(mission.startingSp);
+      expect(state.journeyGear).toBeUndefined();
+      expect(parseTileExperiment(state.rulesetVersion)).toMatchObject({ missionKit: true });
+      expect(getDeathClock(state)).not.toBeNull();
+      expect(step({ ...state, hints: 0 }, { type: 'journey-hint', row: '1', life: 0 }).reason).toBe(
+        'journey-resource-unavailable',
+      );
+      for (const resource of ['sp', 'shield', 'continue'] as const)
+        expect(step(state, { type: 'journey-resource', resource }).reason).toBe(
+          'journey-resource-unavailable',
+        );
+      expect(progress.reserveHints).toBe(10);
+    }
   });
 
   it('keeps a pre-guarantee saved attempt on its original rules and gives the retry the new policy', () => {
@@ -261,8 +381,9 @@ describe('Beacon Route playtest', () => {
     const restored = readCampaignSave(storage);
     expect(restored.progress.clockFree).toBe(true);
     expect(restored.checkpoint?.rulesetVersion).toBe(state.rulesetVersion);
-    expect(getDeathClock(restored.checkpoint!)).toBeNull();
-    expect(grantCampaignClear(attempt, mission, state).mastered).not.toContain('first-steps');
+    expect(getDeathClock(restored.checkpoint!)).not.toBeNull();
+    expect(state.journeyGear).toBeUndefined();
+    expect(grantCampaignClear(attempt, mission, state).mastered).toContain('first-steps');
   });
   it('fits sunshades without overlapping the summer visor and keeps rain clothing', () => {
     const props = { world: 'puppy', season: 'summer', frame: 0 } as const;
@@ -417,7 +538,6 @@ describe('Beacon Route playtest', () => {
         progress,
         saved: { status: 'empty' },
         onStartMission: () => {},
-        onSupplies: () => {},
       }),
     );
     expect(hub).toContain('A Letter from the Stars · Current crossing');

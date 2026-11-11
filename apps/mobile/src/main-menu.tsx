@@ -632,7 +632,6 @@ export function MainMenu({
             progress={campaignProgress}
             saved={campaignSaved}
             onStartMission={onStartCampaignMission}
-            onSupplies={() => onOpen('supplies')}
           />
         ) : (view === 'store' || view === 'bridge-style' || view === 'supplies') &&
           CAMPAIGN_TEST_BUILD ? (

@@ -113,12 +113,13 @@ interface CampaignPresentation {
   readonly minimumStability: number;
   readonly objectiveProgress?: string;
 }
-type CampaignSupplies = Readonly<Record<'sp' | 'hint' | 'shield', boolean>>;
+type InfinitySupplies = Readonly<Record<'sp' | 'hint' | 'shield' | 'continue', number>>;
 export interface InfinitySceneViewProps {
   readonly weather?: 'clear' | 'rain';
   readonly campaignMission?: CampaignPresentation;
   readonly bridgeStyle?: BridgeStyle;
   readonly campaignSupplyPanel?: ReactNode;
+  readonly reserveHints?: number;
   readonly onToggleJourneyGear?: (wear: boolean) => void;
   readonly resourcePanel?: ReactNode;
   readonly guestContinuePanel?: ReactNode;
@@ -188,6 +189,7 @@ export function InfinitySceneView({
   campaignMission,
   bridgeStyle,
   campaignSupplyPanel,
+  reserveHints = 0,
   onToggleJourneyGear,
   settings,
   onSettingsChange,
@@ -200,6 +202,7 @@ export function InfinitySceneView({
   const petWorld = isPetWorld(themeId);
   const presented = presentInfinityScene(state);
   const outcome = presentRunOutcome(state);
+  const availableHints = state.hints + (campaignMission ? 0 : reserveHints);
   const worldOutcomeTheme =
     themeId !== 'obsidian' &&
     !error &&
@@ -454,7 +457,7 @@ export function InfinitySceneView({
           clearedRows={clearedRows}
           sp={state.sp}
           maxSp={maxSp}
-          hints={state.hints}
+          hints={availableHints}
           bonus={bonus}
           hintCue={resourceCues.hints}
           reducedMotion={settings.reducedMotion}
@@ -462,7 +465,7 @@ export function InfinitySceneView({
             interactive &&
             !oracleActive &&
             !state.discovery?.introduction &&
-            state.hints > 0 &&
+            availableHints > 0 &&
             !state.current.noSafeTile &&
             state.current.revealedSafeSide === null
           }
@@ -947,8 +950,12 @@ interface InfinityRunProps {
   weather?: 'clear' | 'rain';
   campaignMission?: CampaignPresentation;
   bridgeStyle?: BridgeStyle;
-  campaignSupplies?: CampaignSupplies;
-  onCampaignResourceCommit?: (state: RunState, events: readonly RunEvent[]) => void;
+  infinitySupplies?: InfinitySupplies;
+  onInfinitySupplyCommit?: (
+    state: RunState,
+    events: readonly RunEvent[],
+    previous: RunState,
+  ) => void;
 }
 function InfinityRun({
   trial = false,
@@ -967,13 +974,17 @@ function InfinityRun({
   weather = 'clear',
   campaignMission,
   bridgeStyle,
-  campaignSupplies,
-  onCampaignResourceCommit,
+  infinitySupplies,
+  onInfinitySupplyCommit,
 }: InfinityRunProps) {
   const { t, number } = useLanguage();
   const { store } = useTestStore();
   const runTheme = useThemeId();
   const isCampaign = !!campaignMission;
+  const suppliesAvailable =
+    !trial &&
+    !isCampaign &&
+    !!parseTileExperiment(initialState?.rulesetVersion ?? '')?.infinitySupplies;
   const model = bridgeModel(bridgeStyle);
   const bridgeSurface =
     model === 'trestle'
@@ -1434,12 +1445,34 @@ function InfinityRun({
     return <MysteryLab onClose={() => setLabOpen(false)} reducedMotion={settings.reducedMotion} />;
   const savedGuestGrant = trial ? undefined : earnedGuestContinuation(state);
   const adOffer = !trial && guestRewardedAd ? guestAdOffer(state) : null;
+  const canSupplyContinue =
+    suppliesAvailable &&
+    onInfinitySupplyCommit &&
+    (infinitySupplies?.continue ?? 0) > 0 &&
+    state.status === 'dead' &&
+    state.revivesGranted < getMaxRevives(state.rulesetVersion);
   return (
     <InfinitySceneView
       trial={trial}
       guestContinuePanel={
-        savedGuestGrant || adOffer ? (
+        savedGuestGrant || adOffer || canSupplyContinue ? (
           <div className="cpi-revive-offer cpi-overlay-actions">
+            {canSupplyContinue && (
+              <button
+                type="button"
+                disabled={!ready || busy}
+                onClick={() => {
+                  unlockAudio();
+                  void issue(
+                    { type: 'journey-resource', resource: 'continue' },
+                    (result, previous) =>
+                      onInfinitySupplyCommit(result.state, result.events, previous),
+                  );
+                }}
+              >
+                Use continue · {infinitySupplies!.continue} left
+              </button>
+            )}
             {savedGuestGrant ? (
               <button
                 type="button"
@@ -1499,26 +1532,27 @@ function InfinityRun({
       }
       weather={weather}
       campaignMission={campaignMission}
+      reserveHints={suppliesAvailable ? infinitySupplies?.hint : 0}
       bridgeStyle={bridgeStyle}
       onToggleJourneyGear={(wear) => {
         unlockAudio();
         void issue({ type: 'journey-gear', wear });
       }}
       campaignSupplyPanel={
-        campaignSupplies &&
-        onCampaignResourceCommit &&
+        suppliesAvailable &&
+        infinitySupplies &&
+        onInfinitySupplyCommit &&
         state.status === 'playing' &&
-        Object.values(campaignSupplies).some(Boolean) ? (
-          <div className="cpi-journey-supplies" aria-label="Crossing supplies">
+        (infinitySupplies.sp >= 25 || infinitySupplies.shield > 0) ? (
+          <div className="cpi-journey-supplies" aria-label="Infinity supplies">
             {(
               [
                 ['sp', '+25 Stability'],
-                ['hint', 'Reserve hint'],
                 ['shield', 'Use shield'],
               ] as const
             ).map(
               ([item, label]) =>
-                campaignSupplies[item] && (
+                infinitySupplies[item] >= (item === 'sp' ? 25 : 1) && (
                   <button
                     key={item}
                     type="button"
@@ -1529,24 +1563,17 @@ function InfinityRun({
                       !!error ||
                       cinematic !== null ||
                       state.pact?.phase === 'offered' ||
-                      (item === 'hint' &&
-                        (state.hints > 0 ||
-                          !!state.current.revealedSafeSide ||
-                          !!state.current.noSafeTile)) ||
                       (item === 'shield' &&
                         state.effects.some((effect) => effect.kind === 'shield_5s'))
                     }
                     onClick={() => {
                       unlockAudio();
-                      void issue(
-                        item === 'hint'
-                          ? { type: 'journey-hint' }
-                          : { type: 'journey-resource', resource: item },
-                        (result) => onCampaignResourceCommit(result.state, result.events),
+                      void issue({ type: 'journey-resource', resource: item }, (result, previous) =>
+                        onInfinitySupplyCommit(result.state, result.events, previous),
                       );
                     }}
                   >
-                    {label}
+                    {label} · {infinitySupplies[item]}
                   </button>
                 ),
             )}
@@ -1580,7 +1607,16 @@ function InfinityRun({
       }}
       onHint={() => {
         unlockAudio();
-        void issue({ type: 'hint' });
+        if (
+          state.hints === 0 &&
+          suppliesAvailable &&
+          (infinitySupplies?.hint ?? 0) > 0 &&
+          onInfinitySupplyCommit
+        ) {
+          void issue({ type: 'journey-hint' }, (result, previous) =>
+            onInfinitySupplyCommit(result.state, result.events, previous),
+          );
+        } else void issue({ type: 'hint' });
       }}
       onMystery={() => {
         unlockAudio();
@@ -1647,8 +1683,8 @@ export function InfinityPractice({
   weather,
   campaignMission,
   bridgeStyle,
-  campaignSupplies,
-  onCampaignResourceCommit,
+  infinitySupplies,
+  onInfinitySupplyCommit,
   newJourney,
   worldTheme,
 }: {
@@ -1667,8 +1703,12 @@ export function InfinityPractice({
   weather?: 'clear' | 'rain';
   campaignMission?: CampaignPresentation;
   bridgeStyle?: BridgeStyle;
-  campaignSupplies?: CampaignSupplies;
-  onCampaignResourceCommit?: (state: RunState, events: readonly RunEvent[]) => void;
+  infinitySupplies?: InfinitySupplies;
+  onInfinitySupplyCommit?: (
+    state: RunState,
+    events: readonly RunEvent[],
+    previous: RunState,
+  ) => void;
   newJourney?: () => RunState;
   worldTheme?: ThemeId;
 }) {
@@ -1693,8 +1733,8 @@ export function InfinityPractice({
         weather={weather}
         campaignMission={campaignMission}
         bridgeStyle={bridgeStyle}
-        campaignSupplies={campaignSupplies}
-        onCampaignResourceCommit={onCampaignResourceCommit}
+        infinitySupplies={infinitySupplies}
+        onInfinitySupplyCommit={onInfinitySupplyCommit}
         onExit={onExit}
         onStore={onStore}
         onViewRankings={onViewRankings}

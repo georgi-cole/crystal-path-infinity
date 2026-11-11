@@ -1,5 +1,14 @@
 # Mobile app foundation — CPI-003
 
+## Offline Campaign/Infinity playtest 0.7.2 — 11 November 2026
+
+The explicit `campaign-qa` profile now reserves all store supplies and functional Gear/No Clock for Infinity. Campaign uses the mission kit, with cosmetic choices shared. New Campaign rules carry `-mission-kit`; new Infinity rules carry `-supplies`. Existing run snapshots retain their captured rules.
+
+Infinity's hint button includes free run hints and stored stock: two starting hints plus a 10-pack shows 12. Stored stock is debited only after the two free hints, and only when used. Inventory and the resulting Infinity checkpoint share an atomic local save with the separate Campaign checkpoint; failed writes roll back the supply action. Legacy Infinity saves migrate when the new slot is created. First-clear Campaign supplies reward Infinity and cannot be spent to finish Campaign missions.
+
+Run `npm run build:campaign-qa` and `npm run preview:campaign-qa`, then refresh port 4178 and start a new crossing for the new policy. Test claims remain free/local, not real billing. See [current rules](../../docs/CURRENT_GAME_RULES.md) and [detailed contract](../../docs/decisions/CAMPAIGN-LIGHTHOUSE-PROPOSAL.md).
+
+
 Server integration update, 7 November 2026: the native client now supports the reviewed age-screen contract, fresh-OTP export/deletion, automatic unfinished-purchase recovery on store entry, server-paid resource spending and the strict `infinity-v11-live` wire schema. The separate `account.html` page uses memory-only web credentials. Default/unsigned builds keep live services off. See [setup and acceptance](../../docs/RELEASE_SERVICES_SETUP_BG.md); synthetic tests are not real ads/payments.
 
 This React 19 / Capacitor 8 app has an offline practice renderer (CPI-008–010), and CPI-013 adds its dedicated Play/Practice/Rankings/Profile/Settings menu. CPI-012 generates real Midnight Prism native icon exports and a static native splash, with a separate immediate in-app startup state and retry/offline fallback. The source SVG and native image generation remain independent of a network or commercial image service. CPI-007 adds the internal game-core dependency for a tested practice runtime and a local `CpiLifecycle` native plugin. **7 November 2026:** optional AdMob/UMP and native-purchase packages/adapters are installed and pinned. Default generation excludes them; default player builds still have no active advertising or billing service. See [native-service activation](../../docs/decisions/NATIVE-SERVICES-2026-11.md) for exact IDs, source status and outstanding release gates. Default Android declares network access; iOS requests no permission purpose strings and declares the in-app elapsed-time API purpose in its privacy manifest.

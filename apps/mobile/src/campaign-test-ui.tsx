@@ -4,7 +4,6 @@ import type { BridgeSlot, StyleId } from './campaign-content';
 import {
   campaignMissionSnapshot,
   campaignRunMatches,
-  canUseCampaignResource,
   newMissionSnapshot,
   nextCampaignMission,
 } from './campaign-test';
@@ -36,12 +35,10 @@ export function CampaignMissionHub({
   progress,
   saved,
   onStartMission,
-  onSupplies,
 }: {
   progress: CampaignProgress;
   saved: PracticeLoad;
   onStartMission: (id: CampaignMissionId, approach?: CampaignApproach) => void;
-  onSupplies: () => void;
 }) {
   const [approach, setApproach] = useState<CampaignApproach>('main');
   const [selectedId, setSelectedId] = useState<CampaignMissionId | null>(null);
@@ -64,8 +61,7 @@ export function CampaignMissionHub({
     saved.status === 'ready' &&
     campaignRunMatches(saved.state, pending) &&
     BigInt(saved.state.lastClearedRow) < BigInt(pending.targetRow) &&
-    (running ||
-      (saved.state.status === 'dead' && canUseCampaignResource(progress, pending, 'continue')));
+    running;
   const mission = selected ? (resume ? pending : newMissionSnapshot(selected.id, approach)) : null;
   const chapter = current?.chapter ?? 'harbour';
   const briefChapter = mission?.chapter ?? chapter;
@@ -272,19 +268,10 @@ export function CampaignMissionHub({
                         : 'Begin crossing'}{' '}
                 <span aria-hidden="true">›</span>
               </button>
-              {mission.assist && !locked && (
-                <button
-                  className="cpi-adventure-button is-quiet"
-                  type="button"
-                  onClick={onSupplies}
-                >
-                  <AdventureIcon name="pack" /> View supplies
-                </button>
-              )}
             </div>
-            {(resume ? mission.gear : mission.assist ? progress.gear : null) && (
-              <small className="cpi-adventure-footnote">Gear packed for this crossing.</small>
-            )}
+            <small className="cpi-adventure-footnote">
+              Mission kit only. Store supplies are for Infinity.
+            </small>
           </div>
         </article>
       ) : !current ? (

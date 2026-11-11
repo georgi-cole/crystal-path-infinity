@@ -1,5 +1,21 @@
 # Crystal Path Campaign and Infinity proposal
 
+## Current offline build — 0.7.2
+
+11 November 2026 · CPI-039 / #109. This supersedes the earlier assisted-Campaign supply/gear/No Clock policy; it does not rewrite historical playtest results.
+
+- **Campaign:** every new attempt snapshots the mission kit and `-mission-kit` rules. Store stock, purchased gear effects and No Clock cannot improve a mission. The core rejects shop supply commands for these attempts; the UI offers no shop supplies or purchased continues in Campaign, including older saves. Mission-provided caches, hints, shields and other scripted effects still work. Existing started snapshots keep their already captured route/rules. Cosmetics stay shared.
+- **Infinity:** new attempts snapshot `-supplies`. The main hint counter includes free run hints plus the current inventory (2 + a 10-pack = 12). Free hints are spent first. The same button then spends one stored hint and guarantees a safe tile. Starting/retrying a run never replenishes or consumes stored hints. Stability restores 25 SP per use; a shield protects one crack within five active seconds. A stored continue restores 150 SP on the same row, subject to the existing per-run revive cap.
+- **Save safety:** the inventory, Campaign checkpoint and Infinity checkpoint share one local-storage envelope. A supply callback must successfully save both the debit and resulting run before the transition commits. Failed writes leave both unchanged; stale/double callbacks do not debit twice. Legacy Infinity checkpoint keys are read until the new slot is created. The slots remain separate when switching modes, claiming an offer or earning a first-clear reward.
+- **Rewards/shop:** Campaign first-clear supplies remain one-time rewards for Infinity; cosmetics remain available to both modes. Shop copy names Infinity, including functional Gear and No Clock. Proposed prices and the one-time free test-claim policy are unchanged; no real purchase integration is claimed.
+- **Verification:** automated coverage checks the 12-hint HUD, two free hints before stock, one-time reserve debit, a protected double-crack landing, failed-write rollback, restart/save/resume, both save slots, accepted Stability/shield/continue debits and rejection of purchased supplies for all 30 Campaign missions. All 30 supplied-kit feasibility fixtures remain required.
+
+
+### 0.7.2 local validation · 11 November 2026
+
+Node 22.23.4: mobile 784/784, game-core 315/315, server-core 211/211 and balance 6/6 tests passed. The focused Campaign/scene run passed 76 tests, including 58 Campaign cases. Workspace typechecking, lint, formatting and Campaign QA, development, staging and production builds passed. A browser test restored previously claimed stock and observed 12 hints at the start of a fresh Infinity crossing; native checks for the final commit remain required on the PR.
+
+
 ## Integration update · 0.7.1 · 11 November 2026
 
 CPI-039 · [tracking issue #109](https://github.com/georgi-cole/crystal-path-infinity/issues/109). The owner approved the reviewed playtest and requested integration into main through a PR.

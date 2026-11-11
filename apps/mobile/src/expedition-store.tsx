@@ -724,7 +724,7 @@ function Outfitters({
       <div className="cpi-market-tray cpi-outfit-details">
         <div>
           <strong className="cpi-gear-price">{copy.price}</strong>
-          <small>Keep forever · Wear one item at a time</small>
+          <small>Keep forever · Wear one item in Infinity</small>
         </div>
         <div className="cpi-market-actions">
           {owned ? (
@@ -765,24 +765,24 @@ const supplyOffers = {
     icon: 'stability',
     title: '500 Stability',
     price: '€1.49',
-    note: 'Add 500 reserve SP. Use 25 SP in a Campaign crossing that allows supplies.',
+    note: 'Add 500 reserve SP for Infinity. Restore 25 SP each time you use it.',
   },
   'hint-pack': {
     icon: 'hint',
     title: '10 Hints',
     price: '€2.49',
-    note: 'Reveal the next safe tile. One hint is used each time you reveal a tile.',
+    note: 'Reveal a safe tile in Infinity. Stored hints join your two starting hints; one is used per reveal.',
   },
   'continue-pack': {
     icon: 'continue',
     title: '3 Continues',
     price: '€0.99',
-    note: 'Continue from the row where you fell, with half your starting SP.',
+    note: 'Continue your Infinity crossing from the row where you fell, with 150 SP.',
   },
   'shield-pack': {
     icon: 'shield',
     ...EXTRA_SUPPLY_OFFERS['shield-pack'],
-    note: 'One shield can absorb a crack while it’s active.',
+    note: 'In Infinity, block one broken tile for up to 5 seconds after activating a shield.',
   },
   'season-change-pack': {
     icon: 'cycle',
@@ -797,7 +797,7 @@ const supplyOffers = {
   'clock-free': {
     icon: 'continue',
     ...EXTRA_SUPPLY_OFFERS['clock-free'],
-    note: 'Turn off the death clock forever. Take your time choosing a tile. Broken tiles and Mystery effects can still cost SP.',
+    note: 'Turn off the Infinity death clock forever. Take your time choosing a tile. Broken tiles and Mystery effects can still cost SP.',
   },
 } as const satisfies Record<
   string,
@@ -856,7 +856,7 @@ function Supplies({
         <h2 id="cpi-supplies-title" ref={heading} tabIndex={-1}>
           {restock ? 'Restock' : 'Supplies'}
         </h2>
-        {!restock && <p>Keep a few things tucked away for the next crossing.</p>}
+        {!restock && <p>Supplies for Infinity. Campaign missions provide their own kit.</p>}
       </header>
       {restock && pack ? (
         <>
@@ -871,8 +871,8 @@ function Supplies({
               <p>{pack.note}</p>
               {restock === 'clock-free' && (
                 <small>
-                  Applies to new crossings. Clock-free runs have their own record. Turn the clock on
-                  for Campaign Mastery.
+                  Applies to new Infinity crossings, with a separate record. Campaign keeps its
+                  mission clock.
                 </small>
               )}
               {'price' in pack && (
@@ -955,7 +955,7 @@ function Supplies({
                 {offer === 'clock-free'
                   ? 'A permanent boost. Play at your own pace.'
                   : offer === 'sp-pack'
-                    ? 'Extra SP for Campaign.'
+                    ? 'Extra SP for Infinity.'
                     : offer === 'hint-pack'
                       ? 'Show a safe tile.'
                       : offer === 'continue-pack'

@@ -971,7 +971,9 @@ export function transitionRun(
   if (state.status === 'finished') return result(state, [], 'finished');
   if (
     (command.type === 'journey-resource' || command.type === 'journey-hint') &&
-    (!state.stream.journey?.reviveSp || !state.runId.startsWith('practice-campaign-'))
+    (!state.stream.journey?.reviveSp ||
+      !state.runId.startsWith('practice-campaign-') ||
+      parseTileExperiment(state.rulesetVersion)?.missionKit)
   )
     return result(state, [], 'journey-resource-unavailable');
   if (state.status === 'dead' && context.activeTimeMs !== state.activeTimeMs) {
@@ -1023,11 +1025,16 @@ export function transitionRun(
       );
     case 'journey-resource': {
       if (command.resource === 'continue') {
-        if (next.status !== 'dead' || !next.death || next.revivesGranted !== 0)
+        const supplyRun = parseTileExperiment(next.rulesetVersion)?.infinitySupplies;
+        if (
+          next.status !== 'dead' ||
+          !next.death ||
+          next.revivesGranted >= (supplyRun ? getMaxRevives(next.rulesetVersion) : 1)
+        )
           return result(next, events, 'journey-resource-unavailable');
         const identity = {
           deathId: next.death.id,
-          ordinal: 1,
+          ordinal: next.revivesGranted + 1,
           grantId: 'journey-' + next.death.id,
         };
         const grant = rewardTransition(next, { type: 'grant-revive', ...identity }, context);

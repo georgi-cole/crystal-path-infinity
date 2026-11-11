@@ -8,6 +8,8 @@ import {
   SEASONS,
   tileExperimentVersion,
   parseTileExperiment,
+  getMaxRevives,
+  getRuleset,
 } from '@crystal-path-infinity/game-core';
 import type {
   GearId,
@@ -44,13 +46,15 @@ export const journeyRuleset = (
   geared = false,
   clockless = false,
   safeHints = true,
+  missionKit = false,
 ) =>
   CAMPAIGN_INFINITY_RULESET +
   '-journey1-' +
   mode +
   (geared ? '-gear' : '') +
   (clockless ? '-clockless' : '') +
-  (safeHints ? '-safe-hints' : '');
+  (safeHints ? '-safe-hints' : '') +
+  (missionKit ? '-mission-kit' : '');
 const SEASON_ORDER = ['spring', 'summer', 'autumn', 'winter'] as const satisfies readonly Season[];
 export type CampaignResource = 'sp' | 'hint' | 'shield' | 'continue';
 export type CampaignApproach = 'main' | 'ridge';
@@ -209,7 +213,8 @@ export function newMissionSnapshot(
     approach: ridge ? 'ridge' : 'main',
     contentRevision: mission.revision ?? '0.3',
     weather: 'clear',
-    rulesetVersion: journeyRuleset((ridge || mission).season),
+    assist: undefined,
+    rulesetVersion: journeyRuleset((ridge || mission).season, false, false, true, true),
   };
 }
 
@@ -283,12 +288,20 @@ export function campaignRunMatches(state: RunState, mission: CampaignMissionSnap
 export function readCampaignSave(storage: Pick<PracticeStorage, 'getItem'>): {
   progress: CampaignProgress;
   checkpoint: RunState | null;
+  infinityCheckpoint: RunState | null;
+  infinitySaved: boolean;
   legacy: boolean;
 } {
-  const empty = { progress: EMPTY_CAMPAIGN_PROGRESS, checkpoint: null, legacy: false };
+  const empty = {
+    progress: EMPTY_CAMPAIGN_PROGRESS,
+    checkpoint: null,
+    infinityCheckpoint: null,
+    infinitySaved: false,
+    legacy: false,
+  };
   try {
     const raw = storage.getItem(CAMPAIGN_TEST_PROGRESS_KEY);
-    if (!raw || raw.length > 100000) return empty;
+    if (!raw || raw.length > 200000) return empty;
     const data = record(JSON.parse(raw));
     const value = data.version === 3 ? record(data.progress) : data;
     if (
@@ -321,6 +334,7 @@ export function readCampaignSave(storage: Pick<PracticeStorage, 'getItem'>): {
               !!snapshot.gear,
               !!parseTileExperiment(snapshot.rulesetVersion)?.clockless,
               !!parseTileExperiment(snapshot.rulesetVersion)?.safeHints,
+              !!parseTileExperiment(snapshot.rulesetVersion)?.missionKit,
             ) &&
           (snapshot.gear === undefined || (snapshot.assist && isGearId(snapshot.gear))) &&
           isBalance(snapshot.targetRow) &&
@@ -420,7 +434,28 @@ export function readCampaignSave(storage: Pick<PracticeStorage, 'getItem'>): {
         // Keep supplies and the completed route even if the active crossing is damaged.
       }
     }
-    return { progress, checkpoint, legacy: value.version !== 3 };
+    let infinityCheckpoint: RunState | null = null;
+    if (data.infinityCheckpoint) {
+      try {
+        const state = data.infinityCheckpoint as RunState;
+        assertRunState(state, PRACTICE_RNG);
+        if (
+          state.runId.startsWith('practice-campaign-infinity-') &&
+          parseTileExperiment(state.rulesetVersion)?.journey &&
+          !parseTileExperiment(state.rulesetVersion)?.missionKit
+        )
+          infinityCheckpoint = state;
+      } catch {
+        // Preserve inventory and the Campaign slot if the Infinity slot is damaged.
+      }
+    }
+    return {
+      progress,
+      checkpoint,
+      infinityCheckpoint,
+      infinitySaved: Object.hasOwn(data, 'infinityCheckpoint'),
+      legacy: value.version !== 3,
+    };
   } catch {
     return empty;
   }
@@ -430,9 +465,15 @@ export function writeCampaignSave(
   storage: Pick<PracticeStorage, 'setItem'>,
   progress: CampaignProgress,
   checkpoint: RunState | null,
+  infinityCheckpoint?: RunState | null,
 ) {
-  const data = JSON.stringify({ version: 3, progress, checkpoint });
-  if (data.length > 100000) throw new RangeError('Campaign save is too large.');
+  const data = JSON.stringify({
+    version: 3,
+    progress,
+    checkpoint,
+    ...(infinityCheckpoint !== undefined ? { infinityCheckpoint } : {}),
+  });
+  if (data.length > 200000) throw new RangeError('Journey save is too large.');
   storage.setItem(CAMPAIGN_TEST_PROGRESS_KEY, data);
 }
 
@@ -527,22 +568,12 @@ export function startCampaignAttempt(
   approach: CampaignApproach = 'main',
 ): CampaignProgress {
   if (!isMissionUnlocked(progress, id)) throw new RangeError('This crossing is sealed.');
-  const base = newMissionSnapshot(id, approach);
-  const mission = progress.clockFree
-    ? { ...base, rulesetVersion: journeyRuleset(base.season, false, true) }
-    : base;
-  const gear = mission.assist ? progress.gear : null;
+  const mission = newMissionSnapshot(id, approach);
   return {
     ...progress,
     ...EMPTY_ATTEMPT,
     activeMissionId: id,
-    activeMissionSnapshot: gear
-      ? {
-          ...mission,
-          gear,
-          rulesetVersion: journeyRuleset(mission.season, true, progress.clockFree),
-        }
-      : mission,
+    activeMissionSnapshot: mission,
   };
 }
 
@@ -639,6 +670,58 @@ export function canUseCampaignResource(
     case 'continue':
       return progress.continues > 0;
   }
+}
+
+/** Infinity owns shop stock; Campaign kits never debit these balances. */
+export function canUseInfinitySupply(
+  progress: CampaignProgress,
+  state: RunState,
+  item: CampaignResource,
+): boolean {
+  if (
+    !state.runId.startsWith('practice-campaign-infinity-') ||
+    !parseTileExperiment(state.rulesetVersion)?.infinitySupplies
+  )
+    return false;
+  if (item === 'continue')
+    return (
+      state.status === 'dead' &&
+      progress.continues > 0 &&
+      state.revivesGranted < getMaxRevives(state.rulesetVersion)
+    );
+  if (state.status !== 'playing' || state.pact?.phase === 'offered') return false;
+  if (item === 'hint')
+    return (
+      progress.reserveHints > 0 &&
+      state.hints === 0 &&
+      state.current.revealedSafeSide === null &&
+      !state.current.noSafeTile
+    );
+  if (item === 'shield')
+    return progress.shields > 0 && !state.effects.some((effect) => effect.kind === 'shield_5s');
+  const max = getRuleset(state.rulesetVersion).maxSp;
+  return progress.reserveSp >= 25 && (max === null || state.sp <= max - 25);
+}
+
+export function infinityProgressFromEvents(
+  progress: CampaignProgress,
+  previous: RunState,
+  events: readonly RunEvent[],
+): CampaignProgress {
+  let next = progress;
+  for (const event of events) {
+    if (event.type !== 'journey-resource-used') continue;
+    if (!canUseInfinitySupply(next, previous, event.resource))
+      throw new RangeError('That Infinity supply is unavailable.');
+    next = {
+      ...next,
+      reserveSp: next.reserveSp - (event.resource === 'sp' ? 25 : 0),
+      reserveHints: next.reserveHints - (event.resource === 'hint' ? 1 : 0),
+      shields: next.shields - (event.resource === 'shield' ? 1 : 0),
+      continues: next.continues - (event.resource === 'continue' ? 1 : 0),
+    };
+  }
+  return next;
 }
 
 export function campaignGoalProgress(
@@ -819,6 +902,7 @@ export function createCampaignInfinityRun(progress: CampaignProgress): RunState 
   const mode = selectedInfinitySeason(progress);
   const journey: JourneyRoute = {
     version: 1,
+    reviveSp: 150,
     season: mode === 'plain' ? 'spring' : mode,
     ...(mode === 'plain'
       ? {}
@@ -832,7 +916,7 @@ export function createCampaignInfinityRun(progress: CampaignProgress): RunState 
   return createRun(
     {
       runId: 'practice-campaign-infinity-' + crypto.randomUUID().replaceAll('-', ''),
-      rulesetVersion: journeyRuleset(mode, !!progress.gear, progress.clockFree),
+      rulesetVersion: journeyRuleset(mode, !!progress.gear, progress.clockFree) + '-supplies',
       routeRng: createPracticeCursor(route),
       mysteryRng: createPracticeCursor(route ^ 0x9e3779b97f4a7c15n),
       observedAt: Date.now(),

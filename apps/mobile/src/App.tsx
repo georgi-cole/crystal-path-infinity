@@ -6,12 +6,7 @@ import {
 } from './app-profile';
 import { rememberMysteries } from './mystery-journal-model';
 import { useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import {
-  usesStoreTestRules,
-  parseTileExperiment,
-  transitionRun,
-  PRACTICE_RNG,
-} from '@crystal-path-infinity/game-core';
+import { usesStoreTestRules, parseTileExperiment } from '@crystal-path-infinity/game-core';
 import { useTestStore, useThemeId } from './store-context';
 import { selectTestPractice } from './test-store';
 import type { ThemeId } from './store-catalog';
@@ -37,7 +32,7 @@ import {
   campaignMissionSnapshot,
   campaignProgressFromEvents,
   campaignRunMatches,
-  canUseCampaignResource,
+  infinityProgressFromEvents,
   advanceInfinityCycle,
   claimTestOffer,
   CAMPAIGN_RAIN_RULESET,
@@ -121,6 +116,10 @@ const showBuildDetails = build.environment !== 'production' && !PLAYER_PREVIEW_E
 function loadLocalPractice(): PracticeLoad {
   if (typeof window === 'undefined') return { status: 'empty' };
   try {
+    if (CAMPAIGN_TEST_BUILD) {
+      const journey = readCampaignSave(practiceStorage());
+      if (journey.infinitySaved) return campaignLoad(journey.infinityCheckpoint);
+    }
     const loaded = readPracticeCheckpoint(practiceStorage());
     if (
       !QA_TOOLS_ENABLED &&
@@ -176,7 +175,12 @@ function loadCampaign() {
     }
     return saved;
   } catch {
-    return { progress: EMPTY_CAMPAIGN_PROGRESS, checkpoint: null };
+    return {
+      progress: EMPTY_CAMPAIGN_PROGRESS,
+      checkpoint: null,
+      infinityCheckpoint: null,
+      infinitySaved: false,
+    };
   }
 }
 
@@ -210,6 +214,9 @@ export function App({
   const [campaignProgress, setCampaignProgress] = useState(loadedCampaign.progress);
   const campaignProgressRef = useRef(campaignProgress);
   const campaignCheckpointRef = useRef<RunState | null>(loadedCampaign.checkpoint);
+  const infinityCheckpointRef = useRef<RunState | null | undefined>(
+    loadedCampaign.infinitySaved ? loadedCampaign.infinityCheckpoint : undefined,
+  );
   const [campaignSaved, setCampaignSaved] = useState<PracticeLoad>(() =>
     campaignLoad(loadedCampaign.checkpoint),
   );
@@ -554,15 +561,17 @@ export function App({
       progress: CampaignProgress,
       checkpoint: RunState | null = campaignCheckpointRef.current,
       requireWrite = false,
+      infinityCheckpoint = infinityCheckpointRef.current,
     ) => {
       try {
-        writeCampaignSave(practiceStorage(), progress, checkpoint);
+        writeCampaignSave(practiceStorage(), progress, checkpoint, infinityCheckpoint);
         setStorageWarning(null);
       } catch (error) {
         setStorageWarning('Campaign progress could not be saved on this device.');
         if (requireWrite) throw error;
       }
       campaignCheckpointRef.current = checkpoint;
+      infinityCheckpointRef.current = infinityCheckpoint;
       if (campaignProgressRef.current !== progress) {
         campaignProgressRef.current = progress;
         setCampaignProgress(progress);
@@ -571,18 +580,14 @@ export function App({
     [],
   );
 
-  const commitCampaignResource = useCallback(
-    (state: RunState, events: readonly RunEvent[]) => {
+  const commitInfinitySupply = useCallback(
+    (state: RunState, events: readonly RunEvent[], previous: RunState) => {
       if (!events.some((event) => event.type === 'journey-resource-used')) return;
-      const progress = campaignProgressRef.current;
-      const mission = progress.activeMissionSnapshot;
-      if (!mission || !campaignRunMatches(state, mission))
-        throw new Error('The crossing has changed.');
-      commitCampaignProgress(
-        campaignProgressFromEvents(progress, mission, events, state.currentRow),
-        state,
-        true,
-      );
+      if (gameRef.current?.mode !== 'infinity' || previous.runId !== state.runId)
+        throw new Error('The Infinity crossing has changed.');
+      const progress = infinityProgressFromEvents(campaignProgressRef.current, previous, events);
+      // Inventory and the resulting crossing share one atomic local-storage write.
+      commitCampaignProgress(progress, campaignCheckpointRef.current, true, state);
     },
     [commitCampaignProgress],
   );
@@ -621,6 +626,21 @@ export function App({
           });
         } else if (state !== campaignCheckpointRef.current || progress !== previous) {
           commitCampaignProgress(progress, state);
+        }
+        return;
+      }
+      if (CAMPAIGN_TEST_BUILD && state.runId.startsWith('practice-campaign-infinity-')) {
+        if (state !== infinityCheckpointRef.current)
+          commitCampaignProgress(
+            campaignProgressRef.current,
+            campaignCheckpointRef.current,
+            false,
+            state,
+          );
+        try {
+          rememberMysteries(practiceStorage(), state);
+        } catch {
+          setStorageWarning('Discovery history could not be saved on this device.');
         }
         return;
       }
@@ -676,7 +696,7 @@ export function App({
     const progress = campaignProgressRef.current;
     const state = createCampaignInfinityRun(progress);
     const next = advanceInfinityCycle(progress);
-    if (next !== progress) commitCampaignProgress(next);
+    commitCampaignProgress(next, campaignCheckpointRef.current, false, state);
     return state;
   };
 
@@ -715,8 +735,7 @@ export function App({
       campaignRunMatches(previous, mission) &&
       (!approach || approach === mission.approach) &&
       BigInt(previous.lastClearedRow) < BigInt(mission.targetRow) &&
-      (previous.status === 'playing' ||
-        (previous.status === 'dead' && canUseCampaignResource(current, mission, 'continue')))
+      previous.status === 'playing'
     ) {
       startPractice(previous, 'campaign', missionId, mission.weather);
       return;
@@ -727,35 +746,6 @@ export function App({
     commitCampaignProgress(progress, initial);
     setCampaignSaved(campaignLoad(initial));
     startPractice(initial, 'campaign', missionId, snapshot.weather);
-  };
-
-  const continueCampaign = () => {
-    const previous = campaignCheckpointRef.current;
-    const progress = campaignProgressRef.current;
-    const mission = progress.activeMissionSnapshot;
-    if (
-      previous?.status !== 'dead' ||
-      !mission ||
-      !canUseCampaignResource(progress, mission, 'continue')
-    )
-      return;
-    const result = transitionRun(
-      previous,
-      { type: 'journey-resource', resource: 'continue' },
-      {
-        rng: PRACTICE_RNG,
-        activeTimeMs: previous.activeTimeMs,
-        achievedAt: previous.lastObservedAt,
-      },
-    );
-    if (!result.accepted) return;
-    try {
-      commitCampaignResource(result.state, result.events);
-    } catch {
-      return;
-    }
-    gameRef.current = null;
-    startPractice(result.state, 'campaign', mission.id, mission.weather);
   };
 
   const changeBridgeStyle = (slot: BridgeSlot, id: StyleId | null) =>
@@ -892,12 +882,6 @@ export function App({
           warning={storageWarning}
           world={campaignProgress.world}
           reducedMotion={settings.reducedMotion}
-          onRevive={
-            !campaignOutcome.goalReached &&
-            canUseCampaignResource(campaignProgress, campaignOutcome.mission, 'continue')
-              ? continueCampaign
-              : undefined
-          }
           onEquip={
             campaignOutcome.firstClear && campaignOutcome.mission.grant.style
               ? changeBridgeStyle
@@ -945,28 +929,19 @@ export function App({
           campaignMission={campaignMissionPresentation}
           bridgeStyle={CAMPAIGN_TEST_BUILD ? campaignProgress.style : undefined}
           worldTheme={CAMPAIGN_TEST_BUILD ? campaignProgress.world : undefined}
-          campaignSupplies={
-            game.mode === 'campaign' && campaignProgress.activeMissionSnapshot
+          infinitySupplies={
+            game.mode === 'infinity' && CAMPAIGN_TEST_BUILD && !game.trialTheme
               ? {
-                  sp: canUseCampaignResource(
-                    campaignProgress,
-                    campaignProgress.activeMissionSnapshot,
-                    'sp',
-                  ),
-                  hint: canUseCampaignResource(
-                    campaignProgress,
-                    campaignProgress.activeMissionSnapshot,
-                    'hint',
-                  ),
-                  shield: canUseCampaignResource(
-                    campaignProgress,
-                    campaignProgress.activeMissionSnapshot,
-                    'shield',
-                  ),
+                  sp: campaignProgress.reserveSp,
+                  hint: campaignProgress.reserveHints,
+                  shield: campaignProgress.shields,
+                  continue: campaignProgress.continues,
                 }
               : undefined
           }
-          onCampaignResourceCommit={game.mode === 'campaign' ? commitCampaignResource : undefined}
+          onInfinitySupplyCommit={
+            game.mode === 'infinity' && CAMPAIGN_TEST_BUILD ? commitInfinitySupply : undefined
+          }
           settings={settings}
           onSettingsChange={changeSettings}
         />

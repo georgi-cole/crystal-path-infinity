@@ -12,9 +12,11 @@ export interface TileExperiment {
   readonly geared?: true;
   readonly clockless?: true;
   readonly safeHints?: true;
+  readonly missionKit?: true;
+  readonly infinitySupplies?: true;
 }
 const identity =
-  /^infinity-v(10|12|13)-tiles-(0|[1-9]\d?|100)-(0|[1-9]\d?|100)-(plain|store)(?:-journey1-(plain|spring|summer|winter|autumn)(-gear)?(-clockless)?(-safe-hints)?)?$/;
+  /^infinity-v(10|12|13)-tiles-(0|[1-9]\d?|100)-(0|[1-9]\d?|100)-(plain|store)(?:-journey1-(plain|spring|summer|winter|autumn)(-gear)?(-clockless)?(-safe-hints)?(-mission-kit|-supplies)?)?$/;
 
 export function parseTileExperiment(version: string): TileExperiment | null {
   if (typeof version !== 'string') return null;
@@ -29,6 +31,7 @@ export function parseTileExperiment(version: string): TileExperiment | null {
     (match[1] !== '12' || match[4] !== 'plain' || highBreakPercent !== 50 || lowBreakPercent !== 50)
   )
     return null;
+  if (match[9] === '-mission-kit' && (match[6] || match[7] || !match[8])) return null;
   return {
     highBreakPercent,
     lowBreakPercent,
@@ -39,6 +42,8 @@ export function parseTileExperiment(version: string): TileExperiment | null {
     ...(match[6] ? { geared: true as const } : {}),
     ...(match[7] ? { clockless: true as const } : {}),
     ...(match[8] ? { safeHints: true as const } : {}),
+    ...(match[9] === '-mission-kit' ? { missionKit: true as const } : {}),
+    ...(match[9] === '-supplies' ? { infinitySupplies: true as const } : {}),
   };
 }
 export function tileExperimentVersion(

@@ -67,6 +67,16 @@ function markup(modifiers: Record<string, unknown> = {}, theme: ThemeId = 'obsid
   );
 }
 describe('CPI-008 standalone scene', () => {
+  it('shows stored Infinity hints in the main counter while Campaign shows only its kit', () => {
+    expect(markup({ reserveHints: 10 })).toContain('aria-label="Use hint, 12 remaining"');
+    const mission = { name: 'Mission kit', targetRow: 24, minimumStability: 100 };
+    expect(markup({ reserveHints: 10, campaignMission: mission })).toContain(
+      'aria-label="Use hint, 2 remaining"',
+    );
+    expect(markup({ reserveHints: 10, campaignMission: mission })).not.toContain(
+      'Use hint, 12 remaining',
+    );
+  });
   it('bundles source-verified black-hole artwork as high-quality offline WebP', () => {
     const image = readFileSync(new URL('../src/infinity-black-hole-bg.webp', import.meta.url));
     expect(image.length).toBe(201_680);
