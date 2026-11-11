@@ -613,19 +613,9 @@
   height: 100%;
   pointer-events: none;
 }
-.cpi-metal-glints polyline {
-  stroke: #d9eff9;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-dasharray: 23 800;
-  filter: drop-shadow(0 0 3px #c2ecff);
-  animation: cpi-metal-glimmer 8s ease-in-out infinite;
-}
-.cpi-metal-glints polyline:nth-child(2) {
-  animation-delay: -3s;
-}
-.cpi-metal-glints polyline:nth-child(3) {
-  animation-delay: -5.5s;
+.cpi-metal-reflection {
+  animation: cpi-metal-glimmer 12s ease-in-out infinite;
+  transform-box: view-box;
 }
 .cpi-metal-mist {
   position: absolute;
@@ -676,17 +666,17 @@
 }
 @keyframes cpi-metal-glimmer {
   0%,
-  12% {
-    stroke-dashoffset: 30;
+  9% {
+    transform: translateX(0);
     opacity: 0;
   }
-  23%,
+  18%,
   42% {
-    opacity: 0.65;
+    opacity: 0.8;
   }
-  62%,
+  56%,
   100% {
-    stroke-dashoffset: -350;
+    transform: translateX(1320px);
     opacity: 0;
   }
 }
