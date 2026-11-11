@@ -1,4 +1,5 @@
 import { useId, useLayoutEffect, useRef } from 'react';
+import blackMetalTraveller from './assets/world-previews/black-metal-traveller-v1.png';
 import type { CSSProperties } from 'react';
 import type { GearId, Season, TileSide, Weather } from '@crystal-path-infinity/game-core';
 import type { SceneCinematic } from './scene-cinematics';
@@ -97,7 +98,7 @@ export function WorldPathCompanion({
   preview = false,
   shieldCharges = 0,
 }: {
-  theme: Exclude<ThemeId, 'obsidian'>;
+  theme: ThemeId;
   cinematic?: SceneCinematic | null;
   standingSide: TileSide;
   sp: number;
@@ -113,6 +114,7 @@ export function WorldPathCompanion({
   shieldCharges?: number;
 }) {
   const id = useId().replace(/:/g, '');
+  const skin = theme === 'obsidian' ? 'chaos' : theme;
   const motionPreferences = useWorldMotion();
   const ref = useRef<SVGSVGElement>(null);
   const motion = planCompanionMotion(sp, standingSide, cinematic);
@@ -147,8 +149,14 @@ export function WorldPathCompanion({
       ? motion.anchor
       : motion.end;
   const frame =
-    motion.action === 'rescue' || reaction === 'happy' ? 1 : reaction === 'panic' ? 2 : 0;
-  const registration = companionPreviewRegistration(theme, gear);
+    theme === 'obsidian'
+      ? 0
+      : motion.action === 'rescue' || reaction === 'happy'
+        ? 1
+        : reaction === 'panic'
+          ? 2
+          : 0;
+  const registration = companionPreviewRegistration(skin, gear);
   return (
     <svg
       ref={ref}
@@ -193,13 +201,13 @@ export function WorldPathCompanion({
         )}
         <g transform={`translate(${anchor.x} ${anchor.y})`}>
           <g className="cpi-world-actor-sprite">
-            {motion.action === 'rescue' && <WorldRescueRig theme={theme} />}
+            {motion.action === 'rescue' && <WorldRescueRig theme={skin} />}
             <g
               className="cpi-surface-bounce"
               data-surface={bridge}
               data-landing={cinematic?.phase === 'impact' && cinematic.feedback?.kind === 'safe'}
             >
-              <WorldAvatarAura theme={theme} effects={effects} />
+              <WorldAvatarAura theme={skin} effects={effects} />
               <g transform={preview ? `translate(${registration.x} ${registration.y})` : undefined}>
                 {gear && (
                   <CompanionTrailGear
@@ -210,17 +218,29 @@ export function WorldPathCompanion({
                     layer="rear"
                   />
                 )}
-                <image
-                  href={worldAsset(WORLD_ASSETS[theme].companion)}
-                  x={-48 - frame * 96}
-                  y="-96"
-                  width="288"
-                  height="96"
-                  clipPath={`url(#${id})`}
-                />
-                {season && (
+                {theme === 'obsidian' ? (
+                  <image
+                    className="cpi-glass-traveller"
+                    href={blackMetalTraveller}
+                    x="-48"
+                    y="-97"
+                    width="96"
+                    height="100"
+                    preserveAspectRatio="xMidYMax meet"
+                  />
+                ) : (
+                  <image
+                    href={worldAsset(WORLD_ASSETS[skin].companion)}
+                    x={-48 - frame * 96}
+                    y="-96"
+                    width="288"
+                    height="96"
+                    clipPath={`url(#${id})`}
+                  />
+                )}
+                {season && theme !== 'obsidian' && (
                   <CompanionSeasonGear
-                    world={theme}
+                    world={skin}
                     season={season}
                     weather={weather}
                     frame={frame}

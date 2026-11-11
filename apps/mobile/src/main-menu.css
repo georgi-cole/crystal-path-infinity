@@ -31,6 +31,27 @@
   padding-bottom: 0.8rem;
   border-bottom: 1px solid #ffffff12;
 }
+
+/* Campaign owns one viewport; only lengthy briefing/journal contents may scroll. */
+.cpi-menu-view--campaign {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+.cpi-menu-view--campaign .cpi-menu-inner {
+  height: 100%;
+  min-height: 0;
+  padding: max(0.5rem, env(safe-area-inset-top, 0px)) max(0.8rem, env(safe-area-inset-right, 0px))
+    max(0.5rem, env(safe-area-inset-bottom, 0px)) max(0.8rem, env(safe-area-inset-left, 0px));
+  gap: 0.55rem;
+}
+.cpi-menu-view--campaign .cpi-menu-header {
+  flex: 0 0 auto;
+  min-height: 2.75rem;
+  padding-bottom: 0.25rem;
+}
 .cpi-menu-series {
   display: inline-flex;
   align-items: center;
@@ -426,7 +447,7 @@
   flex-direction: column;
   gap: 1.2rem;
   width: min(100%, 42rem);
-  margin: 2.5rem auto;
+  margin: 0.65rem auto;
   padding: clamp(1.2rem, 4vw, 2.25rem);
   border: 1px solid #d1d1dd26;
   border-radius: 9px;
@@ -812,7 +833,7 @@
     gap: 0.3rem;
   }
   .cpi-menu-panel {
-    margin-block: 1.7rem;
+    margin-block: 0.65rem;
     padding: 1.2rem;
   }
 }
@@ -899,4 +920,13 @@
 .cpi-menu-view--home .cpi-home-scenery {
   top: 22%;
   bottom: -8%;
+}
+
+/* Interior pages share a compact doorway; keep Home's title composition separate. */
+.cpi-menu-shell:not(.cpi-menu-view--home) .cpi-menu-inner {
+  padding-top: max(0.5rem, env(safe-area-inset-top, 0px));
+}
+.cpi-menu-shell:not(.cpi-menu-view--home) .cpi-menu-header {
+  min-height: 2.75rem;
+  padding-bottom: 0.25rem;
 }

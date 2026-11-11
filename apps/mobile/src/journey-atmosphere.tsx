@@ -4,6 +4,14 @@ import type { GearId, Season, Weather } from '@crystal-path-infinity/game-core';
 import type { ThemeId, WorldId } from './store-catalog';
 import { WORLD_COLORS } from './world-kits';
 import './journey-atmosphere.css';
+import wornUmbrella from './assets/campaign/wearables/umbrella-v1.webp';
+import wornShades from './assets/campaign/wearables/sunshades-v1.webp';
+import wornCream from './assets/campaign/wearables/sun-cream-v1.webp';
+import wornScarf from './assets/campaign/wearables/scarf-v1.webp';
+import wornSkateLeft from './assets/campaign/wearables/skate-left-v1.webp';
+import wornSkateRight from './assets/campaign/wearables/skate-right-v1.webp';
+import wornBootLeft from './assets/campaign/wearables/boot-left-v1.webp';
+import wornBootRight from './assets/campaign/wearables/boot-right-v1.webp';
 
 const light = {
   spring: ['#74d5b3', '#7eaecf'],
@@ -223,7 +231,12 @@ export function JourneyAtmosphere({
 }
 
 // Three registrations per World match the calm, happy and worried sprite frames.
-const eyeAnchor: Record<WorldId, readonly (readonly [number, number, number, number])[]> = {
+const eyeAnchor: Record<ThemeId, readonly (readonly [number, number, number, number])[]> = {
+  obsidian: [
+    [6, -64, -8, 1.04],
+    [6, -64, -8, 1.04],
+    [6, -64, -8, 1.04],
+  ],
   chaos: [
     [7, -65, -12, 1],
     [2, -68, -13, 1],
@@ -255,7 +268,12 @@ const eyeAnchor: Record<WorldId, readonly (readonly [number, number, number, num
     [-17, -46, -17, 1.06],
   ],
 };
-const neckAnchor: Record<WorldId, readonly (readonly [number, number])[]> = {
+const neckAnchor: Record<ThemeId, readonly (readonly [number, number])[]> = {
+  obsidian: [
+    [0, -44],
+    [0, -44],
+    [0, -44],
+  ],
   chaos: [
     [4, -47],
     [3, -49],
@@ -370,7 +388,12 @@ export function CompanionSeasonGear({
 }
 
 // Feet sit in different places on the three poses, especially the jumping workshop robot.
-const footAnchor: Record<WorldId, readonly (readonly [number, number, number, number])[]> = {
+const footAnchor: Record<ThemeId, readonly (readonly [number, number, number, number])[]> = {
+  obsidian: [
+    [-10, -3, 12, -3],
+    [-10, -3, 12, -3],
+    [-10, -3, 12, -3],
+  ],
   chaos: [
     [-10, -3, 13, -3],
     [-13, -11, 11, -9],
@@ -410,222 +433,95 @@ export function CompanionTrailGear({
   weather,
   layer = 'front',
 }: {
-  world: WorldId;
+  world: ThemeId;
   item: GearId;
   frame: number;
   weather?: Weather;
   layer?: 'rear' | 'front';
 }) {
-  const hardware = useId().replaceAll(':', '');
   const [x, y, tilt, scale] = eyeAnchor[world][frame];
   const [nx, ny] = neckAnchor[world][frame];
-  const [high, material, shadow, accent] = WORLD_COLORS[world];
-  const gripX = nx + 14;
-  const gripY = ny + 16;
+  // Purchased equipment uses the same rendered merchandise as the shop, fitted
+  // to each pose. The umbrella sits behind the body; face/neck/feet sit in front.
   if (layer === 'rear')
     return item === 'umbrella' ? (
-      <g className="cpi-companion-gear">
-        <path
-          d={`M${Math.max(-10, Math.min(x, 12)) - 1} ${y - 49}L${gripX} ${gripY - 5}q3 8-2 9`}
-          fill="none"
-          stroke={shadow}
-          strokeWidth="3.8"
-          strokeLinecap="round"
-        />
-        <path
-          d={`M${Math.max(-10, Math.min(x, 12)) - 1} ${y - 49}L${gripX} ${gripY - 5}q3 8-2 9`}
-          fill="none"
-          stroke="#d8be8f"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-        />
+      <g className="cpi-companion-gear" transform={`translate(${x} ${y - 51})`}>
+        <g className="cpi-umbrella-canopy" data-wind={weather === 'gust' || weather === 'squall'}>
+          <image
+            href={wornUmbrella}
+            x="-39"
+            y="0"
+            width="78"
+            height="94"
+            preserveAspectRatio="xMidYMid meet"
+          />
+        </g>
       </g>
     ) : null;
-  switch (item) {
-    case 'trail-scarf':
-      return (
-        <g transform={`translate(${nx} ${ny})`} className="cpi-companion-gear">
-          <defs>
-            <linearGradient id={hardware} x2=".2" y2="1">
-              <stop stopColor={high} />
-              <stop offset=".3" stopColor={material} />
-              <stop offset="1" stopColor={shadow} />
-            </linearGradient>
-          </defs>
-          <path
-            d="M-13-4Q0 2 13-4l2 8Q1 13-14 4Z"
-            fill={`url(#${hardware})`}
-            stroke={high}
-            strokeWidth="1.2"
+  if (item === 'umbrella') return null;
+  if (item === 'sunshades')
+    return (
+      <g
+        className="cpi-companion-gear"
+        transform={`translate(${x} ${y}) rotate(${tilt}) scale(${scale})`}
+      >
+        <image
+          href={wornShades}
+          x="-22"
+          y="-12"
+          width="44"
+          height="25"
+          preserveAspectRatio="xMidYMid meet"
+        />
+      </g>
+    );
+  if (item === 'trail-scarf')
+    return (
+      <g className="cpi-companion-gear" transform={`translate(${nx} ${ny})`}>
+        <image
+          href={wornScarf}
+          x="-19"
+          y="-7"
+          width="38"
+          height="33"
+          preserveAspectRatio="xMidYMid meet"
+        />
+      </g>
+    );
+  if (item === 'sun-balm')
+    return (
+      <g className="cpi-companion-gear" transform={`translate(${nx + 15} ${ny + 17}) rotate(-12)`}>
+        <image
+          href={wornCream}
+          x="-8"
+          y="-8"
+          width="16"
+          height="16"
+          preserveAspectRatio="xMidYMid meet"
+        />
+      </g>
+    );
+  const [lx, ly, rx, ry] = footAnchor[world][frame];
+  const footwear =
+    item === 'frost-runners' ? [wornSkateLeft, wornSkateRight] : [wornBootLeft, wornBootRight];
+  const fit = world === 'jelly' ? 1 : world === 'kitten' ? 0.85 : 0.78;
+  return (
+    <g className="cpi-companion-gear" data-footwear={item}>
+      {[
+        [lx, ly],
+        [rx, ry],
+      ].map(([px, py], index) => (
+        <g key={index} transform={`translate(${px} ${py}) scale(${fit})`}>
+          <image
+            href={footwear[index]}
+            x="-15"
+            y="-24"
+            width="30"
+            height="31"
+            preserveAspectRatio="xMidYMax meet"
           />
-          <path d="m5 6 2 15 9-1-3-16Z" fill={`url(#${hardware})`} stroke={high} strokeWidth="1" />
-          <path
-            d="M-10 1Q0 7 11 1m-18 0v4m4-3v4m4-3v4m4-4v4m3 10 1 4m2-4 1 4m2-4 1 4"
-            fill="none"
-            stroke={accent}
-            strokeWidth="1.1"
-          />
-          <path d="M-7 1q-2-5 4-5Q-1 0-5 3Z" fill="#e8bd71" stroke="#fff1bd" strokeWidth=".65" />
         </g>
-      );
-    case 'umbrella':
-      return (
-        <g className="cpi-companion-gear">
-          <defs>
-            <linearGradient id={hardware} x2=".8" y2="1">
-              <stop stopColor={high} />
-              <stop offset=".34" stopColor={material} />
-              <stop offset="1" stopColor={shadow} />
-            </linearGradient>
-          </defs>
-          <path
-            d={`M${gripX - 3} ${gripY - 5}q8-2 8 4l-1 5-6-1Z`}
-            fill={material}
-            stroke={high}
-            strokeWidth=".7"
-          />
-          <g transform={`translate(${Math.max(-10, Math.min(x, 12))} ${y - 31}) scale(.91)`}>
-            <g
-              className="cpi-umbrella-canopy"
-              data-wind={weather === 'gust' || weather === 'squall'}
-            >
-              <path
-                d="M-38 4Q-22-25-2-23Q20-28 37-1Q24-4 19 3Q10-2 1 5q-10-7-17 1-12-7-22-2Z"
-                fill={shadow}
-                stroke={high}
-                strokeWidth="2.25"
-              />
-              <path
-                d="M-35 3Q-19-22-2-21l3 24Q-9-4-16 4q-9-6-19-1ZM-2-21Q19-24 34-2Q23-5 18 1q-8-4-17 2Z"
-                fill={`url(#${hardware})`}
-                stroke={accent}
-                strokeWidth="1.25"
-              />
-              <path d="m-4-23 3-6 4 5-3 5Z" fill={accent} stroke={high} strokeWidth=".8" />
-              <path
-                d="M-22-9q10-10 21-11m6 3q7-1 15 6"
-                stroke="#fff"
-                strokeOpacity=".64"
-                strokeWidth="1.3"
-                fill="none"
-              />
-              <path
-                d="M-35 3q9-4 19 1Q-8-1 1 3Q10-2 19 1q7-6 15-3"
-                fill="none"
-                stroke={high}
-                strokeWidth="2.3"
-              />
-              <path d="m-5-8 3-4 3 4-3 4Z" fill="#ffe6aa" stroke={high} strokeWidth=".7" />
-            </g>
-          </g>
-        </g>
-      );
-    case 'sunshades':
-      return (
-        <g
-          className="cpi-companion-gear"
-          transform={`translate(${x} ${y}) rotate(${tilt}) scale(${scale})`}
-        >
-          <defs>
-            <linearGradient id={hardware} x2=".55" y2="1">
-              <stop stopColor="#9cb1b2" />
-              <stop offset=".4" stopColor="#2d4b54" />
-              <stop offset="1" stopColor="#101b2b" />
-            </linearGradient>
-          </defs>
-          <path
-            d="M-20-2-15-1M15-1l5-1M-3 0q3-3 6 0"
-            fill="none"
-            stroke={high}
-            strokeWidth="1.8"
-            strokeLinecap="round"
-          />
-          <path
-            d="M-16-4q5-2 12 0l1 4q-2 7-8 6-6-1-5-10ZM4-4q6-2 12 0 3 9-3 10-8 1-10-6Z"
-            fill={`url(#${hardware})`}
-            stroke={accent}
-            strokeWidth="1.8"
-          />
-          <path d="m-14-2 8 0m12 0h8" stroke="#fff" strokeOpacity=".68" strokeWidth="1" />
-          <path d="m-11 1 2 3m20-3 2 3" stroke={material} strokeWidth="1.65" />
-          <path d="m-13 0 4 4m18-4 4 4" stroke={accent} strokeOpacity=".72" strokeWidth="1.1" />
-        </g>
-      );
-    case 'sun-balm':
-      return (
-        <g className="cpi-companion-gear">
-          <g transform={`translate(${x} ${y + 7}) rotate(${tilt}) scale(${scale})`}>
-            <path
-              d="m-15-1 6 2m18 0 6-2"
-              fill="none"
-              stroke="#ffefd3"
-              strokeWidth="2.6"
-              strokeLinecap="round"
-            />
-          </g>
-          <g transform={`translate(${nx + 11} ${ny + 8})`}>
-            <circle r="6.8" fill={shadow} stroke={accent} strokeWidth="1.2" />
-            <circle r="4.4" fill={material} stroke={high} strokeWidth=".85" />
-            <path d="M0-3v6M-3 0h6m-5-2 4 4m0-4-4 4" stroke={high} strokeWidth=".75" />
-          </g>
-        </g>
-      );
-    case 'frost-runners':
-    case 'storm-boots': {
-      const [lx, ly, rx, ry] = footAnchor[world][frame];
-      return (
-        <g className="cpi-companion-gear" data-footwear={item}>
-          {[
-            [lx, ly],
-            [rx, ry],
-          ].map(([px, py], index) => (
-            <g
-              key={index}
-              transform={`translate(${px} ${py}) scale(${world === 'jelly' ? 1 : world === 'kitten' ? 0.85 : 0.78})`}
-            >
-              {item === 'frost-runners' ? (
-                <>
-                  <path
-                    d="M-13-5q5-3 18-2l8 4-2 4h-23Z"
-                    fill={shadow}
-                    stroke={accent}
-                    strokeWidth="1.3"
-                  />
-                  <path d="M-13 4h23l4-3" fill="none" stroke="#d5f7ff" strokeWidth="1.7" />
-                  {[-8, 0, 8].map((wheel) => (
-                    <circle
-                      key={wheel}
-                      cx={wheel}
-                      cy="2.3"
-                      r="2.6"
-                      fill={material}
-                      stroke={high}
-                      strokeWidth=".75"
-                    />
-                  ))}
-                </>
-              ) : (
-                <>
-                  <path
-                    d="M-10-10h14v5q9-1 10 5l-2 3h-24q-3-4 0-8Z"
-                    fill={material}
-                    stroke={high}
-                    strokeWidth="1.2"
-                  />
-                  <path
-                    d="M-12-1h24v4h-24Zm3 5v2m6-2v2m6-2v2m6-2v2"
-                    fill={shadow}
-                    stroke={shadow}
-                    strokeWidth="1.65"
-                  />
-                  <path d="M-7-8h8v4h-8Z" fill="none" stroke={accent} strokeWidth="1.6" />
-                  <path d="M3-2q7-2 9 2M-8-8h6" fill="none" stroke={high} strokeWidth="1.2" />
-                </>
-              )}
-            </g>
-          ))}
-        </g>
-      );
-    }
-  }
+      ))}
+    </g>
+  );
 }

@@ -49,7 +49,7 @@ export function companionFooting(side: TileSide): CompanionPoint {
 }
 
 export function companionScale(width: number, height: number) {
-  const pixels = Math.min(112, Math.max(68, width * 0.2));
+  const pixels = Math.min(144, Math.max(88, width * 0.26));
   return { x: (pixels * 900) / (width * 96), y: (pixels * 700) / (height * 96) };
 }
 

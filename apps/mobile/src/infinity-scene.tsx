@@ -670,7 +670,7 @@ export function InfinitySceneView({
             mysteryReveal={!!state.discovery?.introduction}
           />
           <WorldStepEffect theme={themeId} cinematic={cinematic} reduced={settings.reducedMotion} />
-          {themeId === 'obsidian' && outcome.phase !== 'finished' && (
+          {themeId === 'obsidian' && !gear?.worn && outcome.phase !== 'finished' && (
             <GuardianShieldMarker
               side={companionStandingSide(cinematic?.rows ?? presented.rows)}
               charges={state.journeyShields ?? 0}
@@ -682,7 +682,7 @@ export function InfinitySceneView({
               }
             />
           )}
-          {themeId !== 'obsidian' && outcome.phase !== 'finished' && (
+          {(themeId !== 'obsidian' || gear?.worn) && outcome.phase !== 'finished' && (
             <WorldPathCompanion
               theme={themeId}
               bridge={bridgeModel(bridgeStyle)}

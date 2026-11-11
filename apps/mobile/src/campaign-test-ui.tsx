@@ -186,67 +186,74 @@ export function CampaignMissionHub({
             </span>
           </div>
           <div className="cpi-brief-content">
-            <p className="cpi-adventure-kicker">
-              Crossing {String(selectedIndex + 1).padStart(2, '0')}
-              {replay ? ' · Cleared' : ''}
-            </p>
-            <h2 id="cpi-brief-title" tabIndex={-1} ref={briefing}>
-              {selected.name}
-            </h2>
-            <p className="cpi-brief-story">{mission.objective}</p>
-            {selected.alternate && !resume && !locked && (
-              <div className="cpi-field-chips" aria-label="Choose approach">
-                <button
-                  type="button"
-                  aria-pressed={approach === 'main'}
-                  onClick={() => setApproach('main')}
-                >
-                  <AdventureIcon name="squall" />
-                  Squall road
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={approach === 'ridge'}
-                  onClick={() => setApproach('ridge')}
-                >
-                  <AdventureIcon name="compass" />
-                  Echo ridge
-                </button>
-              </div>
-            )}
-            <div className="cpi-brief-facts">
-              <div>
-                <AdventureIcon name="compass" />
-                <span>
-                  <small>Landing</small>
-                  <strong>Row {mission.targetRow}</strong>
-                </span>
-              </div>
-              {mission.minimumStability > 0 && (
-                <div>
-                  <AdventureIcon name="stability" />
-                  <span>
-                    <small>Finish with</small>
-                    <strong>{mission.minimumStability}+ Stability</strong>
-                  </span>
+            <div
+              className="cpi-brief-scroll"
+              role="region"
+              aria-label="Mission details"
+              tabIndex={0}
+            >
+              <p className="cpi-adventure-kicker">
+                Crossing {String(selectedIndex + 1).padStart(2, '0')}
+                {replay ? ' · Cleared' : ''}
+              </p>
+              <h2 id="cpi-brief-title" tabIndex={-1} ref={briefing}>
+                {selected.name}
+              </h2>
+              <p className="cpi-brief-story">{mission.objective}</p>
+              {selected.alternate && !resume && !locked && (
+                <div className="cpi-field-chips" aria-label="Choose approach">
+                  <button
+                    type="button"
+                    aria-pressed={approach === 'main'}
+                    onClick={() => setApproach('main')}
+                  >
+                    <AdventureIcon name="squall" />
+                    Squall road
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={approach === 'ridge'}
+                    onClick={() => setApproach('ridge')}
+                  >
+                    <AdventureIcon name="compass" />
+                    Echo ridge
+                  </button>
                 </div>
               )}
-              <div>
-                <AdventureIcon name="pack" />
+              <div className="cpi-brief-facts">
+                <div>
+                  <AdventureIcon name="compass" />
+                  <span>
+                    <small>Landing</small>
+                    <strong>Row {mission.targetRow}</strong>
+                  </span>
+                </div>
+                {mission.minimumStability > 0 && (
+                  <div>
+                    <AdventureIcon name="stability" />
+                    <span>
+                      <small>Finish with</small>
+                      <strong>{mission.minimumStability}+ Stability</strong>
+                    </span>
+                  </div>
+                )}
+                <div>
+                  <AdventureIcon name="pack" />
+                  <span>
+                    <small>Starting kit</small>
+                    <strong>
+                      {mission.startingSp} Stability · {mission.startingHints} hints
+                    </strong>
+                  </span>
+                </div>
+              </div>
+              <div className="cpi-brief-reward">
+                <AdventureIcon name="hint" />
                 <span>
-                  <small>Starting kit</small>
-                  <strong>
-                    {mission.startingSp} Stability · {mission.startingHints} hints
-                  </strong>
+                  <small>First clear reward</small>
+                  <strong>{mission.reward}</strong>
                 </span>
               </div>
-            </div>
-            <div className="cpi-brief-reward">
-              <AdventureIcon name="hint" />
-              <span>
-                <small>First clear reward</small>
-                <strong>{mission.reward}</strong>
-              </span>
             </div>
             <div className="cpi-brief-actions">
               <button
