@@ -2,10 +2,28 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { PrismBridge } from '../src/prism-bridge';
-import { advancesOneRow, bridgePane, projectBridgePoint } from '../src/bridge-geometry';
+import {
+  advancesOneRow,
+  bridgePane,
+  projectBridgePoint,
+  bridgeMysteryPlacement,
+} from '../src/bridge-geometry';
 import type { PresentedRow } from '../src/infinity-presentation';
 
 describe('projective crystal bridge', () => {
+  it('keeps chest size and position on the same camera at current and distant rows', () => {
+    expect(bridgeMysteryPlacement(0).scale).toBe(1);
+    const current = bridgeMysteryPlacement(0);
+    let previous = 1;
+    for (const distance of [1, 2, 3, 20]) {
+      const distant = bridgeMysteryPlacement(distance);
+      expect(distant.x).toBe(current.x);
+      expect(distant.y).toBeLessThan(current.y);
+      expect(distant.scale).toBeGreaterThan(0);
+      expect(distant.scale).toBeLessThan(previous);
+      previous = distant.scale;
+    }
+  });
   it('animates only a real adjacent step, with exact indices beyond Number precision', () => {
     expect(advancesOneRow('900719925474099312345678', '900719925474099312345679')).toBe(true);
     expect(advancesOneRow('6', '6')).toBe(false);

@@ -1,0 +1,55 @@
+.cpi-rendered-cache {
+  overflow: visible;
+  filter: drop-shadow(0 2px 2px #01050a88);
+}
+.cpi-cache-contact {
+  fill: #01040a;
+  opacity: 0.36;
+}
+.cpi-cache-art-open,
+.cpi-cache-art-closed {
+  transition: opacity 240ms ease-out;
+}
+.cpi-cache-art-open {
+  opacity: 0;
+}
+.cpi-rendered-cache.is-open .cpi-cache-art-open {
+  opacity: 1;
+}
+.cpi-rendered-cache.is-open .cpi-cache-art-closed {
+  opacity: 0;
+}
+.cpi-rendered-cache.is-still :is(.cpi-cache-art-open, .cpi-cache-art-closed) {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cpi-rendered-cache :is(.cpi-cache-art-open, .cpi-cache-art-closed) {
+    transition: none;
+  }
+}
+
+.cpi-reduced-motion .cpi-rendered-cache :is(.cpi-cache-art-open, .cpi-cache-art-closed) {
+  transition: none;
+}
+
+/* Current props read clearly; distant props follow the bridge's projective camera. */
+.cpi-prism-bridge .cpi-bridge-mystery:has(.cpi-rendered-cache) {
+  width: calc(clamp(5.5rem, 14vw, 7rem) * var(--cache-perspective, 1));
+  height: calc(clamp(6.16rem, 15.68vw, 7.84rem) * var(--cache-perspective, 1));
+  transition:
+    top 420ms ease-out,
+    width 420ms ease-out,
+    height 420ms ease-out;
+}
+.cpi-prism-bridge .is-future .cpi-bridge-mystery:has(.cpi-rendered-cache) {
+  scale: 1;
+  opacity: 0.78;
+}
+.cpi-reduced-motion .cpi-prism-bridge .cpi-bridge-mystery:has(.cpi-rendered-cache) {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cpi-prism-bridge .cpi-bridge-mystery:has(.cpi-rendered-cache) {
+    transition: none;
+  }
+}

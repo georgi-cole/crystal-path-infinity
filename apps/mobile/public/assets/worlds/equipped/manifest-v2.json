@@ -1,0 +1,218 @@
+{
+  "version": 2,
+  "cell": 384,
+  "frames": 3,
+  "foot": 374,
+  "assets": [
+    {
+      "world": "obsidian",
+      "gear": "umbrella",
+      "path": "assets/worlds/equipped/obsidian/umbrella-v2.webp"
+    },
+    {
+      "world": "obsidian",
+      "gear": "sunshades",
+      "path": "assets/worlds/equipped/obsidian/sunshades-v2.webp"
+    },
+    {
+      "world": "obsidian",
+      "gear": "sun-balm",
+      "path": "assets/worlds/equipped/obsidian/sun-balm-v2.webp"
+    },
+    {
+      "world": "obsidian",
+      "gear": "frost-runners",
+      "path": "assets/worlds/equipped/obsidian/frost-runners-v2.webp"
+    },
+    {
+      "world": "obsidian",
+      "gear": "storm-boots",
+      "path": "assets/worlds/equipped/obsidian/storm-boots-v2.webp"
+    },
+    {
+      "world": "obsidian",
+      "gear": "trail-scarf",
+      "path": "assets/worlds/equipped/obsidian/trail-scarf-v2.webp"
+    },
+    {
+      "world": "wilds",
+      "gear": "umbrella",
+      "path": "assets/worlds/equipped/wilds/umbrella-v2.webp"
+    },
+    {
+      "world": "wilds",
+      "gear": "sunshades",
+      "path": "assets/worlds/equipped/wilds/sunshades-v2.webp"
+    },
+    {
+      "world": "wilds",
+      "gear": "sun-balm",
+      "path": "assets/worlds/equipped/wilds/sun-balm-v2.webp"
+    },
+    {
+      "world": "wilds",
+      "gear": "frost-runners",
+      "path": "assets/worlds/equipped/wilds/frost-runners-v2.webp"
+    },
+    {
+      "world": "wilds",
+      "gear": "storm-boots",
+      "path": "assets/worlds/equipped/wilds/storm-boots-v2.webp"
+    },
+    {
+      "world": "wilds",
+      "gear": "trail-scarf",
+      "path": "assets/worlds/equipped/wilds/trail-scarf-v2.webp"
+    },
+    {
+      "world": "league",
+      "gear": "umbrella",
+      "path": "assets/worlds/equipped/league/umbrella-v2.webp"
+    },
+    {
+      "world": "league",
+      "gear": "sunshades",
+      "path": "assets/worlds/equipped/league/sunshades-v2.webp"
+    },
+    {
+      "world": "league",
+      "gear": "sun-balm",
+      "path": "assets/worlds/equipped/league/sun-balm-v2.webp"
+    },
+    {
+      "world": "league",
+      "gear": "frost-runners",
+      "path": "assets/worlds/equipped/league/frost-runners-v2.webp"
+    },
+    {
+      "world": "league",
+      "gear": "storm-boots",
+      "path": "assets/worlds/equipped/league/storm-boots-v2.webp"
+    },
+    {
+      "world": "league",
+      "gear": "trail-scarf",
+      "path": "assets/worlds/equipped/league/trail-scarf-v2.webp"
+    },
+    {
+      "world": "puppy",
+      "gear": "umbrella",
+      "path": "assets/worlds/equipped/puppy/umbrella-v2.webp"
+    },
+    {
+      "world": "puppy",
+      "gear": "sunshades",
+      "path": "assets/worlds/equipped/puppy/sunshades-v2.webp"
+    },
+    {
+      "world": "puppy",
+      "gear": "sun-balm",
+      "path": "assets/worlds/equipped/puppy/sun-balm-v2.webp"
+    },
+    {
+      "world": "puppy",
+      "gear": "frost-runners",
+      "path": "assets/worlds/equipped/puppy/frost-runners-v2.webp"
+    },
+    {
+      "world": "puppy",
+      "gear": "storm-boots",
+      "path": "assets/worlds/equipped/puppy/storm-boots-v2.webp"
+    },
+    {
+      "world": "puppy",
+      "gear": "trail-scarf",
+      "path": "assets/worlds/equipped/puppy/trail-scarf-v2.webp"
+    },
+    {
+      "world": "kitten",
+      "gear": "umbrella",
+      "path": "assets/worlds/equipped/kitten/umbrella-v2.webp"
+    },
+    {
+      "world": "kitten",
+      "gear": "sunshades",
+      "path": "assets/worlds/equipped/kitten/sunshades-v2.webp"
+    },
+    {
+      "world": "kitten",
+      "gear": "sun-balm",
+      "path": "assets/worlds/equipped/kitten/sun-balm-v2.webp"
+    },
+    {
+      "world": "kitten",
+      "gear": "frost-runners",
+      "path": "assets/worlds/equipped/kitten/frost-runners-v2.webp"
+    },
+    {
+      "world": "kitten",
+      "gear": "storm-boots",
+      "path": "assets/worlds/equipped/kitten/storm-boots-v2.webp"
+    },
+    {
+      "world": "kitten",
+      "gear": "trail-scarf",
+      "path": "assets/worlds/equipped/kitten/trail-scarf-v2.webp"
+    },
+    {
+      "world": "chaos",
+      "gear": "umbrella",
+      "path": "assets/worlds/equipped/chaos/umbrella-v2.webp"
+    },
+    {
+      "world": "chaos",
+      "gear": "sunshades",
+      "path": "assets/worlds/equipped/chaos/sunshades-v2.webp"
+    },
+    {
+      "world": "chaos",
+      "gear": "sun-balm",
+      "path": "assets/worlds/equipped/chaos/sun-balm-v2.webp"
+    },
+    {
+      "world": "chaos",
+      "gear": "frost-runners",
+      "path": "assets/worlds/equipped/chaos/frost-runners-v2.webp"
+    },
+    {
+      "world": "chaos",
+      "gear": "storm-boots",
+      "path": "assets/worlds/equipped/chaos/storm-boots-v2.webp"
+    },
+    {
+      "world": "chaos",
+      "gear": "trail-scarf",
+      "path": "assets/worlds/equipped/chaos/trail-scarf-v2.webp"
+    },
+    {
+      "world": "jelly",
+      "gear": "umbrella",
+      "path": "assets/worlds/equipped/jelly/umbrella-v2.webp"
+    },
+    {
+      "world": "jelly",
+      "gear": "sunshades",
+      "path": "assets/worlds/equipped/jelly/sunshades-v2.webp"
+    },
+    {
+      "world": "jelly",
+      "gear": "sun-balm",
+      "path": "assets/worlds/equipped/jelly/sun-balm-v2.webp"
+    },
+    {
+      "world": "jelly",
+      "gear": "frost-runners",
+      "path": "assets/worlds/equipped/jelly/frost-runners-v2.webp"
+    },
+    {
+      "world": "jelly",
+      "gear": "storm-boots",
+      "path": "assets/worlds/equipped/jelly/storm-boots-v2.webp"
+    },
+    {
+      "world": "jelly",
+      "gear": "trail-scarf",
+      "path": "assets/worlds/equipped/jelly/trail-scarf-v2.webp"
+    }
+  ]
+}

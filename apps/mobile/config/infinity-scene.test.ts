@@ -349,7 +349,7 @@ describe('complete world presentation', () => {
         },
         theme,
       );
-      expect(html).toContain(`cpi-world-cache world-${theme} is-open`);
+      expect(html).toMatch(new RegExp(`cpi-world-cache[^"\n]*world-${theme}[^"\n]*is-open`));
       expect(html).toContain(`cpi-world-power world-${theme}`);
       expect(html).toContain(en['game.effectShield']);
       expect(html).toContain('2.5s');

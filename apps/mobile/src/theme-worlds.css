@@ -3,21 +3,21 @@
   --world-soft: #dcad7d;
   --world-panel: #22221e;
   --world-radius: 0.45rem;
-  --world-home-art-opacity: 0.6;
+  --world-home-art-opacity: 0.86;
 }
 [data-world='jelly'] {
   --world-accent: #d7b3e8;
   --world-soft: #a7d6ed;
   --world-panel: #211a31;
   --world-radius: 0.75rem;
-  --world-home-art-opacity: 0.65;
+  --world-home-art-opacity: 0.88;
 }
 [data-world='wilds'] {
   --world-accent: #d6bd96;
   --world-soft: #aebdb4;
   --world-panel: #242420;
   --world-radius: 0.4rem;
-  --world-home-art-saturation: 0.58;
+  --world-home-art-saturation: 1.08;
 }
 [data-world='league'] {
   --world-accent: #f1a46e;
@@ -149,8 +149,8 @@
 }
 .cpi-menu-view--home .cpi-world-art.is-backdrop .cpi-world-plate {
   object-position: 50% 23%;
-  opacity: var(--world-home-art-opacity, 0.78);
-  filter: saturate(var(--world-home-art-saturation, 0.86));
+  opacity: var(--world-home-art-opacity, 0.88);
+  filter: saturate(var(--world-home-art-saturation, 1.08));
 }
 .cpi-menu-view--home .cpi-world-art.is-backdrop .cpi-world-focus-veil {
   background:
@@ -207,7 +207,8 @@
 }
 .cpi-infinity-scene .cpi-world-art.is-backdrop .cpi-world-plate,
 .cpi-world-experience .cpi-world-art.is-backdrop .cpi-world-plate {
-  opacity: 0.38;
+  opacity: 0.76;
+  filter: saturate(1.12) brightness(1.06);
 }
 .cpi-infinity-scene .cpi-world-near {
   opacity: 0.1;

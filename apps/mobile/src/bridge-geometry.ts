@@ -17,6 +17,13 @@ export function projectBridgePoint(x: number, z: number, elevation = 0) {
   return { x: WIDTH / 2 + x * scale, y: HORIZON + (HEIGHT - HORIZON - elevation) * scale };
 }
 
+/** Mystery props share the tile camera and shrink toward the same horizon. */
+export function bridgeMysteryPlacement(distance: number) {
+  const point = projectBridgePoint(0, 0.8 + Math.max(0, distance) * 1.15);
+  const current = projectBridgePoint(0, 0.8);
+  return { ...point, scale: (point.y - HORIZON) / (current.y - HORIZON) };
+}
+
 export function bridgePane(distance: number, side: TileSide) {
   const near = 0.45 + distance * 1.15;
   const far = near + 0.85;

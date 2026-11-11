@@ -12,8 +12,7 @@ import { mysteryChoiceCards } from './mystery-choice-model';
 import { MysteryPager } from './mystery-pager';
 import { useThemeId } from './store-context';
 import { MysteryCache } from './world-treasures';
-import relicClosed from './assets/mystery/relic-closed.webp?inline';
-import relicOpen from './assets/mystery/relic-open.webp?inline';
+import { RenderedMysteryCache } from './mystery-cache-art';
 import './mystery-hologram.css';
 
 const names = {
@@ -35,24 +34,7 @@ export function MysteryCube({
       data-tier={tier}
       aria-hidden="true"
     >
-      <img
-        className="cpi-relic-closed"
-        src={relicClosed}
-        alt=""
-        width="256"
-        height="256"
-        decoding="sync"
-        draggable={false}
-      />
-      <img
-        className="cpi-relic-open"
-        src={relicOpen}
-        alt=""
-        width="256"
-        height="256"
-        decoding="sync"
-        draggable={false}
-      />
+      <RenderedMysteryCache theme="obsidian" open={opened} />
     </span>
   );
 }
