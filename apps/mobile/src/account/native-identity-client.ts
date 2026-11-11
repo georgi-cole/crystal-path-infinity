@@ -10,7 +10,12 @@ export type ProviderSignIn =
   | { status: 'cancelled' | 'link_required' | 'signup_unavailable' | 'already_linked' };
 export type ProviderLink = 'linked' | 'cancelled' | 'already_linked';
 export interface NativeIdentityClient {
-  signIn(provider: IdentityProvider, signal: AbortSignal): Promise<ProviderSignIn>;
+  readonly requiresEligibility?: boolean;
+  signIn(
+    provider: IdentityProvider,
+    signal: AbortSignal,
+    eligibilityPermit?: string,
+  ): Promise<ProviderSignIn>;
   requestLinkCode(linkToken: string, signal: AbortSignal): Promise<{ resendAt: number }>;
   verifyLinkCode(linkToken: string, code: string, signal: AbortSignal): Promise<ProviderSignIn>;
   link(provider: IdentityProvider, signal: AbortSignal): Promise<ProviderLink>;

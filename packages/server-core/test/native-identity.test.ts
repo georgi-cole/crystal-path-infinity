@@ -63,6 +63,60 @@ function fixture(overrides: Record<string, unknown> = {}) {
 }
 
 describe('staging native provider proof', () => {
+  it('uses distinct web audiences, the fixed redirect and a server-only Google secret', async () => {
+    const webApple = 'com.georgicole.crystalpath.infinity.web';
+    const redirectUri = 'https://crystalpath-api.kolequant.xyz/cpi/identity/web-callback';
+    const fetcher = vi.fn<typeof fetch>((url) =>
+      Promise.resolve(
+        url === 'https://oauth2.googleapis.com/token'
+          ? Response.json({ id_token: jwt(google, 'https://accounts.google.com') })
+          : url === 'https://appleid.apple.com/auth/token'
+            ? Response.json({
+                id_token: jwt(webApple, 'https://appleid.apple.com'),
+                refresh_token: 'apple-web-refresh',
+              })
+            : Response.json(jwks),
+      ),
+    );
+    const service = createNativeIdentity({
+      googleClientId: google,
+      apple: {
+        clientId: webApple,
+        teamId: 'C97T2A5255',
+        keyId: 'ABCDEFGHIJ',
+        privateKey: ec.privateKey.export({ type: 'pkcs8', format: 'pem' }).toString(),
+      },
+      web: { redirectUri, googleClientSecret: 'web-server-secret' },
+      fetcher,
+      now: () => now,
+    });
+    await service.verify('google', { code: 'web-google-code', verifier: 'v'.repeat(43) }, nonce);
+    const googleExchange = fetcher.mock.calls.find(
+      ([url]) => url === 'https://oauth2.googleapis.com/token',
+    );
+    expect((googleExchange?.[1]?.body as URLSearchParams).get('client_secret')).toBe(
+      'web-server-secret',
+    );
+    expect((googleExchange?.[1]?.body as URLSearchParams).get('redirect_uri')).toBe(redirectUri);
+    const apple = await service.verify(
+      'apple',
+      { identityToken: jwt(webApple, 'https://appleid.apple.com'), code: 'web-apple-code' },
+      nonce,
+    );
+    expect(await apple.appleRefresh?.()).toBe('apple-web-refresh');
+    const appleExchange = fetcher.mock.calls.find(
+      ([url]) => url === 'https://appleid.apple.com/auth/token',
+    );
+    expect((appleExchange?.[1]?.body as URLSearchParams).get('client_id')).toBe(webApple);
+    expect((appleExchange?.[1]?.body as URLSearchParams).get('redirect_uri')).toBe(redirectUri);
+    await expect(
+      service.verify(
+        'apple',
+        { identityToken: jwt(bundle, 'https://appleid.apple.com'), code: 'native-code' },
+        nonce,
+      ),
+    ).rejects.toBeInstanceOf(NativeIdentityRejected);
+  });
   it('exchanges an iPhone Google code with PKCE and verifies the expected identity', async () => {
     const { service, fetcher } = fixture();
     const verifier = 'x'.repeat(43);

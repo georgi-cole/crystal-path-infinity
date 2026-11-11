@@ -160,10 +160,15 @@ export function readLiveConfiguration(env: (name: string) => string | undefined)
     throw new Error('Independent Apple Sandbox verifier key is required');
   const purchaseEnvironment =
     environment === 'production' ? ('production' as const) : ('sandbox' as const);
+  const publicWebEntry =
+    environment === 'production' &&
+    projectRef === 'wtldjvzvpcfkwfacgsqj' &&
+    env('CPI_WEB_IDENTITY_ENABLED') === 'true';
   return {
     projectRef,
     url,
     environment,
+    publicWebEntry,
     // Staging is opt-in and this project is pinned independently of client flags.
     nativeIdentity:
       environment === 'staging' &&
@@ -184,7 +189,23 @@ export function readLiveConfiguration(env: (name: string) => string | undefined)
               privateKey: require('CPI_IDENTITY_APPLE_PRIVATE_KEY').replaceAll('\\n', '\n'),
             },
           }
-        : undefined,
+        : publicWebEntry
+          ? {
+              googleClientId: require('CPI_IDENTITY_GOOGLE_WEB_CLIENT_ID'),
+              signupEmails: { apple: [], google: [] },
+              directEntry: false,
+              web: {
+                redirectUri: 'https://crystalpath-api.kolequant.xyz/cpi/identity/web-callback',
+                googleClientSecret: require('CPI_IDENTITY_GOOGLE_WEB_CLIENT_SECRET'),
+              },
+              apple: {
+                clientId: 'com.georgicole.crystalpath.infinity.web',
+                teamId: 'C97T2A5255',
+                keyId: require('CPI_IDENTITY_APPLE_WEB_KEY_ID'),
+                privateKey: require('CPI_IDENTITY_APPLE_WEB_PRIVATE_KEY').replaceAll('\\n', '\n'),
+              },
+            }
+          : undefined,
     policy,
     origins,
     products,

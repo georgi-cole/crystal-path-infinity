@@ -62,6 +62,7 @@ export interface LiveServerOptions {
   readonly maintenance: ReturnType<typeof createPurchaseMaintenance>;
   readonly googleJobs?: ReturnType<typeof createGooglePurchaseJobs>;
   readonly appleJobs?: ReturnType<typeof createApplePurchaseJobs>;
+  readonly webIdentity?: { googleClientId: string; appleClientId: string };
 }
 /** Separate host. Raw Supabase sessions, client reward callbacks and client wallet totals authorize nothing. */
 export function createLiveServer(options: LiveServerOptions) {
@@ -405,6 +406,15 @@ export function createLiveServer(options: LiveServerOptions) {
             'cache-control': 'no-store',
           },
         });
+      }
+      if (url.pathname === basePath + '/identity/config') {
+        const response = reply(
+          options.webIdentity ?? { code: 'service_unavailable' },
+          options.webIdentity && request.method === 'GET' && !url.search ? 200 : 503,
+        );
+        const origin = request.headers.get('origin');
+        if (origin) response.headers.set('access-control-allow-origin', origin);
+        return response;
       }
       if (url.pathname === basePath + '/commerce/spend') {
         const token = request.headers.get('authorization')?.match(/^Bearer (.+)$/)?.[1],

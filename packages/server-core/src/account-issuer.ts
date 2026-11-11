@@ -86,6 +86,8 @@ export function createAccountIssuer(options: {
   directory: AccountDirectory;
   mailer: AccountMailer;
   identity?: NativeIdentity;
+  /** Production browser proofs use a separate OAuth audience and screened permits. */
+  publicWebEntry?: boolean;
   policy: AccountPolicy;
   stagingTestEmails?: readonly string[];
   nativeSignup?: {
@@ -111,6 +113,9 @@ export function createAccountIssuer(options: {
     Object.keys(policy.countries).length === 1 &&
     policy.countries.BG?.minimumAge === 18 &&
     policy.countries.BG.neutralAgeScreenAllowed;
+  const publicWebEntry = options.publicWebEntry === true && stagingTestEmails.size === 0;
+  const signupAllowed = (provider: NativeIdentityProvider, address: string) =>
+    publicWebEntry || nativeSignup?.emails[provider].includes(address) === true;
   const limit = createDurableRateLimit(database, crypto, now);
   const digest = (domain: string, value: string) => crypto.digest(domain, value);
   async function owner(connection: SqlConnection, subject: string) {
@@ -499,7 +504,7 @@ export function createAccountIssuer(options: {
           address,
           providerLink.identityHash,
         );
-        if (existing?.subject !== subject || prior?.privacy_context !== 'adult')
+        if (existing?.subject !== subject || prior?.privacy_context !== permit.privacy_context)
           throw new AccountIssuerError(410);
         if (
           !(await attachProvider(
@@ -544,6 +549,7 @@ export function createAccountIssuer(options: {
   ) {
     if (!options.identity) throw new AccountIssuerError(503);
     const direct = isObject(input) && input.schemaVersion === 2;
+    const web = isObject(input) && input.schemaVersion === 4;
     if (
       !exactObject(
         input,
@@ -551,7 +557,8 @@ export function createAccountIssuer(options: {
           ? ['schemaVersion', 'provider', 'clientBuild']
           : ['schemaVersion', 'provider', 'eligibilityPermit'],
       ) ||
-      (!direct && input.schemaVersion !== 1) ||
+      (!direct && !web && input.schemaVersion !== 1) ||
+      web !== publicWebEntry ||
       !isNativeIdentityProvider(input.provider) ||
       (direct &&
         (typeof input.clientBuild !== 'number' ||
@@ -564,7 +571,7 @@ export function createAccountIssuer(options: {
       !context.country ||
       !policy.countries[context.country] ||
       (direct && (!directEntry || auth)) ||
-      (auth && (auth.platform !== 'ios' || input.eligibilityPermit !== null))
+      (auth && (auth.platform !== (web ? 'web' : 'ios') || input.eligibilityPermit !== null))
     )
       throw new AccountIssuerError(403);
     if (!(await limit('identity:' + context.rateKey, 20, 10 * MINUTE)))
@@ -573,7 +580,7 @@ export function createAccountIssuer(options: {
     const nonce = crypto.token();
     await sqlTransaction(database, async (connection) => {
       const permit = auth || direct ? null : await permitted(connection, input.eligibilityPermit);
-      if (permit && permit.platform !== 'ios') throw new AccountIssuerError(403);
+      if (permit && permit.platform !== (web ? 'web' : 'ios')) throw new AccountIssuerError(403);
       await connection.query(
         'insert into cpi_private.account_provider_challenges(nonce_hash,provider,family_id,permit_hash,country,expires_at,direct_client_build) values($1,$2,$3::uuid,$4,$5,$6,$7)',
         [
@@ -684,8 +691,17 @@ export function createAccountIssuer(options: {
     const identity = options.identity;
     if (!identity) throw new AccountIssuerError(503);
     if (
-      !exactObject(input, ['schemaVersion', 'provider', 'nonce', 'credential']) ||
-      (input.schemaVersion !== 1 && input.schemaVersion !== 2 && input.schemaVersion !== 3) ||
+      !exactObject(
+        input,
+        isObject(input) && input.schemaVersion === 4
+          ? ['schemaVersion', 'provider', 'nonce', 'credential', 'eligibilityPermit']
+          : ['schemaVersion', 'provider', 'nonce', 'credential'],
+      ) ||
+      (input.schemaVersion !== 1 &&
+        input.schemaVersion !== 2 &&
+        input.schemaVersion !== 3 &&
+        input.schemaVersion !== 4) ||
+      (input.schemaVersion === 4) !== publicWebEntry ||
       !isNativeIdentityProvider(input.provider)
     )
       throw new AccountIssuerError();
@@ -708,7 +724,13 @@ export function createAccountIssuer(options: {
         )
       ).rows[0];
       if (!row || direct !== (row.direct_client_build !== null)) throw new AccountIssuerError(410);
-      if (!auth && !direct) await permittedHash(connection, str(row.permit_hash));
+      if (!auth && !direct) {
+        await permittedHash(connection, str(row.permit_hash));
+        if (publicWebEntry && digest('permit', token(input.eligibilityPermit)) !== row.permit_hash)
+          throw new AccountIssuerError(403);
+      }
+      if (publicWebEntry && auth && (auth.platform !== 'web' || input.eligibilityPermit !== null))
+        throw new AccountIssuerError(403);
       return row;
     });
     let verified: Awaited<ReturnType<NativeIdentity['verify']>>;
@@ -756,10 +778,10 @@ export function createAccountIssuer(options: {
       // Older TestFlight builds keep their original sign-in and signup contract.
       if (!nativeSignup || input.schemaVersion === 1 || !address)
         return { status: 'link_required' };
-      if (!nativeSignup.emails[provider].includes(address)) return { status: 'signup_unavailable' };
+      if (!signupAllowed(provider, address)) return { status: 'signup_unavailable' };
       const existing = await nativeSignup.directory.lookup(connection, address, identityHash);
       const collision = existing && !existing.matchesProvider ? existing.subject : null;
-      if (collision && clientBuild === null) return { status: 'link_required' };
+      if (collision && clientBuild === null && !publicWebEntry) return { status: 'link_required' };
       if (collision) {
         const prior = (
           await connection.query(
@@ -767,11 +789,52 @@ export function createAccountIssuer(options: {
             [collision],
           )
         ).rows[0];
-        if (prior?.privacy_context !== 'adult') return { status: 'link_required' };
+        const expectedContext = publicWebEntry
+          ? (await permittedHash(connection, str(challenge.permit_hash))).privacy_context
+          : 'adult';
+        if (prior?.privacy_context !== expectedContext) return { status: 'link_required' };
         await owner(connection, collision);
       }
       const appleRefresh = await verified.appleRefresh?.();
       if (provider === 'apple' && !appleRefresh) throw new AccountIssuerError(503);
+      if (publicWebEntry && !collision)
+        return createProviderAccount(connection, {
+          provider,
+          identityHash,
+          address,
+          appleRefresh,
+          displayName: verified.displayName,
+          permitHash: str(challenge.permit_hash),
+          nonceHash,
+          offerProfile: true,
+        });
+      if (publicWebEntry && collision) {
+        const permit = await permittedHash(connection, str(challenge.permit_hash));
+        const linkToken = crypto.token();
+        const hash = digest('identity-link', linkToken);
+        await connection.query(
+          'insert into cpi_private.account_provider_signups(token_hash,provider,identity_hash,permit_hash,country,payload_encrypted,expires_at) values($1,$2,$3,$4,$5,$6,$7)',
+          [
+            hash,
+            provider,
+            identityHash,
+            permit.token_hash,
+            context.country,
+            crypto.seal(
+              {
+                subject: collision,
+                address,
+                permit: token(input.eligibilityPermit),
+                appleRefresh,
+                displayName: verified.displayName,
+              },
+              'identity-link:' + hash,
+            ),
+            number(permit.expires_at),
+          ],
+        );
+        return { status: 'verify_existing', linkToken };
+      }
       if (clientBuild !== null) {
         const admission = await admitAdultTester(connection, clientBuild);
         if (!collision)
@@ -914,7 +977,13 @@ export function createAccountIssuer(options: {
     linkToken: unknown,
     context: AccountRequestContext,
   ): Promise<ProviderLinkProof> {
-    if (!directEntry || !nativeSignup || context.country !== 'BG')
+    if (
+      (!directEntry && !publicWebEntry) ||
+      !nativeSignup ||
+      (publicWebEntry
+        ? !context.country || !policy.countries[context.country]
+        : context.country !== 'BG')
+    )
       throw new AccountIssuerError(403);
     const hash = digest('identity-link', token(linkToken));
     return sqlTransaction(database, async (connection) => {
@@ -930,7 +999,7 @@ export function createAccountIssuer(options: {
         !isObject(data) ||
         typeof data.address !== 'string' ||
         typeof data.subject !== 'string' ||
-        !nativeSignup.emails[row.provider].includes(data.address)
+        !signupAllowed(row.provider, data.address)
       )
         throw new AccountIssuerError(410);
       const identityHash = str(row.identity_hash);

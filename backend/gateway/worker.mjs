@@ -1,4 +1,5 @@
 // Cloudflare Worker. Deploy separately from the game; no credentials are ever bundled into the client.
+import { webIdentityCallback } from './web-identity-callback.mjs';
 const encoder = new TextEncoder();
 const hex = (bytes) =>
   Array.from(new Uint8Array(bytes), (b) => b.toString(16).padStart(2, '0')).join('');
@@ -40,6 +41,8 @@ export default {
   },
   async fetch(request, env) {
     try {
+      const callback = await webIdentityCallback(request);
+      if (callback) return callback;
       const incoming = new URL(request.url),
         base = '/cpi';
       if (

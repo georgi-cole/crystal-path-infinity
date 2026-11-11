@@ -34,6 +34,7 @@ jobs:
       - name: Build and verify guest assets for the project URL
         env:
           CPI_PAGES_ACCOUNTS_ENABLED: ${{ github.ref == 'refs/heads/main' && vars.CPI_PAGES_ACCOUNTS_ENABLED || 'false' }}
+          CPI_PAGES_WEB_PROVIDER_SIGN_IN: ${{ github.ref == 'refs/heads/main' && vars.CPI_PAGES_WEB_PROVIDER_SIGN_IN || 'false' }}
         run: node --experimental-strip-types .github/scripts/build-pages.mjs
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:

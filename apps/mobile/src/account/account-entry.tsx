@@ -70,6 +70,7 @@ export function AccountEntry({
   const [age, setAge] = useState('');
   const [country, setCountry] = useState('');
   const [emailSelected, setEmailSelected] = useState(false);
+  const [screenedProvider, setScreenedProvider] = useState<IdentityProvider | null>(null);
   const [providerNotice, setProviderNotice] = useState<
     'link_required' | 'signup_unavailable' | 'already_linked' | null
   >(null);
@@ -177,13 +178,22 @@ export function AccountEntry({
     }
   }
   function chooseEmail() {
+    setScreenedProvider(null);
     setEmailSelected(true);
     setProviderNotice(null);
     setProviderProblem(null);
     setSessionFailed(false);
   }
   function chooseProvider(provider: IdentityProvider) {
-    void runProvider((identity, signal) => identity.signIn(provider, signal));
+    if (binding?.identity?.requiresEligibility && !flow?.identityPermit()) {
+      flow?.cancel();
+      sync();
+      setScreenedProvider(provider);
+      return;
+    }
+    void runProvider((identity, signal) =>
+      identity.signIn(provider, signal, flow?.identityPermit() ?? undefined),
+    );
   }
   async function send() {
     if (!flow) return;
@@ -214,6 +224,7 @@ export function AccountEntry({
     }
   }
   function cancel() {
+    setScreenedProvider(null);
     providerAttempt.current?.abort();
     setEmailSelected(false);
     setProviderLink(null);
@@ -242,7 +253,7 @@ export function AccountEntry({
   const step = state?.step;
   const screening =
     step === 'guest' || step === 'checking' || step === 'unavailable' || step === 'offline';
-  const showMethods = !!binding?.identity && !emailSelected && !providerLink;
+  const showMethods = !!binding?.identity && !emailSelected && !providerLink && !screenedProvider;
   const emailFlow = !showMethods && !providerLink;
   const codeStep =
     step === 'code' || step === 'verifying' || (step === 'sending' && state?.codeExpiresAt != null);
@@ -422,32 +433,37 @@ export function AccountEntry({
             </form>
           )}
           {step === 'parental_review' && <p role="status">{t('account.parentalReview')}</p>}
-          {emailFlow && (step === 'eligible' || (step === 'sending' && !codeStep)) && (
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                void send();
-              }}
-            >
-              <p>{t('account.privacyFirst')}</p>
-              <label htmlFor="cpi-account-email">{t('account.email')}</label>
-              <input
-                id="cpi-account-email"
-                type="email"
-                autoComplete="email"
-                inputMode="email"
-                autoCapitalize="none"
-                required
-                maxLength={254}
-                value={email}
-                disabled={busy}
-                onChange={(event) => setEmail(event.target.value)}
-              />
-              <button type="submit" disabled={busy || !online}>
-                {t(step === 'sending' ? 'account.sendingCode' : 'account.sendCode')}
-              </button>
-            </form>
+          {screenedProvider && step === 'eligible' && (
+            <IdentityButtons disabled={busy || !online} onChoose={chooseProvider} />
           )}
+          {emailFlow &&
+            !screenedProvider &&
+            (step === 'eligible' || (step === 'sending' && !codeStep)) && (
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void send();
+                }}
+              >
+                <p>{t('account.privacyFirst')}</p>
+                <label htmlFor="cpi-account-email">{t('account.email')}</label>
+                <input
+                  id="cpi-account-email"
+                  type="email"
+                  autoComplete="email"
+                  inputMode="email"
+                  autoCapitalize="none"
+                  required
+                  maxLength={254}
+                  value={email}
+                  disabled={busy}
+                  onChange={(event) => setEmail(event.target.value)}
+                />
+                <button type="submit" disabled={busy || !online}>
+                  {t(step === 'sending' ? 'account.sendingCode' : 'account.sendCode')}
+                </button>
+              </form>
+            )}
           {codeStep && (
             <>
               <form
@@ -498,11 +514,13 @@ export function AccountEntry({
             <p role="alert">{sessionFailed ? t('account.retry') : problem && errors[problem]}</p>
           )}
           <div className="cpi-account-links">
-            {!showMethods && (!screening || emailSelected || providerLink) && !connecting && (
-              <button type="button" onClick={cancel}>
-                {t(binding?.identity ? 'account.otherMethods' : 'account.cancel')}
-              </button>
-            )}
+            {!showMethods &&
+              (!screening || emailSelected || providerLink || screenedProvider) &&
+              !connecting && (
+                <button type="button" onClick={cancel}>
+                  {t(binding?.identity ? 'account.otherMethods' : 'account.cancel')}
+                </button>
+              )}
             {(showMethods || (screening && !providerLink)) && (
               <a
                 href={playerInformationUrl('privacy', locale)}

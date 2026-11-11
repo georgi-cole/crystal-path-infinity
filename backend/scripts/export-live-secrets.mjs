@@ -35,6 +35,14 @@ const names = [
 ];
 if (values.CPI_DATABASE_CA) names.push('CPI_DATABASE_CA');
 if (config.environment === 'staging') names.push('CPI_STAGING_TEST_EMAILS');
+if (config.publicWebEntry)
+  names.push(
+    'CPI_WEB_IDENTITY_ENABLED',
+    'CPI_IDENTITY_GOOGLE_WEB_CLIENT_ID',
+    'CPI_IDENTITY_GOOGLE_WEB_CLIENT_SECRET',
+    'CPI_IDENTITY_APPLE_WEB_KEY_ID',
+    'CPI_IDENTITY_APPLE_WEB_PRIVATE_KEY',
+  );
 if (values.CPI_PURCHASES_ENABLED === 'true') {
   names.push('CPI_COMMERCE_PRODUCTS');
   if (config.purchasePlatforms.includes('android'))

@@ -40,6 +40,19 @@ test('accounts use the fixed production gateway with a verified Pages origin', a
     VITE_ACCOUNT_SERVICES_ENABLED: 'true',
     VITE_ACCOUNT_API_BASE_URL: 'https://crystalpath-api.kolequant.xyz/cpi',
   });
+  const providers = await pagesAccountBuildEnv(
+    { ...publication, CPI_PAGES_WEB_PROVIDER_SIGN_IN: 'true' },
+    () =>
+      new Response(null, {
+        status: 204,
+        headers: {
+          'access-control-allow-origin': 'https://georgi-cole.github.io',
+          'access-control-allow-methods': 'POST',
+          'access-control-allow-headers': 'Authorization, Content-Type',
+        },
+      }),
+  );
+  assert.equal(providers.VITE_WEB_PROVIDER_SIGN_IN, 'true');
   await assert.rejects(
     pagesAccountBuildEnv(publication, () => new Response(null, { status: 204 })),
     /allow the exact Pages origin/,

@@ -1102,11 +1102,17 @@ async function ios() {
       recordLifecycleAction('observation-complete');
       observationComplete = true;
       saveAttempt(boundary, true);
-      recordLifecycleAction('terminate-for-process-webview-recreation');
-      await control(
-        ['simctl', 'terminate', udid, buildInfo.appId],
-        `ios-attempt-${attempt}-terminate.txt`,
-      );
+      // Termination is required between attempts to prove a recreated WebView.
+      // After the last completed observation it is cleanup, handled in finally.
+      // A busy simulator's redundant final terminate must not discard two valid
+      // cold-start/scene-resume observations or skip assertHealthyLaunch below.
+      if (attempt < iosColdStarts) {
+        recordLifecycleAction('terminate-for-process-webview-recreation');
+        await control(
+          ['simctl', 'terminate', udid, buildInfo.appId],
+          `ios-attempt-${attempt}-terminate.txt`,
+        );
+      }
       await stopLog(child);
       saveAttempt(boundary, true);
     }

@@ -7,6 +7,19 @@ const env = {
   CPI_GATEWAY_KEY: '7'.repeat(64),
   CPI_WORKER_KEY: '8'.repeat(64),
 };
+test('browser provider configuration uses a route accepted by the trusted gateway verifier', async (t) => {
+  t.mock.method(globalThis, 'fetch', async (url, init) => {
+    const upstream = new Request(url, init);
+    assert.equal(new URL(upstream.url).pathname, '/functions/v1/cpi-live/identity/config');
+    assert.equal((await verifyGatewayRequest(upstream, env.CPI_GATEWAY_KEY))?.country, 'BG');
+    return Response.json({ googleClientId: 'public-client', appleClientId: 'public-service' });
+  });
+  const request = new Request('https://api.example/cpi/identity/config', {
+    headers: { 'cf-connecting-ip': '192.0.2.4', origin: 'https://georgi-cole.github.io' },
+  });
+  Object.defineProperty(request, 'cf', { value: { country: 'BG' } });
+  assert.equal((await worker.fetch(request, env)).status, 200);
+});
 test('scheduled maintenance uses manual redirects and rejects redirect responses', async (t) => {
   t.mock.method(globalThis, 'fetch', async (url, init) => {
     assert.equal(url, env.CPI_EDGE_URL + '/_worker');
