@@ -86,6 +86,12 @@ The new sequence is first boot → valid Settings PID → successful Settings te
 
 The driver emits phase start/completion timings and a 20-second progress heartbeat with the last OS log line. It records `ios-provisioning-summary.json` with per-phase status, budgets, elapsed times and a restart flag, then explicitly announces app cold-start verification. The native command transcript, host-pressure sample, fresh-device ownership/cleanup, two full app starts (one for a selected smoke profile), lifecycle boundaries, screenshots and error assertions remain required. The final PR records observed new-run timings and acceptance; local deterministic orchestration tests alone are not simulator evidence. No game rules, economy, real payments or runtime service permissions change.
 
+## CPI-041 · 11 November 2026 · owner-approved targeted blocking policy
+
+The owner explicitly selected targeted iPhone simulator checks after reviewing CPI-040. Ordinary known artwork, menu and pure game-content diffs now use Android smoke plus iOS compilation, retaining all App quality/backend checks. Full native launch remains mandatory for native bindings, App/main/startup/lifecycle/runtime integration, dependencies, CI/release configuration, unknown paths/events/comparisons, nightly and manual runs. Root entry points remain conservative even if a particular edit looks cosmetic. Moves/deletions participate in selection. A small allowlist of known UI test files follows the ordinary-content scope; unknown config/tests retain full verification.
+
+The iOS job emits `verification=build` or `full`; the aggregate checks it against the selected mode and rejects absent/mismatched outputs, failed compilation, or skipped/failed required jobs. Compile-only runs have a distinct check name and explicit summary, with simulator preparation/launch steps omitted intentionally. Release source validation additionally requires the exact-SHA successful full `Development iOS build and simulator launch` check. A compile-only UI commit therefore needs a manual full run before release/TestFlight distribution. No check is globally waived and no native launch is claimed from compilation. Current policy supersedes older every-app-change simulator requirements; historical test results remain unchanged. Game rules, payments and business assumptions are unaffected.
+
 ## Sources inspected
 
 - [Capacitor v8 Android custom code](https://capacitorjs.com/docs/android/custom-code) and [iOS custom code](https://capacitorjs.com/docs/ios/custom-code).

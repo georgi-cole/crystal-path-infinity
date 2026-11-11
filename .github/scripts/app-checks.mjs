@@ -32,7 +32,7 @@ function isDocumentationOrPlanning(path) {
 }
 
 /**
- * Only known web/game files qualify for a one-launch native smoke. Everything
+ * Known web/game files require Android smoke and iOS compilation. Everything
  * unclassified (including toolchains, native projects and CI) runs the full
  * lifecycle suite. Do not infer safety from a .ts/.md extension alone.
  */
@@ -42,13 +42,26 @@ function classifyFile(path) {
     path === 'apps/mobile/index.html' ||
     path.startsWith('apps/mobile/public/') ||
     path.startsWith('apps/mobile/src/') ||
+    (path.startsWith('apps/mobile/config/') &&
+      /(?:campaign-journey|infinity-scene|menu-navigation|run-outcome|standalone-audio|kit-loadout)\.test\.ts$/.test(
+        path,
+      )) ||
     (path.startsWith('packages/game-core/') && !path.endsWith('/package.json'))
   ) {
     // Native bindings, clocks and lifecycle integration can live inside src/.
     // They must not be downgraded to the ordinary UI smoke profile.
     const nativeSegment =
-      /^(?:native|capacitor|webview|bridge|lifecycle|foreground[-_.]?clock|platform|android|ios|device|permissions?)/i;
+      /^(?:native|capacitor|webview|startup|bootstrap|lifecycle|foreground[-_.]?clock|platform|android|ios|device|permissions?)/i;
     if (path.split('/').some((segment) => nativeSegment.test(segment))) return 'full';
+    if (
+      [
+        'apps/mobile/src/App.tsx',
+        'apps/mobile/src/main.tsx',
+        'apps/mobile/src/practice-runtime.ts',
+        'apps/mobile/src/gameplay-lifecycle.ts',
+      ].includes(path)
+    )
+      return 'full';
     return 'smoke';
   }
   return 'full';
@@ -111,7 +124,7 @@ export function selectNativeChecks({ eventName, event, repository = '.' }) {
     const reasons = {
       none: 'Only documentation, planning, isolated spikes, or quality configuration changed.',
       smoke:
-        'Known app UI, assets, or game logic changed; one real native launch and resume per platform.',
+        'Known UI/assets/game content: Android launch/resume and iOS compilation; iPhone simulator intentionally omitted.',
       full: 'Native/toolchain/CI or unclassified changes require the exhaustive lifecycle suite.',
     };
     return { mode, reason: reasons[mode], changedFiles: paths.length };
@@ -145,9 +158,19 @@ export function assertAppGate(needs) {
       );
     }
   }
+  if (mode !== 'none') {
+    const verification = needs.ios.outputs?.verification;
+    const required = mode === 'full' ? 'full' : 'build';
+    if (verification !== required)
+      throw new Error(
+        `iOS verification must be ${required}; observed ${verification ?? 'missing'}`,
+      );
+  }
   return mode === 'none'
     ? 'Backend security and App quality passed; native jobs intentionally skipped for a verified non-runtime diff.'
-    : `Backend security, App quality and both native build/launch jobs passed (${mode} profile).`;
+    : mode === 'full'
+      ? 'Backend security, App quality and both full native build/launch jobs passed (full profile).'
+      : 'Backend security, App quality, Android smoke and iOS compilation passed (smoke profile); iPhone simulator intentionally omitted.';
 }
 
 function main() {
