@@ -14,7 +14,7 @@ on:
         description: Standard Mac host for the full iOS simulator check
         type: choice
         options: [macos-26-intel, macos-26]
-        default: macos-26-intel
+        default: macos-26
   # Scheduled regressions run the full multi-launch Android and iOS profile.
   # Keep required PR checks independent: a scheduled failure never becomes a PR skip.
   schedule:
@@ -295,9 +295,9 @@ jobs:
     name: ${{ needs.web.outputs.native_mode == 'full' && 'Development iOS build and simulator launch' || 'Development iOS compilation (simulator intentionally omitted)' }}
     needs: web
     if: ${{ needs.web.outputs.native_mode == 'smoke' || needs.web.outputs.native_mode == 'full' }}
-    # Keep the 14 GB Intel host by default. A manual run can use the standard
-    # Apple silicon host with the same Xcode, simulator runtime, and checks.
-    runs-on: ${{ inputs.ios_runner == 'macos-26' && 'macos-26' || 'macos-26-intel' }}
+    # The full exact-source check passed on standard Apple silicon in CPI-042.
+    # Keep Intel available for manual diagnosis with identical checks/toolchain.
+    runs-on: ${{ inputs.ios_runner == 'macos-26-intel' && 'macos-26-intel' || 'macos-26' }}
     timeout-minutes: 45
     outputs:
       verification: ${{ steps.verification.outputs.mode }}

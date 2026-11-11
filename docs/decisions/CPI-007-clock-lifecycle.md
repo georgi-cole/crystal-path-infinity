@@ -92,6 +92,12 @@ The owner explicitly selected targeted iPhone simulator checks after reviewing C
 
 The iOS job emits `verification=build` or `full`; the aggregate checks it against the selected mode and rejects absent/mismatched outputs, failed compilation, or skipped/failed required jobs. Compile-only runs have a distinct check name and explicit summary, with simulator preparation/launch steps omitted intentionally. Release source validation additionally requires the exact-SHA successful full `Development iOS build and simulator launch` check. A compile-only UI commit therefore needs a manual full run before release/TestFlight distribution. No check is globally waived and no native launch is claimed from compilation. Current policy supersedes older every-app-change simulator requirements; historical test results remain unchanged. Game rules, payments and business assumptions are unaffected.
 
+## CPI-042 · 11 November 2026 · standard Apple silicon verification host
+
+This dated update supersedes the Intel-default host note above, preserving its historical measurements. Full manual run [43041299745](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/43041299745), source `176ce184b2ac6d5a38298491d2b090ef5c8ffc11`, passed the same Xcode 26.6/iOS 26.5 assertions on standard `macos-26`: two cold starts, Settings deactivation/reactivation, native startup/resume round trips and zero unexpected runtime errors. The iPhone menu screenshot was inspected. Preparation recorded 62.5 seconds cold boot, 27.7 seconds Settings launch and 17.0 seconds termination, 108.3 seconds total without a restart. This single observation does not guarantee future host latency.
+
+Required iOS verification now defaults to that standard Apple silicon host; Intel remains an explicit manual diagnostic choice. Owner-approved targeted scope and release source checks are unchanged. Android's post-resume screenshot now awaits the same existing graphics/resource settling used before interruption: native bridge completion can arrive before the compositor displays the menu. No runtime game code, lifecycle/error assertion or physical-device claim changes. Final PR evidence must cover the final revision rather than treating this pre-change observation as its acceptance.
+
 ## Sources inspected
 
 - [Capacitor v8 Android custom code](https://capacitorjs.com/docs/android/custom-code) and [iOS custom code](https://capacitorjs.com/docs/ios/custom-code).
