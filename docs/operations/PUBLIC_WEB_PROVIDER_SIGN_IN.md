@@ -49,6 +49,10 @@ This does not enable native production account sign-in, web ads, web billing, te
 
 ## Local evidence
 
+### iPhone check correction · 11 November 2026
+
+[Run 42926894728](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/42926894728) on `7629533` failed; that historical result is not changed. Its two attempt files both record completed cold-start/scene-resume observations with no observed application/runtime errors. The failure was the extra `simctl terminate` after the final observation, not a completed passing CI run. The script now requires termination only between cold starts, where it establishes process/WebView recreation. Final bounded terminate, simulator shutdown and deletion remain in `finally`. Startup, scene reactivation, screenshots and the final healthy-log assertions are still mandatory. The corrected source needs a new complete required check run before merge.
+
 On 11 November 2026, the focused issuer and identity suite passed 24 checks on the working branch, including a new teen web signup, a browser session, replay rejection, native/staging separation and proof of the existing email before linking. The callback/gateway suite passed six checks. These use synthetic provider responses and a local database; they do not establish successful Google/Apple production login or live email delivery. Record the exact committed revision and live acceptance separately before activation.
 
 [Web signup policy](WEB_SIGNUP_ROLLOUT.md) · [Release setup](../RELEASE_SERVICES_SETUP_BG.md)
