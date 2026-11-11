@@ -25,7 +25,11 @@ import {
 const repository = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const app = join(repository, 'apps/mobile');
 const output = join(app, 'artifacts/unsigned-beta');
-const required = ['App required checks', 'Planning manifest and bootstrap'];
+const required = [
+  'App required checks',
+  'Planning manifest and bootstrap',
+  'Development iOS build and simulator launch',
+];
 function json(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
 }

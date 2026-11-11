@@ -30,7 +30,11 @@ test('unsigned source receipt cannot attest another checkout, dirty source or re
     assert.throws(() => assertSourcePreparation(release, { ...context, ...changed }));
 });
 test('latest required results must succeed on the exact source SHA and trusted Actions app', () => {
-  const checks = ['App required checks', 'Planning manifest and bootstrap'].map((name, index) => ({
+  const checks = [
+    'App required checks',
+    'Planning manifest and bootstrap',
+    'Development iOS build and simulator launch',
+  ].map((name, index) => ({
     id: index + 1,
     name,
     head_sha: sourceSha,
@@ -39,6 +43,24 @@ test('latest required results must succeed on the exact source SHA and trusted A
     conclusion: 'success',
   }));
   assert.doesNotThrow(() => assertSourceChecks({ check_runs: checks }, sourceSha));
+  assert.throws(
+    () => assertSourceChecks({ check_runs: checks.slice(0, 2) }, sourceSha),
+    /iOS build and simulator launch/,
+  );
+  assert.throws(
+    () =>
+      assertSourceChecks(
+        {
+          check_runs: checks.map((check) =>
+            check.id === 3
+              ? { ...check, name: 'Development iOS compilation (simulator intentionally omitted)' }
+              : check,
+          ),
+        },
+        sourceSha,
+      ),
+    /iOS build and simulator launch/,
+  );
   assert.throws(() =>
     assertSourceChecks(
       { check_runs: [...checks, { ...checks[0], id: 3, conclusion: 'failure' }] },

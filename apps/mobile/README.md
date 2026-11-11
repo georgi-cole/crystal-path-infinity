@@ -1,5 +1,9 @@
 # Mobile app foundation — CPI-003
 
+## Targeted iPhone simulator checks — CPI-041 · 11 November 2026
+
+Owner-approved policy: known artwork/menu/game-content changes retain all application tests and web builds, a real Android smoke, and unsigned iOS compilation. They intentionally omit iPhone simulator preparation/launch. Native/startup/lifecycle/runtime entry points, dependencies, CI/release files and unknown diffs require full native verification; nightly and manual runs are full. `App.tsx` and `main.tsx` remain integration entry points requiring full checks. The aggregate requires an explicit matching iOS `build`/`full` output and successful compilation. Compile-only evidence has a distinct job name/summary and is never called a launch pass. Release/TestFlight preparation requires the full iOS launch check on its exact source commit; dispatch full verification first if the source only had a content-scope check. See CONTRIBUTING and the CPI-007 decision.
+
 ## Offline playtest 0.7.4 — 11 November 2026
 
 Hint, Kit and Pause now use compact icon controls with 44px touch areas. The Kit stays open while selecting boosters or gear. A small animated ready count confirms loading; minus returns an unused selection. X, Escape or outside dismissal applies the selection once and resumes. Stability is staged in 25-SP doses and spent only on closing; a failed save keeps the Kit open without spending stock.

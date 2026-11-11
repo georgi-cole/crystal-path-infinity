@@ -276,13 +276,15 @@ jobs:
           if-no-files-found: error
 
   ios:
-    name: Development iOS build and simulator launch
+    name: ${{ needs.web.outputs.native_mode == 'full' && 'Development iOS build and simulator launch' || 'Development iOS compilation (simulator intentionally omitted)' }}
     needs: web
     if: ${{ needs.web.outputs.native_mode == 'smoke' || needs.web.outputs.native_mode == 'full' }}
     # Keep the 14 GB Intel host by default. A manual run can use the standard
     # Apple silicon host with the same Xcode, simulator runtime, and checks.
     runs-on: ${{ inputs.ios_runner == 'macos-26' && 'macos-26' || 'macos-26-intel' }}
     timeout-minutes: 45
+    outputs:
+      verification: ${{ steps.verification.outputs.mode }}
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
       NATIVE_PROFILE: ${{ needs.web.outputs.native_mode }}
@@ -306,6 +308,18 @@ jobs:
           npm run build 2>&1 | tee apps/mobile/artifacts/web-build.log
           npm run native:generate -- --platform ios --environment development 2>&1 | tee apps/mobile/artifacts/ios-generation.log
           npm run native:generate -- --platform ios --environment development --check
+      - name: Record required iOS verification scope
+        id: verification
+        run: |
+          case "$NATIVE_PROFILE" in
+            full) echo 'mode=full' >> "$GITHUB_OUTPUT" ;;
+            smoke)
+              echo 'mode=build' >> "$GITHUB_OUTPUT"
+              echo '### iOS compilation only' >> "$GITHUB_STEP_SUMMARY"
+              echo 'Owner-approved targeted policy: ordinary UI/assets/game content requires an unsigned iOS build; simulator launch is intentionally omitted. This is not a native launch pass.' >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            *) echo 'Invalid iOS verification scope' >&2; exit 1 ;;
+          esac
       - name: Resolve SPM and compile an unsigned simulator app
         working-directory: apps/mobile
         run: |
@@ -354,6 +368,7 @@ jobs:
           PY
           tar -czf build/cpi003-ios-simulator.tar.gz -C build/ios/Build/Products/Debug-iphonesimulator App.app
       - name: Prepare the disposable simulator host
+        if: ${{ env.NATIVE_PROFILE == 'full' }}
         # Archived failures saturated the 7 GB Mac before CPI was installed.
         # Host search indexing is unrelated to our offline startup/lifecycle gate.
         # Mount the runtime before disabling indexing so mounted volumes are covered.
@@ -362,11 +377,12 @@ jobs:
           xcrun simctl list --json runtimes > apps/mobile/artifacts/ios-host-runtimes.json
           sudo mdutil -a -i off 2>&1 | tee apps/mobile/artifacts/ios-host-indexing.log
       - name: Open the minimum screen on iOS Simulator
+        if: ${{ env.NATIVE_PROFILE == 'full' }}
         # Allow bounded first-boot migration and process startup on a fresh simulator.
         timeout-minutes: 30
         run: node --experimental-strip-types apps/mobile/scripts/smoke-native.mjs --platform ios --profile "$NATIVE_PROFILE"
       - name: Classify iOS failure without changing its result
-        if: ${{ failure() }}
+        if: ${{ failure() && env.NATIVE_PROFILE == 'full' }}
         run: node .github/scripts/native-failure-diagnostics.mjs --platform ios
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
@@ -529,8 +545,8 @@ jobs:
 # Stable required context: App required checks. Never put workflow-level path
 # filters on this workflow; native jobs are conditional and the aggregate checks
 # that 'none' was explicitly selected after successful App quality. Full means
-# all original prebridge cold launches; smoke remains strict (one real launch,
-# native pause/resume, bridge round-trip, screenshot, zero runtime errors).
+# all original prebridge cold launches on both platforms. Smoke requires a real
+# Android launch/resume and iOS compilation, with an explicit build-only output.
 # Scheduled/manual dispatches run full regardless of source diff.
 # Commands: developer.android.com/tools/adb and tools/avdmanager;
 # developer.android.com/studio/run/emulator-commandline and emulator-acceleration;

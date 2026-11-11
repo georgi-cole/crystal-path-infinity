@@ -57,19 +57,26 @@ test('docs, planning, quality config and isolated spike changes select none', (t
   assert.equal(decision.changedFiles, 5);
 });
 
-test('ordinary UI/assets/game engine changes select single-launch smoke', (t) => {
+test('ordinary UI/assets/game engine changes select Android smoke and iOS compilation', (t) => {
   const f = fixture(t);
-  f.put('apps/mobile/src/App.tsx', 'export const title = "Updated title";\n');
+  f.put('apps/mobile/src/menu.tsx', 'export const title = "Updated title";\n');
   f.put('apps/mobile/public/scene.svg', '<svg/>\n');
   f.put('packages/game-core/src/rounds.ts', 'export const rounds = 10;\n');
   const decision = f.select(f.commit());
   assert.equal(decision.mode, 'smoke');
-  assert.match(decision.reason, /one real native launch/);
+  assert.match(decision.reason, /iOS compilation/);
+  assert.match(decision.reason, /simulator intentionally omitted/);
 });
 
 test('native bridge, lifecycle, toolchain and workflow changes always select full', (t) => {
   const paths = [
     'apps/mobile/src/native-clock.ts',
+    'apps/mobile/src/App.tsx',
+    'apps/mobile/src/main.tsx',
+    'apps/mobile/src/startup-bootstrap.ts',
+    'apps/mobile/src/startup-diagnostics.ts',
+    'apps/mobile/src/practice-runtime.ts',
+    'apps/mobile/src/gameplay-lifecycle.ts',
     'apps/mobile/src/native/storage.ts',
     'apps/mobile/src/platform/android.ts',
     'apps/mobile/src/integration/webview-adapter.ts',
@@ -97,13 +104,13 @@ test('moving a runtime source to docs cannot hide deleted app code', (t) => {
     join(f.repository, 'apps/mobile/src/App.tsx'),
     join(f.repository, 'docs/App-example.tsx'),
   );
-  assert.equal(f.select(f.commit()).mode, 'smoke');
+  assert.equal(f.select(f.commit()).mode, 'full');
 });
 
 test('deleting runtime source still checks the compiled native app', (t) => {
   const f = fixture(t);
   unlinkSync(join(f.repository, 'apps/mobile/src/App.tsx'));
-  assert.equal(f.select(f.commit()).mode, 'smoke');
+  assert.equal(f.select(f.commit()).mode, 'full');
 });
 
 test('unknown code and dependency changes fail closed to full', (t) => {
@@ -126,7 +133,7 @@ test('unknown code and dependency changes fail closed to full', (t) => {
 test('combined docs and UI are smoke; combined UI and native are full', (t) => {
   const f = fixture(t);
   f.put('docs/guide.md', 'guide\n');
-  f.put('apps/mobile/src/App.tsx', 'export const title = "Second";\n');
+  f.put('apps/mobile/src/menu.tsx', 'export const title = "Second";\n');
   assert.equal(f.select(f.commit()).mode, 'smoke');
   f.put('apps/mobile/src/native-clock.ts', 'export const clock = 1;\n');
   assert.equal(f.select(f.commit()).mode, 'full');
@@ -150,7 +157,7 @@ const results = (mode, quality = 'success', android = 'success', ios = 'success'
   database: { result: 'success' },
   web: { result: quality, outputs: { native_mode: mode } },
   android: { result: android },
-  ios: { result: ios },
+  ios: { result: ios, outputs: { verification: mode === 'full' ? 'full' : 'build' } },
 });
 
 test('aggregate accepts native success for smoke/full or intentional none skips', () => {
@@ -169,6 +176,23 @@ test('aggregate rejects failed quality even when native jobs were skipped', () =
     needs.web.result = quality;
     assert.throws(() => assertAppGate(needs), /App quality did not succeed/);
   }
+});
+
+test('aggregate requires explicit compile-only or full iOS evidence matching the selected scope', () => {
+  for (const mode of ['smoke', 'full']) {
+    for (const verification of [undefined, '', 'skipped', mode === 'full' ? 'build' : 'full']) {
+      const needs = results(mode);
+      needs.ios.outputs.verification = verification;
+      assert.throws(() => assertAppGate(needs), /iOS verification must be/);
+    }
+  }
+});
+
+test('bridge artwork stays in the ordinary-content scope', (t) => {
+  const f = fixture(t);
+  f.put('apps/mobile/src/bridge-geometry.ts', 'export const width = 900;\n');
+  f.put('apps/mobile/src/bridge-flight.tsx', 'export const flight = true;\n');
+  assert.equal(f.select(f.commit()).mode, 'smoke');
 });
 
 test('aggregate rejects missing profile, masked native failures and improper skips', () => {
