@@ -8,7 +8,15 @@ on:
   workflow_dispatch:
     inputs:
       upload_to_testflight:
-        description: Sign and upload an internal-only staging beta
+        description: Sign and upload the checked beta (internal-only by default)
+        type: boolean
+        default: false
+      campaign_beta:
+        description: Offline Campaign review build with free simulated shop claims
+        type: boolean
+        default: false
+      external_beta:
+        description: Allow the offline Campaign build to be submitted for external TestFlight review
         type: boolean
         default: false
       rewarded_ads_test:
@@ -44,15 +52,17 @@ jobs:
       CPI_IOS_UPLOAD: ${{ inputs.upload_to_testflight || false }}
       CPI_EXPECTED_SOURCE_SHA: ${{ inputs.source_sha }}
       CPI_IOS_REVIEW_SOURCE: ${{ inputs.review_source || false }}
+      CPI_CAMPAIGN_BETA: ${{ inputs.campaign_beta || false }}
+      CPI_EXTERNAL_BETA: ${{ inputs.external_beta || false }}
       CPI_IOS_GOOGLE_CLIENT_ID: ${{ vars.CPI_IOS_GOOGLE_CLIENT_ID }}
       VITE_IOS_PROVIDER_SIGN_IN: ${{ inputs.review_source && 'true' || 'false' }}
       CPI_APP_ENV: production
-      CPI_NATIVE_PURCHASES: 'true'
-      CPI_NATIVE_ADS: ${{ inputs.rewarded_ads_test && 'true' || 'false' }}
+      CPI_NATIVE_PURCHASES: ${{ inputs.campaign_beta && 'false' || 'true' }}
+      CPI_NATIVE_ADS: ${{ inputs.rewarded_ads_test && !inputs.campaign_beta && 'true' || 'false' }}
       CPI_IOS_ADMOB_TEST_VERSION: ${{ vars.CPI_IOS_ADMOB_TEST_VERSION }}
       VITE_ACCOUNT_API_BASE_URL: https://crystal-path-staging-api.kolequant.workers.dev/cpi
-      VITE_ACCOUNT_SERVICES_ENABLED: 'true'
-      VITE_PURCHASES_ENABLED: 'true'
+      VITE_ACCOUNT_SERVICES_ENABLED: ${{ inputs.campaign_beta && 'false' || 'true' }}
+      VITE_PURCHASES_ENABLED: ${{ inputs.campaign_beta && 'false' || 'true' }}
       VITE_GUEST_REWARDED_ADS_TEST: ${{ inputs.rewarded_ads_test && 'true' || 'false' }}
       VITE_REWARDED_ADS_ENABLED: ${{ inputs.rewarded_ads_test && 'true' || 'false' }}
       VITE_CLIENT_BUILD: ${{ github.run_number }}
@@ -65,6 +75,9 @@ jobs:
           node-version: '22.23.4'
           cache: npm
           cache-dependency-path: package-lock.json
+      - name: Select offline Campaign gateway isolation
+        if: inputs.campaign_beta
+        run: echo 'VITE_ACCOUNT_API_BASE_URL=' >> "$GITHUB_ENV"
       - name: Check the source and Xcode distribution option
         env:
           GH_TOKEN: ${{ github.token }}
@@ -72,7 +85,12 @@ jobs:
       - name: Build the staging client with the registered store identity
         run: |
           npm ci --ignore-scripts
-          npm run build:production
+          if [[ "$CPI_CAMPAIGN_BETA" == true ]]; then
+            export VITE_ACCOUNT_API_BASE_URL=''
+            npm exec --workspace @crystal-path-infinity/mobile -- vite build --mode campaign-beta
+          else
+            npm run build:production
+          fi
           npm run native:generate -- --platform ios --environment production
           npm run native:generate -- --platform ios --environment production --check
       - name: Resolve pinned Swift packages

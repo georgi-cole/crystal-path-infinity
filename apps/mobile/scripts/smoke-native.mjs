@@ -732,6 +732,10 @@ async function android() {
         assertNoTargetAnr();
         return hasResumeEvidence(boundary);
       });
+      // A bridge response can precede the resumed WebView's compositor frame.
+      // Capture the actual settled menu, preserving the same native assertions.
+      await waitForAndroidGraphicsSettling('resumed', true);
+      recordLifecycleAction('resume-render-stable');
       const pid = text(adb, adbArgs('shell', 'pidof', buildInfo.appId));
       assert.match(pid, /^\d+(?:\s+\d+)*$/, 'App process is not running');
       assert.equal(pid, initialPid, 'Home/resume unexpectedly replaced the app process');

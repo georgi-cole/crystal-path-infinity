@@ -7,6 +7,7 @@ import { loadEnv } from 'vite';
 import { getBuildInfo, requireEnvironment } from './config/environments.ts';
 import { selectGuestAdUnits } from './config/guest-ad-inventory.ts';
 import { assertUnsignedPublicVariables, resolveUnsignedRelease } from './config/release-build.ts';
+import { assertOfflineCampaignBeta } from './config/campaign-beta.ts';
 
 const appRoot = fileURLToPath(new URL('.', import.meta.url));
 const manifest = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as {
@@ -14,20 +15,22 @@ const manifest = JSON.parse(readFileSync(new URL('./package.json', import.meta.u
 };
 
 export default defineConfig(({ mode }) => {
+  const campaignBeta = mode === 'campaign-beta';
   // Both web review profiles use staging identity and can never become a release candidate.
   const preview = mode === 'qa' || mode === 'player-preview' || mode === 'campaign-qa';
   const environment = requireEnvironment(
-    mode === 'test' ? 'development' : preview ? 'staging' : mode,
+    mode === 'test' ? 'development' : campaignBeta ? 'production' : preview ? 'staging' : mode,
   );
   const release =
     mode === 'test' ? null : resolveUnsignedRelease(environment, manifest.version, process.env);
-  if (preview && release)
+  if ((preview || campaignBeta) && release)
     throw new Error('Web review profiles cannot be included in an unsigned release candidate.');
   const values = loadEnv(mode, appRoot, 'VITE_');
+  if (campaignBeta) assertOfflineCampaignBeta({ ...process.env, ...values });
   if (release || mode === 'player-preview') assertUnsignedPublicVariables(values);
   const buildInfo = release?.app ?? getBuildInfo(environment, manifest.version);
   const campaignBase =
-    mode === 'campaign-qa'
+    mode === 'campaign-qa' || campaignBeta
       ? spawnSync('git', ['rev-parse', 'HEAD'], { cwd: appRoot, encoding: 'utf8' }).stdout?.trim()
       : undefined;
   const guestAdUnits = selectGuestAdUnits({ ...process.env, ...values }, environment);
@@ -38,6 +41,20 @@ export default defineConfig(({ mode }) => {
       {
         name: 'crystal-path-build-identity',
         generateBundle() {
+          if (campaignBeta)
+            this.emitFile({
+              type: 'asset',
+              fileName: 'campaign-beta-info.json',
+              source:
+                JSON.stringify({
+                  schemaVersion: 1,
+                  audience: 'campaign-beta',
+                  sourceCommit: campaignBase ?? null,
+                  offline: true,
+                  simulatedPurchases: true,
+                  playtestVersion: '0.7.4',
+                }) + '\n',
+            });
           if (mode === 'qa')
             this.emitFile({
               type: 'asset',

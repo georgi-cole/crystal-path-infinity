@@ -14,7 +14,7 @@ on:
         description: Standard Mac host for the full iOS simulator check
         type: choice
         options: [macos-26-intel, macos-26]
-        default: macos-26-intel
+        default: macos-26
   # Scheduled regressions run the full multi-launch Android and iOS profile.
   # Keep required PR checks independent: a scheduled failure never becomes a PR skip.
   schedule:
@@ -189,8 +189,24 @@ jobs:
       - name: Prepare the official Android emulator tools
         timeout-minutes: 12
         run: |
-          sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends libpulse0 libglu1-mesa
+          # Probe trusted Ubuntu archives before apt's slow mirror failover.
+          # HTTPS and Ubuntu package signature verification stay enabled.
+          if [[ -f /etc/apt/apt-mirrors.txt ]]; then
+            selected_mirror=''
+            for mirror in https://archive.ubuntu.com/ubuntu/ https://mirrors.edge.kernel.org/ubuntu/ https://mirrors.mit.edu/ubuntu/; do
+              echo "Checking Ubuntu archive: $mirror"
+              if curl --ipv4 --fail --silent --show-error --connect-timeout 5 --max-time 15 \
+                "${mirror}dists/noble/InRelease" --output /dev/null; then
+                selected_mirror="$mirror"
+                break
+              fi
+            done
+            test -n "$selected_mirror"
+            printf '%s\tpriority:1\n' "$selected_mirror" | sudo tee /etc/apt/apt-mirrors.txt
+          fi
+          apt_options=(-o Acquire::ForceIPv4=true -o Acquire::Retries=1 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15)
+          sudo timeout 120 apt-get "${apt_options[@]}" update
+          sudo timeout 180 apt-get "${apt_options[@]}" install --yes --no-install-recommends libpulse0 libglu1-mesa
           test -c /dev/kvm
           sudo chown "$(id -u):$(id -g)" /dev/kvm
           sudo chmod 660 /dev/kvm
@@ -279,9 +295,9 @@ jobs:
     name: ${{ needs.web.outputs.native_mode == 'full' && 'Development iOS build and simulator launch' || 'Development iOS compilation (simulator intentionally omitted)' }}
     needs: web
     if: ${{ needs.web.outputs.native_mode == 'smoke' || needs.web.outputs.native_mode == 'full' }}
-    # Keep the 14 GB Intel host by default. A manual run can use the standard
-    # Apple silicon host with the same Xcode, simulator runtime, and checks.
-    runs-on: ${{ inputs.ios_runner == 'macos-26' && 'macos-26' || 'macos-26-intel' }}
+    # The full exact-source check passed on standard Apple silicon in CPI-042.
+    # Keep Intel available for manual diagnosis with identical checks/toolchain.
+    runs-on: ${{ inputs.ios_runner == 'macos-26-intel' && 'macos-26-intel' || 'macos-26' }}
     timeout-minutes: 45
     outputs:
       verification: ${{ steps.verification.outputs.mode }}

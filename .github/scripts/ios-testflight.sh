@@ -35,6 +35,17 @@ preflight() {
   xcodebuild -version
   xcodebuild -help > "$RUNNER_TEMP/cpi-xcodebuild-help.txt" 2>&1 || true
   grep -Fq testFlightInternalTestingOnly "$RUNNER_TEMP/cpi-xcodebuild-help.txt"
+  if [[ "${CPI_EXTERNAL_BETA:-false}" == true && "${CPI_CAMPAIGN_BETA:-false}" != true ]]; then
+    echo 'External beta distribution requires the explicit offline Campaign profile.' >&2
+    exit 1
+  fi
+  if [[ "${CPI_CAMPAIGN_BETA:-false}" == true ]]; then
+    if [[ "${CPI_IOS_REVIEW_SOURCE:-false}" == true ]]; then echo 'Campaign beta uses checked main only.' >&2; exit 1; fi
+    node --experimental-strip-types --input-type=module - <<'JS'
+import { assertOfflineCampaignBeta } from './apps/mobile/config/campaign-beta.ts';
+assertOfflineCampaignBeta(process.env);
+JS
+  else
   if [[ "$CPI_NATIVE_ADS" != "$VITE_REWARDED_ADS_ENABLED" ||
         "$CPI_NATIVE_ADS" != "${VITE_GUEST_REWARDED_ADS_TEST:-false}" ||
         "${VITE_GUEST_REWARDED_ADS_LIVE:-false}" != false ||
@@ -43,6 +54,7 @@ preflight() {
         "$VITE_ACCOUNT_API_BASE_URL" != https://crystal-path-staging-api.kolequant.workers.dev/cpi ]]; then
     echo 'Internal TestFlight requires matching ad flags and accounts on the Crystal Path staging /cpi gateway.' >&2
     exit 1
+  fi
   fi
   if [[ "${CPI_IOS_REVIEW_SOURCE:-false}" == true ]]; then
     if ! review_source_allowed || [[ "$VITE_IOS_PROVIDER_SIGN_IN" != true ||
@@ -139,7 +151,7 @@ project.write_text(project_settings.replace(marker, "\t\t\t\t" + settings))
     "teamID": team,
     "signingCertificate": "Apple Distribution",
     "provisioningProfiles": {bundle: uuid},
-    "testFlightInternalTestingOnly": True,
+    "testFlightInternalTestingOnly": os.environ.get("CPI_EXTERNAL_BETA") != "true",
     "manageAppVersionAndBuildNumber": False,
     "uploadSymbols": True,
 }))
@@ -185,7 +197,16 @@ assert info["CFBundleVersion"] == build
 assert info["UIDeviceFamily"] == [1]
 assert metadata["environment"] == "production" and not (public / "qa-info.json").exists()
 account_base = os.environ["VITE_ACCOUNT_API_BASE_URL"]
-assert any(account_base in asset.read_text(encoding="utf-8") for asset in (public / "assets").glob("*.js"))
+if os.environ.get("CPI_CAMPAIGN_BETA") == "true":
+    beta = json.loads((public / "campaign-beta-info.json").read_text())
+    assert beta["audience"] == "campaign-beta" and beta["offline"] and beta["simulatedPurchases"]
+    assert beta["sourceCommit"] == os.environ["GITHUB_SHA"]
+    assert not account_base
+    assert os.environ["VITE_ACCOUNT_SERVICES_ENABLED"] == os.environ["VITE_PURCHASES_ENABLED"] == "false"
+    assert os.environ["CPI_NATIVE_ADS"] == os.environ["CPI_NATIVE_PURCHASES"] == "false"
+else:
+    assert not (public / "campaign-beta-info.json").exists()
+    assert any(account_base in asset.read_text(encoding="utf-8") for asset in (public / "assets").glob("*.js"))
 if os.environ.get("VITE_IOS_PROVIDER_SIGN_IN") == "true":
     google = os.environ["CPI_IOS_GOOGLE_CLIENT_ID"]
     assert info["CpiGoogleSignInClientID"] == google
@@ -238,7 +259,7 @@ PY
     -exportOptionsPlist "$signing/ExportOptions.plist" -allowProvisioningUpdates \
     -authenticationKeyPath "$key" -authenticationKeyID "$CPI_ASC_UPLOAD_KEY_ID" \
     -authenticationKeyIssuerID "$CPI_ASC_UPLOAD_ISSUER_ID"
-  printf 'Sent to App Store Connect as an internal TestFlight build for Apple processing.\n' \
+  printf 'Sent to App Store Connect for Apple processing. External beta eligibility: %s; offline Campaign: %s.\n' "${CPI_EXTERNAL_BETA:-false}" "${CPI_CAMPAIGN_BETA:-false}" \
     >> "$GITHUB_STEP_SUMMARY"
 }
 
