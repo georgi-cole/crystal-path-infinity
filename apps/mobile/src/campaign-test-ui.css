@@ -1,0 +1,64 @@
+.cpi-campaign-objective {
+  position: relative;
+  z-index: 1;
+  width: max-content;
+  max-width: calc(100% - 2rem);
+  margin: 0.2rem auto 0.4rem;
+  padding: 0.3rem 0.65rem;
+  border: 1px solid #d8bd7642;
+  border-radius: 999px;
+  color: #e6dbbf;
+  background: #090a0dd9;
+  font-size: 0.61rem;
+  letter-spacing: 0.02em;
+}
+
+.cpi-campaign-objective small {
+  display: block;
+  color: #e3bf85;
+  font-size: inherit;
+  text-align: center;
+}
+
+.cpi-rain-curtain {
+  position: fixed;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.18;
+  background-image: repeating-linear-gradient(
+    106deg,
+    transparent 0 22px,
+    #a9dce41a 23px,
+    transparent 24px 48px
+  );
+  background-size: 150px 100%;
+  animation: cpi-rain-drift 1.2s linear infinite;
+}
+
+.cpi-rain-curtain::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #50788112, transparent 45%, #0c1c2418);
+  content: '';
+}
+
+.cpi-rain-mission .cpi-run-mode {
+  color: #9ac8d0;
+}
+
+@keyframes cpi-rain-drift {
+  to {
+    background-position: 0 48px;
+  }
+}
+
+.cpi-reduced-motion .cpi-rain-curtain {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cpi-rain-curtain {
+    animation: none;
+  }
+}

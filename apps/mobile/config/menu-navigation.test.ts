@@ -9,6 +9,8 @@ import {
   canResumePractice,
   formatRowLabel,
   historyFlag,
+  menuSection,
+  menuParent,
   rankedServiceState,
   viewFromHash,
   viewHash,
@@ -55,6 +57,16 @@ function render(view: MenuView = 'home', options: Partial<Parameters<typeof Main
 }
 
 describe('CPI-013 standalone menu and route model', () => {
+  it('keeps tabs within their menu and validates the originating menu', () => {
+    expect(menuSection('infinity-weather')).toBe(menuSection('journal'));
+    expect(menuSection('supplies')).toBe(menuSection('store'));
+    expect(menuSection('bridge-style')).toBe(menuSection('store'));
+    expect(menuSection('campaign')).not.toBe(menuSection('store'));
+    expect(menuParent({ cpiParent: 'campaign' })).toBe('campaign');
+    expect(menuParent({ cpiParent: 'home' })).toBe('home');
+    expect(menuParent({ cpiParent: 'unknown' })).toBeNull();
+    expect(menuParent(null)).toBeNull();
+  });
   it('makes Play prominent and separates ranked, offline practice and the three destinations', () => {
     const html = render();
     expect(html).toContain('data-testid="app-ready"');

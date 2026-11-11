@@ -1,5 +1,10 @@
 import { nextPracticeRuleset } from './balance-tuning';
-import { PLAYER_PREVIEW_ENABLED, QA_TOOLS_ENABLED, practiceStorage } from './app-profile';
+import {
+  CAMPAIGN_TEST_BUILD,
+  PLAYER_PREVIEW_ENABLED,
+  QA_TOOLS_ENABLED,
+  practiceStorage,
+} from './app-profile';
 import { shouldFinishPracticeOnExit } from './practice-exit';
 import { DiscoveryIntroduction } from './mystery-introduction';
 import { MysteryJournal } from './mystery-discovery';
@@ -25,6 +30,8 @@ import { StageAtmosphere } from './stage-atmosphere';
 import { useSoundtrack } from './soundtrack';
 import { PrismBridge } from './prism-bridge';
 import { RunHud } from './run-hud';
+import { RunKitButton, RunKitDialog } from './run-kit';
+import { GuardianShieldMarker } from './guardian-shield';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   createPracticeCursor,
@@ -38,6 +45,9 @@ import {
   presentRowPressure,
   HINT_SCAN_MS,
   marketingSale,
+  usesDiscoveryRules,
+  journeyForecast,
+  journeyGearEffect,
 } from '@crystal-path-infinity/game-core';
 import type {
   RunEvent,
@@ -48,6 +58,7 @@ import type {
   TimedSessionResult,
   EffectKind,
   PactOption,
+  BeforeRunCommit,
 } from '@crystal-path-infinity/game-core';
 import { getGameplayLifecycle } from './gameplay-lifecycle';
 import { createStandaloneAudio } from './standalone-audio';
@@ -78,6 +89,10 @@ import { DeathClock } from './scene-instruments';
 import { collectRunSignals, EMPTY_RUN_SIGNALS, liveSignal } from './run-signals';
 import type { RunSignals } from './run-signals';
 import { createHintCaptionGate } from './hint-caption';
+import { bridgeModel } from './campaign-content';
+import type { BridgeStyle } from './campaign-content';
+import { JourneyAtmosphere } from './journey-atmosphere';
+import { CLEAR_SKY, GEAR_COPY, WEATHER_COPY } from './journey-copy';
 import './infinity-scene.css';
 import './infinity-hud-premium.css';
 import './run-outcome.css';
@@ -94,7 +109,42 @@ const DEFAULT_VISUAL_SKIN = {
 export const INFINITY_SCENE_SKIN = DEFAULT_VISUAL_SKIN;
 
 export type { SceneFeedback } from './scene-cinematics';
+interface CampaignPresentation {
+  readonly name: string;
+  readonly targetRow: number;
+  readonly minimumStability: number;
+  readonly objectiveProgress?: string;
+}
+interface KitSelection {
+  stabilityDoses: number;
+  shieldDelta: number;
+  wear?: boolean;
+  revision: number;
+  notice: string;
+  changed: 'sp' | 'shield' | 'gear' | null;
+  direction: 'load' | 'return';
+}
+const EMPTY_KIT_SELECTION: KitSelection = {
+  stabilityDoses: 0,
+  shieldDelta: 0,
+  revision: 0,
+  notice: '',
+  changed: null,
+  direction: 'load',
+};
+type InfinitySupplies = Readonly<Record<'sp' | 'hint' | 'shield' | 'continue', number>>;
 export interface InfinitySceneViewProps {
+  readonly weather?: 'clear' | 'rain';
+  readonly campaignMission?: CampaignPresentation;
+  readonly bridgeStyle?: BridgeStyle;
+  readonly campaignSupplyPanel?: ReactNode;
+  readonly reserveHints?: number;
+  readonly kitOpen?: boolean;
+  readonly onToggleKit?: () => void;
+  readonly kitGearWear?: boolean;
+  readonly kitNotice?: string;
+  readonly kitError?: boolean;
+  readonly onToggleJourneyGear?: (wear: boolean) => void;
   readonly resourcePanel?: ReactNode;
   readonly guestContinuePanel?: ReactNode;
   readonly trial?: boolean;
@@ -159,6 +209,17 @@ export function InfinitySceneView({
   newPersonalBest,
   onRestart,
   onRetry,
+  weather = 'clear',
+  campaignMission,
+  bridgeStyle,
+  campaignSupplyPanel,
+  reserveHints = 0,
+  kitOpen = false,
+  onToggleKit,
+  kitGearWear,
+  kitNotice,
+  kitError,
+  onToggleJourneyGear,
   settings,
   onSettingsChange,
   cinematic = null,
@@ -170,6 +231,7 @@ export function InfinitySceneView({
   const petWorld = isPetWorld(themeId);
   const presented = presentInfinityScene(state);
   const outcome = presentRunOutcome(state);
+  const availableHints = state.hints + (campaignMission ? 0 : reserveHints);
   const worldOutcomeTheme =
     themeId !== 'obsidian' &&
     !error &&
@@ -253,11 +315,67 @@ export function InfinitySceneView({
     !cinematicBlocks &&
     !pactOffered &&
     !paused &&
+    !kitOpen &&
     !confirmEnd &&
     !error &&
     outcome.phase === 'playing';
   const experiment =
     import.meta.env.MODE !== 'production' ? parseTileExperiment(state.rulesetVersion) : null;
+  const route = state.stream.journey;
+  const season = experiment?.journey === 'plain' ? undefined : route?.season;
+  const forecast = route && season ? journeyForecast(route, BigInt(state.currentRow)) : null;
+  const activeWeather = forecast?.startsIn === 0n ? forecast.weather : undefined;
+  const legacyRain = !route && weather === 'rain';
+  const currentSky = activeWeather ?? (legacyRain ? 'rain' : undefined);
+  const approaching =
+    forecast && forecast.startsIn > 0n && forecast.startsIn <= 3n ? forecast.weather : undefined;
+  const cue = current?.cue;
+  const cueText =
+    cue?.side === null
+      ? 'Both tiles are cracked'
+      : cue?.kind === 'mirror'
+        ? 'Mirror glint · land opposite'
+        : cue?.kind === 'prism'
+          ? 'Rainbow · land on the prism'
+          : cue?.kind === 'echo'
+            ? 'Echo · follow the ring'
+            : cue?.kind === 'gust'
+              ? 'Gust · follow the leaf'
+              : cue?.kind === 'beacon'
+                ? 'Beacon · follow the light'
+                : cue?.kind === 'lens'
+                  ? 'Sunshades · follow the clear glint'
+                  : null;
+  const gear = state.journeyGear;
+  const gearCopy = gear ? GEAR_COPY[gear.item] : undefined;
+  const here =
+    gear && route ? journeyGearEffect(gear.item, route.season, activeWeather) : undefined;
+  const ahead =
+    gear && route && approaching
+      ? journeyGearEffect(gear.item, route.season, approaching)
+      : undefined;
+  const hasGearDownside = gear?.worn && ((here?.hitRelief ?? 0) < 0 || (ahead?.hitRelief ?? 0) < 0);
+  const gearTip =
+    gear && gearCopy
+      ? gear.queued !== null
+        ? gear.queued
+          ? 'Ready after this step.'
+          : 'Packed away after this step.'
+        : gear.worn && (here?.hitRelief ?? 0) < 0
+          ? gearCopy.warning
+          : gear.worn && (ahead?.hitRelief ?? 0) < 0
+            ? 'Pack it away before ' + WEATHER_COPY[approaching!].title.toLowerCase() + '.'
+            : gear.worn && ((here?.hitRelief ?? 0) > 0 || here?.cleanGain)
+              ? gearCopy.ready
+              : !gear.worn &&
+                  ((ahead?.hitRelief ?? 0) > 0 || (here?.hitRelief ?? 0) > 0 || here?.cleanGain)
+                ? 'A good time to bring it out.'
+                : null
+      : null;
+  const hasKit = !!(
+    onToggleKit &&
+    ((gear && gearCopy && onToggleJourneyGear) || campaignSupplyPanel)
+  );
   const modeLabel = trial
     ? t('vault.trial')
     : state.storeTest?.assisted
@@ -330,25 +448,50 @@ export function InfinitySceneView({
 
   return (
     <main
-      className={`cps-shell ${INFINITY_SCENE_SKIN.shell} cpi-infinity-scene${catastrophic ? ' is-catastrophe' : ''}${emergency ? ' is-emergency' : ''}${paused ? ' is-paused' : ''}${pressure?.active || clockActive ? ' is-death-clock' : ''}${settings.reducedMotion ? ' cpi-reduced-motion' : ''}`}
+      className={`cps-shell ${INFINITY_SCENE_SKIN.shell} cpi-infinity-scene${catastrophic ? ' is-catastrophe' : ''}${emergency ? ' is-emergency' : ''}${paused || kitOpen ? ' is-paused' : ''}${pressure?.active || clockActive ? ' is-death-clock' : ''}${settings.reducedMotion ? ' cpi-reduced-motion' : ''}${legacyRain ? ' cpi-rain-mission' : ''}`}
       data-world={themeId}
+      data-weather={activeWeather ?? (legacyRain ? 'rain' : 'clear')}
+      data-season={season}
       data-testid="infinity-scene"
       aria-label={INFINITY_SCENE_SKIN.title}
     >
       <p className="cpi-run-mode">
-        {modeLabel}
-        {experiment && ` · ${experiment.highBreakPercent}% / ${experiment.lowBreakPercent}%`}
+        {campaignMission ? 'Campaign' : modeLabel}
+        {season
+          ? ' · ' + season
+          : experiment &&
+            !CAMPAIGN_TEST_BUILD &&
+            ` · ${experiment.highBreakPercent}% / ${experiment.lowBreakPercent}%`}
+        {gear && !campaignMission && ' · Outfitted'}
       </p>
       <StageAtmosphere emergency={emergency || catastrophic} />
+      {legacyRain && <div className="cpi-rain-curtain" aria-hidden="true" />}
+      {season && (
+        <JourneyAtmosphere
+          season={season}
+          weather={activeWeather}
+          world={themeId}
+          reduced={settings.reducedMotion || paused}
+        />
+      )}
+      {campaignMission && (
+        <p className="cpi-campaign-objective" role="status">
+          {campaignMission.name} · Row {campaignMission.targetRow}
+          {campaignMission.minimumStability > 0 &&
+            ` · ${campaignMission.minimumStability} Stability`}
+          {campaignMission.objectiveProgress && <small>{campaignMission.objectiveProgress}</small>}
+        </p>
+      )}
       <div className="cps-content" inert={overlayVisible}>
         <RunHud
+          campaign={!!campaignMission}
           row={
             cinematic?.rows?.find((row) => row.phase === 'current')?.label ?? presented.currentRow
           }
           clearedRows={clearedRows}
           sp={state.sp}
           maxSp={maxSp}
-          hints={state.hints}
+          hints={availableHints}
           bonus={bonus}
           hintCue={resourceCues.hints}
           reducedMotion={settings.reducedMotion}
@@ -356,14 +499,91 @@ export function InfinitySceneView({
             interactive &&
             !oracleActive &&
             !state.discovery?.introduction &&
-            state.hints > 0 &&
+            availableHints > 0 &&
+            !state.current.noSafeTile &&
             state.current.revealedSafeSide === null
           }
-          canPause={ready && !busy && !cinematicBlocks && !error && state.status === 'playing'}
+          canPause={
+            ready && !busy && !cinematicBlocks && !error && !kitOpen && state.status === 'playing'
+          }
           paused={paused}
           onHint={onHint}
           onPause={onPause}
+          kitControl={
+            hasKit && onToggleKit ? (
+              <RunKitButton
+                open={kitOpen}
+                warning={!!hasGearDownside}
+                charges={state.journeyShields}
+                disabled={
+                  !ready ||
+                  busy ||
+                  !!cinematic ||
+                  paused ||
+                  !!error ||
+                  state.status !== 'playing' ||
+                  pactOffered
+                }
+                onClick={onToggleKit}
+              />
+            ) : undefined
+          }
         />
+        {(season || legacyRain || cueText) && (
+          <aside className="cpi-journey-forecast" data-active={!!currentSky} aria-live="polite">
+            {currentSky ? (
+              <span>
+                {currentSky === 'heat' && here?.clearGlint && gear?.worn
+                  ? 'The sun is playing tricks. Your shades cut through the glare.'
+                  : WEATHER_COPY[currentSky].remark}
+              </span>
+            ) : approaching ? (
+              <span>
+                {WEATHER_COPY[approaching].title} ahead. {WEATHER_COPY[approaching].remark}
+              </span>
+            ) : season ? (
+              <span>{CLEAR_SKY[season]}</span>
+            ) : null}
+            {cueText && <strong>{cueText}</strong>}
+          </aside>
+        )}
+        {hasKit && onToggleKit && kitOpen && !error && state.status === 'playing' && (
+          <RunKitDialog onClose={onToggleKit} notice={kitNotice} error={kitError}>
+            {gear && gearCopy && onToggleJourneyGear && (
+              <aside
+                className="cpi-journey-kit-control"
+                data-warning={!!hasGearDownside}
+                aria-label="Crossing gear"
+              >
+                <span className="cpi-kit-gear-art" data-item={gear.item} aria-hidden="true" />
+                <div>
+                  <strong>{gearCopy.name}</strong>
+                  <small>
+                    {kitGearWear !== undefined
+                      ? kitGearWear
+                        ? 'Ready to wear'
+                        : 'Ready to pack away'
+                      : (gearTip ?? (gear.worn ? 'Wearing' : 'Packed away'))}
+                  </small>
+                </div>
+                <button
+                  type="button"
+                  disabled={!ready || busy || paused || !!error || !!cinematic}
+                  onClick={() => onToggleJourneyGear(!(kitGearWear ?? gear.queued ?? gear.worn))}
+                >
+                  {kitGearWear !== undefined
+                    ? 'Undo change'
+                    : gear.queued !== null
+                      ? 'Cancel change'
+                      : gear.worn
+                        ? 'Pack away'
+                        : 'Bring out'}
+                </button>
+              </aside>
+            )}
+            {campaignSupplyPanel}
+          </RunKitDialog>
+        )}
         <aside
           className={'cpi-run-status' + (pactOffered ? ' is-choosing' : '')}
           aria-label={t('game.effects')}
@@ -432,6 +652,9 @@ export function InfinitySceneView({
             />
           )}
           <PrismBridge
+            bridgeStyle={bridgeStyle}
+            season={season}
+            weather={activeWeather}
             rows={cinematic?.rows ?? presented.rows}
             feedback={cinematic?.feedback ?? feedback}
             interactive={interactive}
@@ -447,15 +670,32 @@ export function InfinitySceneView({
             mysteryReveal={!!state.discovery?.introduction}
           />
           <WorldStepEffect theme={themeId} cinematic={cinematic} reduced={settings.reducedMotion} />
+          {themeId === 'obsidian' && outcome.phase !== 'finished' && (
+            <GuardianShieldMarker
+              side={companionStandingSide(cinematic?.rows ?? presented.rows)}
+              charges={state.journeyShields ?? 0}
+              temporary={state.effects.some((effect) => effect.kind === 'shield_5s')}
+              impact={!!cinematic?.shielded && cinematic.phase === 'impact'}
+              linger={
+                !!cinematic?.shielded &&
+                (cinematic.phase === 'contact' || cinematic.phase === 'impact')
+              }
+            />
+          )}
           {themeId !== 'obsidian' && outcome.phase !== 'finished' && (
             <WorldPathCompanion
               theme={themeId}
+              bridge={bridgeModel(bridgeStyle)}
               cinematic={cinematic}
               standingSide={companionStandingSide(cinematic?.rows ?? presented.rows)}
               sp={state.sp}
               effects={presented.effects}
               reduced={settings.reducedMotion}
-              paused={paused}
+              paused={paused || kitOpen}
+              shieldCharges={state.journeyShields}
+              season={season}
+              weather={activeWeather}
+              gear={gear?.worn ? gear.item : undefined}
               reaction={
                 emergency || catastrophic || hostileReveal || cinematic?.feedback?.kind === 'wrong'
                   ? 'panic'
@@ -517,7 +757,11 @@ export function InfinitySceneView({
           <span className="visually-hidden">{t('game.crossingNote')}</span>
         </p>
       </div>
-      <EffectConsumption cue={resourceCues.consumption} hidden={overlayVisible} />
+      <EffectConsumption
+        cue={resourceCues.consumption}
+        hidden={overlayVisible}
+        glass={themeId === 'obsidian'}
+      />
       {overlayVisible && (
         <div className="cpi-overlay cpi-crossing-overlay">
           <div
@@ -751,7 +995,7 @@ export function InfinitySceneView({
   );
 }
 
-function makeInitialRun(testEconomy = false): RunState {
+function makeInitialRun(testEconomy = false, fixedRulesetVersion?: string): RunState {
   let discoveredMysteries: EffectKind[] = [];
   try {
     discoveredMysteries = readMysteryJournal(practiceStorage());
@@ -762,11 +1006,12 @@ function makeInitialRun(testEconomy = false): RunState {
   crypto.getRandomValues(seed);
   const route = (BigInt(seed[0]) << 32n) | BigInt(seed[1]);
   const mystery = route ^ 0x9e3779b97f4a7c15n;
+  const rulesetVersion = fixedRulesetVersion ?? nextPracticeRuleset(testEconomy);
   return createRun(
     {
       runId: 'practice-' + route.toString(16),
-      rulesetVersion: nextPracticeRuleset(testEconomy),
-      discoveredMysteries,
+      rulesetVersion,
+      ...(usesDiscoveryRules(rulesetVersion) ? { discoveredMysteries } : {}),
       routeRng: createPracticeCursor(route),
       mysteryRng: createPracticeCursor(mystery),
       observedAt: Date.now(),
@@ -786,9 +1031,19 @@ interface InfinityRunProps {
   onRestart: () => void;
   guestRewardedAd?: GuestRewardedAd | null;
   initialState: RunState | null;
-  onCheckpoint: (state: RunState) => void;
+  onCheckpoint: (state: RunState, events?: readonly RunEvent[]) => void;
   settings: PracticeSettings;
   onSettingsChange: (next: PracticeSettings) => void;
+  fixedRulesetVersion?: string;
+  weather?: 'clear' | 'rain';
+  campaignMission?: CampaignPresentation;
+  bridgeStyle?: BridgeStyle;
+  infinitySupplies?: InfinitySupplies;
+  onInfinitySupplyCommit?: (
+    state: RunState,
+    events: readonly RunEvent[],
+    previous: RunState,
+  ) => void;
 }
 function InfinityRun({
   trial = false,
@@ -803,13 +1058,39 @@ function InfinityRun({
   onCheckpoint,
   settings,
   onSettingsChange,
+  fixedRulesetVersion,
+  weather = 'clear',
+  campaignMission,
+  bridgeStyle,
+  infinitySupplies,
+  onInfinitySupplyCommit,
 }: InfinityRunProps) {
   const { t, number } = useLanguage();
   const { store } = useTestStore();
   const runTheme = useThemeId();
+  const isCampaign = !!campaignMission;
+  const suppliesAvailable =
+    !trial &&
+    !isCampaign &&
+    !!parseTileExperiment(initialState?.rulesetVersion ?? '')?.infinitySupplies;
+  const model = bridgeModel(bridgeStyle);
+  const bridgeSurface =
+    model === 'trestle'
+      ? 'wood'
+      : model === 'frost'
+        ? 'ice'
+        : model === 'aurora'
+          ? 'trampoline'
+          : model === 'prism'
+            ? 'cosmic'
+            : model === 'jelly' || model === 'lily' || model === 'cookie'
+              ? model
+              : 'glass';
   const [resourceMessage, setResourceMessage] = useState('');
   const [initial] = useState(() =>
-    initialState ? upgradePracticePacing(initialState) : makeInitialRun(!!store && !trial),
+    initialState
+      ? upgradePracticePacing(initialState)
+      : makeInitialRun(!!store && !trial, fixedRulesetVersion),
   );
   const [initialAudioSettings] = useState(settings);
   const lastCommittedActiveMs = useRef(-500);
@@ -817,6 +1098,15 @@ function InfinityRun({
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [paused, setPaused] = useState(false);
+  const [kitOpen, setKitOpen] = useState(false);
+  const [kitSelection, setKitSelection] = useState<KitSelection>(EMPTY_KIT_SELECTION);
+  const [kitBase, setKitBase] = useState({
+    sp: 0,
+    shields: 0,
+    loaded: 0,
+    gearWear: undefined as boolean | undefined,
+  });
+  const [kitError, setKitError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<SceneFeedback | null>(null);
   const [mysteryFeedback, setMysteryFeedback] = useState<MysteryFeedback | null>(null);
@@ -842,6 +1132,7 @@ function InfinityRun({
   const runtimeRef = useRef<PracticeRuntime | null>(null);
   const audioRef = useRef<StandaloneAudio | null>(null);
   const pauseRef = useRef<PracticePauseLease | null>(null);
+  const kitPauseRef = useRef<PracticePauseLease | null>(null);
   const commandLock = useRef(false);
   const exitLock = useRef(false);
   const directorRef = useRef<ReturnType<typeof createSceneDirector> | null>(null);
@@ -859,9 +1150,14 @@ function InfinityRun({
       {
         createMedia: (source) => new Audio(source),
         haptic: optionalHaptic,
+        ...(initial.stream.journey &&
+        parseTileExperiment(initial.rulesetVersion)?.journey !== 'plain'
+          ? { createAmbientContext: () => new AudioContext() }
+          : {}),
       },
       { ...initialAudioSettings, music: false },
       runTheme,
+      bridgeSurface,
     );
     audioRef.current = audio;
     const director = createSceneDirector(
@@ -890,7 +1186,7 @@ function InfinityRun({
         if (hint && hintCaptionGate.claim()) setHintCaptionRow(hint.row);
         if (result.events.length) setSignals((previous) => collectRunSignals(previous, result));
         let earnedNewBest = false;
-        if (!trial && result.events.some((event) => event.type === 'run-ended')) {
+        if (!trial && !isCampaign && result.events.some((event) => event.type === 'run-ended')) {
           try {
             earnedNewBest =
               result.state.storeTest?.assisted && store
@@ -921,7 +1217,7 @@ function InfinityRun({
           result.state.status !== 'playing' ||
           result.state.activeTimeMs - lastCommittedActiveMs.current >= 500
         ) {
-          onCheckpoint(result.state);
+          onCheckpoint(result.state, result.events);
           lastCommittedActiveMs.current = result.state.activeTimeMs;
         }
         setState(result.state);
@@ -984,7 +1280,17 @@ function InfinityRun({
       unsubscribeCheckpoint();
       runtime.dispose();
     };
-  }, [initial, onCheckpoint, initialAudioSettings, hintCaptionGate, store, trial, runTheme]);
+  }, [
+    initial,
+    onCheckpoint,
+    initialAudioSettings,
+    hintCaptionGate,
+    store,
+    trial,
+    runTheme,
+    isCampaign,
+    bridgeSurface,
+  ]);
 
   useEffect(() => {
     audioRef.current?.setSettings({ ...settings, music: false });
@@ -1021,7 +1327,7 @@ function InfinityRun({
     void audioRef.current?.unlock();
   }
 
-  async function issue(command: SessionCommand) {
+  async function issue(command: SessionCommand, beforeCommit?: BeforeRunCommit) {
     const runtime = runtimeRef.current;
     if (
       !runtime ||
@@ -1031,10 +1337,17 @@ function InfinityRun({
       (command.type !== 'end' && directorRef.current?.isBusy())
     )
       return;
+    if (kitPauseRef.current) return;
     commandLock.current = true;
     setBusy(true);
     try {
-      const result = await runtime.bind(command)();
+      const commit =
+        beforeCommit ??
+        (onInfinitySupplyCommit
+          ? (result: Parameters<BeforeRunCommit>[0], previous: RunState) =>
+              onInfinitySupplyCommit(result.state, result.events, previous)
+          : undefined);
+      const result = await runtime.bind(command, commit)();
       setState(result.state);
       if (
         !result.accepted &&
@@ -1054,6 +1367,113 @@ function InfinityRun({
       commandLock.current = false;
       setBusy(false);
     }
+  }
+
+  async function toggleKit() {
+    const runtime = runtimeRef.current;
+    if (!runtime || !ready || paused || commandLock.current || directorRef.current?.isBusy())
+      return;
+    commandLock.current = true;
+    setBusy(true);
+    try {
+      if (kitPauseRef.current) {
+        await kitPauseRef.current.release();
+        kitPauseRef.current = null;
+        if (
+          kitSelection.stabilityDoses ||
+          kitSelection.shieldDelta ||
+          kitSelection.wear !== undefined
+        ) {
+          const command: SessionCommand = suppliesAvailable
+            ? {
+                type: 'journey-loadout',
+                stabilityDoses: kitSelection.stabilityDoses,
+                shieldDelta: kitSelection.shieldDelta,
+                ...(kitSelection.wear !== undefined ? { wear: kitSelection.wear } : {}),
+              }
+            : { type: 'journey-gear', wear: kitSelection.wear! };
+          const result = await runtime.bind(
+            command,
+            onInfinitySupplyCommit
+              ? (result, previous) => onInfinitySupplyCommit(result.state, result.events, previous)
+              : undefined,
+          )();
+          if (!result.accepted) throw new Error('Kit selection unavailable');
+        }
+        setKitOpen(false);
+        setKitSelection(EMPTY_KIT_SELECTION);
+        setKitError(null);
+      } else {
+        const lease = await runtime.hold('user');
+        if (runtimeRef.current !== runtime || runtime.getState().status !== 'playing') {
+          await lease.release();
+          return;
+        }
+        kitPauseRef.current = lease;
+        setKitBase({
+          sp: infinitySupplies?.sp ?? 0,
+          shields: infinitySupplies?.shield ?? 0,
+          loaded: runtime.getState().journeyShields ?? 0,
+          gearWear: runtime.getState().journeyGear?.queued ?? runtime.getState().journeyGear?.worn,
+        });
+        setKitSelection(EMPTY_KIT_SELECTION);
+        setKitError(null);
+        setKitOpen(true);
+      }
+      setState(runtime.getState());
+    } catch {
+      if (runtime.getState().status === 'playing') {
+        try {
+          if (!kitPauseRef.current) kitPauseRef.current = await runtime.hold('user');
+          setKitOpen(true);
+          setKitError('Couldn’t save your Kit. Your items are still here. Try closing again.');
+        } catch {
+          setKitOpen(false);
+          setError('The crossing could not resume. Try again.');
+        }
+      } else setKitOpen(false);
+    } finally {
+      commandLock.current = false;
+      setBusy(false);
+    }
+  }
+
+  function changeKitSupply(item: 'sp' | 'shield', direction: 1 | -1) {
+    if (!kitOpen || busy || commandLock.current) return;
+    setKitError(null);
+    setKitSelection((previous) => {
+      const stacking = !!parseTileExperiment(state.rulesetVersion)?.shieldStacks;
+      const maxShields = stacking
+        ? kitBase.shields
+        : state.effects.some((effect) => effect.kind === 'shield_5s')
+          ? 0
+          : Math.min(1, kitBase.shields);
+      const target =
+        item === 'sp'
+          ? Math.max(0, Math.min(Math.floor(kitBase.sp / 25), previous.stabilityDoses + direction))
+          : Math.max(0, Math.min(maxShields, kitBase.loaded + previous.shieldDelta + direction));
+      if (
+        item === 'sp'
+          ? target === previous.stabilityDoses
+          : target === kitBase.loaded + previous.shieldDelta
+      )
+        return previous;
+      return {
+        ...previous,
+        ...(item === 'sp' ? { stabilityDoses: target } : { shieldDelta: target - kitBase.loaded }),
+        revision: previous.revision + 1,
+        changed: item,
+        direction: direction > 0 ? 'load' : 'return',
+        notice:
+          item === 'sp'
+            ? direction > 0
+              ? '+25 Stability ready'
+              : '25 Stability put back'
+            : direction > 0
+              ? `Shield ready · ${target} loaded`
+              : `Shield put back · ${target} loaded`,
+      };
+    });
   }
 
   async function togglePause(requestEndAfterPause = false) {
@@ -1093,6 +1513,11 @@ function InfinityRun({
     if (!runtime) return;
     try {
       await runtime.refresh();
+      if (kitPauseRef.current) {
+        await kitPauseRef.current.release();
+        kitPauseRef.current = null;
+        setKitOpen(false);
+      }
       setError(null);
       setReady(true);
       setState(runtime.getState());
@@ -1237,12 +1662,34 @@ function InfinityRun({
     return <MysteryLab onClose={() => setLabOpen(false)} reducedMotion={settings.reducedMotion} />;
   const savedGuestGrant = trial ? undefined : earnedGuestContinuation(state);
   const adOffer = !trial && guestRewardedAd ? guestAdOffer(state) : null;
+  const canSupplyContinue =
+    suppliesAvailable &&
+    onInfinitySupplyCommit &&
+    (infinitySupplies?.continue ?? 0) > 0 &&
+    state.status === 'dead' &&
+    state.revivesGranted < getMaxRevives(state.rulesetVersion);
   return (
     <InfinitySceneView
       trial={trial}
       guestContinuePanel={
-        savedGuestGrant || adOffer ? (
+        savedGuestGrant || adOffer || canSupplyContinue ? (
           <div className="cpi-revive-offer cpi-overlay-actions">
+            {canSupplyContinue && (
+              <button
+                type="button"
+                disabled={!ready || busy}
+                onClick={() => {
+                  unlockAudio();
+                  void issue(
+                    { type: 'journey-resource', resource: 'continue' },
+                    (result, previous) =>
+                      onInfinitySupplyCommit(result.state, result.events, previous),
+                  );
+                }}
+              >
+                Use continue · {infinitySupplies!.continue} left
+              </button>
+            )}
             {savedGuestGrant ? (
               <button
                 type="button"
@@ -1300,6 +1747,112 @@ function InfinityRun({
           />
         ) : undefined
       }
+      weather={weather}
+      campaignMission={campaignMission}
+      kitOpen={kitOpen}
+      kitGearWear={kitSelection.wear}
+      kitNotice={kitError ?? kitSelection.notice}
+      kitError={!!kitError}
+      onToggleKit={() => {
+        void toggleKit();
+      }}
+      reserveHints={suppliesAvailable ? infinitySupplies?.hint : 0}
+      bridgeStyle={bridgeStyle}
+      onToggleJourneyGear={(wear) => {
+        unlockAudio();
+        if (kitOpen) {
+          setKitError(null);
+          setKitSelection((previous) => ({
+            ...previous,
+            wear: wear === kitBase.gearWear ? undefined : wear,
+            revision: previous.revision + 1,
+            changed: 'gear',
+            direction: wear === kitBase.gearWear ? 'return' : 'load',
+            notice:
+              wear === kitBase.gearWear
+                ? 'Gear change undone'
+                : wear
+                  ? 'Gear ready to wear'
+                  : 'Gear ready to pack away',
+          }));
+        } else void issue({ type: 'journey-gear', wear });
+      }}
+      campaignSupplyPanel={
+        suppliesAvailable &&
+        infinitySupplies &&
+        onInfinitySupplyCommit &&
+        state.status === 'playing' &&
+        (infinitySupplies.sp >= 25 || infinitySupplies.shield > 0) ? (
+          <div className="cpi-journey-supplies" aria-label="Infinity supplies">
+            {(['sp', 'shield'] as const).map((item) => {
+              const stacking = !!parseTileExperiment(state.rulesetVersion)?.shieldStacks;
+              const quantity =
+                item === 'sp'
+                  ? kitSelection.stabilityDoses
+                  : kitBase.loaded + kitSelection.shieldDelta;
+              const available =
+                item === 'sp'
+                  ? kitBase.sp - kitSelection.stabilityDoses * 25
+                  : kitBase.shields - quantity;
+              const canAdd =
+                item === 'sp'
+                  ? available >= 25
+                  : available > 0 &&
+                    (stacking ||
+                      (quantity === 0 &&
+                        !state.effects.some((effect) => effect.kind === 'shield_5s')));
+              if ((item === 'sp' ? kitBase.sp < 25 : kitBase.shields === 0) && quantity === 0)
+                return null;
+              return (
+                <article
+                  className="cpi-kit-slot"
+                  key={item}
+                  data-change={kitSelection.changed === item ? kitSelection.direction : undefined}
+                >
+                  <button
+                    type="button"
+                    className="cpi-kit-load"
+                    disabled={!ready || busy || !canAdd}
+                    aria-label={item === 'sp' ? 'Load 25 Stability' : 'Load one shield'}
+                    onClick={() => {
+                      unlockAudio();
+                      changeKitSupply(item, 1);
+                    }}
+                  >
+                    <span className="cpi-kit-supply-art" data-item={item} aria-hidden="true" />
+                    <strong>{item === 'sp' ? '+25 Stability' : 'Shield'}</strong>
+                    <small>
+                      {available} {item === 'sp' ? 'SP in bag' : 'in bag'}
+                    </small>
+                    <span
+                      key={kitSelection.changed === item ? kitSelection.revision : 0}
+                      className="cpi-kit-ready"
+                      data-loaded={quantity > 0}
+                    >
+                      {quantity > 0
+                        ? item === 'sp'
+                          ? `+${quantity * 25} ready`
+                          : `${quantity} loaded`
+                        : 'Tap to load'}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className="cpi-kit-remove"
+                    disabled={!ready || busy || quantity === 0}
+                    aria-label={
+                      item === 'sp' ? 'Remove one Stability dose' : 'Remove one loaded shield'
+                    }
+                    onClick={() => changeKitSupply(item, -1)}
+                  >
+                    −
+                  </button>
+                </article>
+              );
+            })}
+          </div>
+        ) : undefined
+      }
       state={state}
       feedback={feedback}
       cinematic={cinematic}
@@ -1327,7 +1880,16 @@ function InfinityRun({
       }}
       onHint={() => {
         unlockAudio();
-        void issue({ type: 'hint' });
+        if (
+          state.hints === 0 &&
+          suppliesAvailable &&
+          (infinitySupplies?.hint ?? 0) > 0 &&
+          onInfinitySupplyCommit
+        ) {
+          void issue({ type: 'journey-hint' }, (result, previous) =>
+            onInfinitySupplyCommit(result.state, result.events, previous),
+          );
+        } else void issue({ type: 'hint' });
       }}
       onMystery={() => {
         unlockAudio();
@@ -1390,6 +1952,14 @@ export function InfinityPractice({
   guestRewardedAd,
   settings,
   onSettingsChange,
+  fixedRulesetVersion,
+  weather,
+  campaignMission,
+  bridgeStyle,
+  infinitySupplies,
+  onInfinitySupplyCommit,
+  newJourney,
+  worldTheme,
 }: {
   trialTheme?: ThemeId;
   onExit: () => void;
@@ -1398,27 +1968,46 @@ export function InfinityPractice({
   onExitCancelled?: () => void;
   exitRequest?: number;
   initialState?: RunState | null;
-  onCheckpoint: (state: RunState) => void;
+  onCheckpoint: (state: RunState, events?: readonly RunEvent[]) => void;
   guestRewardedAd?: GuestRewardedAd | null;
   settings: PracticeSettings;
   onSettingsChange: (next: PracticeSettings) => void;
+  fixedRulesetVersion?: string;
+  weather?: 'clear' | 'rain';
+  campaignMission?: CampaignPresentation;
+  bridgeStyle?: BridgeStyle;
+  infinitySupplies?: InfinitySupplies;
+  onInfinitySupplyCommit?: (
+    state: RunState,
+    events: readonly RunEvent[],
+    previous: RunState,
+  ) => void;
+  newJourney?: () => RunState;
+  worldTheme?: ThemeId;
 }) {
   const themeId = useThemeId();
   const [attempt, setAttempt] = useState(0);
+  const [retryState, setRetryState] = useState<RunState | null>(null);
   const restartLock = useRef(false);
   useEffect(() => {
     restartLock.current = false;
   }, [attempt]);
   return (
-    <ThemeScope theme={trialTheme ?? themeId}>
+    <ThemeScope theme={trialTheme ?? worldTheme ?? themeId}>
       <InfinityRun
         trial={!!trialTheme}
         key={attempt}
-        initialState={attempt === 0 ? initialState : null}
+        initialState={attempt === 0 ? initialState : retryState}
         onCheckpoint={onCheckpoint}
         guestRewardedAd={guestRewardedAd}
         settings={settings}
         onSettingsChange={onSettingsChange}
+        fixedRulesetVersion={fixedRulesetVersion}
+        weather={weather}
+        campaignMission={campaignMission}
+        bridgeStyle={bridgeStyle}
+        infinitySupplies={infinitySupplies}
+        onInfinitySupplyCommit={onInfinitySupplyCommit}
         onExit={onExit}
         onStore={onStore}
         onViewRankings={onViewRankings}
@@ -1427,6 +2016,7 @@ export function InfinityPractice({
         onRestart={() => {
           if (restartLock.current) return;
           restartLock.current = true;
+          if (newJourney) setRetryState(newJourney());
           setAttempt((n) => n + 1);
         }}
       />

@@ -296,6 +296,28 @@
   color: inherit;
   filter: drop-shadow(0 0 0.65rem rgba(var(--mystery-rgb), 0.45));
 }
+@media (prefers-reduced-motion: no-preference) {
+  .cpi-mystery-journal[data-still='false'] .cpi-journal-emblem .cpi-effect-glyph {
+    animation: cpi-journal-emblem-drift 3.8s ease-in-out infinite;
+  }
+  .cpi-mystery-journal[data-still='false'] .cpi-journal-emblem::after {
+    animation: cpi-journal-emblem-ring 22s linear infinite;
+  }
+}
+@keyframes cpi-journal-emblem-drift {
+  0%,
+  100% {
+    transform: translateY(3%) rotate(-4deg);
+  }
+  50% {
+    transform: translateY(-12%) rotate(5deg);
+  }
+}
+@keyframes cpi-journal-emblem-ring {
+  to {
+    rotate: 405deg;
+  }
+}
 .cpi-mystery-journal h2 {
   font: 600 clamp(1.12rem, 5.8vw, 1.8rem)/1.16 var(--cpi-font-display);
   letter-spacing: -0.022em;

@@ -1,7 +1,17 @@
 import type { ThemeId } from './store-catalog';
-import type { RunEvent, RunState } from '@crystal-path-infinity/game-core';
-import { presentRowPressure, getDeathClock } from '@crystal-path-infinity/game-core';
+import type { RunEvent, RunState, Season, Weather } from '@crystal-path-infinity/game-core';
+import {
+  presentRowPressure,
+  getDeathClock,
+  journeyForecast,
+} from '@crystal-path-infinity/game-core';
 import type { PracticeSettings } from './practice-save';
+import { createJourneyAudio } from './journey-audio';
+import lilySplash from './assets/campaign/lily-splash.wav?url';
+import jellyBreak from './assets/campaign/jelly-break.wav?url';
+import trampolineTear from './assets/campaign/trampoline-tear.wav?url';
+import cosmicBreak from './assets/campaign/cosmic-break.wav?url';
+import woodBreak from './assets/campaign/wood-break.wav?url';
 
 export const CRYSTAL_AUDIO = Object.freeze({
   safe: import.meta.env.BASE_URL + 'assets/sounds/minigames/minigame_gb_safe_step.mp3',
@@ -12,6 +22,11 @@ export const CRYSTAL_AUDIO = Object.freeze({
   // Original offline interim music, NOT the Big Eye glass_bridge.mp3.
   music: import.meta.env.BASE_URL + 'assets/music/crystal-ambient-interim.wav',
   glass: import.meta.env.BASE_URL + 'assets/sounds/crystal-glass-fall.wav',
+  lilySplash,
+  jellyBreak,
+  woodBreak,
+  trampolineTear,
+  cosmicBreak,
   alarm: import.meta.env.BASE_URL + 'assets/sounds/crystal-emergency.wav',
 });
 
@@ -29,6 +44,7 @@ export interface AudioMedia {
 export interface AudioPorts {
   readonly createMedia: (source: string) => AudioMedia;
   readonly haptic: (kind: HapticKind) => Promise<void> | void;
+  readonly createAmbientContext?: () => AudioContext;
 }
 export interface StandaloneAudio {
   setActive(active: boolean): void;
@@ -50,7 +66,11 @@ export function createStandaloneAudio(
   ports: AudioPorts,
   settings: PracticeSettings,
   theme: ThemeId = 'obsidian',
+  surface:
+    'glass' | 'lily' | 'jelly' | 'wood' | 'ice' | 'cookie' | 'trampoline' | 'cosmic' = 'glass',
 ): StandaloneAudio {
+  const journeyAudio = ports.createAmbientContext && createJourneyAudio(ports.createAmbientContext);
+  let journeyMix: Season | Weather | null = null;
   const music = ports.createMedia(CRYSTAL_AUDIO.music);
   music.loop = true;
   music.volume = 0.28;
@@ -65,7 +85,19 @@ export function createStandaloneAudio(
     ),
     newTurn: ports.createMedia(CRYSTAL_AUDIO.newTurn),
     box: ports.createMedia(CRYSTAL_AUDIO.box),
-    glass: ports.createMedia(CRYSTAL_AUDIO.glass),
+    impact: ports.createMedia(
+      surface === 'lily'
+        ? CRYSTAL_AUDIO.lilySplash
+        : surface === 'jelly'
+          ? CRYSTAL_AUDIO.jellyBreak
+          : surface === 'wood' || surface === 'cookie'
+            ? CRYSTAL_AUDIO.woodBreak
+            : surface === 'trampoline'
+              ? CRYSTAL_AUDIO.trampolineTear
+              : surface === 'cosmic'
+                ? CRYSTAL_AUDIO.cosmicBreak
+                : CRYSTAL_AUDIO.glass,
+    ),
   };
   const alarm = ports.createMedia(CRYSTAL_AUDIO.alarm);
   alarm.loop = true;
@@ -94,6 +126,12 @@ export function createStandaloneAudio(
   let alarmPlaying = false;
   let alarmEpoch = 0;
   let alarmStarting: Promise<void> | null = null;
+
+  function syncJourney() {
+    journeyAudio?.setMix(
+      active && foreground && preferences.soundEffects && !emergency ? journeyMix : null,
+    );
+  }
 
   function stopAlarm() {
     alarmEpoch++;
@@ -222,6 +260,7 @@ export function createStandaloneAudio(
     setActive(next) {
       if (disposed || active === next) return;
       active = next;
+      syncJourney();
       if (!active) {
         stopAlarm();
         stopMusic();
@@ -237,6 +276,7 @@ export function createStandaloneAudio(
     setForeground(next) {
       if (disposed || foreground === next) return;
       foreground = next;
+      syncJourney();
       if (!foreground) {
         stopAlarm();
         stopMusic();
@@ -250,6 +290,7 @@ export function createStandaloneAudio(
       if (disposed) return;
       const prior = preferences;
       preferences = next;
+      syncJourney();
       if (!next.music) stopMusic();
       else if (!prior.music) void startMusic();
       if (!next.soundEffects) stopEffects();
@@ -259,6 +300,8 @@ export function createStandaloneAudio(
     async unlock() {
       if (disposed || !active || !foreground) return false;
       unlocked = true;
+      if (preferences.soundEffects) journeyAudio?.unlock();
+      syncJourney();
       syncAlarm();
       if (!preferences.music) return true;
       return startMusic();
@@ -270,6 +313,16 @@ export function createStandaloneAudio(
         ((state.sp > 0 && state.sp < 15) ||
           presentRowPressure(state)?.urgent === true ||
           (getDeathClock(state) !== null && state.activeTimeMs >= getDeathClock(state)!.warningAt));
+      if (journeyAudio && state.stream.journey) {
+        const forecast = journeyForecast(state.stream.journey, BigInt(state.currentRow));
+        journeyMix =
+          state.status === 'playing'
+            ? forecast?.startsIn === 0n
+              ? forecast.weather
+              : state.stream.journey.season
+            : null;
+        syncJourney();
+      }
       syncAlarm();
       const hasTerminal = events.some((event) => event.type === 'run-ended');
       if (!active && !hasTerminal) return;
@@ -289,7 +342,7 @@ export function createStandaloneAudio(
           if (lastStep === key) continue;
           lastStep = key;
           if (event.wrong) {
-            cue('glass');
+            cue('impact', surface === 'ice' ? 0.84 : surface === 'cookie' ? 1.2 : 1);
             pulse('damage');
           } else {
             cue('safe');
@@ -323,6 +376,7 @@ export function createStandaloneAudio(
       stopMusic();
       stopAlarm();
       stopEffects();
+      journeyAudio?.dispose();
     },
   };
 }

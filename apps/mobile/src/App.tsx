@@ -1,11 +1,16 @@
-import { practiceStorage, PLAYER_PREVIEW_ENABLED, QA_TOOLS_ENABLED } from './app-profile';
+import {
+  CAMPAIGN_TEST_BUILD,
+  PLAYER_PREVIEW_ENABLED,
+  practiceStorage,
+  QA_TOOLS_ENABLED,
+} from './app-profile';
 import { rememberMysteries } from './mystery-journal-model';
 import { useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { usesStoreTestRules, parseTileExperiment } from '@crystal-path-infinity/game-core';
-import { useTestStore } from './store-context';
+import { useTestStore, useThemeId } from './store-context';
 import { selectTestPractice } from './test-store';
 import type { ThemeId } from './store-catalog';
-import type { RunState } from '@crystal-path-infinity/game-core';
+import type { GearId, RunEvent, RunState } from '@crystal-path-infinity/game-core';
 import { PRACTICE_RULESET_VERSION } from './practice-rules';
 import { Capacitor } from '@capacitor/core';
 import {
@@ -21,8 +26,55 @@ import type { PracticeLoad, PracticeSettings } from './practice-save';
 import { InfinityPractice } from './infinity-scene';
 import { useHomeSoundtrack } from './soundtrack';
 import { BrandLaunchActive } from './brand-launch-state';
+import {
+  campaignFailureReason,
+  campaignGoalProgress,
+  campaignMissionSnapshot,
+  campaignProgressFromEvents,
+  campaignRunMatches,
+  infinityProgressFromEvents,
+  touchesInfinitySupplies,
+  advanceInfinityCycle,
+  claimTestOffer,
+  CAMPAIGN_RAIN_RULESET,
+  CAMPAIGN_RUN_NAMESPACE,
+  createCampaignInfinityRun,
+  createCampaignRun,
+  equipBridgeStyle,
+  equipBridgeDesign,
+  equipCampaignGear,
+  EMPTY_CAMPAIGN_PROGRESS,
+  grantCampaignClear,
+  isMissionUnlocked,
+  journeyRuleset,
+  namespacePracticeStorage,
+  readCampaignSave,
+  selectedInfinitySeason,
+  spendSeasonChange,
+  startCampaignAttempt,
+  writeCampaignSave,
+} from './campaign-test';
+import type {
+  CampaignApproach,
+  CampaignMissionId,
+  CampaignMissionSnapshot,
+  CampaignOffer,
+  CampaignProgress,
+} from './campaign-test';
+import type { CampaignFailureReason } from './campaign-test';
+import { CAMPAIGN_MISSIONS } from './campaign-content';
+import type { BridgeSlot, BridgeStyle, StyleId } from './campaign-content';
+import { ThemeScope } from './store-provider';
+import { CampaignMissionResult } from './campaign-test-ui';
 import { ConfirmNewPractice, MainMenu } from './main-menu';
-import { canResumePractice, historyFlag, viewFromHash, viewHash } from './menu-navigation';
+import {
+  canResumePractice,
+  historyFlag,
+  menuSection,
+  menuParent,
+  viewFromHash,
+  viewHash,
+} from './menu-navigation';
 import { readTutorialProgress, writeTutorialProgress } from './tutorial-progress';
 import type { TutorialProgress } from './tutorial-progress';
 import type { MenuView } from './menu-navigation';
@@ -65,6 +117,10 @@ const showBuildDetails = build.environment !== 'production' && !PLAYER_PREVIEW_E
 function loadLocalPractice(): PracticeLoad {
   if (typeof window === 'undefined') return { status: 'empty' };
   try {
+    if (CAMPAIGN_TEST_BUILD) {
+      const journey = readCampaignSave(practiceStorage());
+      if (journey.infinitySaved) return campaignLoad(journey.infinityCheckpoint);
+    }
     const loaded = readPracticeCheckpoint(practiceStorage());
     if (
       !QA_TOOLS_ENABLED &&
@@ -92,9 +148,41 @@ function loadLocalPractice(): PracticeLoad {
 const ignoreTrialCheckpoint = () => {};
 
 interface GameOwner {
+  mode: 'infinity' | 'campaign';
+  weather?: 'clear' | 'rain';
+  campaignMissionId?: CampaignMissionId;
   trialTheme?: ThemeId;
   initial: RunState | null;
   token: number;
+}
+
+function campaignRunStorage() {
+  return namespacePracticeStorage(practiceStorage(), CAMPAIGN_RUN_NAMESPACE);
+}
+
+function campaignLoad(state: RunState | null): PracticeLoad {
+  return state ? { status: 'ready', state, revision: 1 } : { status: 'empty' };
+}
+function loadCampaign() {
+  try {
+    const saved = readCampaignSave(practiceStorage());
+    if (saved.legacy && saved.progress.activeMissionSnapshot) {
+      const old = readPracticeCheckpoint(campaignRunStorage());
+      if (
+        old.status === 'ready' &&
+        campaignRunMatches(old.state, saved.progress.activeMissionSnapshot)
+      )
+        return { ...saved, checkpoint: old.state };
+    }
+    return saved;
+  } catch {
+    return {
+      progress: EMPTY_CAMPAIGN_PROGRESS,
+      checkpoint: null,
+      infinityCheckpoint: null,
+      infinitySaved: false,
+    };
+  }
 }
 
 export function App({
@@ -106,6 +194,7 @@ export function App({
 }) {
   const { t } = useLanguage();
   const launchActive = useContext(BrandLaunchActive);
+  const menuTheme = useThemeId();
   const { store, snapshot: testSnapshot } = useTestStore();
   const accountScope = useSyncExternalStore(
     (listener) => services?.session?.subscribeAccountScope(listener) ?? (() => {}),
@@ -122,6 +211,38 @@ export function App({
   const gameRef = useRef<GameOwner | null>(null);
   const gameSequence = useRef(0);
   const [saved, setSaved] = useState<PracticeLoad>({ status: 'empty' });
+  const [loadedCampaign] = useState(loadCampaign);
+  const [campaignProgress, setCampaignProgress] = useState(loadedCampaign.progress);
+  const campaignProgressRef = useRef(campaignProgress);
+  const campaignCheckpointRef = useRef<RunState | null>(loadedCampaign.checkpoint);
+  const infinityCheckpointRef = useRef<RunState | null | undefined>(
+    loadedCampaign.infinitySaved ? loadedCampaign.infinityCheckpoint : undefined,
+  );
+  const [campaignSaved, setCampaignSaved] = useState<PracticeLoad>(() =>
+    campaignLoad(loadedCampaign.checkpoint),
+  );
+  const [campaignOutcome, setCampaignOutcome] = useState<{
+    mission: CampaignMissionSnapshot;
+    cleared: boolean;
+    goalReached: boolean;
+    firstClear: boolean;
+    failureReason: CampaignFailureReason;
+    stability: number;
+    mastery: boolean;
+  } | null>(null);
+  const campaignOutcomeRef = useRef(false);
+  const campaignMission =
+    game?.mode === 'campaign' && game.campaignMissionId
+      ? campaignMissionSnapshot(campaignProgress, game.campaignMissionId)
+      : undefined;
+  const campaignMissionPresentation = campaignMission && {
+    name:
+      CAMPAIGN_MISSIONS.find((entry) => entry.id === campaignMission.id)?.name ??
+      campaignMission.name,
+    targetRow: campaignMission.targetRow,
+    minimumStability: campaignMission.minimumStability,
+    objectiveProgress: campaignGoalProgress(campaignMission, campaignProgress),
+  };
   const visibleSaved = selectTestPractice(testSnapshot, saved);
   const [best, setBest] = useState<string | null>(null);
   const [storageWarning, setStorageWarning] = useState<string | null>(null);
@@ -138,7 +259,11 @@ export function App({
   const [bootError, setBootError] = useState('');
   const [bootAttempt, setBootAttempt] = useState(0);
   const [view, setView] = useState<MenuView>(() =>
-    typeof window === 'undefined' ? 'home' : viewFromHash(window.location.hash, QA_TOOLS_ENABLED),
+    typeof window === 'undefined'
+      ? 'home'
+      : CAMPAIGN_TEST_BUILD && ['#practice-run', '#new-practice'].includes(window.location.hash)
+        ? 'campaign'
+        : viewFromHash(window.location.hash, QA_TOOLS_ENABLED),
   );
   const [savedRun, setSavedRun] = useState<{ scope: object; runId: string } | null>(null);
   const [confirmNew, setConfirmNew] = useState(false);
@@ -285,7 +410,11 @@ export function App({
     window.addEventListener('hashchange', onLocationChange);
     // A refreshed deep link cannot resurrect a gameplay runtime or confirm a delete.
     if (window.location.hash === '#practice-run' || window.location.hash === '#new-practice') {
-      window.history.replaceState({ cpiNavigation: false }, '', '#practice');
+      window.history.replaceState(
+        { cpiNavigation: false },
+        '',
+        CAMPAIGN_TEST_BUILD ? '#campaign' : '#practice',
+      );
     }
     return () => {
       window.removeEventListener('online', onConnection);
@@ -308,7 +437,9 @@ export function App({
     if (gameRef.current || confirmingRef.current || view === next) return;
     if (next === 'store') setStoreEntry('worlds');
     setSavedRun(null);
-    window.history.pushState({ cpiNavigation: true }, '', viewHash(next));
+    if (menuSection(view) === menuSection(next))
+      window.history.replaceState(window.history.state, '', viewHash(next));
+    else window.history.pushState({ cpiNavigation: true, cpiParent: view }, '', viewHash(next));
     setView(next);
     setStorageWarning(null);
   };
@@ -375,6 +506,15 @@ export function App({
       cancelNew();
       return;
     }
+    const section = menuSection(view);
+    if (
+      (section === 'journal' || section === 'store') &&
+      !menuParent(window.history.state as unknown)
+    ) {
+      window.history.replaceState({ cpiNavigation: false }, '', viewHash('home'));
+      setView('home');
+      return;
+    }
     if (historyFlag(window.history.state as unknown, 'cpiNavigation')) {
       window.history.back();
     } else {
@@ -417,12 +557,99 @@ export function App({
       setStorageWarning('Tutorial progress could not be saved on this device.');
     }
   };
+  const commitCampaignProgress = useCallback(
+    (
+      progress: CampaignProgress,
+      checkpoint: RunState | null = campaignCheckpointRef.current,
+      requireWrite = false,
+      infinityCheckpoint = infinityCheckpointRef.current,
+    ) => {
+      try {
+        writeCampaignSave(practiceStorage(), progress, checkpoint, infinityCheckpoint);
+        setStorageWarning(null);
+      } catch (error) {
+        setStorageWarning('Campaign progress could not be saved on this device.');
+        if (requireWrite) throw error;
+      }
+      campaignCheckpointRef.current = checkpoint;
+      infinityCheckpointRef.current = infinityCheckpoint;
+      if (campaignProgressRef.current !== progress) {
+        campaignProgressRef.current = progress;
+        setCampaignProgress(progress);
+      }
+    },
+    [],
+  );
+
+  const commitInfinitySupply = useCallback(
+    (state: RunState, events: readonly RunEvent[], previous: RunState) => {
+      if (!touchesInfinitySupplies(events)) return;
+      if (gameRef.current?.mode !== 'infinity' || previous.runId !== state.runId)
+        throw new Error('The Infinity crossing has changed.');
+      const progress = infinityProgressFromEvents(campaignProgressRef.current, previous, events);
+      // Inventory and the resulting crossing share one atomic local-storage write.
+      commitCampaignProgress(progress, campaignCheckpointRef.current, true, state);
+    },
+    [commitCampaignProgress],
+  );
+
   const onCheckpoint = useCallback(
-    (state: RunState) => {
+    (state: RunState, events: readonly RunEvent[] = []) => {
+      const owner = gameRef.current;
+      if (owner?.mode === 'campaign') {
+        if (campaignOutcomeRef.current) return;
+        const previous = campaignProgressRef.current;
+        const mission = previous.activeMissionSnapshot;
+        if (!mission || !campaignRunMatches(state, mission)) return;
+        if (
+          state === campaignCheckpointRef.current &&
+          events.some((event) => event.type === 'journey-resource-used')
+        )
+          return;
+        let progress = campaignProgressFromEvents(previous, mission, events, state.currentRow);
+        const landing = BigInt(state.lastClearedRow) >= BigInt(mission.targetRow);
+        if (landing || state.status === 'dead') {
+          const failureReason = landing ? campaignFailureReason(mission, progress, state.sp) : null;
+          const cleared = landing && !failureReason;
+          const firstClear = cleared && !progress.cleared.includes(mission.id);
+          const alreadyMastered = progress.mastered.includes(mission.id);
+          if (cleared) progress = grantCampaignClear(progress, mission, state);
+          commitCampaignProgress(progress, cleared ? null : state);
+          campaignOutcomeRef.current = true;
+          setCampaignOutcome({
+            mission,
+            cleared,
+            firstClear,
+            failureReason,
+            goalReached: landing,
+            stability: state.sp,
+            mastery: cleared && !alreadyMastered && progress.mastered.includes(mission.id),
+          });
+        } else if (state !== campaignCheckpointRef.current || progress !== previous) {
+          commitCampaignProgress(progress, state);
+        }
+        return;
+      }
+      if (CAMPAIGN_TEST_BUILD && state.runId.startsWith('practice-campaign-infinity-')) {
+        if (state !== infinityCheckpointRef.current)
+          commitCampaignProgress(
+            campaignProgressRef.current,
+            campaignCheckpointRef.current,
+            false,
+            state,
+          );
+        try {
+          rememberMysteries(practiceStorage(), state);
+        } catch {
+          setStorageWarning('Discovery history could not be saved on this device.');
+        }
+        return;
+      }
+      const storage = practiceStorage();
       try {
         if (usesStoreTestRules(state.rulesetVersion) && store) store.saveRun(state);
-        else writePracticeCheckpoint(practiceStorage(), state);
-        rememberMysteries(practiceStorage(), state);
+        else writePracticeCheckpoint(storage, state);
+        rememberMysteries(storage, state);
         setStorageWarning(null);
       } catch {
         setStorageWarning(
@@ -430,21 +657,48 @@ export function App({
         );
       }
     },
-    [store],
+    [store, commitCampaignProgress],
   );
 
-  const startPractice = (initial: RunState | null) => {
+  const startPractice = (
+    initial: RunState | null,
+    mode: GameOwner['mode'] = 'infinity',
+    campaignMissionId?: CampaignMissionId,
+    weather: 'clear' | 'rain' = 'clear',
+  ) => {
     if (gameRef.current) return;
-    const next = { initial, token: ++gameSequence.current };
+    campaignOutcomeRef.current = false;
+    setCampaignOutcome(null);
+    const next: GameOwner = {
+      initial,
+      mode,
+      weather,
+      campaignMissionId,
+      token: ++gameSequence.current,
+    };
     gameRef.current = next;
     setGame(next);
     setExitRequest(0);
-    window.history.pushState({ cpiNavigation: true }, '', '#practice-run');
+    if (window.location.hash !== '#practice-run')
+      window.history.pushState({ cpiNavigation: true }, '', '#practice-run');
   };
 
   const resumePractice = () => {
     if (visibleSaved.status !== 'ready' || !canResumePractice(visibleSaved)) return;
-    startPractice(visibleSaved.state);
+    startPractice(
+      visibleSaved.state,
+      'infinity',
+      undefined,
+      visibleSaved.state.rulesetVersion === CAMPAIGN_RAIN_RULESET ? 'rain' : 'clear',
+    );
+  };
+
+  const newInfinityRun = () => {
+    const progress = campaignProgressRef.current;
+    const state = createCampaignInfinityRun(progress);
+    const next = advanceInfinityCycle(progress);
+    commitCampaignProgress(next, campaignCheckpointRef.current, false, state);
+    return state;
   };
 
   const startNewPractice = () => {
@@ -462,7 +716,71 @@ export function App({
     } catch {
       setStorageWarning('Progress might not be saved because local storage is unavailable.');
     }
-    startPractice(null);
+    startPractice(CAMPAIGN_TEST_BUILD ? newInfinityRun() : null);
+  };
+
+  const newCampaignRun = (missionId: CampaignMissionId, approach?: CampaignApproach) => {
+    const progress = startCampaignAttempt(campaignProgressRef.current, missionId, approach);
+    const snapshot = progress.activeMissionSnapshot!;
+    const initial = createCampaignRun(snapshot);
+    commitCampaignProgress(progress, initial);
+    setCampaignSaved(campaignLoad(initial));
+    return { initial, snapshot };
+  };
+
+  const startCampaignMission = (
+    missionId: CampaignMissionId,
+    approach?: CampaignApproach,
+    retry = false,
+  ) => {
+    if (!CAMPAIGN_TEST_BUILD || gameRef.current) return;
+    const current = campaignProgressRef.current;
+    if (!isMissionUnlocked(current, missionId)) return;
+    const mission = campaignMissionSnapshot(current, missionId);
+    const previous = campaignCheckpointRef.current;
+    if (
+      !retry &&
+      current.activeMissionId === missionId &&
+      previous &&
+      campaignRunMatches(previous, mission) &&
+      (!approach || approach === mission.approach) &&
+      BigInt(previous.lastClearedRow) < BigInt(mission.targetRow) &&
+      previous.status === 'playing'
+    ) {
+      startPractice(previous, 'campaign', missionId, mission.weather);
+      return;
+    }
+    const { initial, snapshot } = newCampaignRun(missionId, approach);
+    startPractice(initial, 'campaign', missionId, snapshot.weather);
+  };
+
+  const changeBridgeStyle = (slot: BridgeSlot, id: StyleId | null) =>
+    commitCampaignProgress(equipBridgeStyle(campaignProgressRef.current, slot, id));
+  const changeBridgeDesign = (style: BridgeStyle) =>
+    commitCampaignProgress(equipBridgeDesign(campaignProgressRef.current, style));
+  const changeCampaignWorld = (world: ThemeId) =>
+    commitCampaignProgress({ ...campaignProgressRef.current, world });
+  const changeCampaignGear = (gear: GearId | null) =>
+    commitCampaignProgress(equipCampaignGear(campaignProgressRef.current, gear));
+  const changeNextSeason = () => {
+    const current = campaignProgressRef.current;
+    const next = spendSeasonChange(current);
+    if (next !== current) commitCampaignProgress(next);
+  };
+  const changeClockPreference = () => {
+    const current = campaignProgressRef.current;
+    if (current.offers.includes('clock-free'))
+      commitCampaignProgress({ ...current, clockFree: !current.clockFree });
+  };
+  const claimCampaignOffer = (offer: CampaignOffer) => {
+    const current = campaignProgressRef.current;
+    const next = claimTestOffer(current, offer);
+    if (next === current) return;
+    try {
+      commitCampaignProgress(next, campaignCheckpointRef.current, true);
+    } catch {
+      // Keep the displayed supplies unchanged when a claim cannot be saved.
+    }
   };
 
   const requestNewPractice = () => {
@@ -480,6 +798,7 @@ export function App({
   };
 
   const closePractice = (destination: MenuView = 'home') => {
+    const leavingCampaign = gameRef.current?.mode === 'campaign';
     gameRef.current = null;
     setGame(null);
     backExitInFlight.current = false;
@@ -488,6 +807,7 @@ export function App({
       ? { status: 'ready', state: testRun, revision: store?.snapshot().revision ?? 1 }
       : loadLocalPractice();
     setSaved(checkpoint);
+    if (leavingCampaign) setCampaignSaved(campaignLoad(campaignCheckpointRef.current));
     try {
       setBest(
         readPracticePersonalBest(
@@ -555,12 +875,43 @@ export function App({
     );
 
   if (game)
+    if (game.mode === 'campaign' && campaignOutcome)
+      return (
+        <CampaignMissionResult
+          mission={campaignOutcome.mission}
+          cleared={campaignOutcome.cleared}
+          goalReached={campaignOutcome.goalReached}
+          firstClear={campaignOutcome.firstClear}
+          failureReason={campaignOutcome.failureReason}
+          stability={campaignOutcome.stability}
+          mastery={campaignOutcome.mastery}
+          warning={storageWarning}
+          world={campaignProgress.world}
+          reducedMotion={settings.reducedMotion}
+          onEquip={
+            campaignOutcome.firstClear && campaignOutcome.mission.grant.style
+              ? changeBridgeStyle
+              : undefined
+          }
+          onContinue={() => closePractice('campaign')}
+          onRetry={() => {
+            const missionId = campaignOutcome.mission.id;
+            gameRef.current = null;
+            setGame(null);
+            setCampaignOutcome(null);
+            campaignOutcomeRef.current = false;
+            startCampaignMission(missionId, campaignOutcome.mission.approach, true);
+          }}
+        />
+      );
+
+  if (game)
     return (
       <>
         <InfinityPractice
           key={game.token}
           initialState={game.initial}
-          onExit={() => closePractice()}
+          onExit={() => closePractice(game.mode === 'campaign' ? 'campaign' : 'home')}
           onStore={() => {
             setStoreEntry('essentials');
             closePractice('store');
@@ -571,6 +922,34 @@ export function App({
           onCheckpoint={game.trialTheme ? ignoreTrialCheckpoint : onCheckpoint}
           trialTheme={game.trialTheme}
           guestRewardedAd={guestRewardedAd}
+          newJourney={
+            game.mode === 'infinity' && CAMPAIGN_TEST_BUILD && !game.trialTheme
+              ? newInfinityRun
+              : game.mode === 'campaign' && campaignMission
+                ? () => newCampaignRun(campaignMission.id, campaignMission.approach).initial
+                : undefined
+          }
+          weather={
+            game.mode === 'campaign' && game.campaignMissionId
+              ? campaignMissionSnapshot(campaignProgress, game.campaignMissionId).weather
+              : (game.weather ?? 'clear')
+          }
+          campaignMission={campaignMissionPresentation}
+          bridgeStyle={CAMPAIGN_TEST_BUILD ? campaignProgress.style : undefined}
+          worldTheme={CAMPAIGN_TEST_BUILD ? campaignProgress.world : undefined}
+          infinitySupplies={
+            game.mode === 'infinity' && CAMPAIGN_TEST_BUILD && !game.trialTheme
+              ? {
+                  sp: campaignProgress.reserveSp,
+                  hint: campaignProgress.reserveHints,
+                  shield: campaignProgress.shields,
+                  continue: campaignProgress.continues,
+                }
+              : undefined
+          }
+          onInfinitySupplyCommit={
+            game.mode === 'infinity' && CAMPAIGN_TEST_BUILD ? commitInfinitySupply : undefined
+          }
           settings={settings}
           onSettingsChange={changeSettings}
         />
@@ -607,66 +986,91 @@ export function App({
   return (
     <>
       <div inert={confirmNew}>
-        <MainMenu
-          accountEntry={services?.accountEntry}
-          onSignOut={services?.signOut}
-          onAdPrivacyOptions={services?.adPrivacyOptions ?? guestRewardedAd?.showPrivacyOptions}
-          onTryTheme={(theme) => {
-            if (gameRef.current) return;
-            const next: GameOwner = {
-              initial: null,
-              token: ++gameSequence.current,
-              trialTheme: theme,
-            };
-            gameRef.current = next;
-            setGame(next);
-            setExitRequest(0);
-            window.history.pushState({ cpiNavigation: true }, '', '#practice-run');
-          }}
-          view={view}
-          storeEntry={storeEntry}
-          saved={visibleSaved}
-          best={best}
-          online={online}
-          settings={settings}
-          musicAwaitingGesture={musicAwaitingGesture}
-          onActivateMusic={activateMusic}
-          onOpen={navigate}
-          onBack={back}
-          onResume={resumePractice}
-          onNew={requestNewPractice}
-          onSettingsChange={changeSettings}
-          onRetryConnection={retryConnectivity}
-          tutorialProgress={tutorialProgress}
-          onTutorialProgress={onTutorialProgress}
-          buildLabel={buildLabel}
-          warning={storageWarning}
-          profileClient={profileClient}
-          accountName={profile?.profile?.username ?? profile?.providerDisplayName}
-          setupProfile={setupProfile}
-          onAccountSignedIn={onAccountSignedIn}
-          onProfileSaved={onProfileSaved}
-          onSkipProfile={finishProfileSetup}
-          leaderboardClient={services?.leaderboardClient}
-          leaderboardCountries={services?.countries}
-          pendingPersonalResult={services?.pendingPersonalResult || activeRun?.rewardPending}
-          rankedClient={rankedClient}
-          savedRuns={
-            rankedClient &&
-            services?.savedPendingClient && (
-              <SavedRuns
-                client={services.savedPendingClient}
-                online={online}
-                canRecover={!activeRun || activeRun.status === 'finished'}
-                onRecover={openSavedRun}
-              />
-            )
-          }
-          accountControlsClient={accountScope ? services?.accountControlsClient : null}
-          accountScope={accountScope}
-          accountConnected={accountScope !== null}
-          nameReportClient={accountScope ? services?.nameReportClient : null}
-        />
+        <ThemeScope theme={CAMPAIGN_TEST_BUILD ? campaignProgress.world : menuTheme}>
+          <MainMenu
+            accountEntry={services?.accountEntry}
+            onSignOut={services?.signOut}
+            onAdPrivacyOptions={services?.adPrivacyOptions ?? guestRewardedAd?.showPrivacyOptions}
+            onTryTheme={(theme) => {
+              if (gameRef.current) return;
+              const next: GameOwner = {
+                initial: null,
+                token: ++gameSequence.current,
+                mode: 'infinity',
+                trialTheme: theme,
+              };
+              gameRef.current = next;
+              setGame(next);
+              setExitRequest(0);
+              window.history.pushState({ cpiNavigation: true }, '', '#practice-run');
+            }}
+            view={view}
+            storeEntry={storeEntry}
+            saved={visibleSaved}
+            best={
+              CAMPAIGN_TEST_BUILD
+                ? readPracticePersonalBest(
+                    practiceStorage(),
+                    visibleSaved.status === 'ready' && canResumePractice(visibleSaved)
+                      ? visibleSaved.state.rulesetVersion
+                      : journeyRuleset(
+                          selectedInfinitySeason(campaignProgress),
+                          !!campaignProgress.gear,
+                          campaignProgress.clockFree,
+                        ),
+                  )
+                : best
+            }
+            online={online}
+            settings={settings}
+            musicAwaitingGesture={musicAwaitingGesture}
+            onActivateMusic={activateMusic}
+            onOpen={navigate}
+            onBack={back}
+            onResume={resumePractice}
+            onNew={requestNewPractice}
+            campaignProgress={campaignProgress}
+            campaignSaved={campaignSaved}
+            onStartCampaignMission={startCampaignMission}
+            onEquipBridgeDesign={changeBridgeDesign}
+            onChangeCampaignWorld={changeCampaignWorld}
+            onUseSeasonChange={changeNextSeason}
+            onToggleClock={changeClockPreference}
+            onClaimCampaignOffer={claimCampaignOffer}
+            onEquipCampaignGear={changeCampaignGear}
+            onSettingsChange={changeSettings}
+            onRetryConnection={retryConnectivity}
+            tutorialProgress={tutorialProgress}
+            onTutorialProgress={onTutorialProgress}
+            buildLabel={buildLabel}
+            warning={storageWarning}
+            profileClient={profileClient}
+            accountName={profile?.profile?.username ?? profile?.providerDisplayName}
+            setupProfile={setupProfile}
+            onAccountSignedIn={onAccountSignedIn}
+            onProfileSaved={onProfileSaved}
+            onSkipProfile={finishProfileSetup}
+            leaderboardClient={services?.leaderboardClient}
+            leaderboardCountries={services?.countries}
+            pendingPersonalResult={services?.pendingPersonalResult || activeRun?.rewardPending}
+            rankedClient={rankedClient}
+            savedRuns={
+              rankedClient &&
+              services?.savedPendingClient && (
+                <SavedRuns
+                  client={services.savedPendingClient}
+                  online={online}
+                  canRecover={!activeRun || activeRun.status === 'finished'}
+                  onRecover={openSavedRun}
+                />
+              )
+            }
+            accountControlsClient={accountScope ? services?.accountControlsClient : null}
+            accountScope={accountScope}
+            accountConnected={accountScope !== null}
+            nameReportClient={accountScope ? services?.nameReportClient : null}
+          />
+        </ThemeScope>
       </div>
       {confirmNew && (
         <ConfirmNewPractice

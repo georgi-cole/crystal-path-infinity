@@ -29,6 +29,20 @@ import type { PracticeLoad, PracticeSettings } from './practice-save';
 import { canResumePractice, rankedServiceState } from './menu-navigation';
 import type { MenuView } from './menu-navigation';
 import { QA_TOOLS_ENABLED } from './app-profile';
+import { CAMPAIGN_TEST_BUILD } from './app-profile';
+import type {
+  CampaignApproach,
+  CampaignMissionId,
+  CampaignOffer,
+  CampaignProgress,
+} from './campaign-test';
+import type { BridgeStyle } from './campaign-content';
+import type { GearId } from '@crystal-path-infinity/game-core';
+import { EMPTY_CAMPAIGN_PROGRESS, nextCampaignMission } from './campaign-test';
+import { CampaignMissionHub } from './campaign-test-ui';
+import { ExpeditionStore } from './expedition-store';
+import { InfinityWeather } from './expedition-weather';
+import { BackButton } from './back-button';
 import './main-menu.css';
 import './intro-hub-premium.css';
 import './game-settings.css';
@@ -101,6 +115,7 @@ export function MenuAction({
   description,
   icon,
   variant = 'secondary',
+  playMode,
   current = false,
   onClick,
 }: {
@@ -108,6 +123,7 @@ export function MenuAction({
   description?: string;
   icon?: GlyphName;
   variant?: 'primary' | 'secondary' | 'quiet';
+  playMode?: 'campaign';
   current?: boolean;
   onClick: () => void;
 }) {
@@ -116,6 +132,7 @@ export function MenuAction({
       className={'cpi-menu-action cpi-menu-action--' + variant}
       type="button"
       aria-current={current ? 'page' : undefined}
+      data-play-mode={playMode}
       onClick={onClick}
     >
       {icon && (
@@ -235,6 +252,16 @@ export interface MainMenuProps {
   onBack: () => void;
   onResume: () => void;
   onNew: () => void;
+  campaignProgress?: CampaignProgress;
+  campaignSaved?: PracticeLoad;
+  onStartCampaignMission?: (id: CampaignMissionId, approach?: CampaignApproach) => void;
+  onEquipBridgeDesign?: (style: BridgeStyle) => void;
+  onChangeCampaignWorld?: (world: ThemeId) => void;
+  onUseSeasonChange?: () => void;
+  onToggleClock?: () => void;
+  onClaimCampaignOffer?: (offer: CampaignOffer) => void;
+  onEquipCampaignGear?: (gear: GearId | null) => void;
+  onStartTestInfinity?: () => void;
   onSettingsChange: (settings: PracticeSettings) => void;
   onRetryConnection: () => void;
   tutorialProgress: TutorialProgress;
@@ -276,19 +303,7 @@ function MenuHeader({
   const { t } = useLanguage();
   return (
     <header className="cpi-menu-header">
-      {view !== 'home' ? (
-        <button
-          className="cpi-menu-back"
-          type="button"
-          onClick={onBack}
-          aria-label={t('general.back')}
-        >
-          <Glyph name="arrow" />
-          <span>{t('general.back')}</span>
-        </button>
-      ) : (
-        utilities
-      )}
+      {view !== 'home' ? <BackButton onBack={onBack} /> : utilities}
       <div className="cpi-menu-status" aria-label={t('menu.status')}>
         {QA_TOOLS_ENABLED && <StatusPill>QA</StatusPill>}
         <StatusPill>
@@ -316,6 +331,8 @@ function MenuHome({
   rankedClient,
   settings,
   canSignIn,
+  campaignProgress = EMPTY_CAMPAIGN_PROGRESS,
+  onStartTestInfinity = onNew,
 }: Pick<
   MainMenuProps,
   | 'saved'
@@ -326,10 +343,13 @@ function MenuHome({
   | 'tutorialProgress'
   | 'rankedClient'
   | 'settings'
+  | 'campaignProgress'
+  | 'onStartTestInfinity'
 > & { canSignIn: boolean }) {
   const canResume = canResumePractice(saved);
   const { t, number } = useLanguage();
   const theme = useThemeId();
+  const nextMission = nextCampaignMission(campaignProgress);
   return (
     <div className="cpi-home-composition">
       <div className="cpi-home-scenery" aria-hidden="true">
@@ -357,15 +377,55 @@ function MenuHome({
 
       <nav className="cpi-menu-actions" aria-label={t('menu.main')}>
         <MenuAction
-          label={t(canResume && !rankedClient ? 'general.resume' : 'general.play')}
+          label={
+            CAMPAIGN_TEST_BUILD
+              ? canResume
+                ? 'Resume Infinity'
+                : 'Infinity'
+              : t(canResume && !rankedClient ? 'general.resume' : 'general.play')
+          }
           icon="play"
           variant="primary"
-          onClick={rankedClient ? () => onOpen('play') : canResume ? onResume : onNew}
+          description={
+            CAMPAIGN_TEST_BUILD
+              ? canResume
+                ? 'Continue your endless crossing'
+                : 'Go as far as you can'
+              : undefined
+          }
+          onClick={
+            CAMPAIGN_TEST_BUILD
+              ? canResume
+                ? onResume
+                : onStartTestInfinity
+              : rankedClient
+                ? () => onOpen('play')
+                : canResume
+                  ? onResume
+                  : onNew
+          }
         />
         <MenuAction
-          label={t('general.practice')}
+          label={CAMPAIGN_TEST_BUILD ? 'Campaign' : t('general.practice')}
+          description={
+            CAMPAIGN_TEST_BUILD
+              ? nextMission
+                ? `Next · ${nextMission.name}`
+                : 'The Beacon Route is lit'
+              : undefined
+          }
           icon="practice"
-          onClick={QA_TOOLS_ENABLED ? () => onOpen('practice') : canResume ? onResume : onNew}
+          variant={CAMPAIGN_TEST_BUILD ? 'primary' : 'secondary'}
+          playMode={CAMPAIGN_TEST_BUILD ? 'campaign' : undefined}
+          onClick={
+            CAMPAIGN_TEST_BUILD
+              ? () => onOpen('campaign')
+              : QA_TOOLS_ENABLED
+                ? () => onOpen('practice')
+                : canResume
+                  ? onResume
+                  : onNew
+          }
         />
         <MenuAction
           label={tutorialProgress === 'completed' ? t('menu.replay') : t('menu.learn')}
@@ -373,14 +433,22 @@ function MenuHome({
           variant="quiet"
           onClick={() => onOpen('tutorial')}
         />
+        <MenuAction
+          label={t('guide.journalTab')}
+          icon="guide"
+          variant="quiet"
+          onClick={() => onOpen('journal')}
+        />
         {canResume && saved.status === 'ready' && (
           <div className="cpi-menu-resume">
             <span className="cpi-menu-resume-copy">
               {t('menu.savedPractice', { row: number(saved.state.currentRow) })}
             </span>
-            <button type="button" onClick={onResume}>
-              {t('general.resume')}
-            </button>
+            {!CAMPAIGN_TEST_BUILD && (
+              <button type="button" onClick={onResume}>
+                {t('general.resume')}
+              </button>
+            )}
             <button className="cpi-menu-resume-new" type="button" onClick={onNew}>
               {t('general.new')}
             </button>
@@ -478,6 +546,16 @@ export function MainMenu({
   onBack,
   onResume,
   onNew,
+  campaignProgress = EMPTY_CAMPAIGN_PROGRESS,
+  campaignSaved = { status: 'empty' },
+  onStartCampaignMission = () => {},
+  onEquipBridgeDesign = () => {},
+  onChangeCampaignWorld = () => {},
+  onUseSeasonChange = () => {},
+  onToggleClock = () => {},
+  onClaimCampaignOffer = () => {},
+  onEquipCampaignGear = () => {},
+  onStartTestInfinity = onNew,
   onSettingsChange,
   onRetryConnection,
   tutorialProgress,
@@ -545,8 +623,36 @@ export function MainMenu({
               rankedClient={rankedClient}
               settings={settings}
               canSignIn={Boolean(accountEntry) && !accountConnected}
+              campaignProgress={campaignProgress}
+              onStartTestInfinity={onStartTestInfinity}
             />
           </>
+        ) : view === 'campaign' && CAMPAIGN_TEST_BUILD ? (
+          <CampaignMissionHub
+            progress={campaignProgress}
+            saved={campaignSaved}
+            onStartMission={onStartCampaignMission}
+          />
+        ) : (view === 'store' || view === 'bridge-style' || view === 'supplies') &&
+          CAMPAIGN_TEST_BUILD ? (
+          <ExpeditionStore
+            key={view}
+            progress={campaignProgress}
+            initial={
+              view === 'bridge-style'
+                ? 'bridges'
+                : view === 'supplies' || storeEntry === 'essentials'
+                  ? 'supplies'
+                  : 'worlds'
+            }
+            reducedMotion={settings.reducedMotion}
+            onWorld={onChangeCampaignWorld}
+            onBridge={onEquipBridgeDesign}
+            onGear={onEquipCampaignGear}
+            onClaim={onClaimCampaignOffer}
+            onUseSeasonChange={onUseSeasonChange}
+            onToggleClock={onToggleClock}
+          />
         ) : view === 'practice' ? (
           <MenuPanel title={t('general.practice')} eyebrow={t('menu.practiceEyebrow')}>
             <p>
@@ -583,36 +689,41 @@ export function MainMenu({
             {QA_TOOLS_ENABLED && import.meta.env.MODE !== 'production' && <BalanceTuner />}
             <p className="cpi-menu-fine-print">{t('menu.practiceLocal')}</p>
           </MenuPanel>
-        ) : view === 'tutorial' || view === 'journal' ? (
+        ) : view === 'journal' || (view === 'infinity-weather' && CAMPAIGN_TEST_BUILD) ? (
           <div className="cpi-guide-library">
-            <nav className="cpi-guide-tabs" aria-label={t('guide.reference')}>
-              <MenuAction
-                label={t('guide.learnTab')}
-                variant={view === 'tutorial' ? 'primary' : 'quiet'}
-                current={view === 'tutorial'}
-                onClick={() => onOpen('tutorial')}
-              />
-              <MenuAction
-                label={t('guide.journalTab')}
-                variant={view === 'journal' ? 'primary' : 'quiet'}
-                current={view === 'journal'}
-                onClick={() => onOpen('journal')}
-              />
-            </nav>
+            {CAMPAIGN_TEST_BUILD && (
+              <nav className="cpi-guide-tabs" aria-label="Discoveries sections">
+                <MenuAction
+                  label={t('guide.journalTab')}
+                  variant={view === 'journal' ? 'primary' : 'quiet'}
+                  current={view === 'journal'}
+                  onClick={() => onOpen('journal')}
+                />
+                <MenuAction
+                  label="Weather & Seasons"
+                  variant={view === 'infinity-weather' ? 'primary' : 'quiet'}
+                  current={view === 'infinity-weather'}
+                  onClick={() => onOpen('infinity-weather')}
+                />
+              </nav>
+            )}
             {view === 'journal' ? (
               <MysteryJournal reducedMotion={settings.reducedMotion} />
             ) : (
-              <BridgeTutorial
-                onComplete={() => onTutorialProgress('completed')}
-                onSkip={() => {
-                  onTutorialProgress('skipped');
-                  onOpen('home');
-                }}
-                onStartPractice={onNew}
-                reducedMotion={settings.reducedMotion}
-              />
+              <InfinityWeather progress={campaignProgress} />
             )}
           </div>
+        ) : view === 'tutorial' ? (
+          <BridgeTutorial
+            onComplete={() => onTutorialProgress('completed')}
+            onSkip={() => {
+              onTutorialProgress('skipped');
+              onOpen('home');
+            }}
+            onStartPractice={CAMPAIGN_TEST_BUILD ? () => onOpen('home') : onNew}
+            finishLabel={CAMPAIGN_TEST_BUILD ? t('game.returnMenu') : undefined}
+            reducedMotion={settings.reducedMotion}
+          />
         ) : view === 'store' ? (
           <StoreVault
             onTryTheme={onTryTheme}
@@ -671,7 +782,20 @@ export function MainMenu({
             />
           </MenuPanel>
         ) : view === 'profile' ? (
-          accountConnected && !setupProfile ? (
+          CAMPAIGN_TEST_BUILD ? (
+            <MenuPanel title={t('general.profile')}>
+              <p>
+                <strong>Offline playtest</strong>
+              </p>
+              <p>Your crossings, records and supplies are saved on this device.</p>
+              <MenuAction
+                label={t('game.returnMenu')}
+                icon="arrow"
+                variant="quiet"
+                onClick={() => onOpen('home')}
+              />
+            </MenuPanel>
+          ) : accountConnected && !setupProfile ? (
             <SignedInProfile
               name={accountName}
               profileClient={profileClient}

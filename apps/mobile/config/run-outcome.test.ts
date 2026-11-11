@@ -263,7 +263,7 @@ describe('CPI-015 HUD and result state contract', () => {
     expect(html).toContain('348');
     expect(html).toContain(en['game.nextRun']);
     expect(html).toContain('Rankings (not live)');
-    expect(html).toContain('Return to menu');
+    expect(html).toContain('Return home');
     expect(html).not.toContain('Victory');
   });
 

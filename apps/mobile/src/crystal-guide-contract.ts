@@ -61,6 +61,9 @@ export const GUIDE_EVENT_COVERAGE = {
   'revive-granted': 'account',
   'revive-applied': 'account',
   'test-resource-used': 'account',
+  'journey-resource-used': 'account',
+  'journey-gear-queued': 'account',
+  'journey-loadout-applied': 'account',
 } as const satisfies Record<RunEvent['type'], Intent>;
 export const GUIDE_MYSTERY_COVERAGE = {
   regen_3rows: 'discovery',

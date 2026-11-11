@@ -1,4 +1,5 @@
-import type { TileSide } from '@crystal-path-infinity/game-core';
+import type { GearId, TileSide } from '@crystal-path-infinity/game-core';
+import type { WorldId } from './store-catalog';
 import { bridgePane } from './bridge-geometry';
 import type { PresentedRow } from './infinity-presentation';
 import type { SceneCinematic } from './scene-cinematics';
@@ -21,6 +22,26 @@ export function companionLanding(side: TileSide): CompanionPoint {
     }),
     { x: 0, y: 0 },
   );
+}
+
+/** Showroom feet share the exact current-tile camera, independent of material depth. */
+export function companionPreviewFooting(side: TileSide): CompanionPoint {
+  return companionLanding(side);
+}
+
+const PREVIEW_FEET = {
+  chaos: [1.5, 2],
+  jelly: [0.5, 5],
+  wilds: [3.5, 5.5],
+  league: [-0.5, 6],
+  puppy: [-5, 5.8],
+  kitten: [2.5, 5.8],
+} as const satisfies Record<WorldId, readonly [number, number]>;
+
+/** Measured calm-pose foot padding; footwear registers its sole instead. */
+export function companionPreviewRegistration(world: WorldId, gear?: GearId): CompanionPoint {
+  const [x, y] = PREVIEW_FEET[world];
+  return { x: -x, y: gear === 'storm-boots' ? 0 : gear === 'frost-runners' ? 2 : y };
 }
 
 export function companionFooting(side: TileSide): CompanionPoint {

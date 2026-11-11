@@ -1,4 +1,5 @@
 import { STARTING_SP } from '@crystal-path-infinity/game-core';
+import type { ReactNode } from 'react';
 import { useLanguage } from './language-context';
 import { HintCounter } from './resource-feedback';
 import { SpCounter } from './scene-instruments';
@@ -6,6 +7,7 @@ import type { HintCue } from './mystery-feedback';
 import type { SurvivalReward } from './run-signals';
 
 export function RunHud({
+  campaign = false,
   row,
   clearedRows,
   sp,
@@ -19,7 +21,9 @@ export function RunHud({
   paused,
   onHint,
   onPause,
+  kitControl,
 }: {
+  campaign?: boolean;
   row: string;
   clearedRows: string;
   sp: number;
@@ -33,6 +37,7 @@ export function RunHud({
   paused: boolean;
   onHint: () => void;
   onPause: () => void;
+  kitControl?: ReactNode;
 }) {
   const { t, number } = useLanguage();
   const criticalSp = maxSp === null ? 10 : 60;
@@ -42,7 +47,7 @@ export function RunHud({
   return (
     <header className="cpi-hud-header">
       <div className="cpi-hud-position">
-        <span className="cpi-hud-wordmark">Infinity</span>
+        <span className="cpi-hud-wordmark">{campaign ? 'Campaign' : 'Infinity'}</span>
         <strong className="cps-row-display">
           {t('general.row', {
             row: number(row),
@@ -95,6 +100,7 @@ export function RunHud({
         >
           <HintCounter count={hints} cue={hintCue} />
         </button>
+        {kitControl}
         <button
           type="button"
           className="cpi-pause-control cpi-hud-control"

@@ -25,5 +25,5 @@ export const rewardMessages = {
   'rewards.error': 'Couldn’t check the reward.',
   'rewards.offline': 'Reconnect to check your reward.',
   'rewards.retry': 'Check reward',
-  'rewards.leave': 'Return to menu',
+  'rewards.leave': 'Return home',
 } as const;

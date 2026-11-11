@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createRun } from '@crystal-path-infinity/game-core';
+import { createRun, createPracticeCursor, PRACTICE_RNG } from '@crystal-path-infinity/game-core';
+import { journeyRuleset } from '../src/campaign-test';
 import type { RandomSource, RunState, TimedSessionResult } from '@crystal-path-infinity/game-core';
 import { createGameplayLifecycle } from '../src/gameplay-lifecycle';
 import type { GameplayLifecycle } from '../src/gameplay-lifecycle';
@@ -114,7 +115,7 @@ function setupNative(firstRead?: Promise<NativeLifecycleSnapshot>) {
   };
 }
 
-function attachRuntime(lifecycle: GameplayLifecycle, state = fresh()) {
+function attachRuntime(lifecycle: GameplayLifecycle, state = fresh(), source = rng) {
   const wakeups = scheduler();
   const transitions: TimedSessionResult[] = [];
   const onTransition = vi.fn((result: TimedSessionResult) => {
@@ -124,7 +125,7 @@ function attachRuntime(lifecycle: GameplayLifecycle, state = fresh()) {
   const playback = { setActive: vi.fn(), dispose: vi.fn() };
   const runtime = createPracticeRuntime({
     state,
-    rng,
+    rng: source,
     lifecycle,
     schedule: wakeups.schedule,
     onTransition,
@@ -151,6 +152,40 @@ function setup(state = fresh(), firstRead?: Promise<NativeLifecycleSnapshot>) {
 }
 
 describe('practice runtime and acknowledged native time', () => {
+  it('preserves a legacy temporary shield and freezes its kit browsing time', async () => {
+    const native = setupNative();
+    const initial = createRun(
+      {
+        runId: 'practice-campaign-infinity-legacy-kit',
+        rulesetVersion: journeyRuleset('plain') + '-supplies',
+        journey: { version: 1, season: 'spring', reviveSp: 150 },
+        routeRng: createPracticeCursor(4),
+        mysteryRng: createPracticeCursor(9),
+        observedAt: 1_000_000,
+      },
+      PRACTICE_RNG,
+    );
+    const f = attachRuntime(native.lifecycle, initial, PRACTICE_RNG);
+    await f.runtime.ready;
+    const kit = await f.runtime.hold('user');
+    const heldAt = f.runtime.getState().activeTimeMs;
+    native.host.foreground += 60_000;
+    native.host.native += 60_000;
+    await f.runtime.refresh();
+    expect(f.runtime.getState().activeTimeMs).toBe(heldAt);
+    expect(f.runtime.getState().sp).toBe(initial.sp);
+    expect((await f.runtime.bind({ type: 'journey-resource', resource: 'shield' })()).reason).toBe(
+      'clock-paused',
+    );
+    await kit.release();
+    const used = await f.runtime.bind({ type: 'journey-resource', resource: 'shield' })();
+    expect(used.accepted).toBe(true);
+    expect(used.state.effects.find((effect) => effect.kind === 'shield_5s')).toMatchObject({
+      startedAt: heldAt,
+      expiresAt: heldAt + 5000,
+    });
+    f.dispose();
+  });
   it('refreshes an old ready snapshot before releasing recovery so menu time is never charged to a new run', async () => {
     const f = setupNative();
     await f.lifecycle.ready;

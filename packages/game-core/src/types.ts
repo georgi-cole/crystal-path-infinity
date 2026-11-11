@@ -1,3 +1,6 @@
+import type { JourneyCue, JourneyRoute } from './journey.ts';
+import type { GearId, JourneyGear } from './journey-gear.ts';
+
 /** Canonical non-negative decimal integer; never convert row indices to Number. */
 export type Decimal = string;
 export type TileSide = 'left' | 'right';
@@ -121,6 +124,8 @@ export interface BridgeRow {
    * Use hintSafeSide/isBrokenTile for outcome decisions. */
   readonly safeSide: TileSide;
   readonly hasMystery: boolean;
+  readonly cue?: JourneyCue;
+  readonly encounter?: 'heal_10' | 'marketing' | 'shield_5s';
   /** PRIVATE v4 draws. Neither assignment nor unchosen outcomes belong in rendered/network rows. */
   readonly risk?: {
     readonly lowRiskSide: TileSide;
@@ -133,6 +138,7 @@ export interface RowStreamState {
   readonly nextIndex: Decimal;
   readonly nextMysteryIndex: Decimal;
   readonly rng: RandomCursor;
+  readonly journey?: JourneyRoute;
 }
 
 export interface BufferPolicy {
@@ -147,6 +153,8 @@ export interface CurrentRowState {
   readonly lastChoice: { readonly side: TileSide; readonly wrong: boolean } | null;
   /** A hint inspected this row and found no surviving tile. No hint charge was taken. */
   readonly noSafeTile?: true;
+  /** Versioned local hints protect this landing without rerolling the pre-drawn row. */
+  readonly hintProtectedSide?: TileSide;
   readonly mysteryTier?: MysteryTier;
 }
 
@@ -221,6 +229,9 @@ export interface RunState {
   readonly schemaVersion: 1;
   readonly rulesetVersion: string;
   readonly runId: string;
+  readonly journeyGear?: JourneyGear;
+  /** Loaded, unused shields. Inventory is charged only on an unprotected tile hit. */
+  readonly journeyShields?: number;
   readonly status: 'playing' | 'dead' | 'finished';
   readonly sp: number;
   readonly hints: number;
@@ -267,6 +278,8 @@ export interface CreateRunOptions {
   readonly activeTimeMs?: number;
   readonly rulesetVersion?: string;
   readonly buffer?: BufferPolicy;
+  readonly journey?: JourneyRoute;
+  readonly journeyGear?: GearId;
 }
 
 export interface TransitionContext {
@@ -284,6 +297,20 @@ export type RunCommand =
       readonly side: TileSide;
     }
   | { readonly type: 'hint'; readonly row: Decimal; readonly life: number }
+  | { readonly type: 'journey-hint'; readonly row: Decimal; readonly life: number }
+  | {
+      readonly type: 'journey-gear';
+      readonly row: Decimal;
+      readonly life: number;
+      readonly wear: boolean;
+    }
+  | { readonly type: 'journey-resource'; readonly resource: 'sp' | 'shield' | 'continue' }
+  | {
+      readonly type: 'journey-loadout';
+      readonly stabilityDoses: number;
+      readonly shieldDelta: number;
+      readonly wear?: boolean;
+    }
   | { readonly type: 'mystery'; readonly row: Decimal; readonly life: number }
   | {
       readonly type: 'pact';
@@ -317,6 +344,7 @@ export type RunCommand =
     };
 
 export type RejectionReason =
+  | 'journey-resource-unavailable'
   | 'finished'
   | 'not-playing'
   | 'not-dead'
@@ -379,6 +407,11 @@ export type RunEvent = EventTime &
       }
     | { readonly type: 'hint-used'; readonly row: Decimal; readonly safeSide: TileSide }
     | { readonly type: 'hint-unavailable'; readonly row: Decimal }
+    | { readonly type: 'journey-gear-queued'; readonly wear: boolean }
+    | {
+        readonly type: 'journey-resource-used';
+        readonly resource: 'sp' | 'hint' | 'shield' | 'continue';
+      }
     | { readonly type: 'death-clock-ticked'; readonly delta: number; readonly sp: number }
     | {
         readonly type: 'pact-resolved';
@@ -405,6 +438,12 @@ export type RunEvent = EventTime &
         readonly spDelta: number;
         readonly consumedKind: TimedEffectKind | null;
         readonly protectedBy?: 'coyote_10s';
+        readonly shieldChargeUsed?: true;
+      }
+    | {
+        readonly type: 'journey-loadout-applied';
+        readonly stabilityDoses: number;
+        readonly shieldDelta: number;
       }
     | { readonly type: 'row-cleared'; readonly row: Decimal; readonly revivesToReachScore: number }
     | { readonly type: 'death'; readonly death: DeathSnapshot }

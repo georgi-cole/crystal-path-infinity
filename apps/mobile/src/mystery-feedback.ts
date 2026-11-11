@@ -34,7 +34,10 @@ export function mysteryFeedbackFromEvents(
   const choice = latest.find(
     (event) =>
       event.type === 'choice-resolved' &&
-      (event.consumedKind || event.protectedBy || (event.wrong && event.spDelta > 0)),
+      (event.consumedKind ||
+        event.protectedBy ||
+        event.shieldChargeUsed ||
+        (event.wrong && event.spDelta > 0)),
   );
   const pulse = latest.find(
     (event) => event.type === 'effects-ticked' && (event.appliedDelta ?? event.delta) !== 0,
@@ -68,7 +71,9 @@ export function mysteryFeedbackFromEvents(
   if (event.type === 'choice-resolved')
     return {
       id,
-      kind: event.consumedKind ?? event.protectedBy ?? 'inversion_5s',
+      kind: event.shieldChargeUsed
+        ? 'shield_5s'
+        : (event.consumedKind ?? event.protectedBy ?? 'inversion_5s'),
       spDelta: event.spDelta,
       hintDelta: 0,
       action: 'triggered',
@@ -111,9 +116,17 @@ export function runCuesFromEvents(events: readonly RunEvent[], state: RunState):
       hintDelta += event.hintDelta;
     if (
       event.type === 'choice-resolved' &&
-      (event.consumedKind === 'shield_5s' || event.consumedKind === 'lucky_5s')
+      (event.shieldChargeUsed ||
+        event.consumedKind === 'shield_5s' ||
+        event.consumedKind === 'lucky_5s')
     ) {
-      result.consumption = { id, kind: event.consumedKind, spDelta: event.spDelta };
+      result.consumption = {
+        id,
+        kind: event.shieldChargeUsed
+          ? 'shield_5s'
+          : (event.consumedKind as 'shield_5s' | 'lucky_5s'),
+        spDelta: event.spDelta,
+      };
     }
   }
   if (hintDelta !== 0)

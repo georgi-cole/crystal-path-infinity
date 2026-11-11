@@ -53,11 +53,13 @@ export function BridgeTutorial({
   onComplete,
   onSkip,
   onStartPractice,
+  finishLabel,
   reducedMotion = false,
 }: {
   onComplete: () => void;
   onSkip: () => void;
   onStartPractice: () => void;
+  finishLabel?: string;
   reducedMotion?: boolean;
 }) {
   const { t, number } = useLanguage();
@@ -215,7 +217,7 @@ export function BridgeTutorial({
                 className="cpi-guide-primary cpi-menu-action cpi-menu-action--primary"
                 onClick={onStartPractice}
               >
-                {t('guide.begin')}
+                {finishLabel ?? t('guide.begin')}
                 <span aria-hidden="true">{'\u2197'}</span>
               </button>
             )}

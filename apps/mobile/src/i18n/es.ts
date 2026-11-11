@@ -219,7 +219,7 @@ export const es = {
     'Solo resultado de práctica. El envío oficial y la clasificación aún no están disponibles.',
   'game.nextRun': 'Siguiente partida',
   'game.rankingsNotLive': 'Clasificación (no disponible)',
-  'game.returnMenu': 'Volver al menú',
+  'game.returnMenu': 'Volver al inicio',
   'game.deathTitle': 'El puente se rompió',
   'game.deathWrong': 'Un cristal erróneo agotó tus SP.',
   'game.deathMystery': 'Un misterio agotó tus SP.',

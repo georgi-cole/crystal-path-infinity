@@ -201,7 +201,7 @@ export const ar = {
   'game.resultLocal': 'نتيجة تدريب فقط. الإرسال الرسمي والتصنيفات غير متاحة بعد.',
   'game.nextRun': 'المحاولة التالية',
   'game.rankingsNotLive': 'التصنيفات (غير متاحة)',
-  'game.returnMenu': 'العودة للقائمة',
+  'game.returnMenu': 'العودة إلى الشاشة الرئيسية',
   'game.deathTitle': 'انهار الجسر',
   'game.deathWrong': 'استنفد لوح زجاج خاطئ نقاط SP.',
   'game.deathMystery': 'استنفد تأثير غامض نقاط SP.',

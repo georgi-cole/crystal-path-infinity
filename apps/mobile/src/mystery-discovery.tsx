@@ -106,7 +106,12 @@ export function MysteryJournal({
   const changePage = (offset: number) =>
     setPage((index) => (index + offset + known.length) % known.length);
   return (
-    <section className="cpi-mystery-journal" data-world={theme} aria-labelledby="cpi-journal-title">
+    <section
+      className="cpi-mystery-journal"
+      data-world={theme}
+      data-still={reducedMotion}
+      aria-labelledby="cpi-journal-title"
+    >
       <header className={onClose ? 'cpi-journal-header' : 'visually-hidden'}>
         <h1 id="cpi-journal-title" ref={heading} tabIndex={-1} data-menu-heading>
           {t('guide.journalTab')}

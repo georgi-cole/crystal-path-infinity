@@ -218,7 +218,7 @@ export const fr = {
     'Résultat d’entraînement uniquement. L’envoi officiel et les classements ne sont pas actifs.',
   'game.nextRun': 'Partie suivante',
   'game.rankingsNotLive': 'Classements (indisponibles)',
-  'game.returnMenu': 'Retour au menu',
+  'game.returnMenu': 'Retour à l’accueil',
   'game.deathTitle': 'Le pont a cédé',
   'game.deathWrong': 'Une mauvaise dalle a épuisé vos SP.',
   'game.deathMystery': 'Un effet mystère a épuisé vos SP.',

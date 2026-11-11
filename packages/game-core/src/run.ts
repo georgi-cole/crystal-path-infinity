@@ -8,6 +8,8 @@ import {
   SURVIVAL_BONUS_SP,
 } from './pacing.ts';
 import { parseTileExperiment } from './tile-experiments.ts';
+import { activeJourneyWeather, isJourneyEncounter } from './journey.ts';
+import { GEAR_IDS, journeyGearEffect } from './journey-gear.ts';
 import { changeHintBalance } from './business-economy.ts';
 import {
   assertDiscovery,
@@ -131,6 +133,13 @@ export function createRun(options: CreateRunOptions, rng: RandomSource): RunStat
     );
   }
   assertNonEmpty(options.runId, 'Run ID');
+  if (options.journey && !options.runId.startsWith('practice-campaign-'))
+    throw new RangeError('Journey routes are local practice only.');
+  if (
+    !!options.journeyGear !== !!parseTileExperiment(rulesetVersion)?.geared ||
+    (options.journeyGear && !GEAR_IDS.includes(options.journeyGear))
+  )
+    throw new RangeError('Mismatched Journey gear.');
   if (
     rulesetVersion !== LIVE_RULESET_VERSION &&
     (usesStoreTestRules(rulesetVersion) ||
@@ -146,7 +155,7 @@ export function createRun(options: CreateRunOptions, rng: RandomSource): RunStat
   const buffer = { ...(options.buffer ?? { ahead: 8, history: 2 }) };
   assertBuffer(buffer);
   const generated = takeRows(
-    createRowStream(options.routeRng, rng, rulesetVersion),
+    createRowStream(options.routeRng, rng, rulesetVersion, options.journey),
     buffer.ahead,
     rng,
   );
@@ -167,6 +176,10 @@ export function createRun(options: CreateRunOptions, rng: RandomSource): RunStat
     schemaVersion: 1,
     rulesetVersion,
     runId: options.runId,
+    ...(parseTileExperiment(rulesetVersion)?.shieldStacks ? { journeyShields: 0 } : {}),
+    ...(options.journeyGear
+      ? { journeyGear: { item: options.journeyGear, worn: true, queued: null } }
+      : {}),
     status: 'playing',
     sp: STARTING_SP,
     hints: STARTING_HINTS,
@@ -351,6 +364,25 @@ export function assertRunState(state: RunState, rng?: RandomSource): void {
   assertRandomCursor(state.mysteryRng, rng);
   if (state.stream.rulesetVersion !== state.rulesetVersion)
     throw new RangeError('Mismatched stream ruleset.');
+  if (state.stream.journey && !state.runId.startsWith('practice-campaign-'))
+    throw new RangeError('Journey routes are local practice only.');
+  if (
+    !!state.journeyGear !== !!parseTileExperiment(state.rulesetVersion)?.geared ||
+    (state.journeyGear &&
+      (!state.stream.journey ||
+        !GEAR_IDS.includes(state.journeyGear.item) ||
+        typeof state.journeyGear.worn !== 'boolean' ||
+        (state.journeyGear.queued !== null && typeof state.journeyGear.queued !== 'boolean')))
+  )
+    throw new RangeError('Invalid saved Journey gear.');
+  if (
+    parseTileExperiment(state.rulesetVersion)?.shieldStacks
+      ? !Number.isSafeInteger(state.journeyShields) ||
+        state.journeyShields! < 0 ||
+        state.journeyShields! > 10000
+      : state.journeyShields !== undefined
+  )
+    throw new RangeError('Invalid loaded Journey shields.');
   if (
     state.rows.length < 1 ||
     state.rows.length > state.buffer.ahead + state.buffer.history ||
@@ -359,6 +391,11 @@ export function assertRunState(state: RunState, rng?: RandomSource): void {
     throw new RangeError('Unbounded row state.');
   state.rows.forEach((row, position) => {
     assertRowRisk(row, state.rulesetVersion);
+    if (
+      (row.cue || row.encounter) &&
+      (!state.stream.journey || (row.encounter && !isJourneyEncounter(row.encounter)))
+    )
+      throw new RangeError('Invalid Journey row metadata.');
     if (
       row.index !== addDecimal(state.bufferOffset, BigInt(position)) ||
       (row.safeSide !== 'left' && row.safeSide !== 'right') ||
@@ -378,6 +415,15 @@ export function assertRunState(state: RunState, rng?: RandomSource): void {
       state.current.revealedSafeSide !== null)
   )
     throw new RangeError('Invalid no-safe-tile hint.');
+  if (
+    state.current.hintProtectedSide !== undefined &&
+    (!parseTileExperiment(state.rulesetVersion)?.safeHints ||
+      !['left', 'right'].includes(state.current.hintProtectedSide) ||
+      state.current.revealedSafeSide !== state.current.hintProtectedSide ||
+      state.current.noSafeTile ||
+      hintSafeSide(getCurrentRow(state)) !== null)
+  )
+    throw new RangeError('Invalid protected hint landing.');
   assertActiveEffects(state.effects, state.activeTimeMs, state.rulesetVersion);
   if (
     state.reviveReceipts.length !== state.revivesGranted ||
@@ -393,7 +439,8 @@ export function assertRunState(state: RunState, rng?: RandomSource): void {
     assertNonEmpty(receipt.deathId, 'Death ID');
     if (
       receipt.ordinal !== position + 1 ||
-      receipt.sp !== getReviveSp(receipt.ordinal, state.rulesetVersion) ||
+      receipt.sp !==
+        (state.stream.journey?.reviveSp ?? getReviveSp(receipt.ordinal, state.rulesetVersion)) ||
       grantIds.has(receipt.grantId) ||
       deathIds.has(receipt.deathId) ||
       !['granted', 'applied', 'forfeited'].includes(receipt.status)
@@ -761,7 +808,7 @@ function rewardTransition(
         deathId: command.deathId,
         ordinal: command.ordinal,
         grantId: command.grantId,
-        sp: getReviveSp(command.ordinal, state.rulesetVersion),
+        sp: state.stream.journey?.reviveSp ?? getReviveSp(command.ordinal, state.rulesetVersion),
         status: 'granted',
       };
       return result(
@@ -931,6 +978,15 @@ export function transitionRun(
     throw new RangeError('Clocks cannot move backwards.');
   }
   if (state.status === 'finished') return result(state, [], 'finished');
+  if (
+    (command.type === 'journey-resource' ||
+      command.type === 'journey-hint' ||
+      command.type === 'journey-loadout') &&
+    (!state.stream.journey?.reviveSp ||
+      !state.runId.startsWith('practice-campaign-') ||
+      parseTileExperiment(state.rulesetVersion)?.missionKit)
+  )
+    return result(state, [], 'journey-resource-unavailable');
   if (state.status === 'dead' && context.activeTimeMs !== state.activeTimeMs) {
     throw new RangeError('The active clock must be frozen while dead or awaiting a reward.');
   }
@@ -965,6 +1021,159 @@ export function transitionRun(
       return result(next, events);
     case 'test-resource':
       return testResourceTransition(next, command, context, events);
+    case 'journey-gear':
+      if (!next.journeyGear || typeof command.wear !== 'boolean')
+        return result(next, events, 'journey-resource-unavailable');
+      return result(
+        {
+          ...next,
+          journeyGear: {
+            ...next.journeyGear,
+            queued: command.wear === next.journeyGear.worn ? null : command.wear,
+          },
+        },
+        [...events, { ...eventTime(next), type: 'journey-gear-queued', wear: command.wear }],
+      );
+    case 'journey-loadout': {
+      const stacking = !!parseTileExperiment(next.rulesetVersion)?.shieldStacks;
+      if (
+        !parseTileExperiment(next.rulesetVersion)?.infinitySupplies ||
+        !next.runId.startsWith('practice-campaign-infinity-') ||
+        next.status !== 'playing' ||
+        next.pact?.phase === 'offered'
+      )
+        return result(next, events, 'journey-resource-unavailable');
+      if (
+        !Number.isSafeInteger(command.stabilityDoses) ||
+        command.stabilityDoses < 0 ||
+        command.stabilityDoses > 400 ||
+        !Number.isSafeInteger(command.shieldDelta) ||
+        Math.abs(command.shieldDelta) > 10000 ||
+        (command.wear !== undefined && (!next.journeyGear || typeof command.wear !== 'boolean'))
+      )
+        return result(next, events, 'journey-resource-unavailable');
+      const shields = (next.journeyShields ?? 0) + command.shieldDelta;
+      if (
+        stacking
+          ? shields < 0 || shields > 10000
+          : command.shieldDelta < 0 ||
+            command.shieldDelta > 1 ||
+            (command.shieldDelta > 0 && next.effects.some((effect) => effect.kind === 'shield_5s'))
+      )
+        return result(next, events, 'journey-resource-unavailable');
+      const gain = command.stabilityDoses * 25;
+      const max = getRuleset(next.rulesetVersion).maxSp;
+      if (max !== null && next.sp + gain > max)
+        return result(next, events, 'journey-resource-unavailable');
+      const updated = rebaseDeathPressure(
+        {
+          ...next,
+          sp: next.sp + gain,
+          ...(stacking ? { journeyShields: shields } : {}),
+          ...(!stacking && command.shieldDelta
+            ? {
+                effects: mergeEffect(
+                  next.effects,
+                  applyMysteryEffect('shield_5s', next.activeTimeMs).addedEffect,
+                  next.activeTimeMs,
+                  next.rulesetVersion,
+                ),
+              }
+            : {}),
+          ...(command.wear !== undefined && next.journeyGear
+            ? {
+                journeyGear: {
+                  ...next.journeyGear,
+                  queued: command.wear === next.journeyGear.worn ? null : command.wear,
+                },
+              }
+            : {}),
+        },
+        next.sp,
+      );
+      return result(updated, [
+        ...events,
+        {
+          ...eventTime(updated),
+          type: 'journey-loadout-applied',
+          stabilityDoses: command.stabilityDoses,
+          shieldDelta: command.shieldDelta,
+        },
+      ]);
+    }
+    case 'journey-resource': {
+      if (command.resource === 'continue') {
+        const supplyRun = parseTileExperiment(next.rulesetVersion)?.infinitySupplies;
+        if (
+          next.status !== 'dead' ||
+          !next.death ||
+          next.revivesGranted >= (supplyRun ? getMaxRevives(next.rulesetVersion) : 1)
+        )
+          return result(next, events, 'journey-resource-unavailable');
+        const identity = {
+          deathId: next.death.id,
+          ordinal: next.revivesGranted + 1,
+          grantId: 'journey-' + next.death.id,
+        };
+        const grant = rewardTransition(next, { type: 'grant-revive', ...identity }, context);
+        if (!grant.accepted) return grant;
+        const revived = rewardTransition(
+          grant.state,
+          { type: 'apply-revive', ...identity },
+          context,
+        );
+        if (!revived.accepted) return result(next, events, 'journey-resource-unavailable');
+        return result(revived.state, [
+          ...grant.events,
+          ...revived.events,
+          { ...eventTime(revived.state), type: 'journey-resource-used', resource: 'continue' },
+        ]);
+      }
+      if (command.resource === 'shield' && parseTileExperiment(next.rulesetVersion)?.shieldStacks) {
+        if (
+          next.status !== 'playing' ||
+          next.pact?.phase === 'offered' ||
+          next.journeyShields! >= 10000
+        )
+          return result(next, events, 'journey-resource-unavailable');
+        const updated = { ...next, journeyShields: next.journeyShields! + 1 };
+        return result(updated, [
+          ...events,
+          {
+            ...eventTime(updated),
+            type: 'journey-loadout-applied',
+            stabilityDoses: 0,
+            shieldDelta: 1,
+          },
+        ]);
+      }
+      if (
+        next.status !== 'playing' ||
+        next.pact?.phase === 'offered' ||
+        (command.resource === 'shield' &&
+          next.effects.some((effect) => effect.kind === 'shield_5s'))
+      )
+        return result(next, events, 'journey-resource-unavailable');
+      const updated =
+        command.resource === 'sp'
+          ? rebaseDeathPressure(
+              { ...next, sp: clampSp(next.sp + 25, next.rulesetVersion) },
+              next.sp,
+            )
+          : {
+              ...next,
+              effects: mergeEffect(
+                next.effects,
+                applyMysteryEffect('shield_5s', next.activeTimeMs).addedEffect,
+                next.activeTimeMs,
+                next.rulesetVersion,
+              ),
+            };
+      return result(updated, [
+        ...events,
+        { ...eventTime(updated), type: 'journey-resource-used', resource: command.resource },
+      ]);
+    }
     case 'end': {
       if (next.pendingReward) return result(next, events, 'reward-pending');
       const unused = next.reviveReceipts.some((receipt) => receipt.status === 'granted');
@@ -979,21 +1188,33 @@ export function transitionRun(
         };
       return result(finish(next, next.death ? 'death-declined' : 'user-ended', events), events);
     }
+    case 'journey-hint':
     case 'hint': {
+      const fromReserve = command.type === 'journey-hint';
+      if (fromReserve && (next.hints !== 0 || next.pact?.phase === 'offered'))
+        return result(next, events, 'journey-resource-unavailable');
       if (next.pact?.kind === 'false_oracle' && next.pact.phase === 'active')
         return result(next, events, 'oracle-blocks-hints');
       if (next.current.revealedSafeSide !== null || next.current.noSafeTile)
         return result(next, events, 'already-revealed');
-      if (next.hints === 0) return result(next, events, 'no-hints');
-      const safeSide = hintSafeSide(getCurrentRow(next));
+      if (!fromReserve && next.hints === 0) return result(next, events, 'no-hints');
+      const row = getCurrentRow(next);
+      let safeSide = hintSafeSide(row);
+      const protectsLanding =
+        safeSide === null && !!parseTileExperiment(next.rulesetVersion)?.safeHints;
+      if (protectsLanding) safeSide = row.risk!.lowRiskSide;
       if (safeSide === null) {
         next = refreshDecisionWindow({ ...next, current: { ...next.current, noSafeTile: true } });
         events.push({ ...eventTime(next), type: 'hint-unavailable', row: next.currentRow });
         return result(next, events);
       }
       next = {
-        ...changeHintBalance(next, next.hints - 1),
-        current: { ...next.current, revealedSafeSide: safeSide },
+        ...(fromReserve ? next : changeHintBalance(next, next.hints - 1)),
+        current: {
+          ...next.current,
+          revealedSafeSide: safeSide,
+          ...(protectsLanding ? { hintProtectedSide: safeSide } : {}),
+        },
         ...([SCAN_RULESET_VERSION, STORE_TEST_RULESET_VERSION].includes(next.rulesetVersion) &&
         next.pacing
           ? { pacing: { ...next.pacing, hintScanStartedAt: next.activeTimeMs } }
@@ -1001,6 +1222,8 @@ export function transitionRun(
       };
       next = refreshDecisionWindow(next);
       events.push({ ...eventTime(next), type: 'hint-used', row: next.currentRow, safeSide });
+      if (fromReserve)
+        events.push({ ...eventTime(next), type: 'journey-resource-used', resource: 'hint' });
       return result(next, events);
     }
     case 'mystery': {
@@ -1008,12 +1231,14 @@ export function transitionRun(
       if (next.current.mysteryOutcome !== null) return result(next, events, 'mystery-consumed');
       const draw = drawRandom(next.mysteryRng, context.rng);
       const directed = usesMysteryDirectorRules(next.rulesetVersion);
-      const kind = rollMysteryEffect(
-        draw.value,
-        next.rulesetVersion,
-        !next.pact,
-        directed ? mysteryEligibleKinds(next, next.current.mysteryTier!) : undefined,
-      );
+      const kind =
+        getCurrentRow(next).encounter ??
+        rollMysteryEffect(
+          draw.value,
+          next.rulesetVersion,
+          !next.pact,
+          directed ? mysteryEligibleKinds(next, next.current.mysteryTier!) : undefined,
+        );
       const applied = applyMysteryEffect(kind, next.activeTimeMs);
       const beforeMysterySp = next.sp;
       const hints =
@@ -1122,8 +1347,9 @@ export function transitionRun(
     case 'choose': {
       next = endDiscoveryIntroduction(next);
       const row = getCurrentRow(next);
-      const wrong = isBrokenTile(row, command.side);
-      const resolution = wrong
+      const wrong =
+        isBrokenTile(row, command.side) && next.current.hintProtectedSide !== command.side;
+      const drawnResolution = wrong
         ? resolveWrongTileDelta(
             getRowBandDamage(next.currentRow, next.rulesetVersion),
             next.effects,
@@ -1131,8 +1357,25 @@ export function transitionRun(
             next.rulesetVersion,
           )
         : { delta: 0, newEffects: [...next.effects] };
+      const shieldChargeUsed = wrong && drawnResolution.delta < 0 && (next.journeyShields ?? 0) > 0;
+      const resolution = shieldChargeUsed
+        ? { delta: 0, newEffects: [...next.effects], consumedKind: undefined }
+        : drawnResolution;
       const pactChange = resolvePactStep(next, wrong, resolution.delta);
-      const tileDelta = scaleSpDelta(next, resolution.delta);
+      const route = next.stream.journey;
+      const gear =
+        next.journeyGear?.worn && route
+          ? journeyGearEffect(
+              next.journeyGear.item,
+              route.season,
+              activeJourneyWeather(route, BigInt(next.currentRow)),
+            )
+          : undefined;
+      const landingDelta =
+        resolution.delta < 0
+          ? Math.min(0, resolution.delta + (gear?.hitRelief ?? 0))
+          : resolution.delta + (wrong ? 0 : (gear?.cleanGain ?? 0));
+      const tileDelta = scaleSpDelta(next, landingDelta);
       const pactDelta = pactChange
         ? next.pact?.kind === 'blood_oath' ||
           next.pact?.kind === 'false_oracle' ||
@@ -1156,6 +1399,7 @@ export function transitionRun(
         wrong,
         spDelta: sp - next.sp,
         consumedKind: resolution.consumedKind ?? null,
+        ...(shieldChargeUsed ? { shieldChargeUsed: true as const } : {}),
         ...(wrong &&
         resolution.delta === 0 &&
         next.effects.some((effect) => effect.kind === 'coyote_10s')
@@ -1186,10 +1430,11 @@ export function transitionRun(
         ...next,
         sp,
         effects: rowTick.effects,
+        ...(shieldChargeUsed ? { journeyShields: next.journeyShields! - 1 } : {}),
         ...(pactChange ? { pact: pactChange.pact } : {}),
         current: {
           ...next.current,
-          revealedSafeSide: hintSafeSide(row),
+          revealedSafeSide: next.current.hintProtectedSide ?? hintSafeSide(row),
           lastChoice: { side: command.side, wrong },
         },
       };
@@ -1216,6 +1461,9 @@ export function transitionRun(
           revivesToReachScore: next.revivesApplied,
           resolutions: [...next.resolutions, { index: row.index, ...next.current }],
           current: emptyCurrent(),
+          ...(next.journeyGear && next.journeyGear.queued !== null
+            ? { journeyGear: { ...next.journeyGear, worn: next.journeyGear.queued, queued: null } }
+            : {}),
           ...(next.pacing
             ? {
                 pacing: {

@@ -30,9 +30,11 @@ const MOTES = Array.from({ length: 12 }, (_, i) => ({
 export function ThemeArtwork({
   theme,
   background = false,
+  companion = true,
 }: {
   theme: ThemeId;
   background?: boolean;
+  companion?: boolean;
 }) {
   const suspended = useSyncExternalStore(subscribeMotion, motionSuspended, serverSuspended);
   if (theme === 'obsidian') return null;
@@ -110,7 +112,7 @@ export function ThemeArtwork({
         />
       ))}
       <div className="cpi-world-focus-veil" />
-      {preview && (
+      {preview && companion && (
         <div className="cpi-world-poster-companion">
           <img
             src={preview.companion}

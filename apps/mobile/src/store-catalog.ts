@@ -14,7 +14,7 @@ export const THEME_IDS: readonly ThemeId[] = [
 // The glass and its rail lights have their own material palette beside the menu accents.
 export const THEMES = {
   obsidian: {
-    title: 'Obsidian',
+    title: 'Black Metal',
     railLights: ['#fa589c', '#62dfed', '#79e3af'],
     glass: '#c7dae0',
     surface: { highlight: '#e2edf0', shadow: '#101318', edge: '#ecfbff', frame: '#87828f' },

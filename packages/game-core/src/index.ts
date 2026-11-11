@@ -13,4 +13,6 @@ export * from './session.ts';
 export * from './timed-session.ts';
 export * from './pacing.ts';
 export * from './tile-experiments.ts';
+export * from './journey.ts';
+export * from './journey-gear.ts';
 export * from './business-economy.ts';

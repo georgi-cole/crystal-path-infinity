@@ -103,7 +103,7 @@ describe('player presentation and QA isolation', () => {
     player.removeItem('checkpoint');
     expect(qa.getItem('checkpoint')).toBe('qa-run');
   });
-  it('keeps discoveries inside the guide and provides the owner-approved support contact', () => {
+  it('puts Discoveries beside How to Play on home and provides the owner-approved support contact', () => {
     const noop = () => {};
     const options = {
       saved: { status: 'empty' as const },
@@ -121,9 +121,11 @@ describe('player presentation and QA isolation', () => {
     };
     const render = (view: 'home' | 'tutorial' | 'settings') =>
       renderToStaticMarkup(createElement(MainMenu, { ...options, view }));
-    expect(render('home')).not.toContain('Discoveries');
+    const home = render('home');
+    expect(home).toContain('Discoveries');
+    expect(home.indexOf('How to play')).toBeLessThan(home.indexOf('Discoveries'));
     expect(render('settings')).not.toContain('Discoveries');
-    expect(render('tutorial')).toContain('Discoveries');
+    expect(render('tutorial')).not.toContain('Discoveries');
     const help = renderToStaticMarkup(createElement(PrivacyAccountSupport));
     expect(help).toContain(SUPPORT_EMAIL);
     expect(help).toContain(SUPPORT_MAILTO);

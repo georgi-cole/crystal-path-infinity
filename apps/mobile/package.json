@@ -6,13 +6,16 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 5174 --strictPort --mode development",
     "dev:qa": "vite --host 127.0.0.1 --port 5177 --strictPort --mode qa",
+    "dev:campaign-qa": "vite --host 127.0.0.1 --port 5178 --strictPort --mode campaign-qa",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "build": "npm run typecheck && vite build --mode development",
     "build:staging": "npm run typecheck && vite build --mode staging",
     "build:production": "npm run typecheck && vite build --mode production",
     "build:qa": "npm run typecheck && vite build --mode qa",
+    "build:campaign-qa": "npm run typecheck && vite build --mode campaign-qa",
     "preview:qa": "vite preview --host 127.0.0.1 --port 4177 --strictPort --outDir dist-qa",
+    "preview:campaign-qa": "vite preview --host 127.0.0.1 --port 4178 --strictPort --outDir dist-campaign-qa",
     "preview": "vite preview --host 127.0.0.1 --port 4174 --strictPort"
   },
   "dependencies": {

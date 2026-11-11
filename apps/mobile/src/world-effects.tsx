@@ -1,14 +1,23 @@
 import { useId, useLayoutEffect, useRef } from 'react';
 import type { CSSProperties } from 'react';
-import type { TileSide } from '@crystal-path-infinity/game-core';
+import type { GearId, Season, TileSide, Weather } from '@crystal-path-infinity/game-core';
 import type { SceneCinematic } from './scene-cinematics';
+import type { BridgeModel } from './campaign-content';
 import type { ThemeId } from './store-catalog';
-import { companionLanding, companionScale, planCompanionMotion } from './world-companion';
+import {
+  companionLanding,
+  companionPreviewFooting,
+  companionPreviewRegistration,
+  companionScale,
+  planCompanionMotion,
+} from './world-companion';
 import type { PresentedEffect } from './infinity-presentation';
 import { useWorldMotion } from './world-motion';
 import { WorldAvatarAura } from './world-treasures';
+import { GuardianShield } from './guardian-shield';
 import { WORLD_ASSETS, worldAsset } from './world-assets';
 import { WorldRescueRig } from './world-props';
+import { CompanionSeasonGear, CompanionTrailGear } from './journey-atmosphere';
 
 /** Brief material feedback uses only a choice that has already resolved. */
 export function WorldStepEffect({
@@ -81,6 +90,12 @@ export function WorldPathCompanion({
   reaction,
   reduced,
   paused,
+  season,
+  weather,
+  gear,
+  bridge,
+  preview = false,
+  shieldCharges = 0,
 }: {
   theme: Exclude<ThemeId, 'obsidian'>;
   cinematic?: SceneCinematic | null;
@@ -90,6 +105,12 @@ export function WorldPathCompanion({
   reaction: 'calm' | 'happy' | 'panic';
   reduced: boolean;
   paused: boolean;
+  season?: Season;
+  weather?: Weather;
+  gear?: GearId;
+  bridge?: BridgeModel;
+  preview?: boolean;
+  shieldCharges?: number;
 }) {
   const id = useId().replace(/:/g, '');
   const motionPreferences = useWorldMotion();
@@ -120,9 +141,14 @@ export function WorldPathCompanion({
   }, [paused, motionPreferences.suspended, cinematic?.id, cinematic?.phase]);
   if (!motion.visible) return null;
   // Static/reduced-motion presentation still stands on the actual intact pane.
-  const anchor = animated ? motion.anchor : motion.end;
+  const anchor = preview
+    ? companionPreviewFooting(standingSide)
+    : animated
+      ? motion.anchor
+      : motion.end;
   const frame =
     motion.action === 'rescue' || reaction === 'happy' ? 1 : reaction === 'panic' ? 2 : 0;
+  const registration = companionPreviewRegistration(theme, gear);
   return (
     <svg
       ref={ref}
@@ -132,6 +158,9 @@ export function WorldPathCompanion({
       aria-hidden="true"
       data-companion-action={motion.action}
       data-companion-side={motion.side}
+      data-still={reduced || paused || motionPreferences.reduced || motionPreferences.suspended}
+      data-gear={gear}
+      data-companion-preview={preview || undefined}
     >
       <defs>
         <clipPath id={id}>
@@ -165,15 +194,53 @@ export function WorldPathCompanion({
         <g transform={`translate(${anchor.x} ${anchor.y})`}>
           <g className="cpi-world-actor-sprite">
             {motion.action === 'rescue' && <WorldRescueRig theme={theme} />}
-            <WorldAvatarAura theme={theme} effects={effects} />
-            <image
-              href={worldAsset(WORLD_ASSETS[theme].companion)}
-              x={-48 - frame * 96}
-              y="-96"
-              width="288"
-              height="96"
-              clipPath={`url(#${id})`}
-            />
+            <g
+              className="cpi-surface-bounce"
+              data-surface={bridge}
+              data-landing={cinematic?.phase === 'impact' && cinematic.feedback?.kind === 'safe'}
+            >
+              <WorldAvatarAura theme={theme} effects={effects} />
+              <g transform={preview ? `translate(${registration.x} ${registration.y})` : undefined}>
+                {gear && (
+                  <CompanionTrailGear
+                    world={theme}
+                    item={gear}
+                    weather={weather}
+                    frame={frame}
+                    layer="rear"
+                  />
+                )}
+                <image
+                  href={worldAsset(WORLD_ASSETS[theme].companion)}
+                  x={-48 - frame * 96}
+                  y="-96"
+                  width="288"
+                  height="96"
+                  clipPath={`url(#${id})`}
+                />
+                {season && (
+                  <CompanionSeasonGear
+                    world={theme}
+                    season={season}
+                    weather={weather}
+                    frame={frame}
+                    gear={gear}
+                  />
+                )}
+                {gear && (
+                  <CompanionTrailGear world={theme} item={gear} weather={weather} frame={frame} />
+                )}
+                <GuardianShield
+                  charges={shieldCharges}
+                  temporary={effects.some((effect) => effect.kind === 'shield_5s')}
+                  impact={!!cinematic?.shielded && cinematic.phase === 'impact'}
+                  linger={
+                    !!cinematic?.shielded &&
+                    (cinematic.phase === 'contact' || cinematic.phase === 'impact')
+                  }
+                />
+              </g>
+            </g>
           </g>
         </g>
       </g>

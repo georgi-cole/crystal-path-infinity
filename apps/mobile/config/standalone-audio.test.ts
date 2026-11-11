@@ -93,6 +93,33 @@ describe('CPI-010 standalone audio ownership', () => {
       audio.dispose();
     },
   );
+  it.each([
+    ['lily', CRYSTAL_AUDIO.lilySplash],
+    ['wood', CRYSTAL_AUDIO.woodBreak],
+    ['jelly', CRYSTAL_AUDIO.jellyBreak],
+    ['trampoline', CRYSTAL_AUDIO.trampolineTear],
+    ['cosmic', CRYSTAL_AUDIO.cosmicBreak],
+  ] as const)(
+    'plays the %s surface cue and stops it in the background',
+    async (surface, source) => {
+      const f = fixture();
+      const audio = createStandaloneAudio(
+        f.ports,
+        { ...DEFAULT_PRACTICE_SETTINGS, music: false },
+        'puppy',
+        surface,
+      );
+      const options = { foreground: true, personalBest: false };
+      audio.setActive(true);
+      await audio.unlock();
+      audio.playEvents([choose('1', true)], state, options);
+      expect(f.media.get(source)?.played).toBe(1);
+      expect(f.media.has(CRYSTAL_AUDIO.glass)).toBe(false);
+      audio.setForeground(false);
+      expect(f.media.get(source)?.paused).toBe(true);
+      audio.dispose();
+    },
+  );
   it('plays one neutral box opening per found box and respects foreground and mute', async () => {
     const f = fixture();
     const audio = createStandaloneAudio(f.ports, { ...DEFAULT_PRACTICE_SETTINGS, music: false });

@@ -1,5 +1,25 @@
 # Mobile app foundation — CPI-003
 
+## Offline playtest 0.7.4 — 11 November 2026
+
+Hint, Kit and Pause now use compact icon controls with 44px touch areas. The Kit stays open while selecting boosters or gear. A small animated ready count confirms loading; minus returns an unused selection. X, Escape or outside dismissal applies the selection once and resumes. Stability is staged in 25-SP doses and spent only on closing; a failed save keeps the Kit open without spending stock.
+
+New Infinity crossings use `-supplies-shield-stack`: several shields can be loaded, stay ready without a timer, and block one damaging broken tile each. Loaded shields are a subset of owned stock; only a blocked hit spends one. They can be unloaded, survive saves/continues, and unused stock stays available on restart. A physical gold-and-jade shield replaces the character outline. Existing saved runs retain their previous temporary-shield rules; start a new crossing to test stacking. Campaign still uses only its mission kit. This supersedes 0.7.3's auto-close interaction, not its repeat-restock policy. Prices and real-service availability are unchanged.
+
+## Offline playtest 0.7.3 — 11 November 2026
+
+Gear and supplies are tucked behind the compact HUD Kit button. The illustrated phone/wide-screen dialog pauses the crossing while browsing; using an item closes it and resumes before applying the action. Hint remains directly accessible, and a first-row hint now hides both initial direction prompts. Consumable test packs now support repeat restocking and stacking, including after consumption; permanent unlocks remain one-time. Restock shows the live stored balance. The 0.7.2 mode separation and atomic saved-run contracts below are unchanged.
+
+
+## Offline Campaign/Infinity playtest 0.7.2 — 11 November 2026
+
+The explicit `campaign-qa` profile now reserves all store supplies and functional Gear/No Clock for Infinity. Campaign uses the mission kit, with cosmetic choices shared. New Campaign rules carry `-mission-kit`; new Infinity rules carry `-supplies`. Existing run snapshots retain their captured rules.
+
+Infinity's hint button includes free run hints and stored stock: two starting hints plus a 10-pack shows 12. Stored stock is debited only after the two free hints, and only when used. Inventory and the resulting Infinity checkpoint share an atomic local save with the separate Campaign checkpoint; failed writes roll back the supply action. Legacy Infinity saves migrate when the new slot is created. First-clear Campaign supplies reward Infinity and cannot be spent to finish Campaign missions.
+
+Run `npm run build:campaign-qa` and `npm run preview:campaign-qa`, then refresh port 4178 and start a new crossing for the new policy. Test claims remain free/local, not real billing. See [current rules](../../docs/CURRENT_GAME_RULES.md) and [detailed contract](../../docs/decisions/CAMPAIGN-LIGHTHOUSE-PROPOSAL.md).
+
+
 Server integration update, 7 November 2026: the native client now supports the reviewed age-screen contract, fresh-OTP export/deletion, automatic unfinished-purchase recovery on store entry, server-paid resource spending and the strict `infinity-v11-live` wire schema. The separate `account.html` page uses memory-only web credentials. Default/unsigned builds keep live services off. See [setup and acceptance](../../docs/RELEASE_SERVICES_SETUP_BG.md); synthetic tests are not real ads/payments.
 
 This React 19 / Capacitor 8 app has an offline practice renderer (CPI-008–010), and CPI-013 adds its dedicated Play/Practice/Rankings/Profile/Settings menu. CPI-012 generates real Midnight Prism native icon exports and a static native splash, with a separate immediate in-app startup state and retry/offline fallback. The source SVG and native image generation remain independent of a network or commercial image service. CPI-007 adds the internal game-core dependency for a tested practice runtime and a local `CpiLifecycle` native plugin. **7 November 2026:** optional AdMob/UMP and native-purchase packages/adapters are installed and pinned. Default generation excludes them; default player builds still have no active advertising or billing service. See [native-service activation](../../docs/decisions/NATIVE-SERVICES-2026-11.md) for exact IDs, source status and outstanding release gates. Default Android declares network access; iOS requests no permission purpose strings and declares the in-app elapsed-time API purpose in its privacy manifest.
@@ -55,6 +75,7 @@ The root npm workspace contains `apps/mobile`; its dependencies and lockfile liv
 | --- | --- |
 | `npm run dev` | Development browser server on port 5174 |
 | `npm run dev:qa` | Explicit QA browser server on port 5177 |
+| `npm run dev:campaign-qa` | Separate offline Campaign/Infinity playtest on port 5178 |
 | `npm run typecheck` | Check the app, configuration, and tests |
 | `npm run lint` | Type-aware application lint and native/CI script checks |
 | `npm run format:check` | Check the scoped app/config/script formatting |
@@ -64,10 +85,18 @@ The root npm workspace contains `apps/mobile`; its dependencies and lockfile liv
 | `npm run build:staging` | Build staging assets into the same directory |
 | `npm run build:production` | Build production assets into the same directory |
 | `npm run build:qa` | Build QA assets separately into `apps/mobile/dist-qa` |
+| `npm run build:campaign-qa` | Build the offline mission playtest separately into `apps/mobile/dist-campaign-qa` |
 | `npm run preview` | Serve the latest built assets on port 4174 |
 | `npm run preview:qa` | Serve the separate QA bundle on port 4177 |
+| `npm run preview:campaign-qa` | Serve the offline mission bundle on port 4178 |
 
 The development and preview servers bind to `127.0.0.1` and fail if their port is occupied. Each build includes type checking and replaces the previous environment's web output.
+
+**Beacon Route 0.7.1 · 11 November 2026.** Open `http://127.0.0.1:4178/#campaign` after building and starting the Campaign preview. The profile includes the full 30-mission route and a Weather & Seasons guide in Discoveries at `/#infinity-weather`. Store at `/#store` opens with all six Worlds. Bridges opens an eight-style collection with a separate preview for each bridge, including Jelly Path earned at mission 11. Ivy Lantern Walk has been removed and earned torches remain usable. Gear previews equipment on the existing companions. Supplies shows reserves with Add more actions that open the illustrated Restock view. Season Changes are used in Supplies. Test claims are local and free. Campaign and Infinity saves use separate local slots. Profile explicitly labels the offline mode, which starts without account services. [Rules, assets and mission list](../../docs/decisions/CAMPAIGN-LIGHTHOUSE-PROPOSAL.md#current-offline-build--07--11-november-2026).
+
+The Campaign preview identifies its Git base in `/qa-info.json`.
+
+Run the fixed-route, weather-boundary and save checks from the root with `npm exec --workspace @crystal-path-infinity/mobile -- vitest run config/campaign-journey.test.ts`.
 
 ## Player and QA previews
 
@@ -165,3 +194,9 @@ Logs, screenshots, per-attempt diagnostic JSON, lifecycle actions and a final re
 Artifacts are retained for seven days. Evidence uploads can include failed-run diagnostics; inspect the job result and launch JSON before treating an artifact as a pass.
 
 At scaffold creation, local type checking, 19 environment tests, web builds, and generation of both native projects passed. CPI-003 native compilation and launch results require their own CI evidence. The authoritative results and remaining checks are maintained in [CPI-003 app foundation](../../docs/decisions/CPI-003-app-foundation.md).
+
+11 November 2026 · 0.6.2: unified illustrated bridge showroom; higher World companions; material-preserving tile breaks and rebuilt trampolines; six Gear items including Trail Scarf; tap selected Campaign pin again to restore full map; aligned Supplies actions and No Clock display name. Existing saves/offer IDs and offline-only claims are preserved.
+
+11 November 2026 · 0.7: preview feet share the tile camera, slim material edges and matching breaks, redesigned Cosmic Crossing, opaque vivid gameplay companions/Gear, grounded World-card animations, and ten more missions in Starfall Observatory and Cloudrest Harbour. New goals/rewards persist; original attempts retain revision 0.3 and new chapters use 0.4.
+
+11 November 2026 · 0.7.1 (CPI-039): distinct browse/selection companion reactions, guaranteed hinted landing for new Journey attempts, fresh Campaign retry seeds, and unchanged saved-run resume behavior. See the detailed integration update and issue #109.
