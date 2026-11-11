@@ -1,6 +1,9 @@
 import type { SqlPool, SqlConnection } from './database.ts';
 import type { PurchaseProof, PurchaseVerifier, VerifiedPurchase } from './purchase-verification.ts';
 import type { PrivateCryptography } from './private-services.ts';
+import { createHash } from 'node:crypto';
+import { parseOfflineSupplies } from './offline-supplies.ts';
+import type { OfflineAllocation } from './offline-supplies.ts';
 import {
   commerceResourceColumn,
   isAdventureUnlock,
@@ -196,7 +199,100 @@ export function createCommerceService(options: {
       (purchase.environment === 'sandbox' || purchase.environment === 'production')
     );
   }
+  const operationPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  function allocation(row: Record<string, unknown>): OfflineAllocation {
+    return {
+      operationId: String(row.id),
+      sp: count(row.sp),
+      hints: count(row.hints),
+      credits: count(row.credits),
+      shields: count(row.shields),
+      seasonChanges: count(row.season_changes),
+    };
+  }
   return {
+    /** A transfer is debited once on the server, then saved atomically with the local inventory. */
+    allocate(subject: string, operationId: string, input: unknown) {
+      const amounts = parseOfflineSupplies(input);
+      if (!operationPattern.test(operationId) || !amounts) throw new CommerceError();
+      const requestHash = createHash('sha256').update(JSON.stringify(amounts)).digest('hex');
+      return transaction(subject, async (connection, current) => {
+        const prior = (
+          await connection.query(
+            'select * from cpi_private.offline_supply_allocations where id=$1::uuid',
+            [operationId],
+          )
+        ).rows[0];
+        if (prior) {
+          if (prior.wallet_id !== current.accountToken || prior.request_hash !== requestHash)
+            throw new CommerceError();
+          return { allocation: allocation(prior), wallet: current };
+        }
+        if (
+          amounts.sp > current.sp ||
+          amounts.hints > current.hints ||
+          amounts.credits > current.credits ||
+          amounts.shields > current.shields ||
+          amounts.seasonChanges > current.seasonChanges
+        )
+          throw new CommerceError();
+        const pending = await connection.query(
+          'select id from cpi_private.offline_supply_allocations where wallet_id=$1::uuid and acknowledged_at is null limit 100',
+          [current.accountToken],
+        );
+        if (pending.rows.length >= 100) throw new CommerceError();
+        await connection.query(
+          'update cpi_private.commerce_wallets set sp=sp-$2,hints=hints-$3,credits=credits-$4,shields=shields-$5,season_changes=season_changes-$6,revision=revision+1 where id=$1::uuid',
+          [
+            current.accountToken,
+            amounts.sp,
+            amounts.hints,
+            amounts.credits,
+            amounts.shields,
+            amounts.seasonChanges,
+          ],
+        );
+        const inserted = await connection.query(
+          'insert into cpi_private.offline_supply_allocations(id,wallet_id,request_hash,sp,hints,credits,shields,season_changes) values($1::uuid,$2::uuid,$3,$4,$5,$6,$7,$8) returning *',
+          [
+            operationId,
+            current.accountToken,
+            requestHash,
+            amounts.sp,
+            amounts.hints,
+            amounts.credits,
+            amounts.shields,
+            amounts.seasonChanges,
+          ],
+        );
+        return {
+          allocation: allocation(inserted.rows[0]),
+          wallet: await read(connection, current.accountToken),
+        };
+      });
+    },
+    pendingAllocations(subject: string) {
+      return transaction(subject, async (connection, current) => ({
+        allocations: (
+          await connection.query(
+            'select * from cpi_private.offline_supply_allocations where wallet_id=$1::uuid and acknowledged_at is null order by created_at,id limit 100',
+            [current.accountToken],
+          )
+        ).rows.map(allocation),
+        wallet: current,
+      }));
+    },
+    acknowledgeAllocation(subject: string, operationId: string) {
+      if (!operationPattern.test(operationId)) throw new CommerceError();
+      return transaction(subject, async (connection, current) => {
+        const updated = await connection.query(
+          'update cpi_private.offline_supply_allocations set acknowledged_at=coalesce(acknowledged_at,clock_timestamp()) where id=$1::uuid and wallet_id=$2::uuid returning id',
+          [operationId, current.accountToken],
+        );
+        if (updated.rows.length !== 1) throw new CommerceError();
+        return { acknowledged: operationId };
+      });
+    },
     catalog(subject: string, platform: PurchaseProof['platform']) {
       ready(subject);
       return products

@@ -1,5 +1,5 @@
 import type { AppEnvironment } from './environments';
-import { assertCampaignServices } from './campaign-services';
+import { assertCampaignServices } from './campaign-services.ts';
 
 export function productionMobileSignIn(
   environment: AppEnvironment,

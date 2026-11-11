@@ -51,5 +51,10 @@ export function practiceStorage(): PracticeStorage {
       removeItem: (key) => window.localStorage.removeItem(CAMPAIGN_SERVICES_STORAGE_PREFIX + key),
     };
   }
-  return profilePracticeStorage(window.localStorage);
+  // Resolve browser storage only when an operation runs; SSR/bootstrap own no I/O.
+  return profilePracticeStorage({
+    getItem: (key) => window.localStorage.getItem(key),
+    setItem: (key, value) => window.localStorage.setItem(key, value),
+    removeItem: (key) => window.localStorage.removeItem(key),
+  });
 }

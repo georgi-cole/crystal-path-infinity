@@ -74,6 +74,7 @@ export function createNativeIdentity(options: {
     ![
       'https://crystalpath-api.kolequant.xyz/cpi/identity/web-callback',
       'https://crystalpath-api.kolequant.xyz/cpi/identity/mobile/callback',
+      'https://crystal-path-staging-api.kolequant.workers.dev/cpi/identity/mobile/callback',
     ].includes(redirect)
   )
     throw new Error('Invalid web identity redirect');

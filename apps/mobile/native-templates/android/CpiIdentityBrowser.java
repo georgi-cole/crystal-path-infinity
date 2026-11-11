@@ -33,7 +33,8 @@ public final class CpiIdentityBrowser {
         if (!"https".equals(url.getScheme()) || url.getUserInfo() != null || url.getFragment() != null || !provider ||
             url.getQueryParameters("state").size() != 1 || !expectedState.equals(url.getQueryParameter("state")) ||
             url.getQueryParameters("redirect_uri").size() != 1 ||
-            !"https://crystalpath-api.kolequant.xyz/cpi/identity/mobile/callback".equals(url.getQueryParameter("redirect_uri"))) {
+            !("https://crystalpath-api.kolequant.xyz/cpi/identity/mobile/callback".equals(url.getQueryParameter("redirect_uri")) ||
+              "https://crystal-path-staging-api.kolequant.workers.dev/cpi/identity/mobile/callback".equals(url.getQueryParameter("redirect_uri")))) {
             call.reject("Sign-in unavailable"); return;
         }
         pending = call;

@@ -43,6 +43,17 @@ export interface NativeBillingAdapter {
   finish(this: void, proof: PurchaseProof, consumable: boolean): Promise<void>;
 }
 export interface CommerceGateway {
+  readonly offlineSupplies?: {
+    pending(
+      signal: AbortSignal,
+    ): Promise<{ allocations: readonly OfflineAllocation[]; wallet: CommerceWallet }>;
+    allocate(
+      operationId: string,
+      amounts: OfflineSupplyAmounts,
+      signal: AbortSignal,
+    ): Promise<{ allocation: OfflineAllocation; wallet: CommerceWallet }>;
+    acknowledge(operationId: string, signal: AbortSignal): Promise<void>;
+  };
   accountScope(this: void): object | null;
   subscribeAccountScope(this: void, observer: () => void): () => void;
   catalog(this: void, signal: AbortSignal): Promise<readonly LiveProduct[]>;
@@ -62,6 +73,16 @@ export interface CommerceGateway {
     | { status: 'granted'; transactionId: string; consumable: boolean; wallet: CommerceWallet }
   >;
   equip(this: void, theme: ThemeId, signal: AbortSignal): Promise<CommerceWallet>;
+}
+export interface OfflineSupplyAmounts {
+  readonly sp: number;
+  readonly hints: number;
+  readonly credits: number;
+  readonly shields: number;
+  readonly seasonChanges: number;
+}
+export interface OfflineAllocation extends OfflineSupplyAmounts {
+  readonly operationId: string;
 }
 export class CommerceUnavailable extends Error {
   constructor() {

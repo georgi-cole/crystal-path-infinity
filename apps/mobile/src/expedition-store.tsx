@@ -1,3 +1,4 @@
+import { useMarketCheckout } from './commerce/market-checkout';
 import { adventurePrice } from './adventure-prices';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
@@ -113,6 +114,7 @@ function WorldCollection({
   onWorld: StoreActions['onWorld'];
   reducedMotion: boolean;
 }) {
+  const checkout = useMarketCheckout();
   const { t } = useLanguage();
   const [selected, setSelected] = useState(() => worlds.indexOf(progress.world));
   const [reaction, setReaction] = useState<'signature' | 'joy' | 'idle'>('signature');
@@ -249,20 +251,46 @@ function WorldCollection({
                   </p>
                   <p className="cpi-world-story">{worldStories[id]}</p>
                   <small className="cpi-world-price">
-                    {id === 'obsidian' ? 'Included' : '€2.99 · One-time World unlock'}
+                    {id === 'obsidian'
+                      ? 'Included'
+                      : checkout.price('theme.' + id, '€2.99') + ' · One-time World unlock'}
                   </small>
                   <button
                     className="cpi-adventure-button"
                     type="button"
                     tabIndex={active ? 0 : -1}
-                    disabled={progress.world === id}
+                    disabled={
+                      progress.world === id ||
+                      (checkout.live &&
+                        !(
+                          checkout.snapshot.wallet?.owned ??
+                          progress.ownedWorlds ?? ['obsidian']
+                        ).includes(id) &&
+                        checkout.disabled('theme.' + id))
+                    }
                     onClick={() => {
                       onWorld(id);
-                      setBrightPose(true);
-                      setReaction('joy');
+                      if (
+                        !checkout.live ||
+                        (
+                          checkout.snapshot.wallet?.owned ??
+                          progress.ownedWorlds ?? ['obsidian']
+                        ).includes(id)
+                      ) {
+                        setBrightPose(true);
+                        setReaction('joy');
+                      }
                     }}
                   >
-                    {progress.world === id ? 'Current World' : 'Use this World'}
+                    {progress.world === id
+                      ? 'Current World'
+                      : checkout.live &&
+                          !(
+                            checkout.snapshot.wallet?.owned ??
+                            progress.ownedWorlds ?? ['obsidian']
+                          ).includes(id)
+                        ? checkout.label('theme.' + id)
+                        : 'Use this World'}
                   </button>
                 </div>
               </div>
@@ -374,6 +402,7 @@ function BridgeWorkshop({
   reducedMotion: boolean;
   onDetail: (open: boolean) => void;
 }) {
+  const checkout = useMarketCheckout();
   const [selected, setSelected] = useState<BridgeModel | null>(null);
   const [breaking, setBreaking] = useState(false);
   const [landing, setLanding] = useState(0);
@@ -423,7 +452,7 @@ function BridgeWorkshop({
                   {available
                     ? 'In your collection'
                     : offer
-                      ? STYLE_OFFERS[offer].price
+                      ? checkout.price(offer, STYLE_OFFERS[offer].price)
                       : 'Campaign reward'}
                 </small>
               </button>
@@ -471,7 +500,11 @@ function BridgeWorkshop({
             </h2>
             <p>{info.note}</p>
             {!owned && !offer && <small>Earn this bridge in Campaign.</small>}
-            {offer && <small>{STYLE_OFFERS[offer].price} · One-time style unlock</small>}
+            {offer && (
+              <small>
+                {checkout.price(offer, STYLE_OFFERS[offer].price)} · One-time style unlock
+              </small>
+            )}
           </div>
           <div className="cpi-market-actions">
             <button
@@ -504,9 +537,10 @@ function BridgeWorkshop({
                 <button
                   type="button"
                   className="cpi-adventure-button"
+                  disabled={checkout.disabled(offer)}
                   onClick={() => onClaim(offer)}
                 >
-                  Add free test style
+                  {checkout.live ? checkout.label(offer) : 'Add free test style'}
                 </button>
               )
             )}
@@ -617,6 +651,7 @@ function Outfitters({
   reducedMotion: boolean;
   onDetail: (open: boolean) => void;
 }) {
+  const checkout = useMarketCheckout();
   const { t } = useLanguage();
   const [item, setItem] = useState<GearId | null>(null);
   const [world, setWorld] = useState<ThemeId>(progress.world);
@@ -649,7 +684,9 @@ function Outfitters({
               <span className="cpi-gear-display" data-item={id} aria-hidden="true" />
               <strong>{GEAR_COPY[id].name}</strong>
               <small>
-                {ownsCampaignGear(progress, id) ? 'In your collection' : GEAR_COPY[id].price}
+                {ownsCampaignGear(progress, id)
+                  ? 'In your collection'
+                  : checkout.price(gearOffer(id), GEAR_COPY[id].price)}
               </small>
             </button>
           ))}
@@ -721,7 +758,7 @@ function Outfitters({
       </p>
       <div className="cpi-market-tray cpi-outfit-details">
         <div>
-          <strong className="cpi-gear-price">{copy.price}</strong>
+          <strong className="cpi-gear-price">{checkout.price(gearOffer(item), copy.price)}</strong>
           <small>Keep forever · Wear one item in Infinity</small>
         </div>
         <div className="cpi-market-actions">
@@ -738,9 +775,10 @@ function Outfitters({
             <button
               type="button"
               className="cpi-adventure-button"
+              disabled={checkout.disabled(gearOffer(item))}
               onClick={() => onClaim(gearOffer(item))}
             >
-              Add free test gear
+              {checkout.live ? checkout.label(gearOffer(item)) : 'Add free test gear'}
             </button>
           )}
           {progress.gear && (
@@ -820,6 +858,7 @@ function Supplies({
   onToggleClock: () => void;
   onDetail: (open: boolean) => void;
 }) {
+  const checkout = useMarketCheckout();
   const [restock, setRestock] = useState<SupplyOffer | null>(null);
   const openRestock = (offer: SupplyOffer | null) => {
     setRestock(offer);
@@ -882,7 +921,8 @@ function Supplies({
               )}
               {'price' in pack && (
                 <p className="cpi-restock-price">
-                  {pack.price} <small>Proposed price</small>
+                  {checkout.price(restock, pack.price)}{' '}
+                  <small>{checkout.live ? 'Store price' : 'Proposed price'}</small>
                 </p>
               )}
               {locked && (
@@ -896,7 +936,8 @@ function Supplies({
                     (added && !repeatable && restock !== 'clock-free') ||
                     locked ||
                     discovered ||
-                    atLimit
+                    atLimit ||
+                    (!(restock === 'clock-free' && added) && checkout.disabled(restock))
                   }
                   onClick={() =>
                     restock === 'clock-free' && added ? onToggleClock() : onClaim(restock)
@@ -906,17 +947,19 @@ function Supplies({
                     ? progress.clockFree
                       ? 'Clock off · Turn on'
                       : 'Clock on · Turn off'
-                    : atLimit
-                      ? 'Fully stocked'
-                      : added && repeatable
-                        ? 'Add another free test pack'
-                        : added
-                          ? 'Added to supplies'
-                          : locked
-                            ? 'Locked'
-                            : discovered
-                              ? 'Already discovered'
-                              : 'Add free test pack'}
+                    : checkout.live && !atLimit && !locked && !discovered && (repeatable || !added)
+                      ? checkout.label(restock)
+                      : atLimit
+                        ? 'Fully stocked'
+                        : added && repeatable
+                          ? 'Add another free test pack'
+                          : added
+                            ? 'Added to supplies'
+                            : locked
+                              ? 'Locked'
+                              : discovered
+                                ? 'Already discovered'
+                                : 'Add free test pack'}
                 </button>
                 {locked && (
                   <button
@@ -1031,6 +1074,7 @@ export function ExpeditionStore({
   onUseSeasonChange: () => void;
   onToggleClock: () => void;
 }) {
+  const checkout = useMarketCheckout();
   const [department, setDepartment] = useState(initial);
   const [detail, setDetail] = useState(false);
   useEffect(() => {
@@ -1102,8 +1146,33 @@ export function ExpeditionStore({
           onDetail={setDetail}
         />
       )}
+      {checkout.live && (
+        <div className="cpi-market-actions" aria-live="polite">
+          {checkout.snapshot.phase === 'error' && (
+            <p>The store could not connect. Please try again.</p>
+          )}
+          {checkout.snapshot.phase === 'pending' && (
+            <p>Payment is pending. Your items will arrive after it is approved.</p>
+          )}
+          <button
+            type="button"
+            className="cpi-adventure-button is-quiet"
+            disabled={
+              !checkout.flow ||
+              ['loading', 'purchasing', 'recovering'].includes(checkout.snapshot.phase)
+            }
+            onClick={() => {
+              void checkout.flow?.load();
+            }}
+          >
+            Restore &amp; check purchases
+          </button>
+        </div>
+      )}
       <p className="cpi-adventure-footnote">
-        Offline playtest · Test items are free on this device.
+        {checkout.live
+          ? 'Supplies are saved on this device. Permanent items can be restored after sign-in.'
+          : 'Offline playtest · Test items are free on this device.'}
       </p>
     </section>
   );

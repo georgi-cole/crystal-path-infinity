@@ -9,6 +9,7 @@ import type {
   CommerceWallet,
   LiveProduct,
   PurchaseProof,
+  OfflineAllocation,
 } from './commerce-types';
 
 const tokenPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -17,6 +18,29 @@ function record(value: unknown): value is Record<string, unknown> {
 }
 function integer(value: unknown): value is number {
   return Number.isSafeInteger(value) && (value as number) >= 0;
+}
+export function parseOfflineAllocation(value: unknown): OfflineAllocation | null {
+  if (
+    !record(value) ||
+    typeof value.operationId !== 'string' ||
+    !tokenPattern.test(value.operationId)
+  )
+    return null;
+  const keys = ['sp', 'hints', 'credits', 'shields', 'seasonChanges'] as const;
+  if (
+    Object.keys(value).length !== 6 ||
+    keys.some((key) => !integer(value[key]) || value[key] > 10000) ||
+    !keys.some((key) => (value[key] as number) > 0)
+  )
+    return null;
+  return {
+    operationId: value.operationId.toLowerCase(),
+    sp: value.sp as number,
+    hints: value.hints as number,
+    credits: value.credits as number,
+    shields: value.shields as number,
+    seasonChanges: value.seasonChanges as number,
+  };
 }
 export function parseCommerceWallet(value: unknown): CommerceWallet | null {
   if (
@@ -135,7 +159,15 @@ export function createCommerceGateway(options: {
   const fetcher = options.fetcher ?? fetch;
   const session = options.session;
   async function post(
-    route: 'catalog' | 'wallet' | 'begin' | 'verify' | 'equip',
+    route:
+      | 'catalog'
+      | 'wallet'
+      | 'begin'
+      | 'verify'
+      | 'equip'
+      | 'allocate'
+      | 'allocations'
+      | 'allocation-ack',
     payload: object,
     signal: AbortSignal,
   ) {
@@ -177,6 +209,40 @@ export function createCommerceGateway(options: {
     return parsed;
   }
   return {
+    offlineSupplies: {
+      async pending(signal) {
+        const reply = await post('allocations', {}, signal);
+        if (!record(reply) || !Array.isArray(reply.allocations) || reply.allocations.length > 100)
+          throw new CommerceUnavailable();
+        const allocations = reply.allocations.map(parseOfflineAllocation);
+        if (
+          allocations.some((item) => !item) ||
+          new Set(allocations.map((item) => item!.operationId)).size !== allocations.length
+        )
+          throw new CommerceUnavailable();
+        return { allocations: allocations as OfflineAllocation[], wallet: wallet(reply) };
+      },
+      async allocate(operationId, amounts, signal) {
+        if (!parseOfflineAllocation({ operationId, ...amounts })) throw new CommerceUnavailable();
+        const reply = await post('allocate', { operationId, amounts }, signal);
+        const allocation = record(reply) ? parseOfflineAllocation(reply.allocation) : null;
+        if (
+          !allocation ||
+          allocation.operationId !== operationId ||
+          Object.entries(amounts).some(
+            ([key, value]) => allocation[key as keyof typeof amounts] !== value,
+          )
+        )
+          throw new CommerceUnavailable();
+        return { allocation, wallet: wallet(reply) };
+      },
+      async acknowledge(operationId, signal) {
+        if (!tokenPattern.test(operationId)) throw new CommerceUnavailable();
+        const reply = await post('allocation-ack', { operationId }, signal);
+        if (!record(reply) || reply.schemaVersion !== 1 || reply.acknowledged !== operationId)
+          throw new CommerceUnavailable();
+      },
+    },
     accountScope: () => session.accountScope(),
     subscribeAccountScope: (observer) => session.subscribeAccountScope(observer),
     async catalog(signal) {

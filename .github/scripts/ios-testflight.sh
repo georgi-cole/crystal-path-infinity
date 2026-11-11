@@ -35,6 +35,10 @@ preflight() {
   xcodebuild -version
   xcodebuild -help > "$RUNNER_TEMP/cpi-xcodebuild-help.txt" 2>&1 || true
   grep -Fq testFlightInternalTestingOnly "$RUNNER_TEMP/cpi-xcodebuild-help.txt"
+  if [[ "${CPI_CAMPAIGN_SERVICES:-false}" == true && ( "${CPI_CAMPAIGN_BETA:-false}" == true || "${CPI_EXTERNAL_BETA:-false}" == true || "${CPI_IOS_REVIEW_SOURCE:-false}" == true ) ]]; then
+    echo 'Full-game service acceptance requires internal-only checked main, separate from the offline beta.' >&2
+    exit 1
+  fi
   if [[ "${CPI_EXTERNAL_BETA:-false}" == true && "${CPI_CAMPAIGN_BETA:-false}" != true ]]; then
     echo 'External beta distribution requires the explicit offline Campaign profile.' >&2
     exit 1
@@ -44,6 +48,11 @@ preflight() {
     node --experimental-strip-types --input-type=module - <<'JS'
 import { assertOfflineCampaignBeta } from './apps/mobile/config/campaign-beta.ts';
 assertOfflineCampaignBeta(process.env);
+JS
+  elif [[ "${CPI_CAMPAIGN_SERVICES:-false}" == true ]]; then
+    node --experimental-strip-types --input-type=module - <<'JS'
+import { assertCampaignServices } from './apps/mobile/config/campaign-services.ts';
+assertCampaignServices(process.env);
 JS
   else
   if [[ "$CPI_NATIVE_ADS" != "$VITE_REWARDED_ADS_ENABLED" ||
@@ -204,6 +213,17 @@ if os.environ.get("CPI_CAMPAIGN_BETA") == "true":
     assert not account_base
     assert os.environ["VITE_ACCOUNT_SERVICES_ENABLED"] == os.environ["VITE_PURCHASES_ENABLED"] == "false"
     assert os.environ["CPI_NATIVE_ADS"] == os.environ["CPI_NATIVE_PURCHASES"] == "false"
+elif os.environ.get("CPI_CAMPAIGN_SERVICES") == "true":
+    services = json.loads((public / "campaign-services-info.json").read_text())
+    accounts = json.loads((public / "account-services-info.json").read_text())
+    assert services["audience"] == "campaign-services" and services["sandboxPurchases"] and services["demonstrationAds"]
+    assert services["simulatedPurchases"] is False and services["sourceCommit"] == os.environ["GITHUB_SHA"]
+    assert accounts["kind"] == "campaign-services-mobile" and accounts["gateway"] == account_base
+    assert account_base == "https://crystal-path-staging-api.kolequant.workers.dev/cpi"
+    assert os.environ["CPI_NATIVE_ADS"] == os.environ["CPI_NATIVE_PURCHASES"] == "true"
+    assert os.environ["VITE_NATIVE_PROVIDER_SIGN_IN"] == "true"
+    assert not (public / "campaign-beta-info.json").exists()
+    assert any(bundle_id in entry["CFBundleURLSchemes"] for entry in info["CFBundleURLTypes"])
 else:
     assert not (public / "campaign-beta-info.json").exists()
     assert any(account_base in asset.read_text(encoding="utf-8") for asset in (public / "assets").glob("*.js"))

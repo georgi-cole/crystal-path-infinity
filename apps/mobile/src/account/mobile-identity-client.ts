@@ -8,6 +8,7 @@ import type { AccountSessionOwner } from './session-owner';
 import { AccountGatewayError } from './otp-flow';
 
 const production = 'https://crystalpath-api.kolequant.xyz/cpi';
+const staging = 'https://crystal-path-staging-api.kolequant.workers.dev/cpi';
 const opaque = /^[A-Za-z0-9_-]{43}$/;
 const bridge = registerPlugin<{
   openProduction(options: {
@@ -50,9 +51,10 @@ function result(value: unknown): ProviderSignIn {
 export function createMobileIdentityClient(
   base: string,
   session: AccountSessionOwner,
+  options: { allowStaging?: boolean } = {},
 ): NativeIdentityClient | null {
   if (
-    base !== production ||
+    (base !== production && !(base === staging && options.allowStaging === true)) ||
     !['ios', 'android'].includes(Capacitor.getPlatform()) ||
     !Capacitor.isPluginAvailable('CpiIdentity')
   )
@@ -123,9 +125,15 @@ export function createMobileIdentityClient(
       url.username ||
       url.password ||
       url.hash ||
-      !['accounts.google.com', 'appleid.apple.com'].includes(url.hostname) ||
+      !(
+        (url.hostname === 'accounts.google.com' && url.pathname === '/o/oauth2/v2/auth') ||
+        (url.hostname === 'appleid.apple.com' && url.pathname === '/auth/authorize')
+      ) ||
+      begin.url.length > 8192 ||
+      url.searchParams.getAll('state').length !== 1 ||
+      url.searchParams.getAll('redirect_uri').length !== 1 ||
       url.searchParams.get('state') !== begin.state ||
-      url.searchParams.get('redirect_uri') !== production + '/identity/mobile/callback'
+      url.searchParams.get('redirect_uri') !== base + '/identity/mobile/callback'
     )
       throw new AccountGatewayError('unavailable');
     const returned = await bridge.openProduction({ url: begin.url, state: begin.state });

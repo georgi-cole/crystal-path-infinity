@@ -1,5 +1,6 @@
 import type { AppEnvironment } from './environments';
 import { selectGuestAdUnits } from './guest-ad-inventory.ts';
+import { assertCampaignServices } from './campaign-services.ts';
 
 /** Separate version metadata for signed store candidates with live guest ads. */
 export function resolveStoreBuild(
@@ -17,6 +18,14 @@ export function resolveStoreBuild(
     !/^[1-9]\d{0,3}$/.test(build)
   ) {
     throw new Error('Set a numeric store version and a positive store build number.');
+  }
+  if (values.CPI_CAMPAIGN_SERVICES === 'true') {
+    assertCampaignServices(values);
+    if (environment !== 'production' || values.VITE_CLIENT_BUILD !== build)
+      throw new Error(
+        'Sandbox store build identity must match the registered native client build.',
+      );
+    return { version, buildNumber: Number(build) };
   }
   if (
     environment !== 'production' ||

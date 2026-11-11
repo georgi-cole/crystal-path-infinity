@@ -29,7 +29,7 @@ import type { PracticeLoad, PracticeSettings } from './practice-save';
 import { canResumePractice, rankedServiceState } from './menu-navigation';
 import type { MenuView } from './menu-navigation';
 import { QA_TOOLS_ENABLED } from './app-profile';
-import { CAMPAIGN_TEST_BUILD } from './app-profile';
+import { CAMPAIGN_ENABLED, CAMPAIGN_TEST_BUILD } from './app-profile';
 import type {
   CampaignApproach,
   CampaignMissionId,
@@ -378,7 +378,7 @@ function MenuHome({
       <nav className="cpi-menu-actions" aria-label={t('menu.main')}>
         <MenuAction
           label={
-            CAMPAIGN_TEST_BUILD
+            CAMPAIGN_ENABLED
               ? canResume
                 ? 'Resume Infinity'
                 : 'Infinity'
@@ -387,14 +387,14 @@ function MenuHome({
           icon="play"
           variant="primary"
           description={
-            CAMPAIGN_TEST_BUILD
+            CAMPAIGN_ENABLED
               ? canResume
                 ? 'Continue your endless crossing'
                 : 'Go as far as you can'
               : undefined
           }
           onClick={
-            CAMPAIGN_TEST_BUILD
+            CAMPAIGN_ENABLED
               ? canResume
                 ? onResume
                 : onStartTestInfinity
@@ -406,19 +406,19 @@ function MenuHome({
           }
         />
         <MenuAction
-          label={CAMPAIGN_TEST_BUILD ? 'Campaign' : t('general.practice')}
+          label={CAMPAIGN_ENABLED ? 'Campaign' : t('general.practice')}
           description={
-            CAMPAIGN_TEST_BUILD
+            CAMPAIGN_ENABLED
               ? nextMission
                 ? `Next · ${nextMission.name}`
                 : 'The Beacon Route is lit'
               : undefined
           }
           icon="practice"
-          variant={CAMPAIGN_TEST_BUILD ? 'primary' : 'secondary'}
-          playMode={CAMPAIGN_TEST_BUILD ? 'campaign' : undefined}
+          variant={CAMPAIGN_ENABLED ? 'primary' : 'secondary'}
+          playMode={CAMPAIGN_ENABLED ? 'campaign' : undefined}
           onClick={
-            CAMPAIGN_TEST_BUILD
+            CAMPAIGN_ENABLED
               ? () => onOpen('campaign')
               : QA_TOOLS_ENABLED
                 ? () => onOpen('practice')
@@ -444,7 +444,7 @@ function MenuHome({
             <span className="cpi-menu-resume-copy">
               {t('menu.savedPractice', { row: number(saved.state.currentRow) })}
             </span>
-            {!CAMPAIGN_TEST_BUILD && (
+            {!CAMPAIGN_ENABLED && (
               <button type="button" onClick={onResume}>
                 {t('general.resume')}
               </button>
@@ -627,14 +627,14 @@ export function MainMenu({
               onStartTestInfinity={onStartTestInfinity}
             />
           </>
-        ) : view === 'campaign' && CAMPAIGN_TEST_BUILD ? (
+        ) : view === 'campaign' && CAMPAIGN_ENABLED ? (
           <CampaignMissionHub
             progress={campaignProgress}
             saved={campaignSaved}
             onStartMission={onStartCampaignMission}
           />
         ) : (view === 'store' || view === 'bridge-style' || view === 'supplies') &&
-          CAMPAIGN_TEST_BUILD ? (
+          CAMPAIGN_ENABLED ? (
           <ExpeditionStore
             key={view}
             progress={campaignProgress}
@@ -689,9 +689,9 @@ export function MainMenu({
             {QA_TOOLS_ENABLED && import.meta.env.MODE !== 'production' && <BalanceTuner />}
             <p className="cpi-menu-fine-print">{t('menu.practiceLocal')}</p>
           </MenuPanel>
-        ) : view === 'journal' || (view === 'infinity-weather' && CAMPAIGN_TEST_BUILD) ? (
+        ) : view === 'journal' || (view === 'infinity-weather' && CAMPAIGN_ENABLED) ? (
           <div className="cpi-guide-library">
-            {CAMPAIGN_TEST_BUILD && (
+            {CAMPAIGN_ENABLED && (
               <nav className="cpi-guide-tabs" aria-label="Discoveries sections">
                 <MenuAction
                   label={t('guide.journalTab')}
@@ -720,8 +720,8 @@ export function MainMenu({
               onTutorialProgress('skipped');
               onOpen('home');
             }}
-            onStartPractice={CAMPAIGN_TEST_BUILD ? () => onOpen('home') : onNew}
-            finishLabel={CAMPAIGN_TEST_BUILD ? t('game.returnMenu') : undefined}
+            onStartPractice={CAMPAIGN_ENABLED ? () => onOpen('home') : onNew}
+            finishLabel={CAMPAIGN_ENABLED ? t('game.returnMenu') : undefined}
             reducedMotion={settings.reducedMotion}
           />
         ) : view === 'store' ? (

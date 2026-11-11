@@ -8,6 +8,8 @@ import type { PrivateCryptography } from './private-services.ts';
 
 export const MOBILE_IDENTITY_CALLBACK =
   'https://crystalpath-api.kolequant.xyz/cpi/identity/mobile/callback';
+export const STAGING_MOBILE_IDENTITY_CALLBACK =
+  'https://crystal-path-staging-api.kolequant.workers.dev/cpi/identity/mobile/callback';
 const returnBase = 'com.georgicole.crystalpath.infinity:/signin';
 const opaque = /^[A-Za-z0-9_-]{43}$/;
 function token(value: unknown): string {
@@ -21,9 +23,13 @@ export function createMobileIdentity(options: {
   issuer: AccountIssuer;
   googleClientId: string;
   appleClientId: string;
+  callback?: typeof MOBILE_IDENTITY_CALLBACK | typeof STAGING_MOBILE_IDENTITY_CALLBACK;
   now?: () => number;
 }) {
   const { database, crypto, issuer } = options;
+  const callback = options.callback ?? MOBILE_IDENTITY_CALLBACK;
+  if (![MOBILE_IDENTITY_CALLBACK, STAGING_MOBILE_IDENTITY_CALLBACK].includes(callback))
+    throw new AccountIssuerError();
   const now = options.now ?? Date.now;
   const digest = (domain: string, value: string) =>
     crypto.digest('mobile-identity:' + domain, value);
@@ -57,7 +63,7 @@ export function createMobileIdentity(options: {
       );
       const parameters: Record<string, string> = {
         client_id: input.provider === 'google' ? options.googleClientId : options.appleClientId,
-        redirect_uri: MOBILE_IDENTITY_CALLBACK,
+        redirect_uri: callback,
         state,
         nonce: opened.nonce,
         response_type: input.provider === 'google' ? 'code' : 'code id_token',

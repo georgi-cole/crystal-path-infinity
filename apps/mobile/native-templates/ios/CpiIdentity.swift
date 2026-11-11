@@ -29,7 +29,7 @@ public final class CpiIdentity: CAPPlugin, CAPBridgedPlugin,
               parts.queryItems?.filter({ $0.name == "state" }).count == 1,
               parts.queryItems?.first(where: { $0.name == "state" })?.value == state,
               parts.queryItems?.filter({ $0.name == "redirect_uri" }).count == 1,
-              parts.queryItems?.first(where: { $0.name == "redirect_uri" })?.value == "https://crystalpath-api.kolequant.xyz/cpi/identity/mobile/callback" else {
+              ["https://crystalpath-api.kolequant.xyz/cpi/identity/mobile/callback", "https://crystal-path-staging-api.kolequant.workers.dev/cpi/identity/mobile/callback"].contains(parts.queryItems?.first(where: { $0.name == "redirect_uri" })?.value ?? "") else {
             call.reject("Sign-in unavailable")
             return
         }

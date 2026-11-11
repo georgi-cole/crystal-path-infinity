@@ -2,6 +2,7 @@ import { exactObject, isObject } from './private-services.ts';
 import { validateAccountPolicy } from './account-policy.ts';
 import type { AccountPolicy } from './account-policy.ts';
 import type { CommerceProduct } from './commerce-service.ts';
+import { MOBILE_IDENTITY_CALLBACK, STAGING_MOBILE_IDENTITY_CALLBACK } from './mobile-identity.ts';
 
 const stagingProjectRef = 'yfntwewvfsvljxcztoyp';
 
@@ -164,12 +165,57 @@ export function readLiveConfiguration(env: (name: string) => string | undefined)
     environment === 'production' &&
     projectRef === 'wtldjvzvpcfkwfacgsqj' &&
     env('CPI_WEB_IDENTITY_ENABLED') === 'true';
+  const stagingMobileEntry =
+    environment === 'staging' &&
+    projectRef === stagingProjectRef &&
+    env('CPI_NATIVE_IDENTITY_ENABLED') === 'true' &&
+    env('CPI_MOBILE_IDENTITY_ENABLED') === 'true';
+  const publicMobileEntry =
+    (publicWebEntry || stagingMobileEntry) && env('CPI_MOBILE_IDENTITY_ENABLED') === 'true';
+  const mobileIdentity = publicMobileEntry
+    ? ({
+        callback:
+          environment === 'staging' ? STAGING_MOBILE_IDENTITY_CALLBACK : MOBILE_IDENTITY_CALLBACK,
+        googleClientId: require(
+          environment === 'staging'
+            ? 'CPI_IDENTITY_GOOGLE_STAGING_WEB_CLIENT_ID'
+            : 'CPI_IDENTITY_GOOGLE_WEB_CLIENT_ID',
+        ),
+        web: {
+          redirectUri:
+            environment === 'staging' ? STAGING_MOBILE_IDENTITY_CALLBACK : MOBILE_IDENTITY_CALLBACK,
+          googleClientSecret: require(
+            environment === 'staging'
+              ? 'CPI_IDENTITY_GOOGLE_STAGING_WEB_CLIENT_SECRET'
+              : 'CPI_IDENTITY_GOOGLE_WEB_CLIENT_SECRET',
+          ),
+        },
+        apple: {
+          clientId:
+            environment === 'staging'
+              ? 'com.georgicole.crystalpath.infinity.staging.web'
+              : 'com.georgicole.crystalpath.infinity.web',
+          teamId: 'C97T2A5255',
+          keyId: require(
+            environment === 'staging'
+              ? 'CPI_IDENTITY_APPLE_STAGING_WEB_KEY_ID'
+              : 'CPI_IDENTITY_APPLE_WEB_KEY_ID',
+          ),
+          privateKey: require(
+            environment === 'staging'
+              ? 'CPI_IDENTITY_APPLE_STAGING_WEB_PRIVATE_KEY'
+              : 'CPI_IDENTITY_APPLE_WEB_PRIVATE_KEY',
+          ).replaceAll('\\n', '\n'),
+        },
+      } as const)
+    : undefined;
   return {
     projectRef,
     url,
     environment,
     publicWebEntry,
-    publicMobileEntry: publicWebEntry && env('CPI_MOBILE_IDENTITY_ENABLED') === 'true',
+    publicMobileEntry,
+    mobileIdentity,
     // Staging is opt-in and this project is pinned independently of client flags.
     nativeIdentity:
       environment === 'staging' &&

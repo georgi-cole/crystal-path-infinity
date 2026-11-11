@@ -47,6 +47,34 @@ function config(overrides: Record<string, string> = {}) {
 }
 
 describe('live purchase configuration', () => {
+  it('isolates sandbox browser-provider credentials from the existing native iPhone and production identities', () => {
+    const values = config({
+      CPI_NATIVE_IDENTITY_ENABLED: 'true',
+      CPI_MOBILE_IDENTITY_ENABLED: 'true',
+      CPI_IDENTITY_GOOGLE_IOS_CLIENT_ID: '123-ios.apps.googleusercontent.com',
+      CPI_IDENTITY_APPLE_KEY_ID: 'A'.repeat(10),
+      CPI_IDENTITY_APPLE_PRIVATE_KEY: 'fixture-native-key',
+      CPI_IDENTITY_GOOGLE_STAGING_WEB_CLIENT_ID: '123-sandbox.apps.googleusercontent.com',
+      CPI_IDENTITY_GOOGLE_STAGING_WEB_CLIENT_SECRET: 'fixture-web-secret',
+      CPI_IDENTITY_APPLE_STAGING_WEB_KEY_ID: 'B'.repeat(10),
+      CPI_IDENTITY_APPLE_STAGING_WEB_PRIVATE_KEY: 'fixture-sandbox-key',
+    });
+    const result = readLiveConfiguration((name) => values[name]);
+    expect(result?.publicWebEntry).toBe(false);
+    expect(result?.publicMobileEntry).toBe(true);
+    expect(result?.nativeIdentity?.googleClientId).toBe('123-ios.apps.googleusercontent.com');
+    expect(result?.mobileIdentity?.googleClientId).toBe('123-sandbox.apps.googleusercontent.com');
+    expect(result?.mobileIdentity?.callback).toBe(
+      'https://crystal-path-staging-api.kolequant.workers.dev/cpi/identity/mobile/callback',
+    );
+    expect(result?.mobileIdentity?.apple.clientId).toBe(
+      'com.georgicole.crystalpath.infinity.staging.web',
+    );
+    delete values.CPI_IDENTITY_GOOGLE_STAGING_WEB_CLIENT_SECRET;
+    expect(() => readLiveConfiguration((name) => values[name])).toThrow(
+      'CPI_IDENTITY_GOOGLE_STAGING_WEB_CLIENT_SECRET',
+    );
+  });
   it('allows Android-only staging verification without Apple credentials', () => {
     const result = readLiveConfiguration((name) => config()[name]);
     expect(result?.purchasePlatforms).toEqual(['android']);

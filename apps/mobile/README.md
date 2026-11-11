@@ -1,5 +1,13 @@
 # Mobile app foundation — CPI-003
 
+## Full Campaign service acceptance profile — CPI-044 · 12 November 2026
+
+The separate `campaign-services` profile retains the current illustrated Campaign/Infinity game and uses native-priced checkout, verified account entitlements and account-scoped offline supplies. It requires both native SDKs, demonstration ads, native browser sign-in and the exact isolated staging `/cpi` gateway. It rejects live guest-ad inventory. Google/Apple browser callbacks are pinned independently from the existing iPhone native sign-in client; credentials remain server-only. Normal production and the offline free-claim beta remain separate.
+
+TestFlight accepts `campaign_services=true` only from checked main with internal-only distribution; it cannot be combined with `campaign_beta`, `external_beta` or review-branch signing. A new version-specific demo-ad acknowledgement and exact-source full native checks are still required before upload. The profile emits `campaign-services-info.json` and account-service metadata for archive inspection. This is acceptance-build preparation, not a public-release profile or evidence of a completed phone transaction.
+
+Collected consumables stay on this device and can be used offline. A server allocation and an atomic local grant/receipt prevent duplicate retry delivery; acknowledged consumables cannot be restored after deleting local app data. Permanent items restore after account sign-in. Campaign mission kits stay separate from purchased Infinity stock. See [the current integration and outstanding acceptance gates](../../docs/decisions/CPI-044-campaign-full-services.md).
+
 ## Signed offline Campaign beta — CPI-042 · 11 November 2026
 
 The app marketing version is 1.0.1 for this candidate, following App Store Connect's existing 1.0.0 build 45. The offline playtest's feature version remains 0.7.4; build numbers come from new TestFlight workflow runs. Historical 0.1.0 results remain unchanged.

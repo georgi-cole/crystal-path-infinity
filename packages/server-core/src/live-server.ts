@@ -355,9 +355,15 @@ export function createLiveServer(options: LiveServerOptions) {
         );
       return { processed: rows.length };
     });
-    await run('cleanup', options.issuer.maintenance);
-    if (options.mobileIdentity)
-      await run('mobile-identity-cleanup', () => options.mobileIdentity!.maintenance());
+    await run('cleanup', async () => {
+      await options.issuer.maintenance();
+      // Expire browser proofs even when provider entry has subsequently been disabled.
+      await sqlTransaction(options.database, (connection) =>
+        connection.query('delete from cpi_private.account_mobile_identity where expires_at<$1', [
+          Date.now(),
+        ]),
+      );
+    });
     return reply({ tasks, failures }, failures.length ? 503 : 200);
   }
   return async (request: Request): Promise<Response> => {

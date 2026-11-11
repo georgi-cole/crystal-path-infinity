@@ -1,4 +1,4 @@
-import { STAGING_ACCOUNT_GATEWAY } from './environments';
+import { STAGING_ACCOUNT_GATEWAY } from './environments.ts';
 
 /** Full-game acceptance builds use real SDKs against isolated test services. */
 export function assertCampaignServices(values: Readonly<Record<string, string | undefined>>) {

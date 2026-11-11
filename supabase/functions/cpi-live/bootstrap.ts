@@ -6,10 +6,7 @@ import { createProjectSqlPool } from '../../../packages/server-core/src/supabase
 import { privateCryptography } from '../../../packages/server-core/src/private-services.ts';
 import { createAccountIssuer } from '../../../packages/server-core/src/account-issuer.ts';
 import { createNativeIdentity } from '../../../packages/server-core/src/native-identity.ts';
-import {
-  createMobileIdentity,
-  MOBILE_IDENTITY_CALLBACK,
-} from '../../../packages/server-core/src/mobile-identity.ts';
+import { createMobileIdentity } from '../../../packages/server-core/src/mobile-identity.ts';
 import {
   createResendAccountMailer,
   createSupabaseAccountDirectory,
@@ -63,13 +60,9 @@ export function createCpiLiveFunction(env: (name: string) => string | undefined)
         policy: config.policy,
         identity: config.nativeIdentity ? createNativeIdentity(config.nativeIdentity) : undefined,
         publicWebEntry: config.publicWebEntry,
-        mobileIdentity:
-          config.publicMobileEntry && config.nativeIdentity?.web
-            ? createNativeIdentity({
-                ...config.nativeIdentity,
-                web: { ...config.nativeIdentity.web, redirectUri: MOBILE_IDENTITY_CALLBACK },
-              })
-            : undefined,
+        mobileIdentity: config.mobileIdentity
+          ? createNativeIdentity(config.mobileIdentity)
+          : undefined,
         directory,
         nativeSignup: config.nativeIdentity?.signupEmails
           ? {
@@ -150,16 +143,16 @@ export function createCpiLiveFunction(env: (name: string) => string | undefined)
       const live = createLiveServer({
         database,
         issuer,
-        mobileIdentity:
-          config.publicMobileEntry && config.nativeIdentity
-            ? createMobileIdentity({
-                database,
-                crypto,
-                issuer,
-                googleClientId: config.nativeIdentity.googleClientId,
-                appleClientId: config.nativeIdentity.apple.clientId,
-              })
-            : undefined,
+        mobileIdentity: config.mobileIdentity
+          ? createMobileIdentity({
+              database,
+              crypto,
+              issuer,
+              googleClientId: config.mobileIdentity.googleClientId,
+              appleClientId: config.mobileIdentity.apple.clientId,
+              callback: config.mobileIdentity.callback,
+            })
+          : undefined,
         webIdentity:
           config.publicWebEntry && config.nativeIdentity
             ? {

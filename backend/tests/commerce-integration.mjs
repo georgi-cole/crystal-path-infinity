@@ -52,6 +52,23 @@ try {
   assert.equal((await service.wallet(b)).credits, 0);
   await assert.rejects(guest.query('select * from cpi_private.commerce_wallets'));
   await assert.rejects(guest.query('select * from cpi_private.purchase_deliveries'));
+  const allocationId = randomUUID();
+  const amounts = { sp: 0, hints: 0, credits: 2, shields: 0, seasonChanges: 0 };
+  const transfers = await Promise.all(
+    Array.from({ length: 16 }, () => service.allocate(a, allocationId, amounts)),
+  );
+  assert.ok(transfers.every((reply) => reply.allocation.operationId === allocationId));
+  assert.equal((await service.wallet(a)).credits, 1);
+  await assert.rejects(service.allocate(b, allocationId, amounts));
+  await assert.rejects(service.allocate(a, allocationId, { ...amounts, credits: 1 }));
+  await assert.rejects(service.allocate(a, randomUUID(), amounts));
+  await assert.rejects(service.acknowledgeAllocation(b, allocationId));
+  await assert.rejects(guest.query('select * from cpi_private.offline_supply_allocations'));
+  assert.equal((await service.pendingAllocations(a)).allocations.length, 1);
+  assert.equal((await service.pendingAllocations(b)).allocations.length, 0);
+  await service.acknowledgeAllocation(a, allocationId);
+  await service.acknowledgeAllocation(a, allocationId);
+  assert.equal((await service.pendingAllocations(a)).allocations.length, 0);
   await admin.query('delete from auth.users where id=$1', [a]);
   assert.equal(
     (
@@ -64,7 +81,7 @@ try {
   await assert.rejects(service.verify(b, { ...proof, accountToken: second.accountToken }));
   assert.equal((await service.wallet(b)).credits, 0);
   console.log(
-    'PostgreSQL service-role commerce: 16 concurrent retries, exactly one grant, cross-account replay, private-table denial and post-deletion tombstone passed. Synthetic provider only.',
+    'PostgreSQL service-role commerce: concurrent purchase and offline-transfer retries, exactly one grant/debit, changed-request and cross-account rejection, private-table denial, repeat acknowledgement and post-deletion tombstone passed. Synthetic provider only.',
   );
 } finally {
   await admin.query('delete from auth.users where id in ($1,$2)', [a, b]);

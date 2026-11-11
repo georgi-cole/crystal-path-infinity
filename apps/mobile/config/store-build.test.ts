@@ -10,6 +10,32 @@ const store = {
 };
 
 describe('store build identity', () => {
+  it('uses an explicit isolated full-game sandbox identity without enabling live ads', () => {
+    const values = {
+      CPI_STORE_VERSION: '1.0.1',
+      CPI_STORE_BUILD_NUMBER: '59',
+      VITE_CLIENT_BUILD: '59',
+      CPI_CAMPAIGN_SERVICES: 'true',
+      CPI_NATIVE_ADS: 'true',
+      CPI_NATIVE_PURCHASES: 'true',
+      VITE_ACCOUNT_SERVICES_ENABLED: 'true',
+      VITE_PURCHASES_ENABLED: 'true',
+      VITE_GUEST_REWARDED_ADS_TEST: 'true',
+      VITE_NATIVE_PROVIDER_SIGN_IN: 'true',
+      VITE_ACCOUNT_API_BASE_URL: STAGING_ACCOUNT_GATEWAY,
+    };
+    expect(resolveStoreBuild('production', values)).toEqual({ version: '1.0.1', buildNumber: 59 });
+    expect(() =>
+      resolveStoreBuild('production', {
+        ...values,
+        VITE_ACCOUNT_API_BASE_URL: 'https://crystalpath-api.kolequant.xyz/cpi',
+      }),
+    ).toThrow();
+    expect(() => resolveStoreBuild('production', { ...values, VITE_CLIENT_BUILD: '58' })).toThrow();
+    expect(() =>
+      resolveStoreBuild('production', { ...values, VITE_GUEST_REWARDED_ADS_LIVE: 'true' }),
+    ).toThrow();
+  });
   it('leaves regular web and internal builds on their existing metadata', () => {
     expect(resolveStoreBuild('production', {})).toBeNull();
   });

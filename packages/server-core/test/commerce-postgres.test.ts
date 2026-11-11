@@ -77,6 +77,51 @@ afterAll(async () => {
   await database?.close();
 });
 describe('commerce delivery against embedded PostgreSQL', () => {
+  it('transfers offline supplies once and keeps interrupted delivery recoverable only by its owner', async () => {
+    await database.query(
+      'insert into cpi_private.commerce_wallets(user_id,sp,hints,credits,shields,season_changes) values($1::uuid,100,10,3,10,10) on conflict(user_id) do nothing',
+      [user],
+    );
+    const operationId = 'bb000000-0000-4000-8000-000000000001';
+    const amounts = { sp: 25, hints: 2, credits: 1, shields: 5, seasonChanges: 2 };
+    const [first, replay] = await Promise.all([
+      service.allocate(user, operationId, amounts),
+      service.allocate(user, operationId, amounts),
+    ]);
+    expect(first.allocation).toEqual({ ...amounts, operationId });
+    expect(replay.allocation).toEqual(first.allocation);
+    expect(await service.wallet(user)).toMatchObject({
+      sp: 75,
+      hints: 8,
+      credits: 2,
+      shields: 5,
+      seasonChanges: 8,
+    });
+    await expect(service.allocate(user, operationId, { ...amounts, hints: 3 })).rejects.toThrow();
+    await expect(service.allocate(other, operationId, amounts)).rejects.toThrow();
+    await expect(service.acknowledgeAllocation(other, operationId)).rejects.toThrow();
+    expect((await service.pendingAllocations(other)).allocations).toEqual([]);
+    expect((await service.pendingAllocations(user)).allocations).toEqual([first.allocation]);
+    await service.acknowledgeAllocation(user, operationId);
+    await service.acknowledgeAllocation(user, operationId);
+    expect((await service.pendingAllocations(user)).allocations).toEqual([]);
+    for (const input of [
+      { ...amounts, shields: 999 },
+      { ...amounts, sp: -1 },
+      { ...amounts, credits: 0.5 },
+      { ...amounts, free: 100 },
+    ])
+      await expect(
+        Promise.resolve().then(() =>
+          service.allocate(user, 'bb000000-0000-4000-8000-000000000002', input),
+        ),
+      ).rejects.toThrow();
+    // Keep this suite's older receipt-delivery fixtures independent of the transfer.
+    await database.query(
+      'update cpi_private.commerce_wallets set sp=0,hints=0,credits=0,shields=0,season_changes=0 where user_id=$1::uuid',
+      [user],
+    );
+  });
   it('stacks new supply packs once per payment and restores/refunds permanent gear independently', async () => {
     const products = [
       {

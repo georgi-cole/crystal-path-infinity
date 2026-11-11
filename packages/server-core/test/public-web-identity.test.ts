@@ -3,7 +3,11 @@ import { PGlite } from '@electric-sql/pglite';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { createAccountIssuer } from '../src/account-issuer';
-import { createMobileIdentity, MOBILE_IDENTITY_CALLBACK } from '../src/mobile-identity';
+import {
+  createMobileIdentity,
+  MOBILE_IDENTITY_CALLBACK,
+  STAGING_MOBILE_IDENTITY_CALLBACK,
+} from '../src/mobile-identity';
 import { privateCryptography } from '../src/private-services';
 import type { SqlPool } from '../src/database';
 let db: PGlite;
@@ -100,9 +104,14 @@ afterAll(async () => {
   await db?.close();
 });
 describe('public browser provider admission', () => {
-  it.each(['android', 'ios'] as const)(
-    'returns %s to the same production owner without putting proofs in the return link',
-    async (platform) => {
+  it.each([
+    { platform: 'android', name: 'production', callbackUrl: MOBILE_IDENTITY_CALLBACK },
+    { platform: 'ios', name: 'production', callbackUrl: MOBILE_IDENTITY_CALLBACK },
+    { platform: 'android', name: 'sandbox', callbackUrl: STAGING_MOBILE_IDENTITY_CALLBACK },
+    { platform: 'ios', name: 'sandbox', callbackUrl: STAGING_MOBILE_IDENTITY_CALLBACK },
+  ] as const)(
+    'returns $platform via $name without putting proofs in the return link',
+    async ({ platform, name, callbackUrl }) => {
       const service = issuer(false, true);
       const mobile = createMobileIdentity({
         database: pool,
@@ -110,6 +119,7 @@ describe('public browser provider admission', () => {
         issuer: service,
         googleClientId: '123-production.apps.googleusercontent.com',
         appleClientId: 'com.georgicole.crystalpath.infinity.web',
+        callback: callbackUrl,
       });
       const permit = await service.eligibility(
         { schemaVersion: 2, age: 15, country: 'US', platform, clientBuild: 45 },
@@ -122,16 +132,14 @@ describe('public browser provider admission', () => {
         null,
       );
       const authorize = new URL(begin.url);
-      expect(authorize.searchParams.get('redirect_uri')).toBe(MOBILE_IDENTITY_CALLBACK);
+      expect(authorize.searchParams.get('redirect_uri')).toBe(callbackUrl);
       expect(authorize.searchParams.get('code_challenge_method')).toBe('S256');
       await expect(
-        mobile.callback(
-          new Request(MOBILE_IDENTITY_CALLBACK + '?state=' + 'x'.repeat(43) + '&code=unknown'),
-        ),
+        mobile.callback(new Request(callbackUrl + '?state=' + 'x'.repeat(43) + '&code=unknown')),
       ).rejects.toMatchObject({ status: 410 });
-      const code = 'mobile-' + platform;
+      const code = 'mobile-' + platform + '-' + name;
       const callback = await mobile.callback(
-        new Request(MOBILE_IDENTITY_CALLBACK + '?state=' + begin.state + '&code=' + code),
+        new Request(callbackUrl + '?state=' + begin.state + '&code=' + code),
       );
       const html = await callback.text();
       expect(html).toContain('com.georgicole.crystalpath.infinity:/signin?state=' + begin.state);
@@ -139,9 +147,7 @@ describe('public browser provider admission', () => {
       expect(html).not.toContain(begin.flowToken);
       expect(callback.headers.get('cache-control')).toBe('no-store');
       await expect(
-        mobile.callback(
-          new Request(MOBILE_IDENTITY_CALLBACK + '?state=' + begin.state + '&code=replaced'),
-        ),
+        mobile.callback(new Request(callbackUrl + '?state=' + begin.state + '&code=replaced')),
       ).rejects.toMatchObject({ status: 410 });
       await expect(
         mobile.complete(

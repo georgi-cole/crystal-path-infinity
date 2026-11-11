@@ -26,7 +26,7 @@ import { nativeBillingAdapter } from './commerce/native-billing';
 import { createCommerceGateway } from './commerce/commerce-gateway';
 import { CommerceFlow } from './commerce/commerce-flow';
 import { PUBLISHER, DEMO_ADMOB } from '../config/publisher';
-import { SIMULATED_STORE_ENABLED } from './app-profile';
+import { SIMULATED_STORE_ENABLED, CAMPAIGN_SERVICES_BUILD } from './app-profile';
 
 export interface LiveServices {
   readonly account: ApprovedAccountServices;
@@ -59,7 +59,7 @@ export function createLiveServices(values: Readonly<Record<string, unknown>>): L
       staging: base === STAGING_ACCOUNT_GATEWAY,
       identity:
         native && values.VITE_NATIVE_PROVIDER_SIGN_IN === 'true'
-          ? createMobileIdentityClient(base, session)
+          ? createMobileIdentityClient(base, session, { allowStaging: CAMPAIGN_SERVICES_BUILD })
           : native && values.VITE_IOS_PROVIDER_SIGN_IN === 'true'
             ? createNativeIdentityClient(base, session, Number(values.VITE_CLIENT_BUILD ?? 1))
             : !native && values.VITE_WEB_PROVIDER_SIGN_IN === 'true'

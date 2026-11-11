@@ -5,6 +5,8 @@ import type {
   NativeBillingAdapter,
   PricedProduct,
   PurchaseProof,
+  OfflineAllocation,
+  OfflineSupplyAmounts,
 } from './commerce-types';
 import type { ThemeId } from '../store-catalog';
 
@@ -128,6 +130,44 @@ export class CommerceFlow {
         this.accept(wallet);
         this.update({ ...this.state, phase: 'ready' });
       }
+    });
+  transferOfflineSupplies = async (receiver: {
+    capacity(wallet: CommerceWallet): OfflineSupplyAmounts;
+    receive(allocation: OfflineAllocation, accountToken: string): void;
+    acknowledged(operationId: string, accountToken: string): void;
+  }): Promise<void> =>
+    this.operation('loading', async (current, signal) => {
+      const gateway = this.gateway.offlineSupplies;
+      if (!gateway) throw new CommerceUnavailable();
+      const pending = await gateway.pending(signal);
+      if (!current()) return;
+      this.accept(pending.wallet);
+      const accountToken = pending.wallet.accountToken;
+      const deliver = async (allocation: OfflineAllocation) => {
+        if (!current()) return;
+        // The receiver must persist both grant and receipt in one local write before ack.
+        receiver.receive(allocation, accountToken);
+        if (!current()) return;
+        await gateway.acknowledge(allocation.operationId, signal);
+        if (current()) receiver.acknowledged(allocation.operationId, accountToken);
+      };
+      for (const allocation of pending.allocations) {
+        await deliver(allocation);
+        if (!current()) return;
+      }
+      const amounts = receiver.capacity(pending.wallet);
+      if (Object.values(amounts).some((amount) => amount > 0)) {
+        const bytes = crypto.getRandomValues(new Uint8Array(16));
+        bytes[6] = (bytes[6] & 15) | 64;
+        bytes[8] = (bytes[8] & 63) | 128;
+        const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+        const operationId = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+        const reply = await gateway.allocate(operationId, amounts, signal);
+        if (!current()) return;
+        this.accept(reply.wallet, accountToken);
+        await deliver(reply.allocation);
+      }
+      if (current()) this.update({ ...this.state, phase: 'ready' });
     });
   private async deliver(
     receipt: PurchaseProof,
