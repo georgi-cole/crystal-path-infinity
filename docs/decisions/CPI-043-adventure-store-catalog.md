@@ -30,3 +30,33 @@ Prices are customer-facing EUR references. Actual checkout must show the provide
 Apple records are drafts, not submitted purchases. New Google options must remain inactive until receipt verification, permanent entitlement restoration, repeatable pack grants and idempotent delivery are implemented and tested. Existing 18-product live allowlists and server product kinds are not extended by this change. The offline beta continues free simulated claims; build 1.0.1 (54) predates this pricing update.
 
 Initial console audit: Apple 18 Prepare for Submission drafts; Google 18 existing products. Google saved the existing 10-hint pack at final Bulgaria EUR 1.49 on 11 November. Creation of all 13 new products was rejected: “Can't create product. To fix, request billing permission.” The active Android internal login preview is 1.0.0 (45); the old billing-enabled 0.1.0 (1) has been deactivated. A new billing-capable Android artifact is needed to register products; do not replace the active tester release with the old build. Further verified console results are appended below.
+
+### Apple registration verified · 11 November 2026
+
+All 13 new records were created with English names/descriptions, the listed purchase types and Bulgaria EUR price schedules. Apple now shows **31 Prepare for Submission drafts** (18 original + 13 new). New items have not been submitted for review or made available for real checkout. The existing 10-hint SKU now shows Current Price **€1.49** in Bulgaria; the previous €2.49 price was reduced immediately across comparable regions. No earned-only products were created.
+
+| Offer | Apple ID |
+| --- | --- |
+| No Clock | 6833549120 |
+| All Seasons | 6833555878 |
+| 10 Shields | 6833550727 |
+| 10 Season Changes | 6833557384 |
+| Bounce Boulevard | 6833557521 |
+| Cookie Crossing | 6833557821 |
+| Cosmic Style Kit | 6833557791 |
+| Glasswing Umbrella | 6833551402 |
+| Sunshades | 6833552211 |
+| Sun Cream | 6833552516 |
+| Frost Runners | 6833553124 |
+| Storm Boots | 6833554176 |
+| Trail Scarf | 6833555314 |
+
+### Android catalog prerequisite
+
+The first main-based catalog-only package 1.0.1 (55), source 280841fa3a0378700e6af9ce9e0e5d295fd94389, passed local native generation/check, release compilation, upload-key signing and binary inspection. Google accepted it as an unreleased draft and explicitly listed Billing permission, but still rejected catalog creation. It was removed from the release while retained in the artifact library; it was never activated. A replacement 1.0.1 (56) preserves the existing production-login preview instead of disabling login/guest ads. It uses that preview's source d6a3d70216726c488a8cef91870749052a42af09 (documentation-only delta from checked runtime f792e37398c84f7fb493152d052b518e0f6a55d5), with the existing locked native Billing SDK added. It does not merge PR108, publish Pages, enable purchases, or represent the Campaign beta as a production release. It retains Apple/Google/email provider configuration, the production account gateway, guest ad inventory and disabled rankings/purchases. Generation/check, release/debug compilation, signature and packaged permissions/provider configuration were verified; physical-device authentication has not been reverified. AAB SHA-256: 80c55b7b34ccef1b17d5fc3ade97e02ee1155335a7568ce5a53fe8e283249d57. Subsequent distribution/catalog results follow below.
+
+### Application validation
+
+PR119 source 280841fa3a0378700e6af9ce9e0e5d295fd94389 passed all required checks in run 43058421250 and Planning 43058421243. Android recorded three cold starts, iOS two, with native startup/resume round trips and zero unexpected runtime errors. Both final menu screenshots were inspected. This is development launch evidence, not purchase acceptance or a physical-device sign-in result.
+
+**Android distribution verified:** Play Console shows 1.0.1 (56), “Login preview and catalog support”, Active and Available to internal testers on 11 November. Google product creation became enabled after this rollout. The Android login-preview lineage is intentionally retained; Campaign remains in its separately delivered offline iPhone beta. Public production review build 44 and pending PR108 are unchanged. Existing Rockmallow world price was also reduced from final Bulgaria €3.59 to €2.99 through the console; the remaining matching/new-item batch is being verified separately.
