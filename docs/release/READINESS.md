@@ -1,5 +1,7 @@
 # First-version release evidence ledger
 
+**11 November 2026 · Native production login preparation:** Apple, Google and email are being connected to the production account service for both platforms. New signed packages and real device acceptance are still required. Guest ads remain live-only; staging identities, simulated purchases and tester controls remain separate. [Implementation and current evidence](../operations/NATIVE_PRODUCTION_SIGN_IN.md).
+
 **Decision on 2026-11-04: NO GO for live services and public distribution.** The user explicitly requested that live services remain disabled. Source implementation and reviewable PRs continue; the remaining acceptance gates below are not represented as completed. Nothing in this ledger authorizes deployment, account/ad activation, paid registration or store submission.
 
 ## Reviewable source

@@ -6,6 +6,8 @@ import { loadEnv } from 'vite';
 import { getBuildInfo, requireEnvironment } from './config/environments.ts';
 import { selectGuestAdUnits } from './config/guest-ad-inventory.ts';
 import { assertUnsignedPublicVariables, resolveUnsignedRelease } from './config/release-build.ts';
+import { resolveStoreBuild } from './config/store-build.ts';
+import { productionMobileSignIn } from './config/mobile-sign-in.ts';
 
 const appRoot = fileURLToPath(new URL('.', import.meta.url));
 const manifest = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as {
@@ -23,8 +25,11 @@ export default defineConfig(({ mode }) => {
   if (preview && release)
     throw new Error('Web review profiles cannot be included in an unsigned release candidate.');
   const values = loadEnv(mode, appRoot, 'VITE_');
+  const mobileSignIn = productionMobileSignIn(environment, { ...process.env, ...values });
   if (release || mode === 'player-preview') assertUnsignedPublicVariables(values);
-  const buildInfo = release?.app ?? getBuildInfo(environment, manifest.version);
+  const store = resolveStoreBuild(environment, { ...process.env, ...values });
+  if (release && store) throw new Error('Store and unsigned release metadata cannot be combined.');
+  const buildInfo = release?.app ?? getBuildInfo(environment, store?.version ?? manifest.version);
   const guestAdUnits = selectGuestAdUnits({ ...process.env, ...values }, environment);
   return {
     root: appRoot,
@@ -33,6 +38,12 @@ export default defineConfig(({ mode }) => {
       {
         name: 'crystal-path-build-identity',
         generateBundle() {
+          if (mobileSignIn)
+            this.emitFile({
+              type: 'asset',
+              fileName: 'account-services-info.json',
+              source: JSON.stringify(mobileSignIn) + '\n',
+            });
           if (mode === 'qa')
             this.emitFile({
               type: 'asset',

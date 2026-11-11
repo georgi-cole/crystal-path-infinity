@@ -11,12 +11,57 @@ public final class CpiIdentity: CAPPlugin, CAPBridgedPlugin,
     public let identifier = "CpiIdentity"
     public let jsName = "CpiIdentity"
     public let pluginMethods: [CAPPluginMethod] = [
-        CAPPluginMethod(name: "authorize", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "authorize", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "openProduction", returnType: CAPPluginReturnPromise)
     ]
 
     private var pending: CAPPluginCall?
     private var appleController: ASAuthorizationController?
     private var googleSession: ASWebAuthenticationSession?
+
+    @objc public func openProduction(_ call: CAPPluginCall) {
+        guard let raw = call.getString("url"), let state = call.getString("state"),
+              state.range(of: "^[A-Za-z0-9_-]{43}$", options: .regularExpression) != nil,
+              let url = URL(string: raw), let parts = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              parts.scheme == "https", parts.user == nil, parts.password == nil, parts.fragment == nil,
+              ((parts.host == "accounts.google.com" && parts.path == "/o/oauth2/v2/auth") ||
+               (parts.host == "appleid.apple.com" && parts.path == "/auth/authorize")),
+              parts.queryItems?.filter({ $0.name == "state" }).count == 1,
+              parts.queryItems?.first(where: { $0.name == "state" })?.value == state,
+              parts.queryItems?.filter({ $0.name == "redirect_uri" }).count == 1,
+              parts.queryItems?.first(where: { $0.name == "redirect_uri" })?.value == "https://crystalpath-api.kolequant.xyz/cpi/identity/mobile/callback" else {
+            call.reject("Sign-in unavailable")
+            return
+        }
+        DispatchQueue.main.async {
+            guard self.pending == nil, self.bridge?.viewController?.view.window != nil else {
+                call.reject("Sign-in unavailable")
+                return
+            }
+            self.pending = call
+            let browser = ASWebAuthenticationSession(url: url, callbackURLScheme: "com.georgicole.crystalpath.infinity") { [weak self] response, error in
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    if (error as? ASWebAuthenticationSessionError)?.code == .canceledLogin {
+                        self.resolve(["status": "cancelled"])
+                        return
+                    }
+                    guard let response, let returned = URLComponents(url: response, resolvingAgainstBaseURL: false),
+                          returned.scheme == "com.georgicole.crystalpath.infinity", returned.host == nil,
+                          returned.path == "/signin", returned.fragment == nil,
+                          returned.queryItems?.count == 1,
+                          returned.queryItems?.first?.name == "state", returned.queryItems?.first?.value == state else {
+                        self.fail()
+                        return
+                    }
+                    self.resolve(["status": "returned"])
+                }
+            }
+            browser.presentationContextProvider = self
+            self.googleSession = browser
+            if !browser.start() { self.fail() }
+        }
+    }
 
     @objc public func authorize(_ call: CAPPluginCall) {
         guard let provider = call.getString("provider"),
