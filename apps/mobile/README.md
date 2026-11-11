@@ -199,6 +199,8 @@ Logs, screenshots, per-attempt diagnostic JSON, lifecycle actions and a final re
 
 **11 November 2026 · CPI-042 release prerequisite:** main run 43033075588 and beta run 43033150189 both failed before Android launch because `azure.archive.ubuntu.com` could not resolve. Android preparation now removes that mirror from the hosted image's mirror list while retaining its official HTTPS Ubuntu archive/security fallbacks and normal package signature checks. Package-index refresh and dependency installation have separate 120/180-second limits and 15-second network timeouts with one transfer retry. Installation or later emulator failures remain blocking; historical failed attempts are preserved.
 
+The next beta run, 43037536810, reached the new 120-second index-refresh limit because the primary Ubuntu archive was also unreachable. The final preparation now probes HTTPS `InRelease` availability over IPv4 before choosing the Ubuntu archive, Linux Kernel Archives mirror or MIT mirror, each with a 15-second maximum probe. Apt also uses IPv4 and retains the same limits and Ubuntu signature verification. No reachable archive or a failed install still fails the check. Mirror sources: [GitHub hosted-image configuration](https://github.com/actions/runner-images/blob/main/images/ubuntu/scripts/build/configure-apt-sources.sh), [Linux Kernel Archives](https://mirrors.edge.kernel.org/) and [MIT Ubuntu mirror](https://mirrors.mit.edu/ubuntu/). This is a delivery prerequisite, not a passing launch result.
+
 | CI artifact | Contents |
 | --- | --- |
 | `mobile-app-web-evidence` | Dependency/test logs and the three web bundles |

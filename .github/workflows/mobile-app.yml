@@ -189,13 +189,22 @@ jobs:
       - name: Prepare the official Android emulator tools
         timeout-minutes: 12
         run: |
-          # Hosted-image Azure DNS failures blocked both main and the beta check.
-          # Keep the image's official HTTPS Ubuntu fallbacks and signed packages.
+          # Probe trusted Ubuntu archives before apt's slow mirror failover.
+          # HTTPS and Ubuntu package signature verification stay enabled.
           if [[ -f /etc/apt/apt-mirrors.txt ]]; then
-            sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt
-            test -s /etc/apt/apt-mirrors.txt
+            selected_mirror=''
+            for mirror in https://archive.ubuntu.com/ubuntu/ https://mirrors.edge.kernel.org/ubuntu/ https://mirrors.mit.edu/ubuntu/; do
+              echo "Checking Ubuntu archive: $mirror"
+              if curl --ipv4 --fail --silent --show-error --connect-timeout 5 --max-time 15 \
+                "${mirror}dists/noble/InRelease" --output /dev/null; then
+                selected_mirror="$mirror"
+                break
+              fi
+            done
+            test -n "$selected_mirror"
+            printf '%s\tpriority:1\n' "$selected_mirror" | sudo tee /etc/apt/apt-mirrors.txt
           fi
-          apt_options=(-o Acquire::Retries=1 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15)
+          apt_options=(-o Acquire::ForceIPv4=true -o Acquire::Retries=1 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15)
           sudo timeout 120 apt-get "${apt_options[@]}" update
           sudo timeout 180 apt-get "${apt_options[@]}" install --yes --no-install-recommends libpulse0 libglu1-mesa
           test -c /dev/kvm
