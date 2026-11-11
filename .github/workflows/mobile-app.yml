@@ -189,8 +189,15 @@ jobs:
       - name: Prepare the official Android emulator tools
         timeout-minutes: 12
         run: |
-          sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends libpulse0 libglu1-mesa
+          # Hosted-image Azure DNS failures blocked both main and the beta check.
+          # Keep the image's official HTTPS Ubuntu fallbacks and signed packages.
+          if [[ -f /etc/apt/apt-mirrors.txt ]]; then
+            sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt
+            test -s /etc/apt/apt-mirrors.txt
+          fi
+          apt_options=(-o Acquire::Retries=1 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15)
+          sudo timeout 120 apt-get "${apt_options[@]}" update
+          sudo timeout 180 apt-get "${apt_options[@]}" install --yes --no-install-recommends libpulse0 libglu1-mesa
           test -c /dev/kvm
           sudo chown "$(id -u):$(id -g)" /dev/kvm
           sudo chmod 660 /dev/kvm

@@ -197,6 +197,8 @@ Both checks require the React commit marker, page readiness, a real read-only na
 
 Logs, screenshots, per-attempt diagnostic JSON, lifecycle actions and a final result are saved in `apps/mobile/artifacts`. Boot progress is captured in `ios-boot.log`. Every Android attempt is retained; a later pass cannot erase an earlier error. Their scope is the minimal screen and startup/lifecycle behavior, with physical-device, gameplay, ads, backend, and store checks tracked separately.
 
+**11 November 2026 · CPI-042 release prerequisite:** main run 43033075588 and beta run 43033150189 both failed before Android launch because `azure.archive.ubuntu.com` could not resolve. Android preparation now removes that mirror from the hosted image's mirror list while retaining its official HTTPS Ubuntu archive/security fallbacks and normal package signature checks. Package-index refresh and dependency installation have separate 120/180-second limits and 15-second network timeouts with one transfer retry. Installation or later emulator failures remain blocking; historical failed attempts are preserved.
+
 | CI artifact | Contents |
 | --- | --- |
 | `mobile-app-web-evidence` | Dependency/test logs and the three web bundles |
