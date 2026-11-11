@@ -169,3 +169,13 @@ The temporary player review now uses the dedicated web-only player-preview mode.
 The player review omits the mystery lab, demonstration buttons, balance tuning, reset and forced pending or failure controls. Reserves are a regular pause action in both reviews. The Test tools section in QA contains the mystery chamber. The release mode still reads configured commerce and reward services. Both simulated web modes are barred from native asset copying and unsigned release preparation.
 
 The death dialog shows matching Start again and Return to menu buttons. A legal continuation takes priority in its own panel. At the continuation cap, the result shows the usual quota message. The credit shelf reached from defeat puts Return to your crossing first and retains the same run during checkout. Worlds can always be explored in the showcase. The shared journal uses an expanded emblem, its own title row, a readable explanation and a bottom entry selector.
+
+## Gameplay responsiveness update · 11 November 2026
+
+The shared bridge renderer now uses a bounded presentation comparison to skip clock-only parent updates. Every prop, including handlers, control locks, motion settings and hint recovery, remains part of the comparison; projected rows compare all fields and cue contents. Stable gameplay handlers allow this optimization to take effect. React context changes and local camera state continue to update the renderer. Seasonal atmosphere is memoized on its primitive presentation props. Geometry, materials, particle count, weather, companion art, fracture detail and save durability are preserved.
+
+Safe/wrong step input locks are now 600/850 ms, down from 890/1,280 ms. Camera polygon/light travel and mystery hit regions animate for 280 ms inside the 300 ms travel window; companion motion fits inside each beat. Contact is 80 ms. Fatal and mystery-only timing remain unchanged. Input remains click-based with the existing touch-action behavior, and the command lock still prevents duplicate actions.
+
+Regression tests cover clock-only bridge equality, every projected row field, cue changes, handlers, controls, hint recovery, exact unlock boundaries, consecutive steps and disposal. Existing companion tests verify landing before travel.
+
+This source update requires a new native build and device validation before calling the Android/iOS issue resolved. [Dated report and limitations](../analysis/PERFORMANCE-2026-11-11.md).

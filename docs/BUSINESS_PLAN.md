@@ -116,3 +116,7 @@ Gear проверява и постоянни предмети с полза и 
 ## 11 November 2026 · CPI-043 · Launch price hypothesis
 
 Use the lower [adventure launch prices](decisions/CPI-043-adventure-store-catalog.md): gear €1.49, simple paid bridges €1.99, Cosmic Kit/No Clock €2.99, all seasons €3.99, ten hints/season changes €1.49, ten shields €0.99; worlds €2.99. This replaces previous proposed prices for future offers and does not retrospectively recalculate historical simulations. Official Crossy Road, Stack and Vampire Survivors EUR listings informed the affordable range; they do not validate this game's conversion, retention or revenue. Measure paid conversion, pack repurchase and entitlement refunds after real billing acceptance before revising revenue scenarios. Offline claims, draft catalogs and TestFlight installs generate no demonstrated revenue.
+
+## Performance follow-up · 11 November 2026
+
+The current local client branch reduces safe/wrong step presentation locks from 890/1,280 ms to 600/850 ms. This is a responsiveness change, not a measured increase in retention, session duration, revenue or ad delivery. Existing simulation results are preserved with their original assumptions; faster real-time stepping may affect timed-effect exposure and must be measured in a new dated playtest before revising projections. Server rules, economic parameters, purchase/reward verification and started attempts are unchanged. See [the performance report](analysis/PERFORMANCE-2026-11-11.md).

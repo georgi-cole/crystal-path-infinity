@@ -209,3 +209,9 @@
 ## 11 November 2026 · CPI-043 · Lower adventure reference prices
 
 The dated [adventure catalog](decisions/CPI-043-adventure-store-catalog.md) supersedes earlier proposed prices for new purchases: gear €1.49; Bounce/Cookie €1.99; Cosmic Kit and permanent No Clock €2.99; All Seasons €3.99; ten hints/season changes €1.49; ten shields €0.99. Worlds remain €2.99. Campaign-earned rewards stay earned-only. Consumables remain repeatable and Infinity stock stays separate from Campaign. Existing runs and historical simulations are unchanged. Catalog registration is separate from checkout/server fulfilment; the current beta uses free simulated claims. See the detailed document for verified store status and remaining activation checks.
+
+## Client presentation update · 11 November 2026
+
+PR branch `codex/gameplay-performance`: Android and iPhone share a shorter step presentation. Contact is 80 ms; safe impact settles at 300 ms and wrong impact at 550 ms, followed by 300 ms travel. The next choice unlocks at 600 ms / 850 ms respectively (previous presentation: 890 ms / 1,280 ms). Companion hops/escapes, camera motion, rail lights and mystery hit regions follow the shorter travel. Fatal collapse and mystery reveal timing are unchanged. Reduced motion still skips the cinematic. No queued tap is replayed on a later row.
+
+This is a client presentation revision, not a new server ruleset: SP, RNG, rewards, route generation, active clocks and checkpoint durability retain their contracts, including for resumed attempts. Faster intentional choices can change real-time play behavior; older playthroughs and business simulations retain their original dates and assumptions. This is local source, not evidence of a deployed Android/iOS build. See [implementation and validation](analysis/PERFORMANCE-2026-11-11.md#implementation-follow-up--11-november-2026).
