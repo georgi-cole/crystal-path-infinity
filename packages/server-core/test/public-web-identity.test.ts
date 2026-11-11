@@ -42,12 +42,20 @@ function issuer(staging = false, mobile = false) {
   return createAccountIssuer({
     database: pool,
     crypto: privateCryptography('1'.repeat(64), '2'.repeat(64)),
-    policy,
+    policy: staging
+      ? {
+          version: 'staging-mobile-fixture',
+          countries: { BG: { minimumAge: 18, neutralAgeScreenAllowed: true } },
+        }
+      : policy,
     publicWebEntry: !staging,
-    stagingTestEmails: staging ? ['stage@example.com', 'stage2@example.com'] : undefined,
+    stagingTestEmails: staging ? ['stage@gmail.com', 'stage2@gmail.com'] : undefined,
     directory: {
       verifiedEmail: (email) => Promise.resolve(users.get(email)!.id),
-      emailForSubject: () => Promise.resolve('existing@example.com'),
+      emailForSubject: (id) =>
+        Promise.resolve(
+          [...users].find(([, user]) => user.id === id)?.[0] ?? 'existing@example.com',
+        ),
     },
     mailer: {
       send: (message) => {
@@ -104,6 +112,86 @@ afterAll(async () => {
   await db?.close();
 });
 describe('public browser provider admission', () => {
+  it.each(['android', 'ios'] as const)(
+    'screens sandbox %s entry and admits only existing allowed testers',
+    async (platform) => {
+      const service = issuer(true, true);
+      const stageContext = { country: 'BG', rateKey: 'sandbox-' + platform };
+      expect(
+        await service.eligibility(
+          { schemaVersion: 2, age: 17, country: 'BG', platform, clientBuild: 59 },
+          stageContext,
+        ),
+      ).toEqual({ status: 'parental_review' });
+      const permit = await service.eligibility(
+        { schemaVersion: 2, age: 27, country: 'BG', platform, clientBuild: 59 },
+        stageContext,
+      );
+      const other = await service.eligibility(
+        { schemaVersion: 2, age: 27, country: 'BG', platform, clientBuild: 59 },
+        stageContext,
+      );
+      if (!('permit' in permit) || !('permit' in other)) throw Error('permit expected');
+      for (const provider of ['google', 'apple'] as const) {
+        const begin = () =>
+          service.beginIdentity(
+            { schemaVersion: 5, provider, eligibilityPermit: permit.permit },
+            stageContext,
+            null,
+          );
+        const mismatch = await begin();
+        await expect(
+          service.completeIdentity(
+            {
+              schemaVersion: 5,
+              provider,
+              nonce: mismatch.nonce,
+              credential: 'stage',
+              eligibilityPermit: other.permit,
+            },
+            stageContext,
+            null,
+          ),
+        ).rejects.toMatchObject({ status: 403 });
+        const denied = await begin();
+        expect(
+          await service.completeIdentity(
+            {
+              schemaVersion: 5,
+              provider,
+              nonce: denied.nonce,
+              credential: 'not-a-tester-' + platform,
+              eligibilityPermit: permit.permit,
+            },
+            stageContext,
+            null,
+          ),
+        ).toEqual({ status: 'signup_unavailable' });
+        const allowed = await begin();
+        const reply = await service.completeIdentity(
+          {
+            schemaVersion: 5,
+            provider,
+            nonce: allowed.nonce,
+            credential: provider === 'apple' ? 'stage2' : 'stage',
+            eligibilityPermit: permit.permit,
+          },
+          stageContext,
+          null,
+        );
+        expect(reply.status).toBe('verified');
+        if (!('verifiedTicket' in reply) || typeof reply.verifiedTicket !== 'string')
+          throw Error('ticket expected');
+        const session = await service.exchange(reply.verifiedTicket);
+        expect(await service.authenticate(String(session.accessToken))).toMatchObject({
+          platform,
+          country: 'BG',
+          privacyContext: 'adult',
+        });
+      }
+    },
+  );
+
   it.each([
     { platform: 'android', name: 'production', callbackUrl: MOBILE_IDENTITY_CALLBACK },
     { platform: 'ios', name: 'production', callbackUrl: MOBILE_IDENTITY_CALLBACK },

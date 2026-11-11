@@ -88,7 +88,7 @@ export function createAccountIssuer(options: {
   identity?: NativeIdentity;
   /** Production browser proofs use a separate OAuth audience and screened permits. */
   publicWebEntry?: boolean;
-  /** Screened production mobile proofs use the server's separate mobile callback. */
+  /** Screened mobile proofs use a separate audience; staging retains its tester allowlists. */
   mobileIdentity?: NativeIdentity;
   policy: AccountPolicy;
   stagingTestEmails?: readonly string[];
@@ -116,10 +116,14 @@ export function createAccountIssuer(options: {
     policy.countries.BG?.minimumAge === 18 &&
     policy.countries.BG.neutralAgeScreenAllowed;
   const publicWebEntry = options.publicWebEntry === true && stagingTestEmails.size === 0;
-  const publicMobileEntry = !!options.mobileIdentity && stagingTestEmails.size === 0;
+  const mobileEntry = !!options.mobileIdentity;
+  const publicMobileEntry = mobileEntry && stagingTestEmails.size === 0;
   const publicProviderEntry = publicWebEntry || publicMobileEntry;
+  const screenedProviderEntry = publicWebEntry || mobileEntry;
   const signupAllowed = (provider: NativeIdentityProvider, address: string) =>
-    publicProviderEntry || nativeSignup?.emails[provider].includes(address) === true;
+    publicProviderEntry ||
+    nativeSignup?.emails[provider].includes(address) === true ||
+    (mobileEntry && stagingTestEmails.has(address));
   const limit = createDurableRateLimit(database, crypto, now);
   const digest = (domain: string, value: string) => crypto.digest(domain, value);
   async function owner(connection: SqlConnection, subject: string) {
@@ -551,10 +555,10 @@ export function createAccountIssuer(options: {
     context: AccountRequestContext,
     auth: IssuedAccountActor | null,
   ) {
-    if (!options.identity) throw new AccountIssuerError(503);
     const direct = isObject(input) && input.schemaVersion === 2;
     const web = isObject(input) && input.schemaVersion === 4;
     const mobile = isObject(input) && input.schemaVersion === 5;
+    if (!(mobile ? options.mobileIdentity : options.identity)) throw new AccountIssuerError(503);
     if (
       !exactObject(
         input,
@@ -564,7 +568,7 @@ export function createAccountIssuer(options: {
       ) ||
       (!direct && !web && !mobile && input.schemaVersion !== 1) ||
       (web && !publicWebEntry) ||
-      (mobile && !publicMobileEntry) ||
+      (mobile && !mobileEntry) ||
       (!web && !mobile && publicProviderEntry) ||
       !isNativeIdentityProvider(input.provider) ||
       (direct &&
@@ -710,6 +714,7 @@ export function createAccountIssuer(options: {
     auth: IssuedAccountActor | null,
   ) {
     const mobile = isObject(input) && input.schemaVersion === 5;
+    const screened = publicProviderEntry || mobile;
     const identity = mobile ? options.mobileIdentity : options.identity;
     if (!identity) throw new AccountIssuerError(503);
     if (
@@ -725,7 +730,7 @@ export function createAccountIssuer(options: {
         input.schemaVersion !== 4 &&
         input.schemaVersion !== 5) ||
       (input.schemaVersion === 4 && !publicWebEntry) ||
-      (mobile && !publicMobileEntry) ||
+      (mobile && !mobileEntry) ||
       (input.schemaVersion !== 4 && !mobile && publicProviderEntry) ||
       !isNativeIdentityProvider(input.provider)
     )
@@ -754,14 +759,11 @@ export function createAccountIssuer(options: {
         if (mobile && permit.platform === 'web') throw new AccountIssuerError(403);
         if (input.schemaVersion === 4 && permit.platform !== 'web')
           throw new AccountIssuerError(403);
-        if (
-          publicProviderEntry &&
-          digest('permit', token(input.eligibilityPermit)) !== row.permit_hash
-        )
+        if (screened && digest('permit', token(input.eligibilityPermit)) !== row.permit_hash)
           throw new AccountIssuerError(403);
       }
       if (
-        publicProviderEntry &&
+        screened &&
         auth &&
         ((mobile ? auth.platform === 'web' : auth.platform !== 'web') ||
           input.eligibilityPermit !== null)
@@ -817,8 +819,7 @@ export function createAccountIssuer(options: {
       if (!signupAllowed(provider, address)) return { status: 'signup_unavailable' };
       const existing = await nativeSignup.directory.lookup(connection, address, identityHash);
       const collision = existing && !existing.matchesProvider ? existing.subject : null;
-      if (collision && clientBuild === null && !publicProviderEntry)
-        return { status: 'link_required' };
+      if (collision && clientBuild === null && !screened) return { status: 'link_required' };
       if (collision) {
         const prior = (
           await connection.query(
@@ -826,7 +827,7 @@ export function createAccountIssuer(options: {
             [collision],
           )
         ).rows[0];
-        const expectedContext = publicProviderEntry
+        const expectedContext = screened
           ? (await permittedHash(connection, str(challenge.permit_hash))).privacy_context
           : 'adult';
         if (prior?.privacy_context !== expectedContext) return { status: 'link_required' };
@@ -834,7 +835,7 @@ export function createAccountIssuer(options: {
       }
       const appleRefresh = await verified.appleRefresh?.();
       if (provider === 'apple' && !appleRefresh) throw new AccountIssuerError(503);
-      if (publicProviderEntry && !collision)
+      if (screened && !collision)
         return createProviderAccount(connection, {
           provider,
           identityHash,
@@ -845,7 +846,7 @@ export function createAccountIssuer(options: {
           nonceHash,
           offerProfile: true,
         });
-      if (publicProviderEntry && collision) {
+      if (screened && collision) {
         const permit = await permittedHash(connection, str(challenge.permit_hash));
         const linkToken = crypto.token();
         const hash = digest('identity-link', linkToken);
@@ -1015,9 +1016,9 @@ export function createAccountIssuer(options: {
     context: AccountRequestContext,
   ): Promise<ProviderLinkProof> {
     if (
-      (!directEntry && !publicProviderEntry) ||
+      (!directEntry && !screenedProviderEntry) ||
       !nativeSignup ||
-      (publicProviderEntry
+      (screenedProviderEntry
         ? !context.country || !policy.countries[context.country]
         : context.country !== 'BG')
     )
