@@ -1,4 +1,3 @@
-import { useId } from 'react';
 import type { ReactNode } from 'react';
 import type { EffectKind } from '@crystal-path-infinity/game-core';
 import type { PresentedEffect } from './infinity-presentation';
@@ -6,137 +5,16 @@ import type { ThemeId } from './store-catalog';
 import { useLanguage } from './language-context';
 import { CompanionSprite } from './theme-art';
 import { WORLD_ASSETS, worldAsset } from './world-assets';
-import { useWorldMotion } from './world-motion';
 import { WORLD_KITS } from './world-kits';
-import { WorldRelicCache, WorldRelicFrame } from './world-props';
+import { WorldRelicFrame } from './world-props';
+import { RenderedMysteryCache } from './mystery-cache-art';
 import './world-treasures.css';
 
 type World = Exclude<ThemeId, 'obsidian'>;
 
-/** Original, layered props. Their appearance never encodes the hidden reward. */
+/** The same neutral prop is used for every possible content in a World. */
 export function MysteryCache({ theme, open = false }: { theme: World; open?: boolean }) {
-  const id = useId().replace(/:/g, '');
-  const motion = useWorldMotion();
-  if (theme !== 'chaos' && theme !== 'jelly') return <WorldRelicCache theme={theme} open={open} />;
-  return (
-    <svg
-      className={`cpi-world-cache world-${theme}${open ? ' is-open' : ''}${motion.reduced || motion.suspended ? ' is-still' : ''}`}
-      viewBox="0 0 80 88"
-      fill="none"
-      aria-hidden="true"
-    >
-      <defs>
-        <linearGradient
-          id={id + 'shell'}
-          x1="12"
-          y1="22"
-          x2="67"
-          y2="78"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop stopColor={theme === 'chaos' ? '#ffe0a4' : '#fff2ff'} />
-          <stop offset=".4" stopColor={theme === 'chaos' ? '#a75e3b' : '#ceacf5'} />
-          <stop offset="1" stopColor={theme === 'chaos' ? '#392e36' : '#5568a6'} />
-        </linearGradient>
-        <radialGradient id={id + 'core'}>
-          <stop stopColor="#ffffff" />
-          <stop offset=".35" stopColor={theme === 'chaos' ? '#baffde' : '#edc9ff'} />
-          <stop offset="1" stopColor={theme === 'chaos' ? '#409a85' : '#779ee3'} />
-        </radialGradient>
-      </defs>
-      <ellipse cx="40" cy="80" rx="25" ry="4" fill="#020718" opacity=".5" />
-      {theme === 'chaos' ? (
-        <>
-          <path
-            className="cpi-cache-core"
-            d="m40 23 13 20-13 21-13-21 13-20Z"
-            fill={`url(#${id}core)`}
-          />
-          <g className="cpi-cache-base">
-            <path
-              d="m13 42 27 10 27-10v25L40 80 13 67V42Z"
-              fill={`url(#${id}shell)`}
-              stroke="#e8b783"
-            />
-            <path d="M40 53v25M19 51v12l12 6M61 51v12l-12 6" stroke="#3b3437" strokeWidth="3" />
-            <path d="M17 48v16l17 8M63 48v16l-17 8" stroke="#c3eeda" strokeOpacity=".7" />
-            <path d="m35 49 5-3 5 3v12l-5 3-5-3V49Z" fill="#203e3d" stroke="#f1c483" />
-            <circle cx="40" cy="54" r="3" fill="#baffe1" />
-            {[20, 60].map((x) => (
-              <circle key={x} cx={x} cy="65" r="1.8" fill="#f6cc96" />
-            ))}
-          </g>
-          <g className="cpi-cache-lid">
-            <path
-              d="m40 17 29 16v12L40 58 11 45V33l29-16Z"
-              fill={`url(#${id}shell)`}
-              stroke="#f2c58b"
-            />
-            <path
-              d="m12 34 28 14 28-14M40 48v10M25 25l29 15M55 25 26 40"
-              stroke="#502e2d"
-              strokeWidth="2"
-            />
-            <path d="m40 22 13 11-13 8-13-8 13-11Z" fill="#193c3b" stroke="#b1eed2" />
-            <path
-              d="M37 30c0-5 8-5 8 0 0 3-5 3-5 6m0 2v1"
-              stroke="#d4ffe9"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-            <path d="M9 33v12m62-12v12" stroke="#b5bdb0" strokeWidth="4" />
-          </g>
-        </>
-      ) : (
-        <>
-          <path
-            className="cpi-cache-core"
-            d="m40 22 5 13 14 5-14 5-5 15-5-15-14-5 14-5 5-13Z"
-            fill={`url(#${id}core)`}
-          />
-          <g className="cpi-cache-base">
-            <path
-              d="M12 46c0 20 10 33 28 33s28-13 28-33L40 39 12 46Z"
-              fill={`url(#${id}shell)`}
-              stroke="#f2dcff"
-            />
-            <path
-              d="M20 50c2 15 7 20 13 23M60 50c-2 15-7 20-13 23M40 49v25"
-              stroke="#d5eaff"
-              strokeOpacity=".6"
-            />
-            <ellipse cx="40" cy="47" rx="25" ry="9" fill="#514777" stroke="#f4d6ff" />
-            <path d="M16 57c10 10 38 10 48 0" stroke="#fff1ff" strokeOpacity=".35" />
-          </g>
-          <g className="cpi-cache-lid">
-            <path
-              d="M11 44C9 28 22 15 40 15s31 13 29 29c-11 15-47 15-58 0Z"
-              fill={`url(#${id}shell)`}
-              stroke="#f8eaff"
-            />
-            <path
-              d="M20 38c2-10 6-13 11-15M49 23c5 2 9 5 11 15M40 20v16"
-              stroke="#fff2ff"
-              strokeWidth="2"
-              strokeLinecap="round"
-              opacity=".65"
-            />
-            <path d="M11 44c17 11 41 11 58 0" stroke="#bcecff" strokeWidth="3" />
-            <path
-              d="m40 37 3 7 8 2-8 4-3 9-3-9-8-4 8-2 3-7Z"
-              fill={`url(#${id}core)`}
-              stroke="#fff6ff"
-            />
-            <circle cx="19" cy="30" r="2" fill="#ffffff" />
-          </g>
-          <g className="cpi-cache-satellites" stroke="#cdeeff">
-            <circle cx="9" cy="61" r="2.5" />
-            <circle cx="70" cy="19" r="3" />
-          </g>
-        </>
-      )}
-    </svg>
-  );
+  return <RenderedMysteryCache theme={theme} open={open} />;
 }
 
 const hostile = (kind: EffectKind) =>

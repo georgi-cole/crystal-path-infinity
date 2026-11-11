@@ -129,7 +129,9 @@ describe('mystery feedback, practice chamber and public contracts', () => {
       );
       expect(waiting.sp).toBe(80);
       expect(html).toContain('cpi-relic-options');
-      expect(html).toMatch(/class="cpi-relic-open" src="data:image\/webp;base64,/);
+      expect(html).toContain(
+        'class="cpi-cache-art-open" href="/assets/worlds/caches/obsidian-v1.webp"',
+      );
       expect(html).not.toContain('65% ·');
       expect(html.match(/data-pact-option=/g)).toHaveLength(2);
       expect(html).toContain('data-tier="major"');
@@ -573,7 +575,7 @@ describe('mystery feedback, practice chamber and public contracts', () => {
       if (theme === 'obsidian') {
         expect(html).toContain('cpi-mystery-cube is-open');
       } else {
-        expect(html).toContain('cpi-world-cache world-' + theme + ' is-open');
+        expect(html).toMatch(new RegExp(`cpi-world-cache[^"\n]*world-${theme}[^"\n]*is-open`));
         expect(html).not.toContain('cpi-mystery-cube');
       }
     }
