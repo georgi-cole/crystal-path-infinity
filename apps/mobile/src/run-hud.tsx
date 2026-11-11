@@ -1,4 +1,5 @@
 import { STARTING_SP } from '@crystal-path-infinity/game-core';
+import type { ReactNode } from 'react';
 import { useLanguage } from './language-context';
 import { HintCounter } from './resource-feedback';
 import { SpCounter } from './scene-instruments';
@@ -20,6 +21,7 @@ export function RunHud({
   paused,
   onHint,
   onPause,
+  kitControl,
 }: {
   campaign?: boolean;
   row: string;
@@ -35,6 +37,7 @@ export function RunHud({
   paused: boolean;
   onHint: () => void;
   onPause: () => void;
+  kitControl?: ReactNode;
 }) {
   const { t, number } = useLanguage();
   const criticalSp = maxSp === null ? 10 : 60;
@@ -97,6 +100,7 @@ export function RunHud({
         >
           <HintCounter count={hints} cue={hintCue} />
         </button>
+        {kitControl}
         <button
           type="button"
           className="cpi-pause-control cpi-hud-control"

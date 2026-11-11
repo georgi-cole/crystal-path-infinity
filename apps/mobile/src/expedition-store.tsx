@@ -11,6 +11,8 @@ import {
   ownsStyle,
   selectedInfinitySeason,
   unlockedSeasons,
+  isRepeatableSupply,
+  supplyPackFits,
 } from './campaign-test';
 import type { CampaignOffer, CampaignProgress } from './campaign-test';
 import { AdventureIcon, BridgeInsignia } from './expedition-art';
@@ -847,6 +849,8 @@ function Supplies({
   const seasonCount = unlockedSeasons(progress).length;
   const pack = restock ? supplyOffers[restock] : undefined;
   const added = restock !== null && progress.offers.includes(restock);
+  const repeatable = restock !== null && isRepeatableSupply(restock);
+  const atLimit = restock !== null && repeatable && !supplyPackFits(progress, restock);
   const locked = restock === 'season-change-pack' && seasonCount < 2;
   const discovered = restock === 'all-seasons' && seasonCount === 4;
   return (
@@ -868,6 +872,11 @@ function Supplies({
             <div className="cpi-restock-feature-copy">
               <p className="cpi-adventure-kicker">Packed for the trail</p>
               <h3>{pack.title}</h3>
+              {repeatable && (
+                <small className="cpi-restock-balance">
+                  {resources.find(([offer]) => offer === restock)?.[2]} stored
+                </small>
+              )}
               <p>{pack.note}</p>
               {restock === 'clock-free' && (
                 <small>
@@ -887,7 +896,12 @@ function Supplies({
                 <button
                   type="button"
                   className="cpi-adventure-button"
-                  disabled={(added && restock !== 'clock-free') || locked || discovered}
+                  disabled={
+                    (added && !repeatable && restock !== 'clock-free') ||
+                    locked ||
+                    discovered ||
+                    atLimit
+                  }
                   onClick={() =>
                     restock === 'clock-free' && added ? onToggleClock() : onClaim(restock)
                   }
@@ -896,13 +910,17 @@ function Supplies({
                     ? progress.clockFree
                       ? 'Clock off · Turn on'
                       : 'Clock on · Turn off'
-                    : added
-                      ? 'Added to supplies'
-                      : locked
-                        ? 'Locked'
-                        : discovered
-                          ? 'Already discovered'
-                          : 'Add free test pack'}
+                    : atLimit
+                      ? 'Fully stocked'
+                      : added && repeatable
+                        ? 'Add another free test pack'
+                        : added
+                          ? 'Added to supplies'
+                          : locked
+                            ? 'Locked'
+                            : discovered
+                              ? 'Already discovered'
+                              : 'Add free test pack'}
                 </button>
                 {locked && (
                   <button

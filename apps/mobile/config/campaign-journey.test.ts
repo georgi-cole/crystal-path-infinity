@@ -28,6 +28,8 @@ import {
   campaignProgressFromEvents,
   infinityProgressFromEvents,
   canUseInfinitySupply,
+  isRepeatableSupply,
+  supplyPackFits,
   claimTestOffer,
   createCampaignInfinityRun,
   createCampaignRun,
@@ -113,6 +115,38 @@ function demonstrateClear(mission: CampaignMissionSnapshot) {
 }
 
 describe('Beacon Route playtest', () => {
+  it.each([
+    ['sp-pack', 'reserveSp', 500],
+    ['hint-pack', 'reserveHints', 10],
+    ['continue-pack', 'continues', 3],
+    ['shield-pack', 'shields', 10],
+    ['season-change-pack', 'seasonChanges', 10],
+  ] as const)(
+    'stacks repeated %s packs and permits restocking after use',
+    (offer, balance, amount) => {
+      const initial = { ...EMPTY_CAMPAIGN_PROGRESS, offers: ['all-seasons'] as const };
+      const once = claimTestOffer(initial, offer),
+        twice = claimTestOffer(once, offer);
+      expect(isRepeatableSupply(offer)).toBe(true);
+      expect(twice[balance]).toBe(amount * 2);
+      expect(twice.offers.filter((value) => value === offer)).toHaveLength(1);
+      expect(claimTestOffer({ ...twice, [balance]: 0 }, offer)[balance]).toBe(amount);
+      const full = { ...twice, [balance]: 10000 };
+      expect(supplyPackFits(full, offer)).toBe(false);
+      expect(claimTestOffer(full, offer)).toBe(full);
+      let stored = '';
+      writeCampaignSave(
+        {
+          setItem: (_, value) => {
+            stored = value;
+          },
+        },
+        twice,
+        null,
+      );
+      expect(readCampaignSave({ getItem: () => stored }).progress[balance]).toBe(amount * 2);
+    },
+  );
   it('draws new route and Mystery entropy for each Campaign attempt, while an explicit fixture seed reproduces both', () => {
     const entropy = vi.spyOn(crypto, 'getRandomValues');
     const mission = newMissionSnapshot('first-steps');
@@ -425,7 +459,7 @@ describe('Beacon Route playtest', () => {
     expect(selectedInfinitySeason(advanceInfinityCycle(autumn))).toBe('winter');
   });
 
-  it('stores a shield pack and season changes once per test offer across reloads', () => {
+  it('stores shield and season-change balances across reloads and allows another pack', () => {
     let progress = claimTestOffer(EMPTY_CAMPAIGN_PROGRESS, 'all-seasons');
     progress = claimTestOffer(progress, 'season-change-pack');
     progress = spendSeasonChange(claimTestOffer(progress, 'shield-pack'));
@@ -442,8 +476,8 @@ describe('Beacon Route playtest', () => {
     const reloaded = readCampaignSave({ getItem: () => stored }).progress;
     expect(reloaded.shields).toBe(10);
     expect(reloaded.seasonChanges).toBe(9);
-    expect(claimTestOffer(reloaded, 'shield-pack')).toBe(reloaded);
-    expect(claimTestOffer(reloaded, 'season-change-pack')).toBe(reloaded);
+    expect(claimTestOffer(reloaded, 'shield-pack').shields).toBe(20);
+    expect(claimTestOffer(reloaded, 'season-change-pack').seasonChanges).toBe(19);
   });
 
   it.each(CAMPAIGN_MISSIONS)('$name has a supplied-kit clear', ({ id }) => {

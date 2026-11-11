@@ -1,5 +1,10 @@
 # Mobile app foundation — CPI-003
 
+## Offline playtest 0.7.3 — 11 November 2026
+
+Gear and supplies are tucked behind the compact HUD Kit button. The illustrated phone/wide-screen dialog pauses the crossing while browsing; using an item closes it and resumes before applying the action. Hint remains directly accessible, and a first-row hint now hides both initial direction prompts. Consumable test packs now support repeat restocking and stacking, including after consumption; permanent unlocks remain one-time. Restock shows the live stored balance. The 0.7.2 mode separation and atomic saved-run contracts below are unchanged.
+
+
 ## Offline Campaign/Infinity playtest 0.7.2 — 11 November 2026
 
 The explicit `campaign-qa` profile now reserves all store supplies and functional Gear/No Clock for Infinity. Campaign uses the mission kit, with cosmetic choices shared. New Campaign rules carry `-mission-kit`; new Infinity rules carry `-supplies`. Existing run snapshots retain their captured rules.

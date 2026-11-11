@@ -1861,7 +1861,7 @@ export function PrismBridge({
               {row.phase === 'current' &&
                 !phase &&
                 ((row.hint === side && showHintCaption) ||
-                  (row.hint !== side && row.index === '0' && showStepCaptions)) && (
+                  (row.hint === null && row.index === '0' && showStepCaptions)) && (
                   <>
                     <span className="cpi-pane-direction" aria-hidden="true">
                       {side === 'left' ? '↖' : '↗'}

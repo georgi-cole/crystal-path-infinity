@@ -68,6 +68,21 @@ type ExtraSupplyOffer = keyof typeof EXTRA_SUPPLY_OFFERS;
 export type CampaignOffer =
   StyleOffer | ExtraSupplyOffer | 'sp-pack' | 'hint-pack' | 'continue-pack' | `gear:${GearId}`;
 export const gearOffer = (gear: GearId): CampaignOffer => `gear:${gear}`;
+const SUPPLY_PACKS = {
+  'sp-pack': ['reserveSp', 500],
+  'hint-pack': ['reserveHints', 10],
+  'continue-pack': ['continues', 3],
+  'shield-pack': ['shields', 10],
+  'season-change-pack': ['seasonChanges', 10],
+} as const;
+export function isRepeatableSupply(offer: CampaignOffer): offer is keyof typeof SUPPLY_PACKS {
+  return Object.hasOwn(SUPPLY_PACKS, offer);
+}
+export function supplyPackFits(progress: CampaignProgress, offer: CampaignOffer): boolean {
+  if (!isRepeatableSupply(offer)) return true;
+  const [balance, amount] = SUPPLY_PACKS[offer];
+  return progress[balance] <= 10000 - amount;
+}
 
 export interface CampaignMissionSnapshot extends Omit<
   MissionDefinition<CampaignMissionId>,
@@ -548,11 +563,15 @@ export function equipBridgeDesign(
 }
 
 export function claimTestOffer(progress: CampaignProgress, offer: CampaignOffer): CampaignProgress {
-  if (progress.offers.includes(offer)) return progress;
+  if (
+    (progress.offers.includes(offer) && !isRepeatableSupply(offer)) ||
+    !supplyPackFits(progress, offer)
+  )
+    return progress;
   if (offer === 'season-change-pack' && unlockedSeasons(progress).length < 2) return progress;
   return {
     ...progress,
-    offers: [...progress.offers, offer],
+    offers: progress.offers.includes(offer) ? progress.offers : [...progress.offers, offer],
     reserveSp: progress.reserveSp + (offer === 'sp-pack' ? 500 : 0),
     reserveHints: progress.reserveHints + (offer === 'hint-pack' ? 10 : 0),
     continues: progress.continues + (offer === 'continue-pack' ? 3 : 0),

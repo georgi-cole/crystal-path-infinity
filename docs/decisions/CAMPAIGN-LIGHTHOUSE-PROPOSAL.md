@@ -1,5 +1,19 @@
 # Crystal Path Campaign and Infinity proposal
 
+## Current offline build — 0.7.3
+
+11 November 2026 · CPI-039. The play HUD now has one compact **Kit** control beside Hint and Pause. Gear and active supply rows no longer occupy the bridge. A small amber marker calls attention to unsuitable gear without leaving the full description on screen.
+
+The Kit opens a compact illustrated dialog: a bottom card on phones, a small panel near the HUD on wide screens. It reuses the shop's gear/supply art, leaves quantities beside the copy, supports native modal focus/Escape and outside dismissal, and uses a separate pause lease. Item selection releases that lease before issuing the action, then folds the Kit away. Browsing time therefore consumes neither the death clock nor a newly activated shield. Existing lifecycle/background holds remain independent. Hints stay directly accessible from their existing HUD button; continues remain contextual after a fall. Campaign's mission-kit boundary is unchanged.
+
+A first-row hint removes **both** initial Trust prompts for either revealed side, including later hints whose repeated caption is suppressed. The safe highlight and accessible safe-tile description remain. Regression coverage includes both hint sides, collapsed/open Kit markup and a 60-second frozen runtime interval followed by a shield with its full duration. The 0.7.3 restock policy supersedes the earlier one-time test-claim restriction for consumables: SP, hints, shields, continues and Season Changes can be added repeatedly, stack their full quantities and remain available to restock after consumption. Permanent unlocks remain one-time. The local per-resource balance limit stays 10,000; a pack that would exceed it is rejected whole. Repeated packs keep one catalog ownership marker, while saved balances reflect the full credited quantity. Restock displays the live stored count and an enabled Add another free test pack action. Prices, first-clear reward amounts and saved run identities do not change. Claims remain free/offline, not repeated real payments.
+
+
+### 0.7.3 verification · 11 November 2026
+
+The mobile suite passed 793/793 tests with two workers. Focused coverage passed 102 cases across Campaign, scene and runtime tests, including all five repeatable packs and save/reload after restocking. Workspace typechecking, lint and formatting passed, followed by targeted lint for the final restock/focus changes. The Campaign QA build passed. At phone widths, the closed Kit added no bridge rows; the illustrated panel fitted without horizontal overflow, Escape dismissed it, and a shield action closed it with 4.9 seconds still available. The browser restock balance increased 9 → 19 → 29 with the repeat button still enabled. A fresh Infinity run showed 31 total hints; its first hint removed both initial direction captions. Native checks for the final commit are recorded on the PR.
+
+
 ## Current offline build — 0.7.2
 
 11 November 2026 · CPI-039 / #109. This supersedes the earlier assisted-Campaign supply/gear/No Clock policy; it does not rewrite historical playtest results.

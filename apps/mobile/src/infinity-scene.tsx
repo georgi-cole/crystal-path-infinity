@@ -30,6 +30,7 @@ import { StageAtmosphere } from './stage-atmosphere';
 import { useSoundtrack } from './soundtrack';
 import { PrismBridge } from './prism-bridge';
 import { RunHud } from './run-hud';
+import { RunKitButton, RunKitDialog } from './run-kit';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   createPracticeCursor,
@@ -120,6 +121,8 @@ export interface InfinitySceneViewProps {
   readonly bridgeStyle?: BridgeStyle;
   readonly campaignSupplyPanel?: ReactNode;
   readonly reserveHints?: number;
+  readonly kitOpen?: boolean;
+  readonly onToggleKit?: () => void;
   readonly onToggleJourneyGear?: (wear: boolean) => void;
   readonly resourcePanel?: ReactNode;
   readonly guestContinuePanel?: ReactNode;
@@ -190,6 +193,8 @@ export function InfinitySceneView({
   bridgeStyle,
   campaignSupplyPanel,
   reserveHints = 0,
+  kitOpen = false,
+  onToggleKit,
   onToggleJourneyGear,
   settings,
   onSettingsChange,
@@ -286,6 +291,7 @@ export function InfinitySceneView({
     !cinematicBlocks &&
     !pactOffered &&
     !paused &&
+    !kitOpen &&
     !confirmEnd &&
     !error &&
     outcome.phase === 'playing';
@@ -342,6 +348,10 @@ export function InfinitySceneView({
                 ? 'A good time to bring it out.'
                 : null
       : null;
+  const hasKit = !!(
+    onToggleKit &&
+    ((gear && gearCopy && onToggleJourneyGear) || campaignSupplyPanel)
+  );
   const modeLabel = trial
     ? t('vault.trial')
     : state.storeTest?.assisted
@@ -469,10 +479,30 @@ export function InfinitySceneView({
             !state.current.noSafeTile &&
             state.current.revealedSafeSide === null
           }
-          canPause={ready && !busy && !cinematicBlocks && !error && state.status === 'playing'}
+          canPause={
+            ready && !busy && !cinematicBlocks && !error && !kitOpen && state.status === 'playing'
+          }
           paused={paused}
           onHint={onHint}
           onPause={onPause}
+          kitControl={
+            hasKit && onToggleKit ? (
+              <RunKitButton
+                open={kitOpen}
+                warning={!!hasGearDownside}
+                disabled={
+                  !ready ||
+                  busy ||
+                  !!cinematic ||
+                  paused ||
+                  !!error ||
+                  state.status !== 'playing' ||
+                  pactOffered
+                }
+                onClick={onToggleKit}
+              />
+            ) : undefined
+          }
         />
         {(season || legacyRain || cueText) && (
           <aside className="cpi-journey-forecast" data-active={!!currentSky} aria-live="polite">
@@ -492,27 +522,31 @@ export function InfinitySceneView({
             {cueText && <strong>{cueText}</strong>}
           </aside>
         )}
-        {gear && gearCopy && onToggleJourneyGear && state.status === 'playing' && (
-          <aside
-            className="cpi-journey-kit-control"
-            data-warning={!!hasGearDownside}
-            aria-label="Crossing gear"
-          >
-            <span aria-hidden="true">{gearCopy.glyph}</span>
-            <div>
-              <strong>{gearCopy.name}</strong>
-              <small>{gearTip ?? (gear.worn ? 'Wearing' : 'Packed away')}</small>
-            </div>
-            <button
-              type="button"
-              disabled={!interactive}
-              onClick={() => onToggleJourneyGear(!(gear.queued ?? gear.worn))}
-            >
-              {gear.queued !== null ? 'Cancel change' : gear.worn ? 'Pack away' : 'Bring out'}
-            </button>
-          </aside>
+        {hasKit && onToggleKit && kitOpen && !error && state.status === 'playing' && (
+          <RunKitDialog onClose={onToggleKit}>
+            {gear && gearCopy && onToggleJourneyGear && (
+              <aside
+                className="cpi-journey-kit-control"
+                data-warning={!!hasGearDownside}
+                aria-label="Crossing gear"
+              >
+                <span className="cpi-kit-gear-art" data-item={gear.item} aria-hidden="true" />
+                <div>
+                  <strong>{gearCopy.name}</strong>
+                  <small>{gearTip ?? (gear.worn ? 'Wearing' : 'Packed away')}</small>
+                </div>
+                <button
+                  type="button"
+                  disabled={!ready || busy || paused || !!error || !!cinematic}
+                  onClick={() => onToggleJourneyGear(!(gear.queued ?? gear.worn))}
+                >
+                  {gear.queued !== null ? 'Cancel change' : gear.worn ? 'Pack away' : 'Bring out'}
+                </button>
+              </aside>
+            )}
+            {campaignSupplyPanel}
+          </RunKitDialog>
         )}
-        {campaignSupplyPanel}
         <aside
           className={'cpi-run-status' + (pactOffered ? ' is-choosing' : '')}
           aria-label={t('game.effects')}
@@ -1010,6 +1044,7 @@ function InfinityRun({
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [paused, setPaused] = useState(false);
+  const [kitOpen, setKitOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<SceneFeedback | null>(null);
   const [mysteryFeedback, setMysteryFeedback] = useState<MysteryFeedback | null>(null);
@@ -1035,6 +1070,7 @@ function InfinityRun({
   const runtimeRef = useRef<PracticeRuntime | null>(null);
   const audioRef = useRef<StandaloneAudio | null>(null);
   const pauseRef = useRef<PracticePauseLease | null>(null);
+  const kitPauseRef = useRef<PracticePauseLease | null>(null);
   const commandLock = useRef(false);
   const exitLock = useRef(false);
   const directorRef = useRef<ReturnType<typeof createSceneDirector> | null>(null);
@@ -1239,9 +1275,20 @@ function InfinityRun({
       (command.type !== 'end' && directorRef.current?.isBusy())
     )
       return;
+    if (
+      kitPauseRef.current &&
+      command.type !== 'journey-resource' &&
+      command.type !== 'journey-gear'
+    )
+      return;
     commandLock.current = true;
     setBusy(true);
     try {
+      if (kitPauseRef.current) {
+        await kitPauseRef.current.release();
+        kitPauseRef.current = null;
+        setKitOpen(false);
+      }
       const result = await runtime.bind(command, beforeCommit)();
       setState(result.state);
       if (
@@ -1258,6 +1305,35 @@ function InfinityRun({
         setError(`Action unavailable: ${result.reason}`);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Gameplay command failed.');
+    } finally {
+      commandLock.current = false;
+      setBusy(false);
+    }
+  }
+
+  async function toggleKit() {
+    const runtime = runtimeRef.current;
+    if (!runtime || !ready || paused || commandLock.current || directorRef.current?.isBusy())
+      return;
+    commandLock.current = true;
+    setBusy(true);
+    try {
+      if (kitPauseRef.current) {
+        await kitPauseRef.current.release();
+        kitPauseRef.current = null;
+        setKitOpen(false);
+      } else {
+        const lease = await runtime.hold('user');
+        if (runtimeRef.current !== runtime || runtime.getState().status !== 'playing') {
+          await lease.release();
+          return;
+        }
+        kitPauseRef.current = lease;
+        setKitOpen(true);
+      }
+      setState(runtime.getState());
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Unable to open your kit.');
     } finally {
       commandLock.current = false;
       setBusy(false);
@@ -1301,6 +1377,11 @@ function InfinityRun({
     if (!runtime) return;
     try {
       await runtime.refresh();
+      if (kitPauseRef.current) {
+        await kitPauseRef.current.release();
+        kitPauseRef.current = null;
+        setKitOpen(false);
+      }
       setError(null);
       setReady(true);
       setState(runtime.getState());
@@ -1532,6 +1613,10 @@ function InfinityRun({
       }
       weather={weather}
       campaignMission={campaignMission}
+      kitOpen={kitOpen}
+      onToggleKit={() => {
+        void toggleKit();
+      }}
       reserveHints={suppliesAvailable ? infinitySupplies?.hint : 0}
       bridgeStyle={bridgeStyle}
       onToggleJourneyGear={(wear) => {
@@ -1573,7 +1658,11 @@ function InfinityRun({
                       );
                     }}
                   >
-                    {label} · {infinitySupplies[item]}
+                    <span className="cpi-kit-supply-art" data-item={item} aria-hidden="true" />
+                    <strong>{label}</strong>
+                    <small>
+                      {infinitySupplies[item]} {item === 'sp' ? 'SP stored' : 'left'}
+                    </small>
                   </button>
                 ),
             )}

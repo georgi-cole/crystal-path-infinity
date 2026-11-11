@@ -18,6 +18,7 @@ import { ThemeContext } from '../src/store-context';
 import type { ThemeId } from '../src/store-catalog';
 import { en } from '../src/i18n/messages';
 import { DEFAULT_PRACTICE_SETTINGS } from '../src/practice-save';
+import { createCampaignInfinityRun, EMPTY_CAMPAIGN_PROGRESS } from '../src/campaign-test';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 
@@ -67,6 +68,56 @@ function markup(modifiers: Record<string, unknown> = {}, theme: ThemeId = 'obsid
   );
 }
 describe('CPI-008 standalone scene', () => {
+  it.each(['left', 'right'] as const)(
+    'removes both first-row directions when a hint reveals %s',
+    (side) => {
+      let base = makeState();
+      for (let seed = 1; getCurrentRow(base).safeSide !== side && seed < 40; seed++) {
+        base = createRun(
+          {
+            runId: 'practice-caption',
+            routeRng: createPracticeCursor(seed),
+            mysteryRng: createPracticeCursor(9),
+            observedAt: 0,
+          },
+          PRACTICE_RNG,
+        );
+      }
+      expect(getCurrentRow(base).safeSide).toBe(side);
+      const hinted = transitionRun(
+        base,
+        { type: 'hint', row: '1', life: 0 },
+        { rng: PRACTICE_RNG, activeTimeMs: 0, achievedAt: base.lastObservedAt },
+      ).state;
+      for (const hintCaptionRow of [null, '1']) {
+        const html = markup({ state: hinted, hintCaptionRow });
+        expect(html).not.toContain('Trust the left');
+        expect(html).not.toContain('Trust the right');
+        expect(html).toContain('is-hinted');
+        expect(html).toContain('aria-description="This one holds"');
+      }
+    },
+  );
+  it('tucks gear and supplies behind one control and blocks the bridge while the kit is open', () => {
+    const state = createCampaignInfinityRun({ ...EMPTY_CAMPAIGN_PROGRESS, gear: 'trail-scarf' });
+    const props = {
+      state,
+      onToggleKit: noop,
+      onToggleJourneyGear: noop,
+      campaignSupplyPanel: createElement('button', {}, '+25 Stability'),
+    };
+    const closed = markup(props);
+    expect(closed).toContain('aria-label="Open gear and supplies"');
+    expect(closed).not.toContain('aria-label="Crossing gear"');
+    expect(closed).not.toContain('+25 Stability');
+    const open = markup({ ...props, kitOpen: true });
+    expect(open).toContain('Gear &amp; supplies');
+    expect(open).toContain('Paused while you choose');
+    expect(open).toContain('aria-label="Close kit"');
+    expect(open).toContain('aria-label="Crossing gear"');
+    expect(open).toContain('+25 Stability');
+    expect(open).toMatch(/aria-label="Row 1 left tile"[^>]*disabled=""/);
+  });
   it('shows stored Infinity hints in the main counter while Campaign shows only its kit', () => {
     expect(markup({ reserveHints: 10 })).toContain('aria-label="Use hint, 12 remaining"');
     const mission = { name: 'Mission kit', targetRow: 24, minimumStability: 100 };
