@@ -1,14 +1,20 @@
 import type { SqlPool, SqlConnection } from './database.ts';
 import type { PurchaseProof, PurchaseVerifier, VerifiedPurchase } from './purchase-verification.ts';
 import type { PrivateCryptography } from './private-services.ts';
+import {
+  commerceResourceColumn,
+  isAdventureUnlock,
+  isConsumableProduct,
+} from './adventure-products.ts';
 const themes = ['obsidian', 'chaos', 'jelly', 'wilds', 'league', 'puppy', 'kitten'];
 export interface CommerceProduct {
   readonly key: string;
   readonly sku: string;
   readonly platform: 'android' | 'ios';
-  readonly kind: 'sp' | 'hints' | 'credit' | 'theme';
+  readonly kind: 'sp' | 'hints' | 'credit' | 'theme' | 'shields' | 'season_changes' | 'unlock';
   readonly quantity: number;
   readonly theme?: string;
+  readonly unlock?: string;
   /** Keep retired SKU mappings immutable for restore; exclude them from new checkouts. */
   readonly available?: boolean;
 }
@@ -18,6 +24,9 @@ export interface CommerceWallet {
   sp: number;
   hints: number;
   credits: number;
+  shields: number;
+  seasonChanges: number;
+  unlocks: string[];
   owned: string[];
   equipped: string;
 }
@@ -44,7 +53,11 @@ function wallet(row: Record<string, unknown> | undefined): CommerceWallet {
     row.owned.some((t) => !themes.includes(t as string)) ||
     typeof row.equipped !== 'string' ||
     !row.owned.includes(row.equipped) ||
-    row.blocked !== false
+    row.blocked !== false ||
+    (row.unlocks !== undefined &&
+      (!Array.isArray(row.unlocks) ||
+        new Set(row.unlocks).size !== row.unlocks.length ||
+        row.unlocks.some((key) => !isAdventureUnlock(key))))
   )
     throw new CommerceError();
   return {
@@ -53,6 +66,9 @@ function wallet(row: Record<string, unknown> | undefined): CommerceWallet {
     sp: count(row.sp),
     hints: count(row.hints),
     credits: count(row.credits),
+    shields: count(row.shields ?? 0),
+    seasonChanges: count(row.season_changes ?? 0),
+    unlocks: (row.unlocks ?? []) as string[],
     owned: row.owned as string[],
     equipped: row.equipped,
   };
@@ -82,7 +98,15 @@ export function createCommerceService(options: {
       !Number.isSafeInteger(product.quantity) ||
       product.quantity < 1 ||
       product.quantity > 100000 ||
-      !['sp', 'hints', 'credit', 'theme'].includes(product.kind) ||
+      !['sp', 'hints', 'credit', 'theme', 'shields', 'season_changes', 'unlock'].includes(
+        product.kind,
+      ) ||
+      (product.kind === 'unlock'
+        ? product.quantity !== 1 ||
+          !isAdventureUnlock(product.unlock) ||
+          product.key !== product.unlock
+        : product.unlock !== undefined) ||
+      (product.kind !== 'theme' && product.theme !== undefined) ||
       (product.available !== undefined && typeof product.available !== 'boolean') ||
       (product.platform !== 'android' && product.platform !== 'ios') ||
       (product.kind === 'theme' &&
@@ -177,7 +201,7 @@ export function createCommerceService(options: {
       ready(subject);
       return products
         .filter((p) => p.platform === platform && p.available !== false)
-        .map((p) => ({ key: p.key, sku: p.sku, consumable: p.kind !== 'theme' }));
+        .map((p) => ({ key: p.key, sku: p.sku, consumable: isConsumableProduct(p.kind) }));
     },
     wallet: (subject: string) =>
       transaction(subject, (_connection, current) => Promise.resolve(current)),
@@ -203,7 +227,7 @@ export function createCommerceService(options: {
       if (!matches(verified.purchase, proof)) throw new CommerceError();
       if (
         proof.platform === 'ios' &&
-        verified.purchase.nativeConsumable !== (product.kind !== 'theme')
+        verified.purchase.nativeConsumable !== isConsumableProduct(product.kind)
       )
         return { status: 'rejected' as const };
       return transaction(
@@ -221,8 +245,8 @@ export function createCommerceService(options: {
           );
           if (refund.rows.length) return { status: 'rejected' as const };
           const result = await connection.query(
-            `insert into cpi_private.purchase_deliveries(fingerprint,wallet_id,platform,environment,transaction_id,sku,product_key,product_kind,quantity,theme)
-           values($1,$2::uuid,$3,$4,$5,$6,$7,$8,$9,$10) on conflict do nothing returning fingerprint`,
+            `insert into cpi_private.purchase_deliveries(fingerprint,wallet_id,platform,environment,transaction_id,sku,product_key,product_kind,quantity,theme,unlock_key)
+           values($1,$2::uuid,$3,$4,$5,$6,$7,$8,$9,$10,$11) on conflict do nothing returning fingerprint`,
             [
               verified.purchase.fingerprint,
               current.accountToken,
@@ -234,6 +258,7 @@ export function createCommerceService(options: {
               product.kind,
               product.quantity,
               product.theme ?? null,
+              product.unlock ?? null,
             ],
           );
           if (result.rows.length) {
@@ -242,8 +267,13 @@ export function createCommerceService(options: {
                 `update cpi_private.commerce_wallets set owned=case when $2=any(owned) then owned else array_append(owned,$2) end, revision=revision+1 where id=$1::uuid`,
                 [current.accountToken, product.theme!],
               );
+            else if (product.kind === 'unlock')
+              await connection.query(
+                `update cpi_private.commerce_wallets set unlocks=case when $2=any(unlocks) then unlocks else array_append(unlocks,$2) end, revision=revision+1 where id=$1::uuid`,
+                [current.accountToken, product.unlock!],
+              );
             else {
-              const column = product.kind === 'credit' ? 'credits' : product.kind;
+              const column = commerceResourceColumn(product.kind);
               await connection.query(
                 `update cpi_private.commerce_wallets set ${column}=${column}+$2, revision=revision+1 where id=$1::uuid`,
                 [current.accountToken, product.quantity],
@@ -277,7 +307,7 @@ export function createCommerceService(options: {
           return {
             status: 'granted' as const,
             transactionId: proof.transactionId,
-            consumable: product.kind !== 'theme',
+            consumable: isConsumableProduct(product.kind),
             wallet: await read(connection, current.accountToken),
           };
         },

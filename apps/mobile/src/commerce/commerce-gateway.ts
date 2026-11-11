@@ -1,5 +1,6 @@
 import type { AccountSessionOwner } from '../account/session-owner';
-import { STORE_PRODUCTS, THEME_IDS } from '../store-catalog';
+import { THEME_IDS } from '../store-catalog';
+import { COMMERCE_PRODUCTS as catalog, ADVENTURE_COMMERCE_UNLOCKS } from './adventure-products';
 import type { ThemeId } from '../store-catalog';
 import { CommerceUnavailable } from './commerce-types';
 import type {
@@ -11,9 +12,6 @@ import type {
 } from './commerce-types';
 
 const tokenPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const catalog = new Map(
-  STORE_PRODUCTS.map((product) => [product.id.replace(/^test\./, ''), product]),
-);
 function record(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
 }
@@ -27,6 +25,14 @@ export function parseCommerceWallet(value: unknown): CommerceWallet | null {
     !integer(value.sp) ||
     !integer(value.hints) ||
     !integer(value.credits) ||
+    (value.shields !== undefined && !integer(value.shields)) ||
+    (value.seasonChanges !== undefined && !integer(value.seasonChanges)) ||
+    (value.unlocks !== undefined &&
+      (!Array.isArray(value.unlocks) ||
+        new Set(value.unlocks).size !== value.unlocks.length ||
+        value.unlocks.some(
+          (key) => typeof key !== 'string' || !ADVENTURE_COMMERCE_UNLOCKS.includes(key),
+        ))) ||
     typeof value.accountToken !== 'string' ||
     !tokenPattern.test(value.accountToken) ||
     !Array.isArray(value.owned) ||
@@ -43,6 +49,9 @@ export function parseCommerceWallet(value: unknown): CommerceWallet | null {
     sp: value.sp,
     hints: value.hints,
     credits: value.credits,
+    shields: value.shields ?? 0,
+    seasonChanges: value.seasonChanges ?? 0,
+    unlocks: (value.unlocks ?? []) as string[],
     owned: value.owned as ThemeId[],
     equipped: value.equipped as ThemeId,
   };
@@ -60,7 +69,7 @@ export function parseLiveProducts(value: unknown): readonly LiveProduct[] | null
       typeof product.sku !== 'string' ||
       !/^[A-Za-z0-9][A-Za-z0-9._-]{0,199}$/.test(product.sku) ||
       /^(test\.|REPLACE|placeholder)/i.test(product.sku) ||
-      product.consumable !== (catalog.get(product.key)!.kind !== 'theme') ||
+      product.consumable !== catalog.get(product.key)!.consumable ||
       keys.has(product.key) ||
       skus.has(product.sku)
     )

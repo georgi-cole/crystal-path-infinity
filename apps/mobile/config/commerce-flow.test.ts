@@ -16,6 +16,9 @@ const product = {
 const initial: CommerceWallet = {
   revision: 0,
   accountToken: token,
+  shields: 0,
+  seasonChanges: 0,
+  unlocks: [],
   sp: 0,
   credits: 0,
   hints: 0,

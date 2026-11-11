@@ -2,6 +2,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { PGlite } from '@electric-sql/pglite';
 import { createCommerceService } from '../src/commerce-service.ts';
+import { createHash } from 'node:crypto';
+import { createPurchaseMaintenance } from '../src/purchase-maintenance.ts';
+import { privateCryptography } from '../src/private-services.ts';
 import type { SqlPool } from '../src/database.ts';
 import type { PurchaseProof, PurchaseVerification } from '../src/purchase-verification.ts';
 const user = 'fa000000-0000-4000-8000-000000000001',
@@ -74,6 +77,95 @@ afterAll(async () => {
   await database?.close();
 });
 describe('commerce delivery against embedded PostgreSQL', () => {
+  it('stacks new supply packs once per payment and restores/refunds permanent gear independently', async () => {
+    const products = [
+      {
+        key: 'shields.10',
+        sku: 'com.example.shields10',
+        kind: 'shields' as const,
+        quantity: 10,
+        platform: 'android' as const,
+      },
+      {
+        key: 'season_changes.10',
+        sku: 'com.example.seasons10',
+        kind: 'season_changes' as const,
+        quantity: 10,
+        platform: 'android' as const,
+      },
+      {
+        key: 'gear.umbrella',
+        sku: 'com.example.umbrella',
+        kind: 'unlock' as const,
+        unlock: 'gear.umbrella',
+        quantity: 1,
+        platform: 'android' as const,
+      },
+    ];
+    const fingerprint = (transaction: string) =>
+      createHash('sha256').update(transaction).digest('hex');
+    const adventure = createCommerceService({
+      database: pool,
+      economyReady: true,
+      products,
+      verifyPurchase: (proof) =>
+        Promise.resolve({
+          status: 'verified',
+          purchase: {
+            ...proof,
+            fingerprint: fingerprint(proof.transactionId),
+            environment: 'sandbox',
+          },
+        }),
+    });
+    const wallet = await adventure.wallet(other);
+    const proof = (sku: string, transactionId: string): PurchaseProof => ({
+      platform: 'android',
+      sku,
+      transactionId,
+      purchaseToken: 'test-provider-proof',
+      accountToken: wallet.accountToken,
+    });
+    await adventure.verify(other, proof(products[0].sku, 'shield-a'));
+    await adventure.verify(other, proof(products[0].sku, 'shield-a'));
+    await adventure.verify(other, proof(products[0].sku, 'shield-b'));
+    await adventure.verify(other, proof(products[1].sku, 'season-a'));
+    await adventure.verify(other, proof(products[2].sku, 'umbrella-a'));
+    await adventure.verify(other, proof(products[2].sku, 'umbrella-b'));
+    expect(await adventure.wallet(other)).toMatchObject({
+      shields: 20,
+      seasonChanges: 10,
+      unlocks: ['gear.umbrella'],
+    });
+    expect(adventure.catalog(other, 'android').map((p) => p.consumable)).toEqual([
+      true,
+      true,
+      false,
+    ]);
+    const maintenance = createPurchaseMaintenance({
+      database: pool,
+      crypto: privateCryptography('1'.repeat(64), '2'.repeat(64)),
+      acknowledgeAndroid: async () => {},
+    });
+    const refund = (transactionId: string, effectiveAt: number) => ({
+      fingerprint: fingerprint(transactionId),
+      platform: 'android' as const,
+      environment: 'sandbox' as const,
+      transactionId,
+      eventId: 'event-' + effectiveAt,
+      effectiveAt,
+    });
+    await maintenance.refund(refund('umbrella-a', 1));
+    expect((await adventure.wallet(other)).unlocks).toEqual(['gear.umbrella']);
+    await maintenance.refund(refund('umbrella-b', 2));
+    expect((await adventure.wallet(other)).unlocks).toEqual([]);
+    await maintenance.refund(refund('umbrella-b', 3), true);
+    expect((await adventure.wallet(other)).unlocks).toEqual(['gear.umbrella']);
+    await maintenance.refund(refund('shield-a', 4));
+    expect((await adventure.wallet(other)).shields).toBe(10);
+    await maintenance.refund(refund('shield-a', 5), true);
+    expect((await adventure.wallet(other)).shields).toBe(20);
+  });
   it('credits a verified transaction once, even when delivery acknowledgement is lost', async () => {
     const wallet = await service.wallet(user);
     const proof: PurchaseProof = {
@@ -91,7 +183,8 @@ describe('commerce delivery against embedded PostgreSQL', () => {
     expect(duplicate.status).toBe('granted');
     expect((await service.wallet(user)).credits).toBe(3);
     const count = await database.query<{ count: number }>(
-      'select count(*)::int as count from cpi_private.purchase_deliveries',
+      'select count(*)::int as count from cpi_private.purchase_deliveries where sku=$1',
+      [sku],
     );
     expect(count.rows[0].count).toBe(1);
     const foreign = await service.wallet(other);

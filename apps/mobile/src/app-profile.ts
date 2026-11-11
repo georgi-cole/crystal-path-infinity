@@ -9,12 +9,15 @@ export const QA_TOOLS_ENABLED =
   import.meta.env.MODE === 'test';
 export const CAMPAIGN_TEST_BUILD =
   import.meta.env.MODE === 'campaign-qa' || import.meta.env.MODE === 'campaign-beta';
+export const CAMPAIGN_SERVICES_BUILD = import.meta.env.MODE === 'campaign-services';
+export const CAMPAIGN_ENABLED = CAMPAIGN_TEST_BUILD || CAMPAIGN_SERVICES_BUILD;
 
 /** A guest review build uses the player controls with a browser-only simulated wallet. */
 export const PLAYER_PREVIEW_ENABLED = import.meta.env.MODE === 'player-preview';
 export const SIMULATED_STORE_ENABLED = QA_TOOLS_ENABLED || PLAYER_PREVIEW_ENABLED;
 export const PLAYER_STORAGE_PREFIX = 'cpi.player.v1:';
 export const CAMPAIGN_TEST_STORAGE_PREFIX = 'cpi.campaign-qa.v1:';
+export const CAMPAIGN_SERVICES_STORAGE_PREFIX = 'cpi.campaign-services.v1:';
 
 /** QA keeps its historical data; player saves/records/discoveries use a separate namespace. */
 export function profilePracticeStorage(
@@ -40,5 +43,13 @@ export function profilePracticeStorage(
   };
 }
 export function practiceStorage(): PracticeStorage {
+  if (CAMPAIGN_SERVICES_BUILD) {
+    return {
+      getItem: (key) => window.localStorage.getItem(CAMPAIGN_SERVICES_STORAGE_PREFIX + key),
+      setItem: (key, value) =>
+        window.localStorage.setItem(CAMPAIGN_SERVICES_STORAGE_PREFIX + key, value),
+      removeItem: (key) => window.localStorage.removeItem(CAMPAIGN_SERVICES_STORAGE_PREFIX + key),
+    };
+  }
   return profilePracticeStorage(window.localStorage);
 }

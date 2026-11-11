@@ -24,6 +24,9 @@ export interface CommerceWallet {
   readonly sp: number;
   readonly hints: number;
   readonly credits: number;
+  readonly shields: number;
+  readonly seasonChanges: number;
+  readonly unlocks: readonly string[];
   readonly owned: readonly ThemeId[];
   readonly equipped: ThemeId;
 }
