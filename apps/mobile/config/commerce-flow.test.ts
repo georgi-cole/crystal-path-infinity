@@ -6,6 +6,8 @@ import type {
   NativeBillingAdapter,
   PurchaseProof,
 } from '../src/commerce/commerce-types';
+import { EMPTY_CAMPAIGN_PROGRESS } from '../src/campaign-test';
+import { receiveOfflineSupplies, offlineSupplyCapacity } from '../src/commerce/campaign-inventory';
 const token = 'ba000000-0000-4000-8000-000000000001';
 const product = {
   key: 'credits.3',
@@ -16,6 +18,9 @@ const product = {
 const initial: CommerceWallet = {
   revision: 0,
   accountToken: token,
+  shields: 0,
+  seasonChanges: 0,
+  unlocks: [],
   sp: 0,
   credits: 0,
   hints: 0,
@@ -71,6 +76,114 @@ function fixture(pending = false) {
   };
 }
 describe('real purchase delivery and recovery ownership', () => {
+  it('does not deliver an old account transfer after the account changes during recovery', async () => {
+    const f = fixture();
+    await f.flow.load();
+    const allocation = {
+      operationId: 'bb000000-0000-4000-8000-000000000001',
+      sp: 0,
+      hints: 10,
+      credits: 0,
+      shields: 0,
+      seasonChanges: 0,
+    };
+    let resolve!: (value: { allocations: (typeof allocation)[]; wallet: CommerceWallet }) => void;
+    const offline = {
+      pending: vi.fn(
+        () =>
+          new Promise<{ allocations: (typeof allocation)[]; wallet: CommerceWallet }>((done) => {
+            resolve = done;
+          }),
+      ),
+      allocate: vi.fn(() => Promise.reject(new Error('unused'))),
+      acknowledge: vi.fn(() => Promise.resolve()),
+    };
+    Object.assign(f.gateway, { offlineSupplies: offline });
+    const receive = vi.fn();
+    const pending = f.flow.transferOfflineSupplies({
+      capacity: () => ({ sp: 0, hints: 0, credits: 0, shields: 0, seasonChanges: 0 }),
+      receive,
+      acknowledged: () => {},
+    });
+    await vi.waitFor(() => expect(offline.pending).toHaveBeenCalledOnce());
+    f.changeAccount(null);
+    resolve({ allocations: [allocation], wallet: initial });
+    await pending;
+    expect(receive).not.toHaveBeenCalled();
+    expect(offline.acknowledge).not.toHaveBeenCalled();
+    expect(f.flow.snapshot().wallet).toBeNull();
+  });
+  it('recovers a lost allocation acknowledgement without adding supplies twice', async () => {
+    const f = fixture();
+    await f.flow.load();
+    const allocation = {
+      operationId: 'bb000000-0000-4000-8000-000000000001',
+      sp: 0,
+      hints: 10,
+      credits: 0,
+      shields: 0,
+      seasonChanges: 0,
+    };
+    const acknowledge = vi.fn(() => Promise.resolve());
+    acknowledge.mockRejectedValueOnce(new Error('connection lost'));
+    const offline = {
+      pending: vi.fn(() =>
+        Promise.resolve({ allocations: [allocation], wallet: { ...initial, revision: 1 } }),
+      ),
+      allocate: vi.fn(() => Promise.reject(new Error('no new transfer'))),
+      acknowledge,
+    };
+    Object.assign(f.gateway, { offlineSupplies: offline });
+    let progress = EMPTY_CAMPAIGN_PROGRESS;
+    const receive = vi.fn((grant: typeof allocation) => {
+      progress = receiveOfflineSupplies(progress, grant);
+    });
+    const receiver = {
+      capacity: (wallet: CommerceWallet) => offlineSupplyCapacity(progress, wallet),
+      receive,
+      acknowledged: (id: string) => {
+        progress = {
+          ...progress,
+          supplyAllocations: progress.supplyAllocations?.filter((value) => value !== id),
+        };
+      },
+    };
+    await f.flow.transferOfflineSupplies(receiver);
+    expect(f.flow.snapshot().phase).toBe('error');
+    expect(progress.reserveHints).toBe(10);
+    await f.flow.transferOfflineSupplies(receiver);
+    expect(f.flow.snapshot().phase).toBe('ready');
+    expect(progress.reserveHints).toBe(10);
+    expect(progress.supplyAllocations).toEqual([]);
+    expect(offline.allocate).not.toHaveBeenCalled();
+  });
+  it('does not acknowledge a transfer that the local inventory could not save', async () => {
+    const f = fixture();
+    await f.flow.load();
+    const allocation = {
+      operationId: 'bb000000-0000-4000-8000-000000000001',
+      sp: 0,
+      hints: 10,
+      credits: 0,
+      shields: 0,
+      seasonChanges: 0,
+    };
+    const offline = {
+      pending: vi.fn(() => Promise.resolve({ allocations: [allocation], wallet: initial })),
+      allocate: vi.fn(() => Promise.reject(new Error('unused'))),
+      acknowledge: vi.fn(() => Promise.resolve()),
+    };
+    Object.assign(f.gateway, { offlineSupplies: offline });
+    await f.flow.transferOfflineSupplies({
+      capacity: () => ({ sp: 0, hints: 0, credits: 0, shields: 0, seasonChanges: 0 }),
+      receive: () => {
+        throw new Error('Storage full');
+      },
+      acknowledged: () => {},
+    });
+    expect(offline.acknowledge).not.toHaveBeenCalled();
+    expect(f.flow.snapshot().phase).toBe('error');
+  });
   it('restores a verified purchase even when a platform price is unavailable', async () => {
     const f = fixture(true);
     vi.mocked(f.native.prices).mockRejectedValueOnce(new Error('product temporarily unavailable'));

@@ -69,7 +69,14 @@ export function createNativeIdentity(options: {
 }): NativeIdentity {
   const { apple, googleClientId, fetcher = fetch, now = Date.now } = options;
   const redirect = options.web?.redirectUri ?? googleIosRedirect(googleClientId);
-  if (options.web && redirect !== 'https://crystalpath-api.kolequant.xyz/cpi/identity/web-callback')
+  if (
+    options.web &&
+    ![
+      'https://crystalpath-api.kolequant.xyz/cpi/identity/web-callback',
+      'https://crystalpath-api.kolequant.xyz/cpi/identity/mobile/callback',
+      'https://crystal-path-staging-api.kolequant.workers.dev/cpi/identity/mobile/callback',
+    ].includes(redirect)
+  )
     throw new Error('Invalid web identity redirect');
   if (!/^[A-Z0-9]{10}$/.test(apple.teamId) || !/^[A-Z0-9]{10}$/.test(apple.keyId))
     throw new Error('Invalid Apple sign-in configuration');

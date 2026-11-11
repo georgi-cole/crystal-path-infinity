@@ -97,6 +97,9 @@ export interface CampaignMissionSnapshot extends Omit<
 }
 
 export interface CampaignProgress {
+  /** Unacknowledged server transfers, saved atomically with their local resource grants. */
+  readonly supplyAllocations?: readonly string[];
+  readonly ownedWorlds?: readonly ThemeId[];
   readonly version: 3;
   readonly cleared: readonly CampaignMissionId[];
   readonly mastered: readonly CampaignMissionId[];
@@ -137,6 +140,8 @@ const EMPTY_ATTEMPT = {
 } as const;
 
 export const EMPTY_CAMPAIGN_PROGRESS: CampaignProgress = Object.freeze({
+  supplyAllocations: [],
+  ownedWorlds: ['obsidian'] as const,
   version: 3,
   cleared: [],
   mastered: [],
@@ -398,6 +403,25 @@ export function readCampaignSave(storage: Pick<PracticeStorage, 'getItem'>): {
     const legacySeason = unlocked.indexOf(legacyMode);
     const progress: CampaignProgress = {
       ...EMPTY_CAMPAIGN_PROGRESS,
+      ownedWorlds: Array.isArray(value.ownedWorlds)
+        ? [
+            ...new Set(
+              value.ownedWorlds.filter((id): id is ThemeId => THEME_IDS.includes(id as ThemeId)),
+            ),
+          ]
+        : ['obsidian'],
+      supplyAllocations:
+        Array.isArray(value.supplyAllocations) && value.supplyAllocations.length <= 100
+          ? [
+              ...new Set(
+                value.supplyAllocations.filter(
+                  (id): id is string =>
+                    typeof id === 'string' &&
+                    /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(id),
+                ),
+              ),
+            ]
+          : [],
       cleared,
       style,
       offers,

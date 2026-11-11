@@ -1,6 +1,7 @@
 import type { AccountSessionOwner } from './session-owner';
 import type { AccountControlsClient } from './account-controls-model';
 import { ReauthPrompt } from './reauth-prompt';
+import { CAMPAIGN_COMMERCE_ENABLED } from '../app-profile';
 type Purpose = 'export' | 'delete';
 function record(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
@@ -17,6 +18,7 @@ const collections = {
   spend: ['spends', 'id'],
   session: ['sessions', 'id'],
   assistedResult: ['assistedResults', 'id'],
+  ...(CAMPAIGN_COMMERCE_ENABLED ? { allocation: ['allocations', 'id'] as const } : {}),
 } as const;
 /** Own API only, fresh OTP per ceremony, a unique proof per page, and bounded complete export. */
 export function createAccountControlsClient(
@@ -148,7 +150,9 @@ export function createAccountControlsClient(
         }
         for (const [key, [list, idKey]] of Object.entries(collections)) {
           if (done.has(key)) continue;
-          const items = ['purchase', 'spend', 'session', 'assistedResult'].includes(key)
+          const items = ['purchase', 'spend', 'session', 'assistedResult', 'allocation'].includes(
+            key,
+          )
             ? record(value.commerce)
               ? value.commerce[list]
               : []
@@ -190,6 +194,7 @@ export function createAccountControlsClient(
                     spends: lists.spends,
                     sessions: lists.sessions,
                     assistedResults: lists.assistedResults,
+                    ...(CAMPAIGN_COMMERCE_ENABLED ? { allocations: lists.allocations } : {}),
                   },
                 }
               : {}),

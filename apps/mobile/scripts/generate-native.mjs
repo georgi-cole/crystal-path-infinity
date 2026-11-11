@@ -26,6 +26,9 @@ import {
 import { patchAndroidLifecycle } from '../config/native-lifecycle-patch.ts';
 import { BRAND_BACKGROUND, syncNativeBrandAssets } from './brand-assets.mjs';
 import { assertUnsignedRelease, resolveUnsignedRelease } from '../config/release-build.ts';
+import { resolveStoreBuild } from '../config/store-build.ts';
+import { productionMobileSignIn } from '../config/mobile-sign-in.ts';
+import { assertCampaignRelease } from '../config/campaign-release.ts';
 import {
   LIVE_NATIVE_PACKAGES,
   GOOGLE_ADS_SDK,
@@ -41,6 +44,28 @@ let release = null;
 let integrations;
 let accountVaultSuffix;
 let iosGoogleSignInClientId;
+const mobileProviderSignIn = process.env.VITE_NATIVE_PROVIDER_SIGN_IN === 'true';
+
+function withAndroidMobileIdentity(source) {
+  return source
+    .replace(
+      'private boolean paused;',
+      'private boolean paused;\n    private final CpiIdentityBrowser identityBrowser = new CpiIdentityBrowser(this);',
+    )
+    .replace(
+      'registerPlugin(CpiSecureSession.class);',
+      'registerPlugin(CpiSecureSession.class);\n        registerPlugin(CpiIdentity.class);',
+    )
+    .replace(
+      '    @Override public void onPause()',
+      `    public void openIdentity(com.getcapacitor.PluginCall call) { identityBrowser.open(call); }
+    @Override public void onNewIntent(android.content.Intent intent) {
+        super.onNewIntent(intent);
+        identityBrowser.onNewIntent(intent);
+    }
+    @Override public void onPause()`,
+    );
+}
 const background = BRAND_BACKGROUND;
 const nativePackages = [
   '@capacitor/cli',
@@ -209,6 +234,17 @@ function configureAndroid(info) {
         .replaceAll('__DEVELOPMENT__', String(info.environment === 'development')),
     );
   }
+  if (mobileProviderSignIn) {
+    for (const name of ['CpiIdentity.java', 'CpiIdentityBrowser.java'])
+      write(
+        `${javaPath}/${name}`,
+        read(`native-templates/android/${name}`).replaceAll('__PACKAGE__', info.appId),
+      );
+    write(
+      `${javaPath}/MainActivity.java`,
+      withAndroidMobileIdentity(read(`${javaPath}/MainActivity.java`)),
+    );
+  }
   if (integrations.ads) {
     write(
       `${javaPath}/CpiRewardedAds.java`,
@@ -236,6 +272,18 @@ function configureAndroid(info) {
     ).replaceAll('com.getcapacitor.CapacitorWebView', `${info.appId}.CpiWebView`),
   );
   let manifest = read('android/app/src/main/AndroidManifest.xml');
+  if (mobileProviderSignIn)
+    manifest = manifest.replace(
+      '</activity>',
+      `
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="com.georgicole.crystalpath.infinity" android:path="/signin" />
+            </intent-filter>
+        </activity>`,
+    );
   // Template permissions are deliberately limited to network access. Dependency
   // manifest permissions are checked again on the compiled artifact in CI.
   manifest = manifest.replace(/\s*<uses-permission\b[^>]*\/\s*>/g, '');
@@ -292,6 +340,13 @@ function configureAndroid(info) {
   }
   write('android/app/src/main/AndroidManifest.xml', manifest);
   let gradle = read('android/app/build.gradle');
+  if (mobileProviderSignIn)
+    gradle = replaceOnce(
+      gradle,
+      'dependencies {',
+      "dependencies {\n    implementation 'androidx.browser:browser:1.9.0'",
+      'System authentication browser',
+    );
   if (integrations.ads)
     gradle = replaceOnce(
       gradle,
@@ -459,6 +514,16 @@ function configureIOS(info) {
     );
     const path = 'ios/App/App/AppDelegate.swift';
     write(path, withIdentityBridge(read(path)));
+  }
+  if (mobileProviderSignIn) {
+    config.CFBundleURLTypes = [
+      ...(config.CFBundleURLTypes ?? []),
+      { CFBundleURLSchemes: ['com.georgicole.crystalpath.infinity'] },
+    ];
+    write(
+      'ios/App/App/AppDelegate.swift',
+      withIdentityBridge(read('ios/App/App/AppDelegate.swift')),
+    );
   }
   delete config.NSAppTransportSecurity; // ATS defaults; no local/remote cleartext exception.
   assert.ok(
@@ -672,6 +737,8 @@ function verifyNative(platform, info) {
         .replaceAll('__PACKAGE__', info.appId)
         .replaceAll('__ACCOUNT_VAULT_SUFFIX__', accountVaultSuffix)
         .replaceAll('__DEVELOPMENT__', String(info.environment === 'development'));
+      if (mobileProviderSignIn && name === 'MainActivity.java')
+        expected = withAndroidMobileIdentity(expected);
       if (integrations.ads && name === 'MainActivity.java')
         expected = expected.replace(
           'registerPlugin(CpiSecureSession.class);',
@@ -751,6 +818,14 @@ function verifyNative(platform, info) {
         ),
       );
     }
+    if (mobileProviderSignIn) {
+      expectedDelegate = withIdentityBridge(expectedDelegate);
+      assert.ok(
+        plist.CFBundleURLTypes.some(({ CFBundleURLSchemes }) =>
+          CFBundleURLSchemes.includes('com.georgicole.crystalpath.infinity'),
+        ),
+      );
+    }
     assert.equal(plist.CpiGoogleSignInClientID, iosGoogleSignInClientId);
     assert.equal(
       project.split('CODE_SIGN_ENTITLEMENTS = App/CpiIdentity.entitlements;').length,
@@ -801,6 +876,30 @@ function verifyNative(platform, info) {
 try {
   const { platform, environment, check } = options();
   integrations = readNativeIntegrations(process.env, environment);
+  const signIn = productionMobileSignIn(environment, process.env);
+  if (signIn) assert.deepEqual(json('dist/account-services-info.json'), signIn);
+  if (existsSync(join(appRoot, 'dist/campaign-release-info.json'))) {
+    assertCampaignRelease(process.env);
+    const campaign = json('dist/campaign-release-info.json');
+    assert.equal(environment, 'production');
+    assert.equal(campaign.audience, 'campaign-release');
+    assert.match(campaign.sourceCommit, /^[a-f0-9]{40}$/);
+    assert.equal(campaign.sandboxPurchases, false);
+    assert.equal(campaign.demonstrationAds, false);
+    assert.equal(campaign.simulatedPurchases, false);
+    assert.equal(signIn?.kind, 'production-mobile');
+    assert.ok(!existsSync(join(appRoot, 'dist/campaign-beta-info.json')));
+    assert.ok(!existsSync(join(appRoot, 'dist/campaign-services-info.json')));
+  }
+  if (mobileProviderSignIn)
+    assert.ok(
+      environment === 'production' &&
+        process.env.VITE_IOS_PROVIDER_SIGN_IN !== 'true' &&
+        process.env.VITE_ACCOUNT_SERVICES_ENABLED === 'true' &&
+        (process.env.VITE_ACCOUNT_API_BASE_URL === 'https://crystalpath-api.kolequant.xyz/cpi' ||
+          signIn?.kind === 'campaign-services-mobile'),
+      'Mobile provider login requires the production account gateway and registered app identity',
+    );
   if (process.env.VITE_IOS_PROVIDER_SIGN_IN === 'true') {
     iosGoogleSignInClientId = process.env.CPI_IOS_GOOGLE_CLIENT_ID;
     assert.ok(
@@ -816,8 +915,10 @@ try {
   accountVaultSuffix = accountVaultFor(environment);
   const manifest = verifyPackages();
   release = resolveUnsignedRelease(environment, manifest.version, process.env);
-  buildNumber = release?.buildNumber ?? 1;
-  const info = release?.app ?? getBuildInfo(environment, manifest.version);
+  const store = resolveStoreBuild(environment, process.env);
+  assert.ok(!(release && store), 'Store and unsigned release metadata cannot be combined');
+  buildNumber = release?.buildNumber ?? store?.buildNumber ?? 1;
+  const info = release?.app ?? getBuildInfo(environment, store?.version ?? manifest.version);
   // This guard must run before rm/add/sync or any generated project mutation.
   assertBuiltEnvironment(json('dist/build-info.json'), environment, info.version);
   if (release) assertUnsignedRelease(json('dist/release-info.json'), release);

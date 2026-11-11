@@ -30,9 +30,10 @@ export function createCommerceHandler(options: {
       });
     try {
       const url = new URL(request.url);
-      const route = /^\/commerce\/(catalog|wallet|begin|verify|equip)$/.exec(
-        mount(url.pathname) ?? '',
-      )?.[1];
+      const route =
+        /^\/commerce\/(catalog|wallet|begin|verify|equip|allocate|allocations|allocation-ack)$/.exec(
+          mount(url.pathname) ?? '',
+        )?.[1];
       if (!route) return reply({ code: 'not_found' }, 404);
       if (
         url.protocol !== 'https:' ||
@@ -90,18 +91,22 @@ export function createCommerceHandler(options: {
       const value = input as Record<string, unknown>;
       const extra =
         route === 'begin'
-          ? 'key'
+          ? ['key']
           : route === 'verify'
-            ? 'proof'
+            ? ['proof']
             : route === 'equip'
-              ? 'theme'
-              : null;
+              ? ['theme']
+              : route === 'allocate'
+                ? ['operationId', 'amounts']
+                : route === 'allocation-ack'
+                  ? ['operationId']
+                  : [];
       if (
         value.schemaVersion !== 1 ||
         (value.platform !== 'android' && value.platform !== 'ios') ||
         value.platform !== actor.platform ||
         Object.keys(value).some(
-          (key) => key !== 'schemaVersion' && key !== 'platform' && key !== extra,
+          (key) => key !== 'schemaVersion' && key !== 'platform' && !extra.includes(key),
         )
       )
         return reply({ code: 'invalid_request' }, 400);
@@ -120,6 +125,21 @@ export function createCommerceHandler(options: {
         });
       if (route === 'wallet')
         return reply({ schemaVersion: 1, wallet: await options.service.wallet(actor.subject) });
+      if (route === 'allocate' && typeof value.operationId === 'string')
+        return reply({
+          schemaVersion: 1,
+          ...(await options.service.allocate(actor.subject, value.operationId, value.amounts)),
+        });
+      if (route === 'allocations')
+        return reply({
+          schemaVersion: 1,
+          ...(await options.service.pendingAllocations(actor.subject)),
+        });
+      if (route === 'allocation-ack' && typeof value.operationId === 'string')
+        return reply({
+          schemaVersion: 1,
+          ...(await options.service.acknowledgeAllocation(actor.subject, value.operationId)),
+        });
       if (route === 'begin' && typeof value.key === 'string')
         return reply({
           schemaVersion: 1,

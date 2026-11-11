@@ -4,6 +4,7 @@ import { isObject, sqlTransaction } from './private-services.ts';
 import { parsePurchaseProof } from './purchase-verification.ts';
 import type { PurchaseProof } from './purchase-verification.ts';
 import { randomUUID } from 'node:crypto';
+import { commerceResourceColumn, isAdventureUnlock } from './adventure-products.ts';
 
 export interface VerifiedRefund {
   readonly fingerprint: string;
@@ -92,10 +93,14 @@ export function createPurchaseMaintenance(options: {
               'update cpi_private.commerce_wallets set owned=case when $2=any(owned) then owned else array_append(owned,$2) end,revision=revision+1 where id=$1::uuid',
               [delivery.wallet_id, delivery.theme],
             );
-          else {
-            const column = delivery.product_kind === 'credit' ? 'credits' : delivery.product_kind;
-            if (column !== 'sp' && column !== 'hints' && column !== 'credits')
-              throw new Error('Unknown historical product');
+          else if (delivery.product_kind === 'unlock') {
+            if (!isAdventureUnlock(delivery.unlock_key)) throw new Error('Unknown permanent item');
+            await connection.query(
+              'update cpi_private.commerce_wallets set unlocks=case when $2=any(unlocks) then unlocks else array_append(unlocks,$2) end,revision=revision+1 where id=$1::uuid',
+              [delivery.wallet_id, delivery.unlock_key],
+            );
+          } else {
+            const column = commerceResourceColumn(delivery.product_kind);
             await connection.query(
               `update cpi_private.commerce_wallets set ${column}=${column}+$2,revision=revision+1 where id=$1::uuid`,
               [delivery.wallet_id, prior.applied_quantity],
@@ -147,10 +152,19 @@ export function createPurchaseMaintenance(options: {
             `update cpi_private.commerce_wallets set owned=array_remove(owned,$2),equipped=case when equipped=$2 then 'obsidian' else equipped end,revision=revision+1 where id=$1::uuid`,
             [delivery.wallet_id, delivery.theme],
           );
+      } else if (delivery.product_kind === 'unlock') {
+        if (!isAdventureUnlock(delivery.unlock_key)) throw new Error('Unknown permanent item');
+        const another = await connection.query(
+          "select 1 from cpi_private.purchase_deliveries where wallet_id=$1::uuid and product_kind='unlock' and unlock_key=$2 and fingerprint<>$3 and revoked_at is null",
+          [delivery.wallet_id, delivery.unlock_key, event.fingerprint],
+        );
+        if (!another.rows.length)
+          await connection.query(
+            'update cpi_private.commerce_wallets set unlocks=array_remove(unlocks,$2),revision=revision+1 where id=$1::uuid',
+            [delivery.wallet_id, delivery.unlock_key],
+          );
       } else {
-        const column = delivery.product_kind === 'credit' ? 'credits' : delivery.product_kind;
-        if (column !== 'sp' && column !== 'hints' && column !== 'credits')
-          throw new Error('Unknown product');
+        const column = commerceResourceColumn(delivery.product_kind);
         const current = (
           await connection.query(
             `select ${column} as balance from cpi_private.commerce_wallets where id=$1::uuid`,

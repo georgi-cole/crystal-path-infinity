@@ -9,12 +9,18 @@ export const QA_TOOLS_ENABLED =
   import.meta.env.MODE === 'test';
 export const CAMPAIGN_TEST_BUILD =
   import.meta.env.MODE === 'campaign-qa' || import.meta.env.MODE === 'campaign-beta';
+export const CAMPAIGN_SERVICES_BUILD = import.meta.env.MODE === 'campaign-services';
+export const CAMPAIGN_RELEASE_BUILD = import.meta.env.MODE === 'campaign-release';
+export const CAMPAIGN_COMMERCE_ENABLED = CAMPAIGN_SERVICES_BUILD || CAMPAIGN_RELEASE_BUILD;
+export const CAMPAIGN_ENABLED = CAMPAIGN_TEST_BUILD || CAMPAIGN_COMMERCE_ENABLED;
 
 /** A guest review build uses the player controls with a browser-only simulated wallet. */
 export const PLAYER_PREVIEW_ENABLED = import.meta.env.MODE === 'player-preview';
 export const SIMULATED_STORE_ENABLED = QA_TOOLS_ENABLED || PLAYER_PREVIEW_ENABLED;
 export const PLAYER_STORAGE_PREFIX = 'cpi.player.v1:';
 export const CAMPAIGN_TEST_STORAGE_PREFIX = 'cpi.campaign-qa.v1:';
+export const CAMPAIGN_SERVICES_STORAGE_PREFIX = 'cpi.campaign-services.v1:';
+export const CAMPAIGN_RELEASE_STORAGE_PREFIX = 'cpi.campaign-production.v1:';
 
 /** QA keeps its historical data; player saves/records/discoveries use a separate namespace. */
 export function profilePracticeStorage(
@@ -40,5 +46,20 @@ export function profilePracticeStorage(
   };
 }
 export function practiceStorage(): PracticeStorage {
-  return profilePracticeStorage(window.localStorage);
+  if (CAMPAIGN_COMMERCE_ENABLED) {
+    const prefix = CAMPAIGN_RELEASE_BUILD
+      ? CAMPAIGN_RELEASE_STORAGE_PREFIX
+      : CAMPAIGN_SERVICES_STORAGE_PREFIX;
+    return {
+      getItem: (key) => window.localStorage.getItem(prefix + key),
+      setItem: (key, value) => window.localStorage.setItem(prefix + key, value),
+      removeItem: (key) => window.localStorage.removeItem(prefix + key),
+    };
+  }
+  // Resolve browser storage only when an operation runs; SSR/bootstrap own no I/O.
+  return profilePracticeStorage({
+    getItem: (key) => window.localStorage.getItem(key),
+    setItem: (key, value) => window.localStorage.setItem(key, value),
+    removeItem: (key) => window.localStorage.removeItem(key),
+  });
 }

@@ -10,6 +10,9 @@ const wallet = {
   sp: 0,
   hints: 0,
   credits: 3,
+  shields: 0,
+  seasonChanges: 0,
+  unlocks: [],
   accountToken: 'ba000000-0000-4000-8000-000000000001',
   owned: ['obsidian'],
   equipped: 'obsidian',
@@ -25,6 +28,40 @@ const session: Pick<
 };
 const scope = {};
 describe('commerce wire contract', () => {
+  it('recognizes registered adventure purchases and rejects incorrect consumption types or invented grants', () => {
+    expect(
+      parseLiveProducts([
+        {
+          key: 'gear.umbrella',
+          sku: 'com.georgicole.crystalpath.infinity.gear.umbrella',
+          consumable: false,
+        },
+        {
+          key: 'shields.10',
+          sku: 'com.georgicole.crystalpath.infinity.shields.10',
+          consumable: true,
+        },
+      ]),
+    ).toHaveLength(2);
+    expect(
+      parseLiveProducts([{ key: 'unlock.no_clock', sku: 'real.clock', consumable: true }]),
+    ).toBeNull();
+    expect(
+      parseCommerceWallet({
+        ...wallet,
+        shields: 20,
+        seasonChanges: 10,
+        unlocks: ['gear.umbrella', 'unlock.no_clock'],
+      }),
+    ).toMatchObject({ shields: 20, seasonChanges: 10 });
+    for (const invalid of [
+      { ...wallet, shields: -1 },
+      { ...wallet, seasonChanges: 1.5 },
+      { ...wallet, unlocks: ['invented.free.everything'] },
+      { ...wallet, unlocks: ['gear.umbrella', 'gear.umbrella'] },
+    ])
+      expect(parseCommerceWallet(invalid)).toBeNull();
+  });
   it('does not accept unsafe balances, unowned worlds or test products as live entitlements', () => {
     expect(parseCommerceWallet({ ...wallet, secret: 'must-drop' })).toEqual(wallet);
     for (const bad of [

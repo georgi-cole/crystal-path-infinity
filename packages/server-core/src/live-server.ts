@@ -3,6 +3,8 @@ import { timingSafeEqual } from 'node:crypto';
 import { LIVE_RULESET_VERSION, RULESET_VERSION } from '@crystal-path-infinity/game-core';
 import type { SqlPool } from './database.ts';
 import type { AccountIssuer } from './account-issuer.ts';
+import { AccountIssuerError } from './account-issuer.ts';
+import type { createMobileIdentity } from './mobile-identity.ts';
 import type { AccountRequestContext } from './account-policy.ts';
 import type { createCommerceService } from './commerce-service.ts';
 import { createMvpServer } from './server-app.ts';
@@ -63,6 +65,7 @@ export interface LiveServerOptions {
   readonly googleJobs?: ReturnType<typeof createGooglePurchaseJobs>;
   readonly appleJobs?: ReturnType<typeof createApplePurchaseJobs>;
   readonly webIdentity?: { googleClientId: string; appleClientId: string };
+  readonly mobileIdentity?: ReturnType<typeof createMobileIdentity>;
 }
 /** Separate host. Raw Supabase sessions, client reward callbacks and client wallet totals authorize nothing. */
 export function createLiveServer(options: LiveServerOptions) {
@@ -352,7 +355,15 @@ export function createLiveServer(options: LiveServerOptions) {
         );
       return { processed: rows.length };
     });
-    await run('cleanup', options.issuer.maintenance);
+    await run('cleanup', async () => {
+      await options.issuer.maintenance();
+      // Expire browser proofs even when provider entry has subsequently been disabled.
+      await sqlTransaction(options.database, (connection) =>
+        connection.query('delete from cpi_private.account_mobile_identity where expires_at<$1', [
+          Date.now(),
+        ]),
+      );
+    });
     return reply({ tasks, failures }, failures.length ? 503 : 200);
   }
   return async (request: Request): Promise<Response> => {
@@ -393,6 +404,11 @@ export function createLiveServer(options: LiveServerOptions) {
         contexts.set(request, context);
       }
       if (!(await rateLimit(request, null))) return reply({ code: 'rate_limited' }, 429);
+      // Provider navigation is not a CORS account request. Its unpredictable
+      // state only stores an untrusted proof; completion needs the app-held token.
+      if (options.mobileIdentity && url.pathname === basePath + '/identity/mobile/callback') {
+        return await options.mobileIdentity.callback(request);
+      }
       if (!allowOrigin(request.headers.get('origin'))) return reply({ code: 'origin_denied' }, 403);
       if (request.method === 'OPTIONS') {
         const origin = request.headers.get('origin');
@@ -412,6 +428,46 @@ export function createLiveServer(options: LiveServerOptions) {
           options.webIdentity ?? { code: 'service_unavailable' },
           options.webIdentity && request.method === 'GET' && !url.search ? 200 : 503,
         );
+        const origin = request.headers.get('origin');
+        if (origin) response.headers.set('access-control-allow-origin', origin);
+        return response;
+      }
+      if (
+        options.mobileIdentity &&
+        [basePath + '/identity/mobile/begin', basePath + '/identity/mobile/complete'].includes(
+          url.pathname,
+        )
+      ) {
+        if (request.method !== 'POST' || url.search || request.headers.has('cookie'))
+          return reply({ code: 'invalid_request' }, 400);
+        const header = request.headers.get('authorization');
+        const bearer = header?.match(/^Bearer ([A-Za-z0-9_-]{43})$/)?.[1];
+        const actor = bearer ? await options.issuer.authenticate(bearer) : null;
+        if (header && !actor) return reply({ code: 'account_required' }, 401);
+        const context = contexts.get(request);
+        if (!context) return reply({ code: 'service_unavailable' }, 503);
+        let response: Response;
+        try {
+          const input = await privateJson(request);
+          response = reply(
+            url.pathname.endsWith('/begin')
+              ? await options.mobileIdentity.begin(input, context, actor)
+              : await options.mobileIdentity.complete(input, context, actor),
+          );
+        } catch (error) {
+          const status = error instanceof AccountIssuerError ? error.status : 503;
+          response = reply(
+            {
+              code:
+                status === 410
+                  ? 'expired'
+                  : status === 429
+                    ? 'rate_limited'
+                    : 'service_unavailable',
+            },
+            status,
+          );
+        }
         const origin = request.headers.get('origin');
         if (origin) response.headers.set('access-control-allow-origin', origin);
         return response;

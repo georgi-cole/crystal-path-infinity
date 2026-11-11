@@ -332,7 +332,7 @@ export function createAccountLifecycleHandler(options: AccountLifecycleOptions) 
       if (
         !object(cursor) ||
         Object.keys(cursor).length < 4 ||
-        Object.keys(cursor).length > 11 ||
+        Object.keys(cursor).length > 12 ||
         Object.keys(cursor).some(
           (key) =>
             ![
@@ -347,12 +347,21 @@ export function createAccountLifecycleHandler(options: AccountLifecycleOptions) 
               'spend',
               'session',
               'assistedResult',
+              'allocation',
             ].includes(key),
         ) ||
         (cursor.report !== undefined &&
           cursor.report !== null &&
           (typeof cursor.report !== 'string' || !uuid.test(cursor.report))) ||
-        !['reward', 'adAuthorization', 'purchase', 'spend', 'session', 'assistedResult'].every(
+        ![
+          'reward',
+          'adAuthorization',
+          'purchase',
+          'spend',
+          'session',
+          'assistedResult',
+          'allocation',
+        ].every(
           (key) =>
             cursor[key] === undefined ||
             cursor[key] === null ||
@@ -463,7 +472,28 @@ export function createAccountLifecycleHandler(options: AccountLifecycleOptions) 
               )
             )
               throw new Error('Invalid commerce export');
-            commerce = parsed;
+            const allocationsRow = (
+              await connection.query(
+                'select cpi_private.export_own_offline_supplies($1::uuid,$2::uuid) as allocations',
+                [actor.subject, cursor.allocation ?? null],
+              )
+            ).rows[0];
+            const allocations = json(allocationsRow?.allocations);
+            if (
+              !object(allocations) ||
+              !Array.isArray(allocations.allocations) ||
+              allocations.allocations.length > 100 ||
+              !(
+                allocations.next === null ||
+                (typeof allocations.next === 'string' && uuid.test(allocations.next))
+              )
+            )
+              throw new Error('Invalid supply export');
+            commerce = {
+              ...parsed,
+              allocations: allocations.allocations,
+              next: { ...parsed.next, allocation: allocations.next },
+            };
           }
           return {
             ...data,
@@ -478,6 +508,7 @@ export function createAccountLifecycleHandler(options: AccountLifecycleOptions) 
                     spends: commerce.spends,
                     sessions: commerce.sessions,
                     assistedResults: commerce.assistedResults,
+                    allocations: commerce.allocations,
                   },
                 }
               : {}),

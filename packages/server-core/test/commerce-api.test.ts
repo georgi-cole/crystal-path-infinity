@@ -4,6 +4,9 @@ import { createMvpServer } from '../src/server-app.ts';
 const user = 'fa000000-0000-4000-8000-000000000001';
 function fixture(allowed = true, checkoutReady = vi.fn(() => Promise.resolve(true))) {
   const service = {
+    allocate: vi.fn(() => Promise.reject(new Error('private-allocation-error'))),
+    pendingAllocations: vi.fn(() => Promise.reject(new Error('private-allocation-error'))),
+    acknowledgeAllocation: vi.fn(() => Promise.reject(new Error('private-allocation-error'))),
     catalog: vi.fn(() => []),
     wallet: vi.fn(() => Promise.reject(new Error('private-db-credential'))),
     begin: vi.fn(() => Promise.resolve({ accountToken: user, sku: 'com.example.credits3' })),

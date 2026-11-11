@@ -1,6 +1,6 @@
 import { nextPracticeRuleset } from './balance-tuning';
 import {
-  CAMPAIGN_TEST_BUILD,
+  CAMPAIGN_ENABLED,
   PLAYER_PREVIEW_ENABLED,
   QA_TOOLS_ENABLED,
   practiceStorage,
@@ -460,7 +460,7 @@ export function InfinitySceneView({
         {season
           ? ' · ' + season
           : experiment &&
-            !CAMPAIGN_TEST_BUILD &&
+            !CAMPAIGN_ENABLED &&
             ` · ${experiment.highBreakPercent}% / ${experiment.lowBreakPercent}%`}
         {gear && !campaignMission && ' · Outfitted'}
       </p>

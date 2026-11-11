@@ -43,6 +43,25 @@ if (config.publicWebEntry)
     'CPI_IDENTITY_APPLE_WEB_KEY_ID',
     'CPI_IDENTITY_APPLE_WEB_PRIVATE_KEY',
   );
+values.CPI_MOBILE_IDENTITY_ENABLED ??= 'false';
+names.push('CPI_MOBILE_IDENTITY_ENABLED');
+if (config.environment === 'staging' && config.mobileIdentity)
+  names.push(
+    'CPI_IDENTITY_GOOGLE_STAGING_WEB_CLIENT_ID',
+    'CPI_IDENTITY_GOOGLE_STAGING_WEB_CLIENT_SECRET',
+    'CPI_IDENTITY_APPLE_STAGING_WEB_KEY_ID',
+    'CPI_IDENTITY_APPLE_STAGING_WEB_PRIVATE_KEY',
+  );
+if (config.environment === 'staging' && config.nativeIdentity)
+  names.push(
+    'CPI_NATIVE_IDENTITY_ENABLED',
+    'CPI_IDENTITY_GOOGLE_IOS_CLIENT_ID',
+    'CPI_IDENTITY_APPLE_KEY_ID',
+    'CPI_IDENTITY_APPLE_PRIVATE_KEY',
+    ...['CPI_STAGING_PROVIDER_SIGNUP_EMAILS', 'CPI_STAGING_DIRECT_PROVIDER_ENTRY'].filter(
+      (name) => values[name] !== undefined,
+    ),
+  );
 if (values.CPI_PURCHASES_ENABLED === 'true') {
   names.push('CPI_COMMERCE_PRODUCTS');
   if (config.purchasePlatforms.includes('android'))

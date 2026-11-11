@@ -9,6 +9,7 @@ export function assertOfflineCampaignBeta(values: Record<string, string | undefi
     'VITE_GUEST_REWARDED_ADS_TEST',
     'VITE_GUEST_REWARDED_ADS_LIVE',
     'VITE_IOS_PROVIDER_SIGN_IN',
+    'VITE_NATIVE_PROVIDER_SIGN_IN',
   ]) {
     if (values[key] && values[key] !== 'false')
       throw new Error('Campaign beta requires offline services: ' + key);

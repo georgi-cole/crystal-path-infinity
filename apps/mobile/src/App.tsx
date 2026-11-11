@@ -1,5 +1,7 @@
 import {
+  CAMPAIGN_ENABLED,
   CAMPAIGN_TEST_BUILD,
+  CAMPAIGN_COMMERCE_ENABLED,
   PLAYER_PREVIEW_ENABLED,
   practiceStorage,
   QA_TOOLS_ENABLED,
@@ -22,7 +24,7 @@ import {
   writePracticeCheckpoint,
   writePracticeSettings,
 } from './practice-save';
-import type { PracticeLoad, PracticeSettings } from './practice-save';
+import type { PracticeLoad, PracticeSettings, PracticeStorage } from './practice-save';
 import { InfinityPractice } from './infinity-scene';
 import { useHomeSoundtrack } from './soundtrack';
 import { BrandLaunchActive } from './brand-launch-state';
@@ -38,6 +40,7 @@ import {
   claimTestOffer,
   CAMPAIGN_RAIN_RULESET,
   CAMPAIGN_RUN_NAMESPACE,
+  CAMPAIGN_TEST_PROGRESS_KEY,
   createCampaignInfinityRun,
   createCampaignRun,
   equipBridgeStyle,
@@ -93,6 +96,14 @@ import type { GuestRewardedAd } from './rewards/native-admob';
 import type { SavedPendingClient } from './ranked/saved-pending-client';
 import { SavedRuns } from './ranked/saved-pending-view';
 import type { AccountEntryBinding } from './account/account-entry';
+import { useCommerce } from './commerce/commerce-context';
+import { commerceKeyForOffer } from './commerce/adventure-products';
+import {
+  applyPaidEntitlements,
+  offlineSupplyCapacity,
+  receiveOfflineSupplies,
+  seedAccountCampaign,
+} from './commerce/campaign-inventory';
 
 /** Supplied only by an approved account host; shipped builds inject nothing. */
 export interface ApprovedAccountServices {
@@ -114,14 +125,14 @@ export interface ApprovedAccountServices {
 const build = __CPI_BUILD_INFO__;
 const showBuildDetails = build.environment !== 'production' && !PLAYER_PREVIEW_ENABLED;
 
-function loadLocalPractice(): PracticeLoad {
+function loadLocalPractice(storage: PracticeStorage): PracticeLoad {
   if (typeof window === 'undefined') return { status: 'empty' };
   try {
-    if (CAMPAIGN_TEST_BUILD) {
-      const journey = readCampaignSave(practiceStorage());
+    if (CAMPAIGN_ENABLED) {
+      const journey = readCampaignSave(storage);
       if (journey.infinitySaved) return campaignLoad(journey.infinityCheckpoint);
     }
-    const loaded = readPracticeCheckpoint(practiceStorage());
+    const loaded = readPracticeCheckpoint(storage);
     if (
       !QA_TOOLS_ENABLED &&
       loaded.status === 'ready' &&
@@ -130,7 +141,7 @@ function loadLocalPractice(): PracticeLoad {
       return { status: 'empty' };
     if (loaded.status === 'ready') {
       try {
-        rememberMysteries(practiceStorage(), loaded.state);
+        rememberMysteries(storage, loaded.state);
       } catch {
         /* Journal writes never invalidate the saved run. */
       }
@@ -156,18 +167,27 @@ interface GameOwner {
   token: number;
 }
 
-function campaignRunStorage() {
-  return namespacePracticeStorage(practiceStorage(), CAMPAIGN_RUN_NAMESPACE);
+function campaignRunStorage(storage: PracticeStorage) {
+  return namespacePracticeStorage(storage, CAMPAIGN_RUN_NAMESPACE);
 }
 
 function campaignLoad(state: RunState | null): PracticeLoad {
   return state ? { status: 'ready', state, revision: 1 } : { status: 'empty' };
 }
-function loadCampaign() {
+function loadCampaign(storage: PracticeStorage, seedStorage?: PracticeStorage) {
   try {
-    const saved = readCampaignSave(practiceStorage());
+    let saved = readCampaignSave(storage);
+    if (seedStorage && !storage.getItem(CAMPAIGN_TEST_PROGRESS_KEY)) {
+      const guest = readCampaignSave(seedStorage);
+      saved = {
+        ...guest,
+        progress: seedAccountCampaign(guest.progress),
+        infinityCheckpoint: null,
+        infinitySaved: false,
+      };
+    }
     if (saved.legacy && saved.progress.activeMissionSnapshot) {
-      const old = readPracticeCheckpoint(campaignRunStorage());
+      const old = readPracticeCheckpoint(campaignRunStorage(storage));
       if (
         old.status === 'ready' &&
         campaignRunMatches(old.state, saved.progress.activeMissionSnapshot)
@@ -188,10 +208,19 @@ function loadCampaign() {
 export function App({
   services,
   guestRewardedAd = null,
+  storage: suppliedStorage,
+  storageSeed,
+  commerceAccountToken,
 }: {
   services?: ApprovedAccountServices;
   guestRewardedAd?: GuestRewardedAd | null;
+  storage?: PracticeStorage;
+  storageSeed?: PracticeStorage;
+  commerceAccountToken?: string;
 }) {
+  const [storage] = useState(() => suppliedStorage ?? practiceStorage());
+  const [deviceStorage] = useState(practiceStorage);
+  const { flow: commerceFlow, snapshot: commerceSnapshot } = useCommerce();
   const { t } = useLanguage();
   const launchActive = useContext(BrandLaunchActive);
   const menuTheme = useThemeId();
@@ -211,7 +240,7 @@ export function App({
   const gameRef = useRef<GameOwner | null>(null);
   const gameSequence = useRef(0);
   const [saved, setSaved] = useState<PracticeLoad>({ status: 'empty' });
-  const [loadedCampaign] = useState(loadCampaign);
+  const [loadedCampaign] = useState(() => loadCampaign(storage, storageSeed));
   const [campaignProgress, setCampaignProgress] = useState(loadedCampaign.progress);
   const campaignProgressRef = useRef(campaignProgress);
   const campaignCheckpointRef = useRef<RunState | null>(loadedCampaign.checkpoint);
@@ -250,7 +279,7 @@ export function App({
   const [tutorialProgress, setTutorialProgress] = useState<TutorialProgress>(() => {
     if (typeof window === 'undefined') return 'unseen';
     try {
-      return readTutorialProgress(practiceStorage());
+      return readTutorialProgress(deviceStorage);
     } catch {
       return 'unseen';
     }
@@ -261,7 +290,7 @@ export function App({
   const [view, setView] = useState<MenuView>(() =>
     typeof window === 'undefined'
       ? 'home'
-      : CAMPAIGN_TEST_BUILD && ['#practice-run', '#new-practice'].includes(window.location.hash)
+      : CAMPAIGN_ENABLED && ['#practice-run', '#new-practice'].includes(window.location.hash)
         ? 'campaign'
         : viewFromHash(window.location.hash, QA_TOOLS_ENABLED),
   );
@@ -347,17 +376,17 @@ export function App({
       const testRun = store?.snapshot().checkpoint;
       const checkpoint: PracticeLoad = testRun
         ? { status: 'ready', state: testRun, revision: store?.snapshot().revision ?? 1 }
-        : loadLocalPractice();
+        : loadLocalPractice(storage);
       let preferences = DEFAULT_PRACTICE_SETTINGS;
       try {
-        preferences = readPracticeSettings(practiceStorage()).settings;
+        preferences = readPracticeSettings(deviceStorage).settings;
       } catch {
         // Offline play does not require a writable settings store.
       }
       let personalBest: string | null = null;
       try {
         personalBest = readPracticePersonalBest(
-          practiceStorage(),
+          deviceStorage,
           checkpoint.status === 'ready'
             ? checkpoint.state.rulesetVersion
             : PRACTICE_RULESET_VERSION,
@@ -381,7 +410,7 @@ export function App({
     return () => {
       active = false;
     };
-  }, [bootAttempt, store]);
+  }, [bootAttempt, store, storage, deviceStorage]);
 
   useEffect(() => {
     const onConnection = () => setOnline(navigator.onLine !== false);
@@ -413,7 +442,7 @@ export function App({
       window.history.replaceState(
         { cpiNavigation: false },
         '',
-        CAMPAIGN_TEST_BUILD ? '#campaign' : '#practice',
+        CAMPAIGN_ENABLED ? '#campaign' : '#practice',
       );
     }
     return () => {
@@ -539,20 +568,20 @@ export function App({
       if (next.music && !settings.music) activateMusic();
       setSettings(next);
       try {
-        writePracticeSettings(practiceStorage(), next);
+        writePracticeSettings(deviceStorage, next);
         setStorageWarning(null);
       } catch {
         setStorageWarning('Settings could not be saved on this device.');
       }
     },
-    [activateMusic, settings.music],
+    [activateMusic, settings.music, deviceStorage],
   );
   const onTutorialProgress = (progress: Exclude<TutorialProgress, 'unseen'>) => {
     // Replaying or skipping a completed tutorial must never erase completion.
     const next = tutorialProgress === 'completed' ? 'completed' : progress;
     setTutorialProgress(next);
     try {
-      writeTutorialProgress(practiceStorage(), next);
+      writeTutorialProgress(deviceStorage, next);
     } catch {
       setStorageWarning('Tutorial progress could not be saved on this device.');
     }
@@ -565,7 +594,7 @@ export function App({
       infinityCheckpoint = infinityCheckpointRef.current,
     ) => {
       try {
-        writeCampaignSave(practiceStorage(), progress, checkpoint, infinityCheckpoint);
+        writeCampaignSave(storage, progress, checkpoint, infinityCheckpoint);
         setStorageWarning(null);
       } catch (error) {
         setStorageWarning('Campaign progress could not be saved on this device.');
@@ -578,8 +607,89 @@ export function App({
         setCampaignProgress(progress);
       }
     },
-    [],
+    [storage],
   );
+
+  const transferSupplies = useCallback(async () => {
+    if (!commerceFlow || !commerceAccountToken) return;
+    const assertOwner = (token: string) => {
+      if (token !== commerceAccountToken)
+        throw new Error('Please reopen the store for this account.');
+    };
+    await commerceFlow.transferOfflineSupplies({
+      capacity: (wallet) => offlineSupplyCapacity(campaignProgressRef.current, wallet),
+      receive: (allocation, token) => {
+        assertOwner(token);
+        const next = receiveOfflineSupplies(campaignProgressRef.current, allocation);
+        if (next !== campaignProgressRef.current)
+          commitCampaignProgress(next, campaignCheckpointRef.current, true);
+      },
+      acknowledged: (operationId, token) => {
+        assertOwner(token);
+        const current = campaignProgressRef.current;
+        if (current.supplyAllocations?.includes(operationId))
+          commitCampaignProgress(
+            {
+              ...current,
+              supplyAllocations: current.supplyAllocations.filter((id) => id !== operationId),
+            },
+            campaignCheckpointRef.current,
+            true,
+          );
+      },
+    });
+  }, [commerceFlow, commerceAccountToken, commitCampaignProgress]);
+  const lastSupplySync = useRef<string | null>(null);
+  useEffect(() => {
+    if (
+      !CAMPAIGN_COMMERCE_ENABLED ||
+      !commerceAccountToken ||
+      !commerceSnapshot.wallet ||
+      commerceSnapshot.wallet.accountToken !== commerceAccountToken
+    )
+      return;
+    try {
+      commitCampaignProgress(
+        applyPaidEntitlements(campaignProgressRef.current, commerceSnapshot.wallet),
+        campaignCheckpointRef.current,
+        true,
+      );
+    } catch {
+      /* Keep the last durable inventory; the store can retry. */
+    }
+  }, [commerceAccountToken, commerceSnapshot.wallet, commitCampaignProgress]);
+  useEffect(() => {
+    if (commerceSnapshot.phase === 'error') lastSupplySync.current = null;
+    if (
+      !CAMPAIGN_COMMERCE_ENABLED ||
+      game ||
+      !['store', 'supplies', 'bridge-style'].includes(view) ||
+      !commerceAccountToken ||
+      commerceSnapshot.phase !== 'ready' ||
+      !commerceSnapshot.wallet
+    )
+      return;
+    const key = [
+      commerceAccountToken,
+      commerceSnapshot.wallet.revision,
+      campaignProgress.reserveSp,
+      campaignProgress.reserveHints,
+      campaignProgress.continues,
+      campaignProgress.shields,
+      campaignProgress.seasonChanges,
+    ].join(':');
+    if (lastSupplySync.current === key) return;
+    lastSupplySync.current = key;
+    void transferSupplies();
+  }, [
+    commerceAccountToken,
+    commerceSnapshot.phase,
+    commerceSnapshot.wallet,
+    game,
+    view,
+    transferSupplies,
+    campaignProgress,
+  ]);
 
   const commitInfinitySupply = useCallback(
     (state: RunState, events: readonly RunEvent[], previous: RunState) => {
@@ -630,7 +740,7 @@ export function App({
         }
         return;
       }
-      if (CAMPAIGN_TEST_BUILD && state.runId.startsWith('practice-campaign-infinity-')) {
+      if (CAMPAIGN_ENABLED && state.runId.startsWith('practice-campaign-infinity-')) {
         if (state !== infinityCheckpointRef.current)
           commitCampaignProgress(
             campaignProgressRef.current,
@@ -639,17 +749,16 @@ export function App({
             state,
           );
         try {
-          rememberMysteries(practiceStorage(), state);
+          rememberMysteries(deviceStorage, state);
         } catch {
           setStorageWarning('Discovery history could not be saved on this device.');
         }
         return;
       }
-      const storage = practiceStorage();
       try {
         if (usesStoreTestRules(state.rulesetVersion) && store) store.saveRun(state);
         else writePracticeCheckpoint(storage, state);
-        rememberMysteries(storage, state);
+        rememberMysteries(deviceStorage, state);
         setStorageWarning(null);
       } catch {
         setStorageWarning(
@@ -657,7 +766,7 @@ export function App({
         );
       }
     },
-    [store, commitCampaignProgress],
+    [store, commitCampaignProgress, storage, deviceStorage],
   );
 
   const startPractice = (
@@ -710,13 +819,13 @@ export function App({
     }
     try {
       store?.clearRun();
-      clearPracticeCheckpoint(practiceStorage());
+      clearPracticeCheckpoint(storage);
       setSaved({ status: 'empty' });
       setStorageWarning(null);
     } catch {
       setStorageWarning('Progress might not be saved because local storage is unavailable.');
     }
-    startPractice(CAMPAIGN_TEST_BUILD ? newInfinityRun() : null);
+    startPractice(CAMPAIGN_ENABLED ? newInfinityRun() : null);
   };
 
   const newCampaignRun = (missionId: CampaignMissionId, approach?: CampaignApproach) => {
@@ -733,7 +842,7 @@ export function App({
     approach?: CampaignApproach,
     retry = false,
   ) => {
-    if (!CAMPAIGN_TEST_BUILD || gameRef.current) return;
+    if (!CAMPAIGN_ENABLED || gameRef.current) return;
     const current = campaignProgressRef.current;
     if (!isMissionUnlocked(current, missionId)) return;
     const mission = campaignMissionSnapshot(current, missionId);
@@ -758,8 +867,20 @@ export function App({
     commitCampaignProgress(equipBridgeStyle(campaignProgressRef.current, slot, id));
   const changeBridgeDesign = (style: BridgeStyle) =>
     commitCampaignProgress(equipBridgeDesign(campaignProgressRef.current, style));
-  const changeCampaignWorld = (world: ThemeId) =>
+  const changeCampaignWorld = (world: ThemeId) => {
+    const owned = commerceSnapshot.wallet?.owned ??
+      campaignProgressRef.current.ownedWorlds ?? ['obsidian'];
+    if (CAMPAIGN_COMMERCE_ENABLED && !owned.includes(world)) {
+      if (!commerceSnapshot.wallet) {
+        navigate('profile');
+        return;
+      }
+      if (commerceFlow) void commerceFlow.buy('theme.' + world);
+      return;
+    }
     commitCampaignProgress({ ...campaignProgressRef.current, world });
+    if (CAMPAIGN_COMMERCE_ENABLED && commerceFlow) void commerceFlow.equip(world);
+  };
   const changeCampaignGear = (gear: GearId | null) =>
     commitCampaignProgress(equipCampaignGear(campaignProgressRef.current, gear));
   const changeNextSeason = () => {
@@ -773,6 +894,15 @@ export function App({
       commitCampaignProgress({ ...current, clockFree: !current.clockFree });
   };
   const claimCampaignOffer = (offer: CampaignOffer) => {
+    if (!CAMPAIGN_TEST_BUILD) {
+      if (!commerceSnapshot.wallet) {
+        navigate('profile');
+        return;
+      }
+      const key = commerceKeyForOffer(offer);
+      if (CAMPAIGN_COMMERCE_ENABLED && key && commerceFlow) void commerceFlow.buy(key);
+      return;
+    }
     const current = campaignProgressRef.current;
     const next = claimTestOffer(current, offer);
     if (next === current) return;
@@ -805,13 +935,13 @@ export function App({
     const testRun = store?.snapshot().checkpoint;
     const checkpoint: PracticeLoad = testRun
       ? { status: 'ready', state: testRun, revision: store?.snapshot().revision ?? 1 }
-      : loadLocalPractice();
+      : loadLocalPractice(storage);
     setSaved(checkpoint);
     if (leavingCampaign) setCampaignSaved(campaignLoad(campaignCheckpointRef.current));
     try {
       setBest(
         readPracticePersonalBest(
-          practiceStorage(),
+          deviceStorage,
           checkpoint.status === 'ready'
             ? checkpoint.state.rulesetVersion
             : PRACTICE_RULESET_VERSION,
@@ -923,7 +1053,7 @@ export function App({
           trialTheme={game.trialTheme}
           guestRewardedAd={guestRewardedAd}
           newJourney={
-            game.mode === 'infinity' && CAMPAIGN_TEST_BUILD && !game.trialTheme
+            game.mode === 'infinity' && CAMPAIGN_ENABLED && !game.trialTheme
               ? newInfinityRun
               : game.mode === 'campaign' && campaignMission
                 ? () => newCampaignRun(campaignMission.id, campaignMission.approach).initial
@@ -935,10 +1065,10 @@ export function App({
               : (game.weather ?? 'clear')
           }
           campaignMission={campaignMissionPresentation}
-          bridgeStyle={CAMPAIGN_TEST_BUILD ? campaignProgress.style : undefined}
-          worldTheme={CAMPAIGN_TEST_BUILD ? campaignProgress.world : undefined}
+          bridgeStyle={CAMPAIGN_ENABLED ? campaignProgress.style : undefined}
+          worldTheme={CAMPAIGN_ENABLED ? campaignProgress.world : undefined}
           infinitySupplies={
-            game.mode === 'infinity' && CAMPAIGN_TEST_BUILD && !game.trialTheme
+            game.mode === 'infinity' && CAMPAIGN_ENABLED && !game.trialTheme
               ? {
                   sp: campaignProgress.reserveSp,
                   hint: campaignProgress.reserveHints,
@@ -948,7 +1078,7 @@ export function App({
               : undefined
           }
           onInfinitySupplyCommit={
-            game.mode === 'infinity' && CAMPAIGN_TEST_BUILD ? commitInfinitySupply : undefined
+            game.mode === 'infinity' && CAMPAIGN_ENABLED ? commitInfinitySupply : undefined
           }
           settings={settings}
           onSettingsChange={changeSettings}
@@ -986,7 +1116,7 @@ export function App({
   return (
     <>
       <div inert={confirmNew}>
-        <ThemeScope theme={CAMPAIGN_TEST_BUILD ? campaignProgress.world : menuTheme}>
+        <ThemeScope theme={CAMPAIGN_ENABLED ? campaignProgress.world : menuTheme}>
           <MainMenu
             accountEntry={services?.accountEntry}
             onSignOut={services?.signOut}
@@ -1008,9 +1138,9 @@ export function App({
             storeEntry={storeEntry}
             saved={visibleSaved}
             best={
-              CAMPAIGN_TEST_BUILD
+              CAMPAIGN_ENABLED
                 ? readPracticePersonalBest(
-                    practiceStorage(),
+                    storage,
                     visibleSaved.status === 'ready' && canResumePractice(visibleSaved)
                       ? visibleSaved.state.rulesetVersion
                       : journeyRuleset(

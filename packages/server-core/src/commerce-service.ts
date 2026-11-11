@@ -1,14 +1,23 @@
 import type { SqlPool, SqlConnection } from './database.ts';
 import type { PurchaseProof, PurchaseVerifier, VerifiedPurchase } from './purchase-verification.ts';
 import type { PrivateCryptography } from './private-services.ts';
+import { createHash } from 'node:crypto';
+import { parseOfflineSupplies } from './offline-supplies.ts';
+import type { OfflineAllocation } from './offline-supplies.ts';
+import {
+  commerceResourceColumn,
+  isAdventureUnlock,
+  isConsumableProduct,
+} from './adventure-products.ts';
 const themes = ['obsidian', 'chaos', 'jelly', 'wilds', 'league', 'puppy', 'kitten'];
 export interface CommerceProduct {
   readonly key: string;
   readonly sku: string;
   readonly platform: 'android' | 'ios';
-  readonly kind: 'sp' | 'hints' | 'credit' | 'theme';
+  readonly kind: 'sp' | 'hints' | 'credit' | 'theme' | 'shields' | 'season_changes' | 'unlock';
   readonly quantity: number;
   readonly theme?: string;
+  readonly unlock?: string;
   /** Keep retired SKU mappings immutable for restore; exclude them from new checkouts. */
   readonly available?: boolean;
 }
@@ -18,6 +27,9 @@ export interface CommerceWallet {
   sp: number;
   hints: number;
   credits: number;
+  shields: number;
+  seasonChanges: number;
+  unlocks: string[];
   owned: string[];
   equipped: string;
 }
@@ -44,7 +56,11 @@ function wallet(row: Record<string, unknown> | undefined): CommerceWallet {
     row.owned.some((t) => !themes.includes(t as string)) ||
     typeof row.equipped !== 'string' ||
     !row.owned.includes(row.equipped) ||
-    row.blocked !== false
+    row.blocked !== false ||
+    (row.unlocks !== undefined &&
+      (!Array.isArray(row.unlocks) ||
+        new Set(row.unlocks).size !== row.unlocks.length ||
+        row.unlocks.some((key) => !isAdventureUnlock(key))))
   )
     throw new CommerceError();
   return {
@@ -53,6 +69,9 @@ function wallet(row: Record<string, unknown> | undefined): CommerceWallet {
     sp: count(row.sp),
     hints: count(row.hints),
     credits: count(row.credits),
+    shields: count(row.shields ?? 0),
+    seasonChanges: count(row.season_changes ?? 0),
+    unlocks: (row.unlocks ?? []) as string[],
     owned: row.owned as string[],
     equipped: row.equipped,
   };
@@ -82,7 +101,15 @@ export function createCommerceService(options: {
       !Number.isSafeInteger(product.quantity) ||
       product.quantity < 1 ||
       product.quantity > 100000 ||
-      !['sp', 'hints', 'credit', 'theme'].includes(product.kind) ||
+      !['sp', 'hints', 'credit', 'theme', 'shields', 'season_changes', 'unlock'].includes(
+        product.kind,
+      ) ||
+      (product.kind === 'unlock'
+        ? product.quantity !== 1 ||
+          !isAdventureUnlock(product.unlock) ||
+          product.key !== product.unlock
+        : product.unlock !== undefined) ||
+      (product.kind !== 'theme' && product.theme !== undefined) ||
       (product.available !== undefined && typeof product.available !== 'boolean') ||
       (product.platform !== 'android' && product.platform !== 'ios') ||
       (product.kind === 'theme' &&
@@ -172,12 +199,105 @@ export function createCommerceService(options: {
       (purchase.environment === 'sandbox' || purchase.environment === 'production')
     );
   }
+  const operationPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  function allocation(row: Record<string, unknown>): OfflineAllocation {
+    return {
+      operationId: String(row.id),
+      sp: count(row.sp),
+      hints: count(row.hints),
+      credits: count(row.credits),
+      shields: count(row.shields),
+      seasonChanges: count(row.season_changes),
+    };
+  }
   return {
+    /** A transfer is debited once on the server, then saved atomically with the local inventory. */
+    allocate(subject: string, operationId: string, input: unknown) {
+      const amounts = parseOfflineSupplies(input);
+      if (!operationPattern.test(operationId) || !amounts) throw new CommerceError();
+      const requestHash = createHash('sha256').update(JSON.stringify(amounts)).digest('hex');
+      return transaction(subject, async (connection, current) => {
+        const prior = (
+          await connection.query(
+            'select * from cpi_private.offline_supply_allocations where id=$1::uuid',
+            [operationId],
+          )
+        ).rows[0];
+        if (prior) {
+          if (prior.wallet_id !== current.accountToken || prior.request_hash !== requestHash)
+            throw new CommerceError();
+          return { allocation: allocation(prior), wallet: current };
+        }
+        if (
+          amounts.sp > current.sp ||
+          amounts.hints > current.hints ||
+          amounts.credits > current.credits ||
+          amounts.shields > current.shields ||
+          amounts.seasonChanges > current.seasonChanges
+        )
+          throw new CommerceError();
+        const pending = await connection.query(
+          'select id from cpi_private.offline_supply_allocations where wallet_id=$1::uuid and acknowledged_at is null limit 100',
+          [current.accountToken],
+        );
+        if (pending.rows.length >= 100) throw new CommerceError();
+        await connection.query(
+          'update cpi_private.commerce_wallets set sp=sp-$2,hints=hints-$3,credits=credits-$4,shields=shields-$5,season_changes=season_changes-$6,revision=revision+1 where id=$1::uuid',
+          [
+            current.accountToken,
+            amounts.sp,
+            amounts.hints,
+            amounts.credits,
+            amounts.shields,
+            amounts.seasonChanges,
+          ],
+        );
+        const inserted = await connection.query(
+          'insert into cpi_private.offline_supply_allocations(id,wallet_id,request_hash,sp,hints,credits,shields,season_changes) values($1::uuid,$2::uuid,$3,$4,$5,$6,$7,$8) returning *',
+          [
+            operationId,
+            current.accountToken,
+            requestHash,
+            amounts.sp,
+            amounts.hints,
+            amounts.credits,
+            amounts.shields,
+            amounts.seasonChanges,
+          ],
+        );
+        return {
+          allocation: allocation(inserted.rows[0]),
+          wallet: await read(connection, current.accountToken),
+        };
+      });
+    },
+    pendingAllocations(subject: string) {
+      return transaction(subject, async (connection, current) => ({
+        allocations: (
+          await connection.query(
+            'select * from cpi_private.offline_supply_allocations where wallet_id=$1::uuid and acknowledged_at is null order by created_at,id limit 100',
+            [current.accountToken],
+          )
+        ).rows.map(allocation),
+        wallet: current,
+      }));
+    },
+    acknowledgeAllocation(subject: string, operationId: string) {
+      if (!operationPattern.test(operationId)) throw new CommerceError();
+      return transaction(subject, async (connection, current) => {
+        const updated = await connection.query(
+          'update cpi_private.offline_supply_allocations set acknowledged_at=coalesce(acknowledged_at,clock_timestamp()) where id=$1::uuid and wallet_id=$2::uuid returning id',
+          [operationId, current.accountToken],
+        );
+        if (updated.rows.length !== 1) throw new CommerceError();
+        return { acknowledged: operationId };
+      });
+    },
     catalog(subject: string, platform: PurchaseProof['platform']) {
       ready(subject);
       return products
         .filter((p) => p.platform === platform && p.available !== false)
-        .map((p) => ({ key: p.key, sku: p.sku, consumable: p.kind !== 'theme' }));
+        .map((p) => ({ key: p.key, sku: p.sku, consumable: isConsumableProduct(p.kind) }));
     },
     wallet: (subject: string) =>
       transaction(subject, (_connection, current) => Promise.resolve(current)),
@@ -203,7 +323,7 @@ export function createCommerceService(options: {
       if (!matches(verified.purchase, proof)) throw new CommerceError();
       if (
         proof.platform === 'ios' &&
-        verified.purchase.nativeConsumable !== (product.kind !== 'theme')
+        verified.purchase.nativeConsumable !== isConsumableProduct(product.kind)
       )
         return { status: 'rejected' as const };
       return transaction(
@@ -221,8 +341,8 @@ export function createCommerceService(options: {
           );
           if (refund.rows.length) return { status: 'rejected' as const };
           const result = await connection.query(
-            `insert into cpi_private.purchase_deliveries(fingerprint,wallet_id,platform,environment,transaction_id,sku,product_key,product_kind,quantity,theme)
-           values($1,$2::uuid,$3,$4,$5,$6,$7,$8,$9,$10) on conflict do nothing returning fingerprint`,
+            `insert into cpi_private.purchase_deliveries(fingerprint,wallet_id,platform,environment,transaction_id,sku,product_key,product_kind,quantity,theme,unlock_key)
+           values($1,$2::uuid,$3,$4,$5,$6,$7,$8,$9,$10,$11) on conflict do nothing returning fingerprint`,
             [
               verified.purchase.fingerprint,
               current.accountToken,
@@ -234,6 +354,7 @@ export function createCommerceService(options: {
               product.kind,
               product.quantity,
               product.theme ?? null,
+              product.unlock ?? null,
             ],
           );
           if (result.rows.length) {
@@ -242,8 +363,13 @@ export function createCommerceService(options: {
                 `update cpi_private.commerce_wallets set owned=case when $2=any(owned) then owned else array_append(owned,$2) end, revision=revision+1 where id=$1::uuid`,
                 [current.accountToken, product.theme!],
               );
+            else if (product.kind === 'unlock')
+              await connection.query(
+                `update cpi_private.commerce_wallets set unlocks=case when $2=any(unlocks) then unlocks else array_append(unlocks,$2) end, revision=revision+1 where id=$1::uuid`,
+                [current.accountToken, product.unlock!],
+              );
             else {
-              const column = product.kind === 'credit' ? 'credits' : product.kind;
+              const column = commerceResourceColumn(product.kind);
               await connection.query(
                 `update cpi_private.commerce_wallets set ${column}=${column}+$2, revision=revision+1 where id=$1::uuid`,
                 [current.accountToken, product.quantity],
@@ -277,7 +403,7 @@ export function createCommerceService(options: {
           return {
             status: 'granted' as const,
             transactionId: proof.transactionId,
-            consumable: product.kind !== 'theme',
+            consumable: isConsumableProduct(product.kind),
             wallet: await read(connection, current.accountToken),
           };
         },
