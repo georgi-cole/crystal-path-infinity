@@ -2,6 +2,7 @@ import type { GearId, TileSide } from '@crystal-path-infinity/game-core';
 import type { WorldId } from './store-catalog';
 import { bridgePane } from './bridge-geometry';
 import type { PresentedRow } from './infinity-presentation';
+import { STEP_TIMING } from './scene-cinematics';
 import type { SceneCinematic } from './scene-cinematics';
 
 export type CompanionPoint = { x: number; y: number };
@@ -103,7 +104,7 @@ export function planCompanionMotion(
       action: 'travel',
       anchor: destination,
       end,
-      duration: 0.46,
+      duration: STEP_TIMING.travel / 1000,
       side,
       path: `M0 0L${end.x - destination.x} ${end.y - destination.y}`,
     };
@@ -119,7 +120,7 @@ export function planCompanionMotion(
       ...base,
       action: 'escape',
       end: destination,
-      duration: 0.62,
+      duration: (STEP_TIMING.wrong - STEP_TIMING.contact - 30) / 1000,
       side,
       path: `M0 0Q${hx * 0.5} ${hy - 42} ${hx} ${hy}Q${(hx + dx) / 2} ${dy - 48} ${dx} ${dy}`,
     };
@@ -127,7 +128,7 @@ export function planCompanionMotion(
     ...base,
     action: 'hop',
     end: destination,
-    duration: 0.29,
+    duration: (STEP_TIMING.safe - STEP_TIMING.contact - 20) / 1000,
     side,
     path: `M0 0Q${dx * 0.5} ${dy - 42} ${dx} ${dy}`,
   };

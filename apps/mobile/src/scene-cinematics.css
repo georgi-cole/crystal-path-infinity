@@ -169,7 +169,7 @@
 .cpi-glass-pane.is-contact .cpi-pane-material {
   transform-box: fill-box;
   transform-origin: center;
-  animation: cpi-glass-contact 0.11s ease-out both;
+  animation: cpi-glass-contact 0.08s ease-out both;
 }
 .cpi-glass-shard {
   transform-box: fill-box;

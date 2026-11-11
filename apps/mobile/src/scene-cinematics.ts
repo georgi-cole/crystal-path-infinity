@@ -27,10 +27,10 @@ export interface SceneCinematic {
   readonly shielded?: true;
 }
 export const STEP_TIMING = Object.freeze({
-  contact: 110,
-  safe: 430,
-  wrong: 820,
-  travel: 460,
+  contact: 80,
+  safe: 300,
+  wrong: 550,
+  travel: 300,
   death: 1800,
   mystery: 1450,
 });
