@@ -1,5 +1,11 @@
 # Mobile app foundation — CPI-003
 
+## Signed offline Campaign beta — CPI-042 · 11 November 2026
+
+The explicit `campaign-beta` Vite profile builds the reviewed 0.7.4 offline Campaign/Infinity game with the registered production bundle identity for TestFlight signing. It enables the same local test store and isolated campaign save namespace as `campaign-qa`, while rejecting active account gateways, sign-in, ads, billing and native commerce flags. It emits `campaign-beta-info.json` with the source SHA and simulated-purchase disclosure. Normal production builds remain separate; unsigned release preparation rejects this review profile.
+
+The TestFlight workflow accepts `campaign_beta=true` and optionally `external_beta=true`; external eligibility is restricted to this offline profile. Default uploads remain internal-only staging clients. Beta archives must contain the matching manifest/source and disabled services. Upload still requires checked current main, a new build counter, protected signing/upload credentials and an exact-source full iOS simulator pass. External eligibility does not submit an App Store version or grant developer access. External testers may require Apple's beta review; invitations/availability must be verified separately from upload. Tester addresses are not committed or passed through public workflow inputs.
+
 ## Targeted iPhone simulator checks — CPI-041 · 11 November 2026
 
 Owner-approved policy: known artwork/menu/game-content changes retain all application tests and web builds, a real Android smoke, and unsigned iOS compilation. They intentionally omit iPhone simulator preparation/launch. Native/startup/lifecycle/runtime entry points, dependencies, CI/release files and unknown diffs require full native verification; nightly and manual runs are full. `App.tsx` and `main.tsx` remain integration entry points requiring full checks. The aggregate requires an explicit matching iOS `build`/`full` output and successful compilation. Compile-only evidence has a distinct job name/summary and is never called a launch pass. Release/TestFlight preparation requires the full iOS launch check on its exact source commit; dispatch full verification first if the source only had a content-scope check. See CONTRIBUTING and the CPI-007 decision.

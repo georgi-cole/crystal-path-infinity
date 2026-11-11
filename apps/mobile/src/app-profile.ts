@@ -5,8 +5,10 @@ export const QA_TOOLS_ENABLED =
   import.meta.env.MODE === 'development' ||
   import.meta.env.MODE === 'qa' ||
   import.meta.env.MODE === 'campaign-qa' ||
+  import.meta.env.MODE === 'campaign-beta' ||
   import.meta.env.MODE === 'test';
-export const CAMPAIGN_TEST_BUILD = import.meta.env.MODE === 'campaign-qa';
+export const CAMPAIGN_TEST_BUILD =
+  import.meta.env.MODE === 'campaign-qa' || import.meta.env.MODE === 'campaign-beta';
 
 /** A guest review build uses the player controls with a browser-only simulated wallet. */
 export const PLAYER_PREVIEW_ENABLED = import.meta.env.MODE === 'player-preview';
