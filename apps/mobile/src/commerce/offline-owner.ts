@@ -1,5 +1,8 @@
+import { CAMPAIGN_RELEASE_BUILD } from '../app-profile';
 /** Noncredential pointer to this device's last Infinity inventory. Never authenticates an API. */
-const key = 'cpi.campaign-services.offline-owner.v1';
+const key = CAMPAIGN_RELEASE_BUILD
+  ? 'cpi.campaign-production.offline-owner.v1'
+  : 'cpi.campaign-services.offline-owner.v1';
 const event = 'cpi-offline-owner';
 export function readOfflineOwner(): string | null {
   try {

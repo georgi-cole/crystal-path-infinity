@@ -9,6 +9,7 @@ import { selectGuestAdUnits } from './config/guest-ad-inventory.ts';
 import { assertUnsignedPublicVariables, resolveUnsignedRelease } from './config/release-build.ts';
 import { assertOfflineCampaignBeta } from './config/campaign-beta.ts';
 import { assertCampaignServices } from './config/campaign-services.ts';
+import { assertCampaignRelease } from './config/campaign-release.ts';
 import { resolveStoreBuild } from './config/store-build.ts';
 import { productionMobileSignIn } from './config/mobile-sign-in.ts';
 
@@ -20,12 +21,13 @@ const manifest = JSON.parse(readFileSync(new URL('./package.json', import.meta.u
 export default defineConfig(({ mode }) => {
   const campaignBeta = mode === 'campaign-beta';
   const campaignServices = mode === 'campaign-services';
+  const campaignRelease = mode === 'campaign-release';
   // Both web review profiles use staging identity and can never become a release candidate.
   const preview = mode === 'qa' || mode === 'player-preview' || mode === 'campaign-qa';
   const environment = requireEnvironment(
     mode === 'test'
       ? 'development'
-      : campaignBeta || campaignServices
+      : campaignBeta || campaignServices || campaignRelease
         ? 'production'
         : preview
           ? 'staging'
@@ -44,12 +46,13 @@ export default defineConfig(({ mode }) => {
   const mobileSignIn = productionMobileSignIn(environment, serviceValues);
   if (campaignBeta) assertOfflineCampaignBeta({ ...process.env, ...values });
   if (campaignServices) assertCampaignServices({ ...process.env, ...values });
+  if (campaignRelease) assertCampaignRelease(serviceValues);
   if (release || mode === 'player-preview') assertUnsignedPublicVariables(values);
   const store = resolveStoreBuild(environment, serviceValues);
   if (release && store) throw new Error('Store and unsigned release metadata cannot be combined.');
   const buildInfo = release?.app ?? getBuildInfo(environment, store?.version ?? manifest.version);
   const campaignBase =
-    mode === 'campaign-qa' || campaignBeta || campaignServices
+    mode === 'campaign-qa' || campaignBeta || campaignServices || campaignRelease
       ? spawnSync('git', ['rev-parse', 'HEAD'], { cwd: appRoot, encoding: 'utf8' }).stdout?.trim()
       : undefined;
   const guestAdUnits = selectGuestAdUnits({ ...process.env, ...values }, environment);
@@ -60,6 +63,20 @@ export default defineConfig(({ mode }) => {
       {
         name: 'crystal-path-build-identity',
         generateBundle() {
+          if (campaignRelease)
+            this.emitFile({
+              type: 'asset',
+              fileName: 'campaign-release-info.json',
+              source:
+                JSON.stringify({
+                  schemaVersion: 1,
+                  audience: 'campaign-release',
+                  sourceCommit: campaignBase,
+                  sandboxPurchases: false,
+                  demonstrationAds: false,
+                  simulatedPurchases: false,
+                }) + '\n',
+            });
           if (mobileSignIn)
             this.emitFile({
               type: 'asset',

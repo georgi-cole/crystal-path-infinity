@@ -35,6 +35,16 @@ preflight() {
   xcodebuild -version
   xcodebuild -help > "$RUNNER_TEMP/cpi-xcodebuild-help.txt" 2>&1 || true
   grep -Fq testFlightInternalTestingOnly "$RUNNER_TEMP/cpi-xcodebuild-help.txt"
+  if [[ "${CPI_PUBLIC_RELEASE:-false}" == true ]]; then
+    if [[ "${CPI_CAMPAIGN_BETA:-false}" == true || "${CPI_CAMPAIGN_SERVICES:-false}" == true || "${CPI_EXTERNAL_BETA:-false}" == true || "${CPI_IOS_REVIEW_SOURCE:-false}" == true ]]; then
+      echo 'Public Campaign is separate from every test/review profile.' >&2; exit 1
+    fi
+    # Validate the native build counter before the following build-identity step.
+    CPI_STORE_VERSION=$(node -p 'require("./apps/mobile/package.json").version') CPI_STORE_BUILD_NUMBER=$GITHUB_RUN_NUMBER node --experimental-strip-types --input-type=module - <<'JS'
+import { assertCampaignRelease } from './apps/mobile/config/campaign-release.ts';
+assertCampaignRelease(process.env);
+JS
+  fi
   if [[ "${CPI_CAMPAIGN_SERVICES:-false}" == true && ( "${CPI_CAMPAIGN_BETA:-false}" == true || "${CPI_EXTERNAL_BETA:-false}" == true || "${CPI_IOS_REVIEW_SOURCE:-false}" == true ) ]]; then
     echo 'Full-game service acceptance requires internal-only checked main, separate from the offline beta.' >&2
     exit 1
@@ -43,7 +53,9 @@ preflight() {
     echo 'External beta distribution requires the explicit offline Campaign profile.' >&2
     exit 1
   fi
-  if [[ "${CPI_CAMPAIGN_BETA:-false}" == true ]]; then
+  if [[ "${CPI_PUBLIC_RELEASE:-false}" == true ]]; then
+    : # Validated above; signing/upload still require checked current main below.
+  elif [[ "${CPI_CAMPAIGN_BETA:-false}" == true ]]; then
     if [[ "${CPI_IOS_REVIEW_SOURCE:-false}" == true ]]; then echo 'Campaign beta uses checked main only.' >&2; exit 1; fi
     node --experimental-strip-types --input-type=module - <<'JS'
 import { assertOfflineCampaignBeta } from './apps/mobile/config/campaign-beta.ts';
@@ -160,7 +172,7 @@ project.write_text(project_settings.replace(marker, "\t\t\t\t" + settings))
     "teamID": team,
     "signingCertificate": "Apple Distribution",
     "provisioningProfiles": {bundle: uuid},
-    "testFlightInternalTestingOnly": os.environ.get("CPI_EXTERNAL_BETA") != "true",
+    "testFlightInternalTestingOnly": os.environ.get("CPI_EXTERNAL_BETA") != "true" and os.environ.get("CPI_PUBLIC_RELEASE") != "true",
     "manageAppVersionAndBuildNumber": False,
     "uploadSymbols": True,
 }))
@@ -206,7 +218,17 @@ assert info["CFBundleVersion"] == build
 assert info["UIDeviceFamily"] == [1]
 assert metadata["environment"] == "production" and not (public / "qa-info.json").exists()
 account_base = os.environ["VITE_ACCOUNT_API_BASE_URL"]
-if os.environ.get("CPI_CAMPAIGN_BETA") == "true":
+if os.environ.get("CPI_PUBLIC_RELEASE") == "true":
+    release = json.loads((public / "campaign-release-info.json").read_text())
+    accounts = json.loads((public / "account-services-info.json").read_text())
+    assert release["audience"] == "campaign-release" and release["sourceCommit"] == os.environ["GITHUB_SHA"]
+    assert release["sandboxPurchases"] is False and release["demonstrationAds"] is False and release["simulatedPurchases"] is False
+    assert accounts["kind"] == "production-mobile" and accounts["gateway"] == account_base
+    assert account_base == "https://crystalpath-api.kolequant.xyz/cpi"
+    assert not (public / "campaign-beta-info.json").exists() and not (public / "campaign-services-info.json").exists()
+    assert os.environ["CPI_NATIVE_ADS"] == os.environ["CPI_NATIVE_PURCHASES"] == "true"
+    assert any(bundle_id in entry["CFBundleURLSchemes"] for entry in info["CFBundleURLTypes"])
+elif os.environ.get("CPI_CAMPAIGN_BETA") == "true":
     beta = json.loads((public / "campaign-beta-info.json").read_text())
     assert beta["audience"] == "campaign-beta" and beta["offline"] and beta["simulatedPurchases"]
     assert beta["sourceCommit"] == os.environ["GITHUB_SHA"]

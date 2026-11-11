@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { CAMPAIGN_SERVICES_BUILD, practiceStorage } from './app-profile';
+import { CAMPAIGN_COMMERCE_ENABLED, practiceStorage } from './app-profile';
 import { namespacePracticeStorage } from './campaign-test';
 import { App } from './App';
 import { createLiveServices } from './live-services';
@@ -40,7 +40,7 @@ function PlayerContent({
     };
   }, []);
   useEffect(() => {
-    if (!CAMPAIGN_SERVICES_BUILD) return;
+    if (!CAMPAIGN_COMMERCE_ENABLED) return;
     if (
       ['connecting', 'signing_out', 'blocked', 'revocation_unconfirmed'].includes(phase) ||
       (phase === 'guest' && previousPhase.current !== 'guest')
@@ -49,16 +49,16 @@ function PlayerContent({
     previousPhase.current = phase;
   }, [phase]);
   useEffect(() => {
-    if (CAMPAIGN_SERVICES_BUILD && snapshot.wallet)
+    if (CAMPAIGN_COMMERCE_ENABLED && snapshot.wallet)
       rememberOfflineOwner(snapshot.wallet.accountToken);
   }, [snapshot.wallet]);
   useEffect(() => {
-    if (CAMPAIGN_SERVICES_BUILD && snapshot.phase === 'idle' && flow) void flow.load();
+    if (CAMPAIGN_COMMERCE_ENABLED && snapshot.phase === 'idle' && flow) void flow.load();
   }, [flow, snapshot.phase]);
   const allowCached =
     !['connecting', 'signing_out', 'blocked', 'revocation_unconfirmed'].includes(phase) &&
     (!online || phase !== 'guest');
-  const accountToken = CAMPAIGN_SERVICES_BUILD
+  const accountToken = CAMPAIGN_COMMERCE_ENABLED
     ? (snapshot.wallet?.accountToken ?? (allowCached ? (cachedToken ?? undefined) : undefined))
     : undefined;
   const guestStorage = useMemo(() => practiceStorage(), []);
@@ -72,7 +72,7 @@ function PlayerContent({
         ? {
             ...services.account,
             signOut: async () => {
-              if (CAMPAIGN_SERVICES_BUILD) rememberOfflineOwner(null);
+              if (CAMPAIGN_COMMERCE_ENABLED) rememberOfflineOwner(null);
               return (await services.account.signOut?.()) ?? true;
             },
           }

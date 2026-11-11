@@ -28,6 +28,7 @@ import { BRAND_BACKGROUND, syncNativeBrandAssets } from './brand-assets.mjs';
 import { assertUnsignedRelease, resolveUnsignedRelease } from '../config/release-build.ts';
 import { resolveStoreBuild } from '../config/store-build.ts';
 import { productionMobileSignIn } from '../config/mobile-sign-in.ts';
+import { assertCampaignRelease } from '../config/campaign-release.ts';
 import {
   LIVE_NATIVE_PACKAGES,
   GOOGLE_ADS_SDK,
@@ -877,6 +878,19 @@ try {
   integrations = readNativeIntegrations(process.env, environment);
   const signIn = productionMobileSignIn(environment, process.env);
   if (signIn) assert.deepEqual(json('dist/account-services-info.json'), signIn);
+  if (existsSync(join(appRoot, 'dist/campaign-release-info.json'))) {
+    assertCampaignRelease(process.env);
+    const campaign = json('dist/campaign-release-info.json');
+    assert.equal(environment, 'production');
+    assert.equal(campaign.audience, 'campaign-release');
+    assert.match(campaign.sourceCommit, /^[a-f0-9]{40}$/);
+    assert.equal(campaign.sandboxPurchases, false);
+    assert.equal(campaign.demonstrationAds, false);
+    assert.equal(campaign.simulatedPurchases, false);
+    assert.equal(signIn?.kind, 'production-mobile');
+    assert.ok(!existsSync(join(appRoot, 'dist/campaign-beta-info.json')));
+    assert.ok(!existsSync(join(appRoot, 'dist/campaign-services-info.json')));
+  }
   if (mobileProviderSignIn)
     assert.ok(
       environment === 'production' &&

@@ -1,7 +1,7 @@
 import {
   CAMPAIGN_ENABLED,
   CAMPAIGN_TEST_BUILD,
-  CAMPAIGN_SERVICES_BUILD,
+  CAMPAIGN_COMMERCE_ENABLED,
   PLAYER_PREVIEW_ENABLED,
   practiceStorage,
   QA_TOOLS_ENABLED,
@@ -642,7 +642,7 @@ export function App({
   const lastSupplySync = useRef<string | null>(null);
   useEffect(() => {
     if (
-      !CAMPAIGN_SERVICES_BUILD ||
+      !CAMPAIGN_COMMERCE_ENABLED ||
       !commerceAccountToken ||
       !commerceSnapshot.wallet ||
       commerceSnapshot.wallet.accountToken !== commerceAccountToken
@@ -661,7 +661,7 @@ export function App({
   useEffect(() => {
     if (commerceSnapshot.phase === 'error') lastSupplySync.current = null;
     if (
-      !CAMPAIGN_SERVICES_BUILD ||
+      !CAMPAIGN_COMMERCE_ENABLED ||
       game ||
       !['store', 'supplies', 'bridge-style'].includes(view) ||
       !commerceAccountToken ||
@@ -870,7 +870,7 @@ export function App({
   const changeCampaignWorld = (world: ThemeId) => {
     const owned = commerceSnapshot.wallet?.owned ??
       campaignProgressRef.current.ownedWorlds ?? ['obsidian'];
-    if (CAMPAIGN_SERVICES_BUILD && !owned.includes(world)) {
+    if (CAMPAIGN_COMMERCE_ENABLED && !owned.includes(world)) {
       if (!commerceSnapshot.wallet) {
         navigate('profile');
         return;
@@ -879,7 +879,7 @@ export function App({
       return;
     }
     commitCampaignProgress({ ...campaignProgressRef.current, world });
-    if (CAMPAIGN_SERVICES_BUILD && commerceFlow) void commerceFlow.equip(world);
+    if (CAMPAIGN_COMMERCE_ENABLED && commerceFlow) void commerceFlow.equip(world);
   };
   const changeCampaignGear = (gear: GearId | null) =>
     commitCampaignProgress(equipCampaignGear(campaignProgressRef.current, gear));
@@ -900,7 +900,7 @@ export function App({
         return;
       }
       const key = commerceKeyForOffer(offer);
-      if (CAMPAIGN_SERVICES_BUILD && key && commerceFlow) void commerceFlow.buy(key);
+      if (CAMPAIGN_COMMERCE_ENABLED && key && commerceFlow) void commerceFlow.buy(key);
       return;
     }
     const current = campaignProgressRef.current;
