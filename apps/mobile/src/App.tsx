@@ -718,6 +718,15 @@ export function App({
     startPractice(CAMPAIGN_TEST_BUILD ? newInfinityRun() : null);
   };
 
+  const newCampaignRun = (missionId: CampaignMissionId, approach?: CampaignApproach) => {
+    const progress = startCampaignAttempt(campaignProgressRef.current, missionId, approach);
+    const snapshot = progress.activeMissionSnapshot!;
+    const initial = createCampaignRun(snapshot);
+    commitCampaignProgress(progress, initial);
+    setCampaignSaved(campaignLoad(initial));
+    return { initial, snapshot };
+  };
+
   const startCampaignMission = (
     missionId: CampaignMissionId,
     approach?: CampaignApproach,
@@ -740,11 +749,7 @@ export function App({
       startPractice(previous, 'campaign', missionId, mission.weather);
       return;
     }
-    const progress = startCampaignAttempt(current, missionId, approach);
-    const snapshot = progress.activeMissionSnapshot!;
-    const initial = createCampaignRun(snapshot);
-    commitCampaignProgress(progress, initial);
-    setCampaignSaved(campaignLoad(initial));
+    const { initial, snapshot } = newCampaignRun(missionId, approach);
     startPractice(initial, 'campaign', missionId, snapshot.weather);
   };
 
@@ -919,7 +924,9 @@ export function App({
           newJourney={
             game.mode === 'infinity' && CAMPAIGN_TEST_BUILD && !game.trialTheme
               ? newInfinityRun
-              : undefined
+              : game.mode === 'campaign' && campaignMission
+                ? () => newCampaignRun(campaignMission.id, campaignMission.approach).initial
+                : undefined
           }
           weather={
             game.mode === 'campaign' && game.campaignMissionId
