@@ -4,6 +4,7 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import {
+  appendFileSync,
   closeSync,
   existsSync,
   mkdirSync,
@@ -62,6 +63,7 @@ for (const suffix of [
   'startup-diagnostics.json',
   'native-lifecycle.log',
   'lifecycle-actions.json',
+  'provisioning-summary.json',
 ]) {
   rmSync(join(evidenceRoot, `${platform}-${suffix}`), { force: true });
 }
@@ -165,17 +167,43 @@ async function waitFor(description, milliseconds, probe) {
   }
   throw new Error(`Timed out waiting for ${description} (${milliseconds / 1000}s)`);
 }
-async function runLogged(command, commandArgs, file, timeout) {
+async function runLogged(command, commandArgs, file, timeout, progressLabel) {
+  const started = Date.now();
+  let nextProgress = started + 20_000;
+  if (progressLabel) console.log(`${progressLabel}: started (budget ${timeout / 1000}s)`);
   const child = detachedLog(command, commandArgs, file);
   try {
     await waitFor(`${command} completion; diagnostics in ${file}`, timeout, () => {
       if (child.smokeError) throw child.smokeError;
       assert.equal(child.signalCode, null, `${command} was terminated; see ${file}`);
+      if (progressLabel && child.exitCode === null && Date.now() >= nextProgress) {
+        let lastLine = '';
+        try {
+          lastLine =
+            readFileSync(join(evidenceRoot, file), 'utf8')
+              .trim()
+              .split(/\r?\n/)
+              .filter(Boolean)
+              .at(-1)
+              ?.trim()
+              .slice(0, 180) ?? '';
+        } catch {
+          /* The command's original result remains authoritative. */
+        }
+        console.log(
+          `${progressLabel}: ${Math.round((Date.now() - started) / 1000)}s elapsed${lastLine ? ' · ' + lastLine : ''}`,
+        );
+        nextProgress = Date.now() + 20_000;
+      }
       return child.exitCode !== null;
     });
     assert.equal(child.exitCode, 0, `${command} failed; see ${file}`);
   } finally {
     if (child.exitCode === null) child.kill('SIGKILL');
+    if (progressLabel)
+      console.log(
+        `${progressLabel}: ${child.exitCode === 0 ? 'completed' : 'stopped'} after ${((Date.now() - started) / 1000).toFixed(1)}s`,
+      );
   }
 }
 function appLog() {
@@ -909,7 +937,13 @@ async function ios() {
   // Keep the event loop draining attached native logs while launch services run.
   // spawnSync can block that pipe during a foreground/background transition.
   async function control(commandArgs, file, timeout = 60_000) {
-    await runLogged('xcrun', commandArgs, file, timeout);
+    await runLogged(
+      'xcrun',
+      commandArgs,
+      file,
+      timeout,
+      `iOS ${commandArgs[1]}${commandArgs[1] === 'io' ? ' screenshot' : ''}`,
+    );
     return readFileSync(join(evidenceRoot, file), 'utf8').trim();
   }
   async function openSettingsUntilObservation(description, file, observe) {
@@ -955,45 +989,113 @@ async function ios() {
     ),
   );
   try {
+    const provisioningStarted = Date.now();
+    const provisioningSummary = {
+      schemaVersion: 1,
+      runtime,
+      freshDevice: true,
+      ready: false,
+      restarted: false,
+      phases: [],
+    };
+    const saveProvisioning = () =>
+      save(
+        'ios-provisioning-summary.json',
+        JSON.stringify(
+          { ...provisioningSummary, elapsedMs: Date.now() - provisioningStarted },
+          null,
+          2,
+        ) + '\n',
+      );
+    saveProvisioning();
     console.log(
       `Booting fresh ${device.name} / iOS 26.5 simulator (budget ${provisioningBudgetsMs.coldBoot / 1000}s); progress is recorded in ios-boot.log`,
     );
-    await prepareIosSimulator(async (step, timeout) => {
-      console.log(`iOS provisioning: ${step} (budget ${timeout / 1000}s)`);
-      // Every operation names only the fresh device owned by this invocation.
-      if (step === 'cold-boot' || step === 'warm-boot') {
-        await runLogged(
-          'xcrun',
-          ['simctl', 'bootstatus', udid, '-b'],
-          step === 'cold-boot' ? 'ios-boot.log' : 'ios-warm-boot.log',
-          timeout,
-        );
-        return '';
-      }
+    const prepared = await prepareIosSimulator(async (step, timeout) => {
+      const phase = {
+        step,
+        startedAt: new Date().toISOString(),
+        budgetMs: timeout,
+        status: 'running',
+        elapsedMs: 0,
+      };
+      const phaseStarted = Date.now();
+      provisioningSummary.phases.push(phase);
       if (step === 'shutdown') {
-        // The continuous host-pressure capture already records processes/memory.
-        // Reset promptly: synchronous diagnostics can hang on migration's busy
-        // services and prevent this required cleanup from running at all.
-        return control(['simctl', 'shutdown', udid], 'ios-migration-shutdown.log', timeout);
+        provisioningSummary.restarted = true;
+        console.log(
+          'iOS setup: pre-install Settings readiness failed; restarting this owned simulator once',
+        );
       }
-      if (step === 'system-launch') {
+      saveProvisioning();
+      try {
+        // Every operation names only the fresh device owned by this invocation.
+        if (step === 'cold-boot' || step === 'warm-boot') {
+          await runLogged(
+            'xcrun',
+            ['simctl', 'bootstatus', udid, '-b'],
+            step === 'cold-boot' ? 'ios-boot.log' : 'ios-warm-boot.log',
+            timeout,
+            `iOS setup ${step}`,
+          );
+          return '';
+        }
+        if (step === 'shutdown') {
+          // The continuous host-pressure capture already records processes/memory.
+          // Reset promptly: synchronous diagnostics can hang on migration's busy
+          // services and prevent this required cleanup from running at all.
+          return control(['simctl', 'shutdown', udid], 'ios-migration-shutdown.log', timeout);
+        }
+        if (step === 'system-launch') {
+          const controlFile = provisioningSummary.restarted
+            ? 'ios-launchservice-recovery.txt'
+            : 'ios-launchservice-control.txt';
+          phase.logFile = controlFile;
+          const output = await control(
+            ['simctl', 'launch', udid, 'com.apple.Preferences'],
+            controlFile,
+            timeout,
+          );
+          recordLifecycleAction('ios-system-app-launch-confirmed');
+          return output;
+        }
         const output = await control(
-          ['simctl', 'launch', udid, 'com.apple.Preferences'],
-          'ios-launchservice-control.txt',
+          ['simctl', 'terminate', udid, 'com.apple.Preferences'],
+          'ios-launchservice-terminate.txt',
           timeout,
         );
-        save('ios-launchservice-control.txt', output + '\n');
-        recordLifecycleAction('ios-system-app-launch-confirmed');
+        recordLifecycleAction('ios-system-app-terminated');
         return output;
+      } catch (error) {
+        phase.status = 'failed';
+        phase.error = error.message;
+        throw error;
+      } finally {
+        phase.elapsedMs = Date.now() - phaseStarted;
+        phase.finishedAt = new Date().toISOString();
+        if (phase.status === 'running') phase.status = 'success';
+        saveProvisioning();
       }
-      const output = await control(
-        ['simctl', 'terminate', udid, 'com.apple.Preferences'],
-        'ios-launchservice-terminate.txt',
-        timeout,
-      );
-      recordLifecycleAction('ios-system-app-terminated');
-      return output;
     });
+    provisioningSummary.restarted = prepared.restarted;
+    provisioningSummary.ready = true;
+    saveProvisioning();
+    console.log(
+      `iOS setup ready after ${((Date.now() - provisioningStarted) / 1000).toFixed(1)}s; restart ${prepared.restarted ? 'required' : 'not needed'}`,
+    );
+    if (process.env.GITHUB_STEP_SUMMARY) {
+      appendFileSync(
+        process.env.GITHUB_STEP_SUMMARY,
+        `### iOS simulator preparation\n\nFresh iOS 26.5 device; readiness restart **${prepared.restarted ? 'required' : 'not needed'}**. App verification follows separately.\n\n| Phase | Result | Seconds |\n| --- | --- | ---: |\n` +
+          provisioningSummary.phases
+            .map(
+              (phase) =>
+                `| ${phase.step} | ${phase.status} | ${(phase.elapsedMs / 1000).toFixed(1)} |`,
+            )
+            .join('\n') +
+          '\n\n',
+      );
+    }
     // Install only after post-migration services pass the control round trip.
     await control(
       [
@@ -1006,6 +1108,7 @@ async function ios() {
       provisioningBudgetsMs.install,
     );
     for (attempt = 1; attempt <= iosColdStarts; attempt += 1) {
+      console.log(`iOS app verification: cold start ${attempt}/${iosColdStarts} (setup complete)`);
       boundary = undefined;
       observationComplete = false;
       logOffset = appLog().length;

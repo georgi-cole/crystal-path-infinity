@@ -76,6 +76,16 @@ The required app workflow therefore pins the supported 14 GB macOS 15 Intel / Xc
 
 Executed counts, exact revision, workflow links and artifact digests are recorded in the issue/PR. Local generation is not native compile/launch evidence. Emulator/simulator results do not replace physical-device, real-ad, server, performance or long-session gates in CPI-002/CPI-034.
 
+## 11 November 2026 · CPI-040 · avoid unconditional simulator restarts
+
+This current note supersedes the earlier provisioning sequence and toolchain description above without rewriting its historical failures. The workflow currently pins Xcode 26.6 / iOS 26.5 on `macos-26-intel`, a standard 14 GB Intel host ([GitHub runner specifications](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)). CPI-040 changes neither that runtime nor the required native gate.
+
+The passing [PR #110 baseline, run #414](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/43015447506), feature head `e2587f0f438ce32e3fd05d5d9919702731dd384d`, provides actual command timings: initial boot 227.8 s; unconditional shutdown 57.5 s; warm boot 77.1 s; Settings launch 12.9 s; Settings termination 4.1 s. The forced restart therefore cost 134.6 s before app installation. Its full iOS smoke took about 10 minutes 53 seconds including cleanup; two recreated app processes, Settings interruptions, bridge identity/resume, required screenshots and zero runtime errors passed. The screenshot was inspected. These remain historical measurements, not a speed prediction for the new policy. The UI's single long smoke step was insufficient to show which OS/app phase was progressing.
+
+The new sequence is first boot → valid Settings PID → successful Settings termination → install CPI. Only a thrown pre-install Settings launch permits one shutdown/warm boot of the same fresh owned device and a second readiness probe. Its initial failed command/log remains recorded separately from the recovery log. An invalid successful PID response is terminal. Cold boot, shutdown, warm boot, second probe or termination failure cannot produce a readiness pass. No failed app launch, lifecycle assertion, screenshot or runtime-error check is retried or waived. The first-boot allowance remains 900 seconds, with existing per-command limits and the 30-minute smoke ceiling. On a healthy boot, the old forced restart is absent; unreliable OS readiness retains a bounded recovery path before CPI is installed.
+
+The driver emits phase start/completion timings and a 20-second progress heartbeat with the last OS log line. It records `ios-provisioning-summary.json` with per-phase status, budgets, elapsed times and a restart flag, then explicitly announces app cold-start verification. The native command transcript, host-pressure sample, fresh-device ownership/cleanup, two full app starts (one for a selected smoke profile), lifecycle boundaries, screenshots and error assertions remain required. The final PR records observed new-run timings and acceptance; local deterministic orchestration tests alone are not simulator evidence. No game rules, economy, real payments or runtime service permissions change.
+
 ## Sources inspected
 
 - [Capacitor v8 Android custom code](https://capacitorjs.com/docs/android/custom-code) and [iOS custom code](https://capacitorjs.com/docs/ios/custom-code).
