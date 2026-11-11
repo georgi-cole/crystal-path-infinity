@@ -1323,51 +1323,66 @@ function InfinityRun({
     return () => document.removeEventListener('keydown', cancelOnEscape);
   }, [confirmEnd]);
 
-  function unlockAudio() {
+  const unlockAudio = useCallback(() => {
     void audioRef.current?.unlock();
-  }
+  }, []);
 
-  async function issue(command: SessionCommand, beforeCommit?: BeforeRunCommit) {
-    const runtime = runtimeRef.current;
-    if (
-      !runtime ||
-      !ready ||
-      (paused && command.type !== 'end') ||
-      commandLock.current ||
-      (command.type !== 'end' && directorRef.current?.isBusy())
-    )
-      return;
-    if (kitPauseRef.current) return;
-    commandLock.current = true;
-    setBusy(true);
-    try {
-      const commit =
-        beforeCommit ??
-        (onInfinitySupplyCommit
-          ? (result: Parameters<BeforeRunCommit>[0], previous: RunState) =>
-              onInfinitySupplyCommit(result.state, result.events, previous)
-          : undefined);
-      const result = await runtime.bind(command, commit)();
-      setState(result.state);
+  const issue = useCallback(
+    async (command: SessionCommand, beforeCommit?: BeforeRunCommit) => {
+      const runtime = runtimeRef.current;
       if (
-        !result.accepted &&
-        result.reason &&
-        ![
-          'clock-paused',
-          'stale-command',
-          'stale-pause',
-          'command-consumed',
-          'died-before-command',
-        ].includes(result.reason)
+        !runtime ||
+        !ready ||
+        (paused && command.type !== 'end') ||
+        commandLock.current ||
+        (command.type !== 'end' && directorRef.current?.isBusy())
       )
-        setError(`Action unavailable: ${result.reason}`);
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Gameplay command failed.');
-    } finally {
-      commandLock.current = false;
-      setBusy(false);
-    }
-  }
+        return;
+      if (kitPauseRef.current) return;
+      commandLock.current = true;
+      setBusy(true);
+      try {
+        const commit =
+          beforeCommit ??
+          (onInfinitySupplyCommit
+            ? (result: Parameters<BeforeRunCommit>[0], previous: RunState) =>
+                onInfinitySupplyCommit(result.state, result.events, previous)
+            : undefined);
+        const result = await runtime.bind(command, commit)();
+        setState(result.state);
+        if (
+          !result.accepted &&
+          result.reason &&
+          ![
+            'clock-paused',
+            'stale-command',
+            'stale-pause',
+            'command-consumed',
+            'died-before-command',
+          ].includes(result.reason)
+        )
+          setError(`Action unavailable: ${result.reason}`);
+      } catch (reason) {
+        setError(reason instanceof Error ? reason.message : 'Gameplay command failed.');
+      } finally {
+        commandLock.current = false;
+        setBusy(false);
+      }
+    },
+    [ready, paused, onInfinitySupplyCommit],
+  );
+
+  const chooseTile = useCallback(
+    (side: TileSide) => {
+      unlockAudio();
+      void issue({ type: 'choose', side });
+    },
+    [unlockAudio, issue],
+  );
+  const openMystery = useCallback(() => {
+    unlockAudio();
+    void issue({ type: 'mystery' });
+  }, [unlockAudio, issue]);
 
   async function toggleKit() {
     const runtime = runtimeRef.current;
@@ -1874,10 +1889,7 @@ function InfinityRun({
       busy={busy}
       paused={paused}
       error={error}
-      onChoose={(side) => {
-        unlockAudio();
-        void issue({ type: 'choose', side });
-      }}
+      onChoose={chooseTile}
       onHint={() => {
         unlockAudio();
         if (
@@ -1891,10 +1903,7 @@ function InfinityRun({
           );
         } else void issue({ type: 'hint' });
       }}
-      onMystery={() => {
-        unlockAudio();
-        void issue({ type: 'mystery' });
-      }}
+      onMystery={openMystery}
       onPause={() => {
         void togglePause();
       }}

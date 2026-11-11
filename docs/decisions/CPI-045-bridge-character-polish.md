@@ -80,3 +80,11 @@ Cache visual verification: all fourteen extracted closed/open states were inspec
 The seven runtime pairs total 324,112 bytes (about 317 KiB); high-resolution masters stay outside the app bundle. Targeted box/offer/scene regressions passed after replacing historical inline-image/class-order assertions with the new asset contract. Camera tests verify centered, positive, decreasing scale into the distance. Final full-suite and quality results are recorded after completion; native CI remains separate evidence.
 
 Final cache-revision checks passed: 825 mobile/config, 315 core and 211 server tests (1,351 total), six balance tests, lint, formatting, Campaign QA TypeScript/bundle and planning validation. Current branch still starts from latest fetched main 40ca8bc. Native checks remain CI evidence, not inferred from these passes.
+
+## Merge latest main — 11 November 2026
+
+Merged main `1f16e19` (CPI-046, PR #124: lower render work and step input delay) into the CPI-045 branch using a merge commit, rather than rebasing its artwork history. The automatic merge had no conflicts. The new bridge/atmosphere memoization, render-detail selection and shorter cinematic timing are retained alongside the fitted outfits, larger character sizing, new cache artwork and shared camera projection. Companion motion now uses main's shared step timing while keeping the PR's larger presentation size. Main's performance documentation and current-rule notes are preserved; this integration does not add a new gameplay/economy change.
+
+Verification of the combined tree is recorded after local checks. The earlier 40ca8bc baseline references remain historical; current integration baseline is now 1f16e19. Native CI must run against the pushed merge commit.
+
+Combined-tree verification passed: 831 mobile/config, 315 core and 211 server tests (1,357 total), six balance tests, workspace typecheck, lint, formatting, Campaign QA build and planning validation. Merge commit identity uses the existing georgi-cole-associated Git identity. Prior artwork source 755ffea has passing required CI including Android and iOS build/launch (run 43100137459); the merge commit receives new checks before PR merge.

@@ -54,6 +54,36 @@ function fixture(sp = 300, reduced = false) {
 }
 afterEach(() => vi.useRealTimers());
 describe('readable step and death presentation', () => {
+  it.each([false, true])('unlocks exactly at the shorter visual boundary (wrong=%s)', (wrong) => {
+    const f = fixture();
+    f.choose(wrong);
+    const duration = (wrong ? STEP_TIMING.wrong : STEP_TIMING.safe) + STEP_TIMING.travel;
+    expect(duration).toBe(wrong ? 850 : 600);
+    vi.advanceTimersByTime(duration - 1);
+    expect(f.director.isBusy()).toBe(true);
+    vi.advanceTimersByTime(1);
+    expect(f.director.isBusy()).toBe(false);
+    expect(f.updates.at(-1)).toBe(null);
+  });
+  it('cancels a completed sequence before the next step so old timers cannot clear it', () => {
+    const f = fixture();
+    f.choose(false);
+    vi.advanceTimersByTime(STEP_TIMING.safe + STEP_TIMING.travel);
+    const next = f.session.bind({
+      type: 'choose',
+      side: getCurrentRow(f.session.getState()).safeSide,
+    })();
+    f.director.receive(next);
+    expect(next.accepted).toBe(true);
+    expect(f.director.isBusy()).toBe(true);
+    vi.advanceTimersByTime(STEP_TIMING.contact);
+    expect(f.updates.at(-1)?.phase).toBe('impact');
+    f.director.dispose();
+    const count = f.updates.length;
+    vi.runAllTimers();
+    expect(f.updates).toHaveLength(count);
+  });
+
   it('commits gameplay immediately but holds the chosen row through contact and impact before travel', () => {
     const f = fixture();
     expect(f.choose(false).state.currentRow).toBe('2');

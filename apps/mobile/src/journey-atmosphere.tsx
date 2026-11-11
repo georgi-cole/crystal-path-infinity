@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { memo } from 'react';
 import type { CSSProperties } from 'react';
 import type { GearId, Season, Weather } from '@crystal-path-infinity/game-core';
 import type { ThemeId, WorldId } from './store-catalog';
@@ -151,7 +152,7 @@ function Rainfall({ storm }: { storm: boolean }) {
   );
 }
 
-export function JourneyAtmosphere({
+export const JourneyAtmosphere = memo(function JourneyAtmosphere({
   season,
   weather,
   world,
@@ -220,7 +221,7 @@ export function JourneyAtmosphere({
         ))}
     </div>
   );
-}
+});
 
 // Three registrations per World match the calm, happy and worried sprite frames.
 const eyeAnchor: Record<ThemeId, readonly (readonly [number, number, number, number])[]> = {

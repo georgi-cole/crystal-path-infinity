@@ -1,5 +1,7 @@
+import { sameBridgePresentation } from './bridge-render';
 import { MysteryCube } from './mystery-box';
 import {
+  memo,
   useEffect,
   useId,
   useLayoutEffect,
@@ -757,7 +759,7 @@ function MovingPolygon({
           attributeName="points"
           from={coordinates(previous)}
           to={coordinates(shape)}
-          dur=".42s"
+          dur=".28s"
           calcMode="spline"
           keyTimes="0;1"
           keySplines=".22 .65 .3 1"
@@ -801,7 +803,7 @@ function MovingLamp({
           type="translate"
           from={`${old.x} ${old.y - 4 * oldScale}`}
           to={`${p.x} ${p.y - 4 * scale}`}
-          dur=".42s"
+          dur=".28s"
           fill="freeze"
           calcMode="spline"
           keyTimes="0;1"
@@ -816,7 +818,7 @@ function MovingLamp({
             type="scale"
             from={oldScale}
             to={scale}
-            dur=".42s"
+            dur=".28s"
             fill="freeze"
             calcMode="spline"
             keyTimes="0;1"
@@ -967,7 +969,7 @@ const motionSnapshot = () => window.matchMedia('(prefers-reduced-motion: reduce)
 const serverMotionSnapshot = () => false;
 
 /** Camera movement is a bounded visual transition. It never owns the game clock. */
-export function PrismBridge({
+export const PrismBridge = memo(function PrismBridge({
   rows,
   feedback,
   interactive = false,
@@ -1052,7 +1054,7 @@ export function PrismBridge({
         setCamera((previous) =>
           previous.row === camera.row ? { ...previous, moving: false } : previous,
         ),
-      440,
+      300,
     );
     return () => window.clearTimeout(timer);
   }, [camera.row, camera.moving]);
@@ -1938,4 +1940,4 @@ export function PrismBridge({
       ))}
     </div>
   );
-}
+}, sameBridgePresentation);
