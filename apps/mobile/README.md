@@ -2,6 +2,8 @@
 
 ## Signed offline Campaign beta — CPI-042 · 11 November 2026
 
+The app marketing version is 1.0.1 for this candidate, following App Store Connect's existing 1.0.0 build 45. The offline playtest's feature version remains 0.7.4; build numbers come from new TestFlight workflow runs. Historical 0.1.0 results remain unchanged.
+
 The explicit `campaign-beta` Vite profile builds the reviewed 0.7.4 offline Campaign/Infinity game with the registered production bundle identity for TestFlight signing. It enables the same local test store and isolated campaign save namespace as `campaign-qa`, while rejecting active account gateways, sign-in, ads, billing and native commerce flags. It emits `campaign-beta-info.json` with the source SHA and simulated-purchase disclosure. Normal production builds remain separate; unsigned release preparation rejects this review profile.
 
 The TestFlight workflow accepts `campaign_beta=true` and optionally `external_beta=true`; external eligibility is restricted to this offline profile. Default uploads remain internal-only staging clients. Beta archives must contain the matching manifest/source and disabled services. Upload still requires checked current main, a new build counter, protected signing/upload credentials and an exact-source full iOS simulator pass. External eligibility does not submit an App Store version or grant developer access. External testers may require Apple's beta review; invitations/availability must be verified separately from upload. Tester addresses are not committed or passed through public workflow inputs.
