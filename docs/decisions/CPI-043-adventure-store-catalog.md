@@ -60,3 +60,12 @@ The first main-based catalog-only package 1.0.1 (55), source 280841fa3a0378700e6
 PR119 source 280841fa3a0378700e6af9ce9e0e5d295fd94389 passed all required checks in run 43058421250 and Planning 43058421243. Android recorded three cold starts, iOS two, with native startup/resume round trips and zero unexpected runtime errors. Both final menu screenshots were inspected. This is development launch evidence, not purchase acceptance or a physical-device sign-in result.
 
 **Android distribution verified:** Play Console shows 1.0.1 (56), “Login preview and catalog support”, Active and Available to internal testers on 11 November. Google product creation became enabled after this rollout. The Android login-preview lineage is intentionally retained; Campaign remains in its separately delivered offline iPhone beta. Public production review build 44 and pending PR108 are unchanged. Existing Rockmallow world price was also reduced from final Bulgaria €3.59 to €2.99 through the console; the remaining matching/new-item batch is being verified separately.
+
+
+### Google registration verified · 11 November 2026
+
+The reviewed batch was applied successfully: Play Console now displays **1–31 of 31 products**. All 13 new IDs exist exactly once, each with a backwards-compatible `buy` option left Draft (zero active options). The original 18 products retain one active option each. The batch created 13 products and lowered prices on 16 existing products; hints.10 and theme.wilds were already saved at their lower target prices. A stale pending revision for theme.wilds was discarded before applying; the real product was preserved. Earlier failed pre-Billing operations were skipped, not catalog deletions.
+
+The Bulgaria customer references match the table above, including directly inspected No Clock **EUR 2.99**. Localized tax/rounding differences can remain outside the base region and must be read from the store at checkout. New records are registered, not activated purchase integration. Android internal 56 preserves the login preview; no production release or Campaign purchase fulfilment was enabled.
+
+Documentation-only continuation 54a2a7a also passed all required checks in run 43061884673 and Planning 43061884370, including both full native launch jobs. The final PR head must pass the same required checks before merge. The code launch screenshots inspected for source 280841f remain the runtime evidence; later documentation-only commits do not change that runtime.

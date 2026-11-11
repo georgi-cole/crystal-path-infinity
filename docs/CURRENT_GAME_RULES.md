@@ -1,5 +1,7 @@
 # Текущи правила и икономика
 
+**11 November 2026 · current store references · CPI-043.** The [dated catalog](decisions/CPI-043-adventure-store-catalog.md) supersedes older proposed prices for future purchases. Both stores now contain 31 registered products; the 13 new products remain draft/inactive. Offline claims remain free simulations and historical economy results are unchanged.
+
 **Подготовка за TestFlight · 11 ноември 2026 · CPI-042.** Изричният `campaign-beta` профил включва същия offline Campaign/Infinity playtest 0.7.4 в подписана тестова iPhone сборка. Всички shop claims остават безплатни локални симулации, live accounts/ads/purchases и native commerce plugins са изключени. Профилът има отделен beta manifest със source SHA и не се използва от нормален production build. Подготовката/компилацията не означава качена или одобрена от Apple сборка; реалният статус се записва след разпространение. Игровите шансове, награди, цени и legacy snapshots не се променят.
 
 **Black Metal Store preview · 0.7.4.** Мостът в World картата е статичен с фини метални отблясъци, лека мъгла и прашинки; движещият се път остава на home. Материалът винаги е Black Metal, независимо от оборудвания World. Reduced motion и неактивните карти спират атмосферните анимации. Това е само представяне и не променя gameplay.
