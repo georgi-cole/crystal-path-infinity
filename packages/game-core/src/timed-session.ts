@@ -172,6 +172,7 @@ export function createTimedRunSession(
       type === 'journey-hint' ||
       type === 'journey-gear' ||
       type === 'journey-resource' ||
+      type === 'journey-loadout' ||
       type === 'mystery' ||
       type === 'pact' ||
       type === 'tick';

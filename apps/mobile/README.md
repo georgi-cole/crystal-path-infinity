@@ -1,5 +1,11 @@
 # Mobile app foundation — CPI-003
 
+## Offline playtest 0.7.4 — 11 November 2026
+
+Hint, Kit and Pause now use compact icon controls with 44px touch areas. The Kit stays open while selecting boosters or gear. A small animated ready count confirms loading; minus returns an unused selection. X, Escape or outside dismissal applies the selection once and resumes. Stability is staged in 25-SP doses and spent only on closing; a failed save keeps the Kit open without spending stock.
+
+New Infinity crossings use `-supplies-shield-stack`: several shields can be loaded, stay ready without a timer, and block one damaging broken tile each. Loaded shields are a subset of owned stock; only a blocked hit spends one. They can be unloaded, survive saves/continues, and unused stock stays available on restart. A physical gold-and-jade shield replaces the character outline. Existing saved runs retain their previous temporary-shield rules; start a new crossing to test stacking. Campaign still uses only its mission kit. This supersedes 0.7.3's auto-close interaction, not its repeat-restock policy. Prices and real-service availability are unchanged.
+
 ## Offline playtest 0.7.3 — 11 November 2026
 
 Gear and supplies are tucked behind the compact HUD Kit button. The illustrated phone/wide-screen dialog pauses the crossing while browsing; using an item closes it and resumes before applying the action. Hint remains directly accessible, and a first-row hint now hides both initial direction prompts. Consumable test packs now support repeat restocking and stacking, including after consumption; permanent unlocks remain one-time. Restock shows the live stored balance. The 0.7.2 mode separation and atomic saved-run contracts below are unchanged.

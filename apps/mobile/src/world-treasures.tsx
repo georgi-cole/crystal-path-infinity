@@ -245,7 +245,7 @@ export function WorldPowerGlyph({ theme, kind }: { theme: World; kind: EffectKin
   );
 }
 
-/** A shield field and two small accents use only already-active public effects. */
+/** Small accents use only already-active public effects. The physical shield is rendered in front. */
 export function WorldAvatarAura({
   theme,
   effects,
@@ -253,29 +253,10 @@ export function WorldAvatarAura({
   theme: World;
   effects: readonly PresentedEffect[];
 }) {
-  const shield = effects.some((effect) => effect.kind === 'shield_5s');
   const good = effects.find((effect) => effect.positive && effect.kind !== 'shield_5s');
   const bad = effects.find((effect) => !effect.positive);
   return (
     <g className={`cpi-avatar-aura world-${theme}`}>
-      {shield && (
-        <path
-          className="cpi-avatar-shield"
-          d={
-            theme === 'chaos'
-              ? 'm0-100 42 18v36c0 28-42 48-42 48s-42-20-42-48v-36l42-18Z'
-              : theme === 'jelly'
-                ? 'M0-101c-34 0-49 22-47 49S-31-1 0-1s49-23 47-51-13-49-47-49Z'
-                : theme === 'wilds'
-                  ? 'm0-105 37 20 14 35-28 43-40 7-34-41 11-43 40-21Z'
-                  : theme === 'league'
-                    ? 'M-29-105h82L26-1h-78l23-104Z'
-                    : theme === 'puppy'
-                      ? 'm-26-101 57 6 18 31-9 50-38 14-47-24-4-50 23-27Z'
-                      : 'm0-109 37 28 17 33-29 46-41-2-38-41 17-42 37-22Z'
-          }
-        />
-      )}
       {good && (
         <g transform="translate(26 -98) scale(.37)">
           <WorldPowerGlyph theme={theme} kind={good.kind} />

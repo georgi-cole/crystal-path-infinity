@@ -176,6 +176,7 @@ export function createRun(options: CreateRunOptions, rng: RandomSource): RunStat
     schemaVersion: 1,
     rulesetVersion,
     runId: options.runId,
+    ...(parseTileExperiment(rulesetVersion)?.shieldStacks ? { journeyShields: 0 } : {}),
     ...(options.journeyGear
       ? { journeyGear: { item: options.journeyGear, worn: true, queued: null } }
       : {}),
@@ -374,6 +375,14 @@ export function assertRunState(state: RunState, rng?: RandomSource): void {
         (state.journeyGear.queued !== null && typeof state.journeyGear.queued !== 'boolean')))
   )
     throw new RangeError('Invalid saved Journey gear.');
+  if (
+    parseTileExperiment(state.rulesetVersion)?.shieldStacks
+      ? !Number.isSafeInteger(state.journeyShields) ||
+        state.journeyShields! < 0 ||
+        state.journeyShields! > 10000
+      : state.journeyShields !== undefined
+  )
+    throw new RangeError('Invalid loaded Journey shields.');
   if (
     state.rows.length < 1 ||
     state.rows.length > state.buffer.ahead + state.buffer.history ||
@@ -970,7 +979,9 @@ export function transitionRun(
   }
   if (state.status === 'finished') return result(state, [], 'finished');
   if (
-    (command.type === 'journey-resource' || command.type === 'journey-hint') &&
+    (command.type === 'journey-resource' ||
+      command.type === 'journey-hint' ||
+      command.type === 'journey-loadout') &&
     (!state.stream.journey?.reviveSp ||
       !state.runId.startsWith('practice-campaign-') ||
       parseTileExperiment(state.rulesetVersion)?.missionKit)
@@ -1023,6 +1034,73 @@ export function transitionRun(
         },
         [...events, { ...eventTime(next), type: 'journey-gear-queued', wear: command.wear }],
       );
+    case 'journey-loadout': {
+      const stacking = !!parseTileExperiment(next.rulesetVersion)?.shieldStacks;
+      if (
+        !parseTileExperiment(next.rulesetVersion)?.infinitySupplies ||
+        !next.runId.startsWith('practice-campaign-infinity-') ||
+        next.status !== 'playing' ||
+        next.pact?.phase === 'offered'
+      )
+        return result(next, events, 'journey-resource-unavailable');
+      if (
+        !Number.isSafeInteger(command.stabilityDoses) ||
+        command.stabilityDoses < 0 ||
+        command.stabilityDoses > 400 ||
+        !Number.isSafeInteger(command.shieldDelta) ||
+        Math.abs(command.shieldDelta) > 10000 ||
+        (command.wear !== undefined && (!next.journeyGear || typeof command.wear !== 'boolean'))
+      )
+        return result(next, events, 'journey-resource-unavailable');
+      const shields = (next.journeyShields ?? 0) + command.shieldDelta;
+      if (
+        stacking
+          ? shields < 0 || shields > 10000
+          : command.shieldDelta < 0 ||
+            command.shieldDelta > 1 ||
+            (command.shieldDelta > 0 && next.effects.some((effect) => effect.kind === 'shield_5s'))
+      )
+        return result(next, events, 'journey-resource-unavailable');
+      const gain = command.stabilityDoses * 25;
+      const max = getRuleset(next.rulesetVersion).maxSp;
+      if (max !== null && next.sp + gain > max)
+        return result(next, events, 'journey-resource-unavailable');
+      const updated = rebaseDeathPressure(
+        {
+          ...next,
+          sp: next.sp + gain,
+          ...(stacking ? { journeyShields: shields } : {}),
+          ...(!stacking && command.shieldDelta
+            ? {
+                effects: mergeEffect(
+                  next.effects,
+                  applyMysteryEffect('shield_5s', next.activeTimeMs).addedEffect,
+                  next.activeTimeMs,
+                  next.rulesetVersion,
+                ),
+              }
+            : {}),
+          ...(command.wear !== undefined && next.journeyGear
+            ? {
+                journeyGear: {
+                  ...next.journeyGear,
+                  queued: command.wear === next.journeyGear.worn ? null : command.wear,
+                },
+              }
+            : {}),
+        },
+        next.sp,
+      );
+      return result(updated, [
+        ...events,
+        {
+          ...eventTime(updated),
+          type: 'journey-loadout-applied',
+          stabilityDoses: command.stabilityDoses,
+          shieldDelta: command.shieldDelta,
+        },
+      ]);
+    }
     case 'journey-resource': {
       if (command.resource === 'continue') {
         const supplyRun = parseTileExperiment(next.rulesetVersion)?.infinitySupplies;
@@ -1049,6 +1127,24 @@ export function transitionRun(
           ...grant.events,
           ...revived.events,
           { ...eventTime(revived.state), type: 'journey-resource-used', resource: 'continue' },
+        ]);
+      }
+      if (command.resource === 'shield' && parseTileExperiment(next.rulesetVersion)?.shieldStacks) {
+        if (
+          next.status !== 'playing' ||
+          next.pact?.phase === 'offered' ||
+          next.journeyShields! >= 10000
+        )
+          return result(next, events, 'journey-resource-unavailable');
+        const updated = { ...next, journeyShields: next.journeyShields! + 1 };
+        return result(updated, [
+          ...events,
+          {
+            ...eventTime(updated),
+            type: 'journey-loadout-applied',
+            stabilityDoses: 0,
+            shieldDelta: 1,
+          },
         ]);
       }
       if (
@@ -1253,7 +1349,7 @@ export function transitionRun(
       const row = getCurrentRow(next);
       const wrong =
         isBrokenTile(row, command.side) && next.current.hintProtectedSide !== command.side;
-      const resolution = wrong
+      const drawnResolution = wrong
         ? resolveWrongTileDelta(
             getRowBandDamage(next.currentRow, next.rulesetVersion),
             next.effects,
@@ -1261,6 +1357,10 @@ export function transitionRun(
             next.rulesetVersion,
           )
         : { delta: 0, newEffects: [...next.effects] };
+      const shieldChargeUsed = wrong && drawnResolution.delta < 0 && (next.journeyShields ?? 0) > 0;
+      const resolution = shieldChargeUsed
+        ? { delta: 0, newEffects: [...next.effects], consumedKind: undefined }
+        : drawnResolution;
       const pactChange = resolvePactStep(next, wrong, resolution.delta);
       const route = next.stream.journey;
       const gear =
@@ -1299,6 +1399,7 @@ export function transitionRun(
         wrong,
         spDelta: sp - next.sp,
         consumedKind: resolution.consumedKind ?? null,
+        ...(shieldChargeUsed ? { shieldChargeUsed: true as const } : {}),
         ...(wrong &&
         resolution.delta === 0 &&
         next.effects.some((effect) => effect.kind === 'coyote_10s')
@@ -1329,6 +1430,7 @@ export function transitionRun(
         ...next,
         sp,
         effects: rowTick.effects,
+        ...(shieldChargeUsed ? { journeyShields: next.journeyShields! - 1 } : {}),
         ...(pactChange ? { pact: pactChange.pact } : {}),
         current: {
           ...next.current,

@@ -457,7 +457,8 @@ export function readCampaignSave(storage: Pick<PracticeStorage, 'getItem'>): {
         if (
           state.runId.startsWith('practice-campaign-infinity-') &&
           parseTileExperiment(state.rulesetVersion)?.journey &&
-          !parseTileExperiment(state.rulesetVersion)?.missionKit
+          !parseTileExperiment(state.rulesetVersion)?.missionKit &&
+          (state.journeyShields ?? 0) <= progress.shields
         )
           infinityCheckpoint = state;
       } catch {
@@ -717,7 +718,9 @@ export function canUseInfinitySupply(
       !state.current.noSafeTile
     );
   if (item === 'shield')
-    return progress.shields > 0 && !state.effects.some((effect) => effect.kind === 'shield_5s');
+    return parseTileExperiment(state.rulesetVersion)?.shieldStacks
+      ? progress.shields > (state.journeyShields ?? 0)
+      : progress.shields > 0 && !state.effects.some((effect) => effect.kind === 'shield_5s');
   const max = getRuleset(state.rulesetVersion).maxSp;
   return progress.reserveSp >= 25 && (max === null || state.sp <= max - 25);
 }
@@ -729,6 +732,38 @@ export function infinityProgressFromEvents(
 ): CampaignProgress {
   let next = progress;
   for (const event of events) {
+    if (event.type === 'journey-loadout-applied') {
+      const stacks = !!parseTileExperiment(previous.rulesetVersion)?.shieldStacks;
+      const target = (previous.journeyShields ?? 0) + event.shieldDelta;
+      if (
+        !previous.runId.startsWith('practice-campaign-infinity-') ||
+        !parseTileExperiment(previous.rulesetVersion)?.infinitySupplies ||
+        previous.status !== 'playing' ||
+        previous.pact?.phase === 'offered' ||
+        next.reserveSp < event.stabilityDoses * 25 ||
+        (stacks
+          ? target < 0 || target > next.shields
+          : event.shieldDelta < 0 || event.shieldDelta > next.shields)
+      )
+        throw new RangeError('That Kit selection is unavailable.');
+      next = {
+        ...next,
+        reserveSp: next.reserveSp - event.stabilityDoses * 25,
+        shields: stacks ? next.shields : next.shields - event.shieldDelta,
+      };
+      continue;
+    }
+    if (event.type === 'choice-resolved' && event.shieldChargeUsed) {
+      if (
+        !previous.runId.startsWith('practice-campaign-infinity-') ||
+        !parseTileExperiment(previous.rulesetVersion)?.shieldStacks ||
+        (previous.journeyShields ?? 0) < 1 ||
+        next.shields < 1
+      )
+        throw new RangeError('No loaded shield is available.');
+      next = { ...next, shields: next.shields - 1 };
+      continue;
+    }
     if (event.type !== 'journey-resource-used') continue;
     if (!canUseInfinitySupply(next, previous, event.resource))
       throw new RangeError('That Infinity supply is unavailable.');
@@ -741,6 +776,15 @@ export function infinityProgressFromEvents(
     };
   }
   return next;
+}
+
+export function touchesInfinitySupplies(events: readonly RunEvent[]): boolean {
+  return events.some(
+    (event) =>
+      event.type === 'journey-resource-used' ||
+      event.type === 'journey-loadout-applied' ||
+      (event.type === 'choice-resolved' && !!event.shieldChargeUsed),
+  );
 }
 
 export function campaignGoalProgress(
@@ -935,7 +979,8 @@ export function createCampaignInfinityRun(progress: CampaignProgress): RunState 
   return createRun(
     {
       runId: 'practice-campaign-infinity-' + crypto.randomUUID().replaceAll('-', ''),
-      rulesetVersion: journeyRuleset(mode, !!progress.gear, progress.clockFree) + '-supplies',
+      rulesetVersion:
+        journeyRuleset(mode, !!progress.gear, progress.clockFree) + '-supplies-shield-stack',
       routeRng: createPracticeCursor(route),
       mysteryRng: createPracticeCursor(route ^ 0x9e3779b97f4a7c15n),
       observedAt: Date.now(),

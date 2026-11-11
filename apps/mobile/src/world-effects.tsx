@@ -14,6 +14,7 @@ import {
 import type { PresentedEffect } from './infinity-presentation';
 import { useWorldMotion } from './world-motion';
 import { WorldAvatarAura } from './world-treasures';
+import { GuardianShield } from './guardian-shield';
 import { WORLD_ASSETS, worldAsset } from './world-assets';
 import { WorldRescueRig } from './world-props';
 import { CompanionSeasonGear, CompanionTrailGear } from './journey-atmosphere';
@@ -94,6 +95,7 @@ export function WorldPathCompanion({
   gear,
   bridge,
   preview = false,
+  shieldCharges = 0,
 }: {
   theme: Exclude<ThemeId, 'obsidian'>;
   cinematic?: SceneCinematic | null;
@@ -108,6 +110,7 @@ export function WorldPathCompanion({
   gear?: GearId;
   bridge?: BridgeModel;
   preview?: boolean;
+  shieldCharges?: number;
 }) {
   const id = useId().replace(/:/g, '');
   const motionPreferences = useWorldMotion();
@@ -227,6 +230,15 @@ export function WorldPathCompanion({
                 {gear && (
                   <CompanionTrailGear world={theme} item={gear} weather={weather} frame={frame} />
                 )}
+                <GuardianShield
+                  charges={shieldCharges}
+                  temporary={effects.some((effect) => effect.kind === 'shield_5s')}
+                  impact={!!cinematic?.shielded && cinematic.phase === 'impact'}
+                  linger={
+                    !!cinematic?.shielded &&
+                    (cinematic.phase === 'contact' || cinematic.phase === 'impact')
+                  }
+                />
               </g>
             </g>
           </g>

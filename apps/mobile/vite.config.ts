@@ -53,7 +53,7 @@ export default defineConfig(({ mode }) => {
                   schemaVersion: 1,
                   audience: 'campaign-qa',
                   tools: 'offline-campaign',
-                  playtestVersion: '0.7.3',
+                  playtestVersion: '0.7.4',
                   baseCommit: campaignBase || null,
                 }) + '\n',
             });

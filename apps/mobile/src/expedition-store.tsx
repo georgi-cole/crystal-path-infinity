@@ -784,7 +784,7 @@ const supplyOffers = {
   'shield-pack': {
     icon: 'shield',
     ...EXTRA_SUPPLY_OFFERS['shield-pack'],
-    note: 'In Infinity, block one broken tile for up to 5 seconds after activating a shield.',
+    note: 'Load shields in your Kit. Each blocks one broken tile. Unused shields stay in your stock. New crossings support multiple loaded shields.',
   },
   'season-change-pack': {
     icon: 'cycle',

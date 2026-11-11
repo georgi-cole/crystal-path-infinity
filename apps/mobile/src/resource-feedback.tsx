@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { ConsumptionCue, HintCue } from './mystery-feedback';
 import { useLanguage } from './language-context';
+import guardianArt from './assets/campaign/guardian-shield-v1.png?url';
+import { GlassGuardianShield } from './guardian-shield';
 
 export function HintCounter({ count, cue }: { count: number; cue?: HintCue }) {
   return (
@@ -36,9 +38,11 @@ export function HintCounter({ count, cue }: { count: number; cue?: HintCue }) {
 export function EffectConsumption({
   cue,
   hidden = false,
+  glass = false,
 }: {
   cue?: ConsumptionCue;
   hidden?: boolean;
+  glass?: boolean;
 }) {
   const { locale } = useLanguage();
   const [dismissed, setDismissed] = useState<string | null>(null);
@@ -66,7 +70,11 @@ export function EffectConsumption({
       >
         {shield ? (
           <>
-            <path d="M50 8 82 22v27c0 23-32 43-32 43S18 72 18 49V22Z" />
+            {glass ? (
+              <GlassGuardianShield />
+            ) : (
+              <image href={guardianArt} x="20" y="8" width="60" height="84" />
+            )}
             <path d="m50 12-9 22 18 13-17 13 8 29" />
             <path d="m35 49 10 10 22-25" />
           </>

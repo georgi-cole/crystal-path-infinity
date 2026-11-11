@@ -33,6 +33,7 @@ import {
   campaignProgressFromEvents,
   campaignRunMatches,
   infinityProgressFromEvents,
+  touchesInfinitySupplies,
   advanceInfinityCycle,
   claimTestOffer,
   CAMPAIGN_RAIN_RULESET,
@@ -582,7 +583,7 @@ export function App({
 
   const commitInfinitySupply = useCallback(
     (state: RunState, events: readonly RunEvent[], previous: RunState) => {
-      if (!events.some((event) => event.type === 'journey-resource-used')) return;
+      if (!touchesInfinitySupplies(events)) return;
       if (gameRef.current?.mode !== 'infinity' || previous.runId !== state.runId)
         throw new Error('The Infinity crossing has changed.');
       const progress = infinityProgressFromEvents(campaignProgressRef.current, previous, events);

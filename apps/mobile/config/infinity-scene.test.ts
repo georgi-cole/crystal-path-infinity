@@ -68,6 +68,17 @@ function markup(modifiers: Record<string, unknown> = {}, theme: ThemeId = 'obsid
   );
 }
 describe('CPI-008 standalone scene', () => {
+  it('uses a translucent glass shield for Black Metal and a material prop for characters', () => {
+    const state = { ...createCampaignInfinityRun(EMPTY_CAMPAIGN_PROGRESS), journeyShields: 5 };
+    const glass = markup({ state });
+    expect(glass).toContain('cpi-glass-guardian');
+    expect(glass).not.toContain('cpi-guardian-material');
+    for (const theme of ['wilds', 'league', 'puppy', 'kitten', 'chaos', 'jelly'] as const) {
+      const character = markup({ state }, theme);
+      expect(character).toContain('cpi-guardian-material');
+      expect(character).not.toContain('cpi-glass-guardian');
+    }
+  });
   it.each(['left', 'right'] as const)(
     'removes both first-row directions when a hint reveals %s',
     (side) => {
@@ -114,6 +125,7 @@ describe('CPI-008 standalone scene', () => {
     expect(open).toContain('Gear &amp; supplies');
     expect(open).toContain('Paused while you choose');
     expect(open).toContain('aria-label="Close kit"');
+    expect(open).not.toContain('Back to the crossing');
     expect(open).toContain('aria-label="Crossing gear"');
     expect(open).toContain('+25 Stability');
     expect(open).toMatch(/aria-label="Row 1 left tile"[^>]*disabled=""/);
@@ -342,7 +354,9 @@ describe('complete world presentation', () => {
       expect(html).toContain(en['game.effectShield']);
       expect(html).toContain('2.5s');
       expect(html).toContain('data-companion-action="stand"');
-      expect(html).toContain('cpi-avatar-shield');
+      expect(html).toContain('cpi-guardian-material');
+      expect(html).toContain('guardian-shield-v1.png');
+      expect(html).not.toContain('cpi-avatar-shield');
       expect(html).toContain('aria-label="Row 1 left tile"');
       expect(html).not.toContain('safeSide');
     },

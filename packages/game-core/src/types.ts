@@ -230,6 +230,8 @@ export interface RunState {
   readonly rulesetVersion: string;
   readonly runId: string;
   readonly journeyGear?: JourneyGear;
+  /** Loaded, unused shields. Inventory is charged only on an unprotected tile hit. */
+  readonly journeyShields?: number;
   readonly status: 'playing' | 'dead' | 'finished';
   readonly sp: number;
   readonly hints: number;
@@ -303,6 +305,12 @@ export type RunCommand =
       readonly wear: boolean;
     }
   | { readonly type: 'journey-resource'; readonly resource: 'sp' | 'shield' | 'continue' }
+  | {
+      readonly type: 'journey-loadout';
+      readonly stabilityDoses: number;
+      readonly shieldDelta: number;
+      readonly wear?: boolean;
+    }
   | { readonly type: 'mystery'; readonly row: Decimal; readonly life: number }
   | {
       readonly type: 'pact';
@@ -430,6 +438,12 @@ export type RunEvent = EventTime &
         readonly spDelta: number;
         readonly consumedKind: TimedEffectKind | null;
         readonly protectedBy?: 'coyote_10s';
+        readonly shieldChargeUsed?: true;
+      }
+    | {
+        readonly type: 'journey-loadout-applied';
+        readonly stabilityDoses: number;
+        readonly shieldDelta: number;
       }
     | { readonly type: 'row-cleared'; readonly row: Decimal; readonly revivesToReachScore: number }
     | { readonly type: 'death'; readonly death: DeathSnapshot }

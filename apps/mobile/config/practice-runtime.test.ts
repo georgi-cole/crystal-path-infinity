@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createRun, PRACTICE_RNG } from '@crystal-path-infinity/game-core';
-import { createCampaignInfinityRun, EMPTY_CAMPAIGN_PROGRESS } from '../src/campaign-test';
+import { createRun, createPracticeCursor, PRACTICE_RNG } from '@crystal-path-infinity/game-core';
+import { journeyRuleset } from '../src/campaign-test';
 import type { RandomSource, RunState, TimedSessionResult } from '@crystal-path-infinity/game-core';
 import { createGameplayLifecycle } from '../src/gameplay-lifecycle';
 import type { GameplayLifecycle } from '../src/gameplay-lifecycle';
@@ -152,9 +152,19 @@ function setup(state = fresh(), firstRead?: Promise<NativeLifecycleSnapshot>) {
 }
 
 describe('practice runtime and acknowledged native time', () => {
-  it('freezes kit browsing time and starts a supply effect only after the kit hold is released', async () => {
+  it('preserves a legacy temporary shield and freezes its kit browsing time', async () => {
     const native = setupNative();
-    const initial = createCampaignInfinityRun(EMPTY_CAMPAIGN_PROGRESS);
+    const initial = createRun(
+      {
+        runId: 'practice-campaign-infinity-legacy-kit',
+        rulesetVersion: journeyRuleset('plain') + '-supplies',
+        journey: { version: 1, season: 'spring', reviveSp: 150 },
+        routeRng: createPracticeCursor(4),
+        mysteryRng: createPracticeCursor(9),
+        observedAt: 1_000_000,
+      },
+      PRACTICE_RNG,
+    );
     const f = attachRuntime(native.lifecycle, initial, PRACTICE_RNG);
     await f.runtime.ready;
     const kit = await f.runtime.hold('user');

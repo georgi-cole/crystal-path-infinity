@@ -300,12 +300,13 @@ describe('Beacon Route playtest', () => {
     state = boost.state;
     const shield = step(state, { type: 'journey-resource', resource: 'shield' });
     progress = infinityProgressFromEvents(progress, state, shield.events);
-    expect(progress.shields).toBe(9);
-    expect(canUseInfinitySupply(progress, shield.state, 'shield')).toBe(false);
+    expect(progress.shields).toBe(10);
+    expect(shield.state.journeyShields).toBe(1);
+    expect(canUseInfinitySupply(progress, shield.state, 'shield')).toBe(true);
     expect(step(shield.state, { type: 'journey-resource', resource: 'shield' }).accepted).toBe(
-      false,
+      true,
     );
-    state = { ...state, sp: 1 };
+    state = { ...shield.state, sp: 1 };
     for (let n = 0; n < 2; n++) {
       const fallen = step(state, { type: 'tick' }, 3_600_000).state;
       expect(fallen.status).toBe('dead');
@@ -341,6 +342,9 @@ describe('Beacon Route playtest', () => {
       expect(state.journeyGear).toBeUndefined();
       expect(parseTileExperiment(state.rulesetVersion)).toMatchObject({ missionKit: true });
       expect(getDeathClock(state)).not.toBeNull();
+      expect(
+        step(state, { type: 'journey-loadout', stabilityDoses: 1, shieldDelta: 5 }).reason,
+      ).toBe('journey-resource-unavailable');
       expect(step({ ...state, hints: 0 }, { type: 'journey-hint', row: '1', life: 0 }).reason).toBe(
         'journey-resource-unavailable',
       );

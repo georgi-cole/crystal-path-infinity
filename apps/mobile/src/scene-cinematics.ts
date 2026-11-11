@@ -24,6 +24,7 @@ export interface SceneCinematic {
   readonly feedback: SceneFeedback | null;
   readonly mystery: MysteryReveal | null;
   readonly fatal: boolean;
+  readonly shielded?: true;
 }
 export const STEP_TIMING = Object.freeze({
   contact: 110,
@@ -89,6 +90,9 @@ export function createSceneDirector(
           ? { kind: mystery.kind, spDelta: mystery.spDelta, hintDelta: mystery.hintDelta }
           : null,
         fatal,
+        ...(choice && (choice.shieldChargeUsed || choice.consumedKind === 'shield_5s')
+          ? { shielded: true as const }
+          : {}),
       };
       publish(beat);
       function at(delay: number, callback: () => void) {

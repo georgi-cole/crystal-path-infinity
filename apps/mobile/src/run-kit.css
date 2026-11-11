@@ -8,10 +8,6 @@
   width: 1.35rem;
   height: 1.35rem;
 }
-.cpi-kit-toggle > span {
-  font-size: 0.5rem;
-  line-height: 1;
-}
 .cpi-kit-toggle > i {
   position: absolute;
   inset: -0.2rem -0.2rem auto auto;
@@ -142,16 +138,112 @@
   gap: 0.65rem;
   margin: 0;
 }
-.cpi-run-kit .cpi-journey-supplies button {
+.cpi-run-kit .cpi-kit-slot {
+  position: relative;
+  border: 1px solid #c9b28863;
+  border-radius: 0.85rem;
+  background: linear-gradient(145deg, #ffe1a116, #111f30);
+  overflow: hidden;
+}
+.cpi-run-kit .cpi-journey-supplies .cpi-kit-load {
   display: grid;
   grid-template-columns: 2.8rem minmax(0, 1fr);
   align-items: center;
   gap: 0.2rem 0.4rem;
   text-align: start;
-  padding: 0.65rem 0.45rem;
-  min-height: 5rem;
+  width: 100%;
+  padding: 0.65rem 0.5rem 0.6rem;
+  min-height: 6.5rem;
+  border: 0;
   border-radius: 0.85rem;
-  background: linear-gradient(145deg, #ffe1a116, #111f30);
+  background: transparent;
+  cursor: pointer;
+}
+.cpi-run-kit .cpi-journey-supplies .cpi-kit-load:disabled {
+  opacity: 0.7;
+}
+.cpi-run-kit .cpi-journey-supplies .cpi-kit-remove {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 0.85rem;
+  background: transparent;
+  color: #f6dcaa;
+  font-size: 1.3rem;
+  cursor: pointer;
+}
+.cpi-kit-remove::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  z-index: -1;
+  border: 1px solid #e9c78a55;
+  border-radius: 50%;
+  background: #ffffff0a;
+}
+.cpi-kit-ready {
+  grid-column: 1/-1;
+  justify-self: start;
+  margin: 0.3rem 2.1rem 0 0;
+  color: #b9c9d7;
+  font-size: 0.67rem;
+  line-height: 1.35;
+}
+.cpi-kit-ready[data-loaded='true'] {
+  color: #b6f4d5;
+  animation: cpi-kit-confirm 0.3s ease-out both;
+}
+.cpi-kit-slot[data-change='return'] .cpi-kit-ready[data-loaded='true'] {
+  color: #f4d9a6;
+  animation-name: cpi-kit-put-back;
+}
+.cpi-kit-notice {
+  min-height: 1.4rem;
+  margin: 0.7rem 0 0.25rem;
+  font-size: 0.73rem;
+  line-height: 1.4;
+  color: #b6f4d5;
+}
+.cpi-kit-notice[data-error='true'] {
+  color: #ffd0b5;
+}
+.cpi-kit-help {
+  display: block;
+  color: #b9c9d7;
+  font-size: 0.65rem;
+}
+@keyframes cpi-kit-confirm {
+  0% {
+    transform: scale(0.92);
+    opacity: 0.4;
+    filter: brightness(1.6);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+    filter: brightness(1);
+  }
+}
+@keyframes cpi-kit-put-back {
+  0% {
+    transform: translateX(5px);
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 .cpi-kit-supply-art {
   grid-row: span 2;
@@ -162,7 +254,7 @@
   filter: drop-shadow(0 0.25rem 0.2rem #0006);
 }
 .cpi-kit-supply-art[data-item='shield'] {
-  background-position: 0 100%;
+  background: url('./assets/campaign/guardian-shield-v1.png') center / contain no-repeat;
 }
 .cpi-run-kit .cpi-journey-supplies strong {
   font-size: 0.78rem;
@@ -173,21 +265,6 @@
   font-size: 0.68rem;
   color: #c9cbd4;
   align-self: start;
-}
-.cpi-kit-return {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  min-height: 2.75rem;
-  margin-top: 0.85rem;
-  padding: 0.45rem 0.7rem;
-  color: #edd8af;
-  border: 0;
-  border-radius: 0.6rem;
-  background: #ffffff08;
-  font: 600 0.75rem var(--cpi-font-body);
-  cursor: pointer;
 }
 .cpi-run-kit button:focus-visible {
   outline: 2px solid #ffe2a0;
@@ -207,4 +284,62 @@
   .cpi-hud-header:has(.cpi-kit-toggle) .cpi-scene-toolbar-actions {
     gap: 0.25rem;
   }
+}
+
+/* Small painted controls retain 44px touch areas. */
+.cpi-infinity-scene[data-world] .cpi-hud-header .cpi-scene-toolbar-actions {
+  gap: 0;
+}
+.cpi-infinity-scene[data-world] .cpi-hud-header .cpi-scene-toolbar-actions .cpi-hud-control {
+  position: relative;
+  isolation: isolate;
+  min-width: 44px;
+  min-height: 44px;
+  height: 44px;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  gap: 3px;
+}
+.cpi-infinity-scene[data-world]
+  .cpi-hud-header
+  .cpi-scene-toolbar-actions
+  .cpi-hud-control::before {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  z-index: -1;
+  border: 1px solid #c9b9dc40;
+  border-radius: 10px;
+  background: var(--world-panel, #19151e);
+}
+.cpi-infinity-scene[data-world] .cpi-hud-header .cpi-scene-toolbar-actions .cpi-hint-control {
+  min-width: 48px;
+}
+.cpi-infinity-scene[data-world]
+  .cpi-hud-header
+  .cpi-scene-toolbar-actions
+  .cpi-hint-control::before {
+  inset-inline: 2px;
+}
+.cpi-infinity-scene[data-world]
+  .cpi-hud-header
+  .cpi-scene-toolbar-actions
+  .cpi-hud-control:hover:not(:disabled)::before {
+  border-color: #eed49c99;
+}
+.cpi-infinity-scene[data-world] .cpi-hud-header .cpi-kit-toggle > svg {
+  width: 18px;
+  height: 18px;
+}
+.cpi-infinity-scene[data-world] .cpi-hud-header .cpi-pause-control svg {
+  width: 15px;
+  height: 15px;
+}
+.cpi-kit-toggle > i {
+  inset: 1px 1px auto auto;
+  width: 12px;
+  height: 12px;
+  font-size: 10px;
 }

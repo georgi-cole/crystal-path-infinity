@@ -8,11 +8,13 @@ export function RunKitButton({
   disabled,
   open,
   onClick,
+  charges = 0,
 }: {
   warning: boolean;
   disabled: boolean;
   open: boolean;
   onClick: () => void;
+  charges?: number;
 }) {
   const ref = useRef<HTMLButtonElement>(null);
   const returnFocus = useRef(false);
@@ -29,20 +31,32 @@ export function RunKitButton({
       type="button"
       className="cpi-hud-control cpi-kit-toggle"
       data-warning={warning}
-      aria-label={warning ? 'Open gear and supplies, check your gear' : 'Open gear and supplies'}
+      aria-label={
+        (warning ? 'Open gear and supplies, check your gear' : 'Open gear and supplies') +
+        (charges ? `, ${charges} shield${charges === 1 ? '' : 's'} loaded` : '')
+      }
       aria-haspopup="dialog"
       aria-expanded={open}
       disabled={disabled}
       onClick={onClick}
     >
       <AdventureIcon name="pack" />
-      <span>Kit</span>
       {warning && <i aria-hidden="true">!</i>}
     </button>
   );
 }
 
-export function RunKitDialog({ onClose, children }: { onClose: () => void; children: ReactNode }) {
+export function RunKitDialog({
+  onClose,
+  children,
+  notice,
+  error,
+}: {
+  onClose: () => void;
+  children: ReactNode;
+  notice?: string;
+  error?: boolean;
+}) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const dialog = ref.current;
@@ -83,9 +97,15 @@ export function RunKitDialog({ onClose, children }: { onClose: () => void; child
         </button>
       </header>
       {children}
-      <button type="button" className="cpi-kit-return" onClick={onClose}>
-        Back to the crossing <span aria-hidden="true">›</span>
-      </button>
+      <p
+        className="cpi-kit-notice"
+        data-error={!!error}
+        role={error ? 'alert' : 'status'}
+        aria-live="polite"
+      >
+        {notice || 'Tap to load. Use − to put it back.'}
+      </p>
+      <small className="cpi-kit-help">Close X when you’re ready.</small>
     </dialog>
   );
 }

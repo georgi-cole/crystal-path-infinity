@@ -1809,7 +1809,7 @@
   --pack-art: 100% 0;
 }
 .cpi-supply-artwork[data-offer='shield-pack'] {
-  --pack-art: 0 100%;
+  background: url('./assets/campaign/guardian-shield-v1.png') center / contain no-repeat;
 }
 .cpi-supply-artwork[data-offer='season-change-pack'] {
   --pack-art: 50% 100%;
@@ -1868,6 +1868,8 @@
   display: grid;
   place-items: center;
   min-width: 0;
+  box-sizing: border-box;
+  padding: clamp(1.1rem, 3svh, 2rem);
   background: radial-gradient(ellipse, #f9d99d20, transparent 68%);
 }
 .cpi-restock-display .cpi-supply-artwork {
