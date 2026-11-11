@@ -7,6 +7,18 @@ on:
       - .github/scripts/ios-testflight.sh
   workflow_dispatch:
     inputs:
+      production_accounts:
+        description: Preview production account login from its checked review branch
+        type: boolean
+        default: false
+      version:
+        description: Production account preview version
+        type: string
+        default: '1.0.0'
+      build_number:
+        description: Unused production account preview build number
+        type: string
+        default: '45'
       upload_to_testflight:
         description: Sign and upload an internal-only staging beta
         type: boolean
@@ -27,6 +39,7 @@ on:
 permissions:
   contents: read
   checks: read
+  pull-requests: read
 
 concurrency:
   group: cpi-ios-testflight-${{ inputs.upload_to_testflight && 'upload' || github.ref }}
@@ -35,7 +48,7 @@ concurrency:
 jobs:
   archive:
     name: Build the Crystal Path iOS archive
-    if: github.repository == 'georgi-cole/crystal-path-infinity'
+    if: github.repository == 'georgi-cole/crystal-path-infinity' && !inputs.production_accounts
     runs-on: macos-26
     timeout-minutes: 40
     environment: ${{ inputs.upload_to_testflight && (inputs.review_source && 'cpi-ios-staging-review' || 'cpi-ios-testflight') || 'cpi-ios-compile' }}
@@ -100,3 +113,14 @@ jobs:
       - name: Remove signing material from the runner
         if: always() && inputs.upload_to_testflight
         run: bash .github/scripts/ios-testflight.sh cleanup
+
+  production-account-preview:
+    if: github.event_name == 'workflow_dispatch' && inputs.production_accounts
+    uses: ./.github/workflows/ios-store-candidate.yml
+    with:
+      source_sha: ${{ inputs.source_sha }}
+      version: ${{ inputs.version }}
+      build_number: ${{ inputs.build_number }}
+      upload_to_testflight: ${{ inputs.upload_to_testflight }}
+      preview_source: true
+    secrets: inherit

@@ -1,6 +1,23 @@
 name: Crystal Path iOS store candidate
 
 on:
+  workflow_call:
+    inputs:
+      source_sha:
+        required: true
+        type: string
+      version:
+        required: true
+        type: string
+      build_number:
+        required: true
+        type: string
+      upload_to_testflight:
+        type: boolean
+        default: false
+      preview_source:
+        type: boolean
+        default: false
   pull_request:
     paths:
       - .github/workflows/ios-store-candidate.yml
@@ -26,10 +43,15 @@ on:
         description: Upload the signed production account candidate to TestFlight
         type: boolean
         default: false
+      preview_source:
+        description: Internal-only TestFlight from the exact checked native login review branch
+        type: boolean
+        default: false
 
 permissions:
   contents: read
   checks: read
+  pull-requests: read
 
 concurrency:
   group: cpi-ios-store-candidate
@@ -37,8 +59,8 @@ concurrency:
 
 jobs:
   archive:
-    name: Sign the iOS live guest ad candidate
-    if: github.repository == 'georgi-cole/crystal-path-infinity' && (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
+    name: Verify the production iOS account build
+    if: github.repository == 'georgi-cole/crystal-path-infinity' && (github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || (inputs.preview_source && github.ref == 'refs/heads/codex/native-production-sign-in'))
     runs-on: macos-26
     timeout-minutes: 40
     environment: ${{ github.event_name == 'workflow_dispatch' && 'cpi-ios-testflight' || 'cpi-ios-compile' }}
@@ -47,6 +69,8 @@ jobs:
       CPI_EXPECTED_SOURCE_SHA: ${{ inputs.source_sha }}
       CPI_STORE_VERSION: ${{ inputs.version || '1.0.0' }}
       CPI_STORE_BUILD_NUMBER: ${{ inputs.build_number || '45' }}
+      CPI_IOS_INTERNAL_ONLY: ${{ inputs.preview_source && 'true' || 'false' }}
+      CPI_IOS_PREVIEW_SOURCE: ${{ inputs.preview_source || false }}
       CPI_APP_ENV: production
       CPI_NATIVE_ADS: 'true'
       VITE_GUEST_REWARDED_ADS_LIVE: 'true'
@@ -63,21 +87,30 @@ jobs:
         with:
           node-version: '22.23.4'
           cache: npm
-      - name: Verify current main and required checks
+      - name: Verify the exact approved source and required checks
         if: github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          [[ "$GITHUB_RUN_ATTEMPT" == 1 &&
-              "$CPI_EXPECTED_SOURCE_SHA" == "$GITHUB_SHA" &&
-              "$(git rev-parse HEAD)" == "$GITHUB_SHA" &&
-              "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)" == "$GITHUB_SHA" ]]
+          source_branch=main
+          if [[ "$CPI_IOS_PREVIEW_SOURCE" == true ]]; then
+            source_branch=codex/native-production-sign-in
+            gh pr view 108 --repo "$GITHUB_REPOSITORY" --json state,headRefOid,headRefName,baseRefName > "$RUNNER_TEMP/cpi-preview-pr.json"
+            gh api "repos/$GITHUB_REPOSITORY/compare/main...$GITHUB_SHA" --jq .status > "$RUNNER_TEMP/cpi-main-relation.txt"
+          fi
+          export CPI_CHECKOUT_SHA="$(git rev-parse HEAD)"
+          export CPI_CURRENT_BRANCH_SHA="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$source_branch" --jq .object.sha)"
           gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs" > "$RUNNER_TEMP/cpi-source-checks.json"
           node --experimental-strip-types --input-type=module - "$RUNNER_TEMP/cpi-source-checks.json" <<'JS'
           import { readFileSync } from 'node:fs';
-          import { assertSourceChecks } from './.github/scripts/unsigned-beta.mjs';
-          assertSourceChecks(JSON.parse(readFileSync(process.argv[2], 'utf8')), process.env.GITHUB_SHA);
+          import { assertNativeAccountSource } from './.github/scripts/native-account-source.mjs';
+          const env=process.env, preview=env.CPI_IOS_PREVIEW_SOURCE==='true';
+          assertNativeAccountSource({repository:env.GITHUB_REPOSITORY,sourceSha:env.GITHUB_SHA,expectedSha:env.CPI_EXPECTED_SOURCE_SHA,
+            checkoutSha:env.CPI_CHECKOUT_SHA,currentBranchSha:env.CPI_CURRENT_BRANCH_SHA,runAttempt:env.GITHUB_RUN_ATTEMPT,
+            ref:env.GITHUB_REF,preview,internalOnly:env.CPI_IOS_INTERNAL_ONLY,
+            ...(preview?{pr:JSON.parse(readFileSync(env.RUNNER_TEMP+'/cpi-preview-pr.json','utf8')),mainRelation:readFileSync(env.RUNNER_TEMP+'/cpi-main-relation.txt','utf8').trim()}:{}),
+          },JSON.parse(readFileSync(process.argv[2],'utf8')));
           JS
       - name: Build production assets and resolve pinned packages
         run: |

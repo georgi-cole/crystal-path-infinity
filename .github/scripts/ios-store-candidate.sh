@@ -16,7 +16,7 @@ xcodebuild archive -project "$project" -scheme App -configuration Release \
 # Export this candidate to disk for review, with the internal-only option disabled.
 options="$signing/ExportOptions.plist"
 /usr/libexec/PlistBuddy -c 'Set :destination export' "$options"
-/usr/libexec/PlistBuddy -c 'Set :testFlightInternalTestingOnly false' "$options"
+/usr/libexec/PlistBuddy -c "Set :testFlightInternalTestingOnly ${CPI_IOS_INTERNAL_ONLY:-false}" "$options"
 xcodebuild -exportArchive -archivePath "$archive" -exportOptionsPlist "$options" -exportPath "$output"
 
 packages=("$output"/*.ipa)
