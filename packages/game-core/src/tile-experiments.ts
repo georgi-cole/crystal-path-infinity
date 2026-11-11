@@ -8,8 +8,13 @@ export interface TileExperiment {
   readonly store: boolean;
   readonly business?: true;
   readonly extendedReading?: true;
+  readonly journey?: 'spring' | 'summer' | 'autumn' | 'winter' | 'plain';
+  readonly geared?: true;
+  readonly clockless?: true;
+  readonly safeHints?: true;
 }
-const identity = /^infinity-v(10|12|13)-tiles-(0|[1-9]\d?|100)-(0|[1-9]\d?|100)-(plain|store)$/;
+const identity =
+  /^infinity-v(10|12|13)-tiles-(0|[1-9]\d?|100)-(0|[1-9]\d?|100)-(plain|store)(?:-journey1-(plain|spring|summer|winter|autumn)(-gear)?(-clockless)?(-safe-hints)?)?$/;
 
 export function parseTileExperiment(version: string): TileExperiment | null {
   if (typeof version !== 'string') return null;
@@ -18,12 +23,22 @@ export function parseTileExperiment(version: string): TileExperiment | null {
   const highBreakPercent = Number(match[2]),
     lowBreakPercent = Number(match[3]);
   if (lowBreakPercent > highBreakPercent) return null;
+  const journey = match[5] as TileExperiment['journey'];
+  if (
+    journey &&
+    (match[1] !== '12' || match[4] !== 'plain' || highBreakPercent !== 50 || lowBreakPercent !== 50)
+  )
+    return null;
   return {
     highBreakPercent,
     lowBreakPercent,
     store: match[4] === 'store',
     ...(match[1] !== '10' ? { business: true as const } : {}),
     ...(match[1] === '13' ? { extendedReading: true as const } : {}),
+    ...(journey ? { journey } : {}),
+    ...(match[6] ? { geared: true as const } : {}),
+    ...(match[7] ? { clockless: true as const } : {}),
+    ...(match[8] ? { safeHints: true as const } : {}),
   };
 }
 export function tileExperimentVersion(

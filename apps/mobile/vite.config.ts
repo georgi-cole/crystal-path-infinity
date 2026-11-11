@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react';
@@ -14,7 +15,7 @@ const manifest = JSON.parse(readFileSync(new URL('./package.json', import.meta.u
 
 export default defineConfig(({ mode }) => {
   // Both web review profiles use staging identity and can never become a release candidate.
-  const preview = mode === 'qa' || mode === 'player-preview';
+  const preview = mode === 'qa' || mode === 'player-preview' || mode === 'campaign-qa';
   const environment = requireEnvironment(
     mode === 'test' ? 'development' : preview ? 'staging' : mode,
   );
@@ -25,6 +26,10 @@ export default defineConfig(({ mode }) => {
   const values = loadEnv(mode, appRoot, 'VITE_');
   if (release || mode === 'player-preview') assertUnsignedPublicVariables(values);
   const buildInfo = release?.app ?? getBuildInfo(environment, manifest.version);
+  const campaignBase =
+    mode === 'campaign-qa'
+      ? spawnSync('git', ['rev-parse', 'HEAD'], { cwd: appRoot, encoding: 'utf8' }).stdout?.trim()
+      : undefined;
   const guestAdUnits = selectGuestAdUnits({ ...process.env, ...values }, environment);
   return {
     root: appRoot,
@@ -38,6 +43,19 @@ export default defineConfig(({ mode }) => {
               type: 'asset',
               fileName: 'qa-info.json',
               source: JSON.stringify({ schemaVersion: 1, audience: 'qa', tools: true }) + '\n',
+            });
+          if (mode === 'campaign-qa')
+            this.emitFile({
+              type: 'asset',
+              fileName: 'qa-info.json',
+              source:
+                JSON.stringify({
+                  schemaVersion: 1,
+                  audience: 'campaign-qa',
+                  tools: 'offline-campaign',
+                  playtestVersion: '0.7.1',
+                  baseCommit: campaignBase || null,
+                }) + '\n',
             });
           if (mode === 'player-preview')
             this.emitFile({
@@ -70,7 +88,13 @@ export default defineConfig(({ mode }) => {
     build: {
       target: 'es2022',
       outDir:
-        mode === 'qa' ? 'dist-qa' : mode === 'player-preview' ? 'dist-player-preview' : 'dist',
+        mode === 'qa'
+          ? 'dist-qa'
+          : mode === 'campaign-qa'
+            ? 'dist-campaign-qa'
+            : mode === 'player-preview'
+              ? 'dist-player-preview'
+              : 'dist',
       rollupOptions: {
         input: {
           index: fileURLToPath(new URL('./index.html', import.meta.url)),

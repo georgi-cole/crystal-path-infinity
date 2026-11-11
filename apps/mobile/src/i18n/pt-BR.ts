@@ -214,7 +214,7 @@ export const ptBR = {
     'Só resultado de treino. Envio oficial e rankings ainda não estão disponíveis.',
   'game.nextRun': 'Próxima tentativa',
   'game.rankingsNotLive': 'Ranking (indisponível)',
-  'game.returnMenu': 'Voltar ao menu',
+  'game.returnMenu': 'Voltar ao início',
   'game.deathTitle': 'A ponte cedeu',
   'game.deathWrong': 'Um vidro errado esgotou seus SP.',
   'game.deathMystery': 'Um efeito misterioso esgotou seus SP.',

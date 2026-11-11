@@ -487,7 +487,7 @@ export const en = {
   'game.resultLocal': 'A local record only. The ranked ledger is not connected.',
   'game.nextRun': 'Face the crystal again',
   'game.rankingsNotLive': 'Rankings (not live)',
-  'game.returnMenu': 'Return to menu',
+  'game.returnMenu': 'Return home',
   'game.deathTitle': 'The abyss remembers',
   'game.deathWrong': 'The crystal chose the abyss. Your last SP went with it.',
   'game.deathMystery': 'The box asked a price. Your remaining SP paid it.',

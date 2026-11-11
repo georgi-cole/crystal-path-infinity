@@ -205,7 +205,7 @@ export const ja = {
   'game.resultLocal': 'これは練習結果です。公式送信とランキングはまだ利用できません。',
   'game.nextRun': '次の挑戦',
   'game.rankingsNotLive': 'ランキング（未公開）',
-  'game.returnMenu': 'メニューへ',
+  'game.returnMenu': 'ホームに戻る',
   'game.deathTitle': '橋が崩れました',
   'game.deathWrong': '間違った板でSPがなくなりました。',
   'game.deathMystery': '謎の効果でSPがなくなりました。',

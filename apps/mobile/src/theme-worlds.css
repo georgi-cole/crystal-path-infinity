@@ -225,11 +225,12 @@
   pointer-events: none;
 }
 .cpi-world-path-companion {
-  opacity: 0.86;
+  opacity: 1;
 }
 .cpi-world-actor-sprite {
   transform-origin: 0 0;
   transform: scale(var(--companion-x-correction, 1), var(--companion-y-correction, 1));
+  filter: saturate(1.2) contrast(1.04) brightness(1.035);
 }
 .cpi-world-impact {
   color: #a7eacb;

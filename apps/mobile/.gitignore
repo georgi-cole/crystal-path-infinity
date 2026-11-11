@@ -1,5 +1,6 @@
 node_modules/
 dist/
+dist-campaign-qa/
 /android/
 /ios/
 !native-templates/android/

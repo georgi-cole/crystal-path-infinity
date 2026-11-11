@@ -1,5 +1,8 @@
 import { addDecimal, assertNonNegativeInteger, compareDecimal, decimal } from './numbers.ts';
 import { drawRandom, assertRandomCursor } from './random.ts';
+import { assertJourneyRoute, journeyRow } from './journey.ts';
+import { parseTileExperiment } from './tile-experiments.ts';
+import type { JourneyRoute } from './journey.ts';
 import {
   getRuleset,
   MAX_ROW_BATCH,
@@ -48,6 +51,7 @@ export function createRowStream(
   cursor: RandomCursor,
   rng: RandomSource,
   rulesetVersion: string = RULESET_VERSION,
+  journey?: JourneyRoute,
 ): RowStreamState {
   getRuleset(rulesetVersion);
   const draw = drawRandom(cursor, rng);
@@ -56,11 +60,19 @@ export function createRowStream(
     nextIndex: '0',
     nextMysteryIndex: gap(draw.value).toString(),
     rng: draw.cursor,
+    ...(journey ? { journey } : {}),
   };
 }
 
 export function assertRowStream(stream: RowStreamState, rng?: RandomSource): void {
   getRuleset(stream.rulesetVersion);
+  const identity = parseTileExperiment(stream.rulesetVersion)?.journey;
+  if (
+    !!stream.journey !== !!identity ||
+    (stream.journey && stream.journey.season !== (identity === 'plain' ? 'spring' : identity))
+  )
+    throw new RangeError('Mismatched Journey rules.');
+  if (stream.journey) assertJourneyRoute(stream.journey);
   decimal(stream.nextIndex);
   decimal(stream.nextMysteryIndex);
   if (compareDecimal(stream.nextMysteryIndex, stream.nextIndex) < 0) {
@@ -87,13 +99,22 @@ export function takeRows(stream: RowStreamState, count: number, rng: RandomSourc
     cursor = side.cursor;
     const lowRiskSide = side.value < 0.5 ? 'left' : 'right';
     let risk: BridgeRow['risk'];
+    let special: ReturnType<typeof journeyRow> | undefined;
     if (odds) {
       const left = drawRandom(cursor, rng);
       const right = drawRandom(left.cursor, rng);
       cursor = right.cursor;
+      if (stream.journey)
+        special = journeyRow(
+          stream.journey,
+          BigInt(nextIndex) + 1n,
+          lowRiskSide,
+          left.value,
+          right.value,
+        );
       risk = {
         lowRiskSide,
-        broken: {
+        broken: special?.broken ?? {
           left: left.value < (lowRiskSide === 'left' ? odds.low : odds.high),
           right: right.value < (lowRiskSide === 'right' ? odds.low : odds.high),
         },
@@ -108,14 +129,16 @@ export function takeRows(stream: RowStreamState, count: number, rng: RandomSourc
     const row: BridgeRow = {
       index: nextIndex,
       safeSide: lowRiskSide,
-      hasMystery,
+      hasMystery: hasMystery || !!special?.encounter,
       ...(risk ? { risk } : {}),
+      ...(special?.cue ? { cue: special.cue } : {}),
+      ...(special?.encounter ? { encounter: special.encounter } : {}),
     };
     rows.push(risk ? { ...row, safeSide: hintSafeSide(row) ?? lowRiskSide } : row);
     nextIndex = addDecimal(nextIndex);
   }
   return {
     rows,
-    stream: { rulesetVersion: stream.rulesetVersion, nextIndex, nextMysteryIndex, rng: cursor },
+    stream: { ...stream, nextIndex, nextMysteryIndex, rng: cursor },
   };
 }

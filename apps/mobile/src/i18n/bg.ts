@@ -7,7 +7,7 @@ import { crystalGuideBg } from './crystal-guide-messages';
 export const bg = {
   'rewards.limit': 'Рекламните продължавания свършиха.',
   'rewards.quota': 'Използвани продължавания: {applied}.',
-  'rewards.leave': 'Към менюто',
+  'rewards.leave': 'Към началния екран',
   'rewards.guestLeft': 'Остават рекламни продължавания · {count}',
   'rewards.guestOffline': 'Свържи се с интернет, за да гледаш реклама.',
   'rewards.watchRestore': 'Гледай реклама · Възстанови {sp} SP',
@@ -398,7 +398,7 @@ export const bg = {
   'game.resultLocal': 'Само местен запис. Летописът на класирането не е свързан.',
   'game.nextRun': 'Отново срещу кристала',
   'game.rankingsNotLive': 'Класация (неактивна)',
-  'game.returnMenu': 'Към менюто',
+  'game.returnMenu': 'Към началния екран',
   'game.deathTitle': 'Бездната помни',
   'game.deathWrong': 'Кристалът избра бездната. Последните ти SP отидоха с него.',
   'game.deathMystery': 'Кутията поиска цена. Останалите ти SP я платиха.',

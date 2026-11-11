@@ -14,6 +14,8 @@ import type {
 export type SessionCommand =
   | { readonly type: 'choose'; readonly side: TileSide }
   | { readonly type: 'hint' }
+  | { readonly type: 'journey-hint' }
+  | { readonly type: 'journey-gear'; readonly wear: boolean }
   | { readonly type: 'mystery' }
   | { readonly type: 'pact'; readonly option: PactOption }
   | Exclude<RunCommand, { readonly row: string }>;
@@ -70,6 +72,8 @@ export function createRunSession(initialState: RunState, rng: RandomSource): Run
       const command: RunCommand =
         input.type === 'choose' ||
         input.type === 'hint' ||
+        input.type === 'journey-hint' ||
+        input.type === 'journey-gear' ||
         input.type === 'mystery' ||
         input.type === 'pact'
           ? { ...input, row, life }

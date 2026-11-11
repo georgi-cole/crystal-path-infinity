@@ -3,6 +3,12 @@ import type {
   RunState,
   TileSide,
   MysteryTier,
+  JourneyCue,
+} from '@crystal-path-infinity/game-core';
+import {
+  activeJourneyWeather,
+  journeyExpectedSide,
+  journeyGearEffect,
 } from '@crystal-path-infinity/game-core';
 
 /** Renderer-safe shape. In particular, future tiles never contain safeSide. */
@@ -19,6 +25,7 @@ export interface PresentedRow {
   readonly wrong: boolean;
   readonly noSafeTile?: true;
   readonly mysteryTier?: MysteryTier;
+  readonly cue?: JourneyCue;
 }
 export interface PresentedEffect {
   readonly kind: ActiveEffect['kind'];
@@ -71,6 +78,17 @@ export function presentInfinityScene(state: RunState): PresentedScene {
   const current = BigInt(state.lastClearedRow);
   const resolved = new Map(state.resolutions.map((r) => [r.index, r]));
   const rows: PresentedRow[] = [];
+  const route = state.stream.journey;
+  const gear = state.journeyGear;
+  const clearsGlint = !!(
+    route &&
+    gear?.worn &&
+    journeyGearEffect(
+      gear.item,
+      route.season,
+      activeJourneyWeather(route, BigInt(state.currentRow)),
+    ).clearGlint
+  );
   for (const row of state.rows) {
     const offset = BigInt(row.index) - current;
     if (offset < -1n || offset > 3n) continue;
@@ -86,6 +104,12 @@ export function presentInfinityScene(state: RunState): PresentedScene {
       row.hasMystery &&
       state.current.mysteryOutcome === null &&
       state.status === 'playing';
+    const cue =
+      phase === 'current' && state.current.revealedSafeSide === null && row.cue
+        ? clearsGlint && row.cue.kind === 'mirror' && row.cue.side
+          ? { kind: 'lens' as const, side: journeyExpectedSide(row) }
+          : row.cue
+        : undefined;
     rows.push({
       index: row.index,
       label: (BigInt(row.index) + 1n).toString(),
@@ -97,6 +121,7 @@ export function presentInfinityScene(state: RunState): PresentedScene {
       hint: phase === 'current' ? state.current.revealedSafeSide : null,
       chosen: decision?.side ?? null,
       wrong: decision?.wrong ?? false,
+      ...(cue ? { cue } : {}),
       ...(phase === 'current' && state.current.noSafeTile ? { noSafeTile: true as const } : {}),
       ...(phase === 'current' && state.current.mysteryTier
         ? { mysteryTier: state.current.mysteryTier }

@@ -13,6 +13,7 @@ import {
   assertSpAmount,
 } from './rules.ts';
 import { isPactKind } from './pacts.ts';
+import { parseTileExperiment } from './tile-experiments.ts';
 import type { EffectKind, MysteryTier, RandomSource, RunState } from './types.ts';
 
 export const MYSTERY_TIER_WEIGHTS = Object.freeze({
@@ -106,7 +107,11 @@ export function prepareMysteryRow(state: RunState, rng: RandomSource): RunState 
   const available =
     BigInt(next.currentRow) >= BigInt(director.nextRow) &&
     director.rhythm?.kind !== 'mystery_silence_30s';
-  if (available && !next.current.mysteryTier) {
+  const currentIndex = (BigInt(next.currentRow) - 1n).toString();
+  const encounter = next.rows.find((row) => row.index === currentIndex)?.encounter;
+  if (encounter && !next.current.mysteryTier) {
+    next = { ...next, current: { ...next.current, mysteryTier: mysteryTier(encounter) } };
+  } else if (available && !next.current.mysteryTier) {
     const tiers = MYSTERY_TIERS.filter((tier) => mysteryEligibleKinds(next, tier).length > 0);
     const draw = drawRandom(next.mysteryRng, rng);
     let roll = draw.value * tiers.reduce((sum, tier) => sum + MYSTERY_TIER_WEIGHTS[tier], 0);
@@ -121,7 +126,6 @@ export function prepareMysteryRow(state: RunState, rng: RandomSource): RunState 
       current: { ...next.current, mysteryTier: selected },
     };
   }
-  const currentIndex = (BigInt(next.currentRow) - 1n).toString();
   return {
     ...next,
     rows: next.rows.map((row) => ({
@@ -209,6 +213,7 @@ export function getDeathClock(
   state: RunState,
 ): { warningAt: number; expiresAt: number; firstLossAt?: number } | null {
   if (!usesMysteryDirectorRules(state.rulesetVersion) || state.status !== 'playing') return null;
+  if (parseTileExperiment(state.rulesetVersion)?.clockless) return null;
   const intro = state.discovery?.introduction;
   const warningAt =
     state.pact?.phase === 'offered'

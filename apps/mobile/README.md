@@ -55,6 +55,7 @@ The root npm workspace contains `apps/mobile`; its dependencies and lockfile liv
 | --- | --- |
 | `npm run dev` | Development browser server on port 5174 |
 | `npm run dev:qa` | Explicit QA browser server on port 5177 |
+| `npm run dev:campaign-qa` | Separate offline Campaign/Infinity playtest on port 5178 |
 | `npm run typecheck` | Check the app, configuration, and tests |
 | `npm run lint` | Type-aware application lint and native/CI script checks |
 | `npm run format:check` | Check the scoped app/config/script formatting |
@@ -64,10 +65,18 @@ The root npm workspace contains `apps/mobile`; its dependencies and lockfile liv
 | `npm run build:staging` | Build staging assets into the same directory |
 | `npm run build:production` | Build production assets into the same directory |
 | `npm run build:qa` | Build QA assets separately into `apps/mobile/dist-qa` |
+| `npm run build:campaign-qa` | Build the offline mission playtest separately into `apps/mobile/dist-campaign-qa` |
 | `npm run preview` | Serve the latest built assets on port 4174 |
 | `npm run preview:qa` | Serve the separate QA bundle on port 4177 |
+| `npm run preview:campaign-qa` | Serve the offline mission bundle on port 4178 |
 
 The development and preview servers bind to `127.0.0.1` and fail if their port is occupied. Each build includes type checking and replaces the previous environment's web output.
+
+**Beacon Route 0.7.1 · 11 November 2026.** Open `http://127.0.0.1:4178/#campaign` after building and starting the Campaign preview. The profile includes the full 30-mission route and a Weather & Seasons guide in Discoveries at `/#infinity-weather`. Store at `/#store` opens with all six Worlds. Bridges opens an eight-style collection with a separate preview for each bridge, including Jelly Path earned at mission 11. Ivy Lantern Walk has been removed and earned torches remain usable. Gear previews equipment on the existing companions. Supplies shows reserves with Add more actions that open the illustrated Restock view. Season Changes are used in Supplies. Test claims are local and free. Campaign and Infinity saves use separate local slots. Profile explicitly labels the offline mode, which starts without account services. [Rules, assets and mission list](../../docs/decisions/CAMPAIGN-LIGHTHOUSE-PROPOSAL.md#current-offline-build--07--11-november-2026).
+
+The Campaign preview identifies its Git base in `/qa-info.json`.
+
+Run the fixed-route, weather-boundary and save checks from the root with `npm exec --workspace @crystal-path-infinity/mobile -- vitest run config/campaign-journey.test.ts`.
 
 ## Player and QA previews
 
@@ -165,3 +174,9 @@ Logs, screenshots, per-attempt diagnostic JSON, lifecycle actions and a final re
 Artifacts are retained for seven days. Evidence uploads can include failed-run diagnostics; inspect the job result and launch JSON before treating an artifact as a pass.
 
 At scaffold creation, local type checking, 19 environment tests, web builds, and generation of both native projects passed. CPI-003 native compilation and launch results require their own CI evidence. The authoritative results and remaining checks are maintained in [CPI-003 app foundation](../../docs/decisions/CPI-003-app-foundation.md).
+
+11 November 2026 · 0.6.2: unified illustrated bridge showroom; higher World companions; material-preserving tile breaks and rebuilt trampolines; six Gear items including Trail Scarf; tap selected Campaign pin again to restore full map; aligned Supplies actions and No Clock display name. Existing saves/offer IDs and offline-only claims are preserved.
+
+11 November 2026 · 0.7: preview feet share the tile camera, slim material edges and matching breaks, redesigned Cosmic Crossing, opaque vivid gameplay companions/Gear, grounded World-card animations, and ten more missions in Starfall Observatory and Cloudrest Harbour. New goals/rewards persist; original attempts retain revision 0.3 and new chapters use 0.4.
+
+11 November 2026 · 0.7.1 (CPI-039): distinct browse/selection companion reactions, guaranteed hinted landing for new Journey attempts, fresh Campaign retry seeds, and unchanged saved-run resume behavior. See the detailed integration update and issue #109.

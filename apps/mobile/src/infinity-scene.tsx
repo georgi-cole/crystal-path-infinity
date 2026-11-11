@@ -1,5 +1,10 @@
 import { nextPracticeRuleset } from './balance-tuning';
-import { PLAYER_PREVIEW_ENABLED, QA_TOOLS_ENABLED, practiceStorage } from './app-profile';
+import {
+  CAMPAIGN_TEST_BUILD,
+  PLAYER_PREVIEW_ENABLED,
+  QA_TOOLS_ENABLED,
+  practiceStorage,
+} from './app-profile';
 import { shouldFinishPracticeOnExit } from './practice-exit';
 import { DiscoveryIntroduction } from './mystery-introduction';
 import { MysteryJournal } from './mystery-discovery';
@@ -38,6 +43,9 @@ import {
   presentRowPressure,
   HINT_SCAN_MS,
   marketingSale,
+  usesDiscoveryRules,
+  journeyForecast,
+  journeyGearEffect,
 } from '@crystal-path-infinity/game-core';
 import type {
   RunEvent,
@@ -48,6 +56,7 @@ import type {
   TimedSessionResult,
   EffectKind,
   PactOption,
+  BeforeRunCommit,
 } from '@crystal-path-infinity/game-core';
 import { getGameplayLifecycle } from './gameplay-lifecycle';
 import { createStandaloneAudio } from './standalone-audio';
@@ -78,6 +87,10 @@ import { DeathClock } from './scene-instruments';
 import { collectRunSignals, EMPTY_RUN_SIGNALS, liveSignal } from './run-signals';
 import type { RunSignals } from './run-signals';
 import { createHintCaptionGate } from './hint-caption';
+import { bridgeModel } from './campaign-content';
+import type { BridgeStyle } from './campaign-content';
+import { JourneyAtmosphere } from './journey-atmosphere';
+import { CLEAR_SKY, GEAR_COPY, WEATHER_COPY } from './journey-copy';
 import './infinity-scene.css';
 import './infinity-hud-premium.css';
 import './run-outcome.css';
@@ -94,7 +107,19 @@ const DEFAULT_VISUAL_SKIN = {
 export const INFINITY_SCENE_SKIN = DEFAULT_VISUAL_SKIN;
 
 export type { SceneFeedback } from './scene-cinematics';
+interface CampaignPresentation {
+  readonly name: string;
+  readonly targetRow: number;
+  readonly minimumStability: number;
+  readonly objectiveProgress?: string;
+}
+type CampaignSupplies = Readonly<Record<'sp' | 'hint' | 'shield', boolean>>;
 export interface InfinitySceneViewProps {
+  readonly weather?: 'clear' | 'rain';
+  readonly campaignMission?: CampaignPresentation;
+  readonly bridgeStyle?: BridgeStyle;
+  readonly campaignSupplyPanel?: ReactNode;
+  readonly onToggleJourneyGear?: (wear: boolean) => void;
   readonly resourcePanel?: ReactNode;
   readonly guestContinuePanel?: ReactNode;
   readonly trial?: boolean;
@@ -159,6 +184,11 @@ export function InfinitySceneView({
   newPersonalBest,
   onRestart,
   onRetry,
+  weather = 'clear',
+  campaignMission,
+  bridgeStyle,
+  campaignSupplyPanel,
+  onToggleJourneyGear,
   settings,
   onSettingsChange,
   cinematic = null,
@@ -258,6 +288,57 @@ export function InfinitySceneView({
     outcome.phase === 'playing';
   const experiment =
     import.meta.env.MODE !== 'production' ? parseTileExperiment(state.rulesetVersion) : null;
+  const route = state.stream.journey;
+  const season = experiment?.journey === 'plain' ? undefined : route?.season;
+  const forecast = route && season ? journeyForecast(route, BigInt(state.currentRow)) : null;
+  const activeWeather = forecast?.startsIn === 0n ? forecast.weather : undefined;
+  const legacyRain = !route && weather === 'rain';
+  const currentSky = activeWeather ?? (legacyRain ? 'rain' : undefined);
+  const approaching =
+    forecast && forecast.startsIn > 0n && forecast.startsIn <= 3n ? forecast.weather : undefined;
+  const cue = current?.cue;
+  const cueText =
+    cue?.side === null
+      ? 'Both tiles are cracked'
+      : cue?.kind === 'mirror'
+        ? 'Mirror glint · land opposite'
+        : cue?.kind === 'prism'
+          ? 'Rainbow · land on the prism'
+          : cue?.kind === 'echo'
+            ? 'Echo · follow the ring'
+            : cue?.kind === 'gust'
+              ? 'Gust · follow the leaf'
+              : cue?.kind === 'beacon'
+                ? 'Beacon · follow the light'
+                : cue?.kind === 'lens'
+                  ? 'Sunshades · follow the clear glint'
+                  : null;
+  const gear = state.journeyGear;
+  const gearCopy = gear ? GEAR_COPY[gear.item] : undefined;
+  const here =
+    gear && route ? journeyGearEffect(gear.item, route.season, activeWeather) : undefined;
+  const ahead =
+    gear && route && approaching
+      ? journeyGearEffect(gear.item, route.season, approaching)
+      : undefined;
+  const hasGearDownside = gear?.worn && ((here?.hitRelief ?? 0) < 0 || (ahead?.hitRelief ?? 0) < 0);
+  const gearTip =
+    gear && gearCopy
+      ? gear.queued !== null
+        ? gear.queued
+          ? 'Ready after this step.'
+          : 'Packed away after this step.'
+        : gear.worn && (here?.hitRelief ?? 0) < 0
+          ? gearCopy.warning
+          : gear.worn && (ahead?.hitRelief ?? 0) < 0
+            ? 'Pack it away before ' + WEATHER_COPY[approaching!].title.toLowerCase() + '.'
+            : gear.worn && ((here?.hitRelief ?? 0) > 0 || here?.cleanGain)
+              ? gearCopy.ready
+              : !gear.worn &&
+                  ((ahead?.hitRelief ?? 0) > 0 || (here?.hitRelief ?? 0) > 0 || here?.cleanGain)
+                ? 'A good time to bring it out.'
+                : null
+      : null;
   const modeLabel = trial
     ? t('vault.trial')
     : state.storeTest?.assisted
@@ -330,18 +411,43 @@ export function InfinitySceneView({
 
   return (
     <main
-      className={`cps-shell ${INFINITY_SCENE_SKIN.shell} cpi-infinity-scene${catastrophic ? ' is-catastrophe' : ''}${emergency ? ' is-emergency' : ''}${paused ? ' is-paused' : ''}${pressure?.active || clockActive ? ' is-death-clock' : ''}${settings.reducedMotion ? ' cpi-reduced-motion' : ''}`}
+      className={`cps-shell ${INFINITY_SCENE_SKIN.shell} cpi-infinity-scene${catastrophic ? ' is-catastrophe' : ''}${emergency ? ' is-emergency' : ''}${paused ? ' is-paused' : ''}${pressure?.active || clockActive ? ' is-death-clock' : ''}${settings.reducedMotion ? ' cpi-reduced-motion' : ''}${legacyRain ? ' cpi-rain-mission' : ''}`}
       data-world={themeId}
+      data-weather={activeWeather ?? (legacyRain ? 'rain' : 'clear')}
+      data-season={season}
       data-testid="infinity-scene"
       aria-label={INFINITY_SCENE_SKIN.title}
     >
       <p className="cpi-run-mode">
-        {modeLabel}
-        {experiment && ` · ${experiment.highBreakPercent}% / ${experiment.lowBreakPercent}%`}
+        {campaignMission ? 'Campaign' : modeLabel}
+        {season
+          ? ' · ' + season
+          : experiment &&
+            !CAMPAIGN_TEST_BUILD &&
+            ` · ${experiment.highBreakPercent}% / ${experiment.lowBreakPercent}%`}
+        {gear && !campaignMission && ' · Outfitted'}
       </p>
       <StageAtmosphere emergency={emergency || catastrophic} />
+      {legacyRain && <div className="cpi-rain-curtain" aria-hidden="true" />}
+      {season && (
+        <JourneyAtmosphere
+          season={season}
+          weather={activeWeather}
+          world={themeId}
+          reduced={settings.reducedMotion || paused}
+        />
+      )}
+      {campaignMission && (
+        <p className="cpi-campaign-objective" role="status">
+          {campaignMission.name} · Row {campaignMission.targetRow}
+          {campaignMission.minimumStability > 0 &&
+            ` · ${campaignMission.minimumStability} Stability`}
+          {campaignMission.objectiveProgress && <small>{campaignMission.objectiveProgress}</small>}
+        </p>
+      )}
       <div className="cps-content" inert={overlayVisible}>
         <RunHud
+          campaign={!!campaignMission}
           row={
             cinematic?.rows?.find((row) => row.phase === 'current')?.label ?? presented.currentRow
           }
@@ -357,6 +463,7 @@ export function InfinitySceneView({
             !oracleActive &&
             !state.discovery?.introduction &&
             state.hints > 0 &&
+            !state.current.noSafeTile &&
             state.current.revealedSafeSide === null
           }
           canPause={ready && !busy && !cinematicBlocks && !error && state.status === 'playing'}
@@ -364,6 +471,45 @@ export function InfinitySceneView({
           onHint={onHint}
           onPause={onPause}
         />
+        {(season || legacyRain || cueText) && (
+          <aside className="cpi-journey-forecast" data-active={!!currentSky} aria-live="polite">
+            {currentSky ? (
+              <span>
+                {currentSky === 'heat' && here?.clearGlint && gear?.worn
+                  ? 'The sun is playing tricks. Your shades cut through the glare.'
+                  : WEATHER_COPY[currentSky].remark}
+              </span>
+            ) : approaching ? (
+              <span>
+                {WEATHER_COPY[approaching].title} ahead. {WEATHER_COPY[approaching].remark}
+              </span>
+            ) : season ? (
+              <span>{CLEAR_SKY[season]}</span>
+            ) : null}
+            {cueText && <strong>{cueText}</strong>}
+          </aside>
+        )}
+        {gear && gearCopy && onToggleJourneyGear && state.status === 'playing' && (
+          <aside
+            className="cpi-journey-kit-control"
+            data-warning={!!hasGearDownside}
+            aria-label="Crossing gear"
+          >
+            <span aria-hidden="true">{gearCopy.glyph}</span>
+            <div>
+              <strong>{gearCopy.name}</strong>
+              <small>{gearTip ?? (gear.worn ? 'Wearing' : 'Packed away')}</small>
+            </div>
+            <button
+              type="button"
+              disabled={!interactive}
+              onClick={() => onToggleJourneyGear(!(gear.queued ?? gear.worn))}
+            >
+              {gear.queued !== null ? 'Cancel change' : gear.worn ? 'Pack away' : 'Bring out'}
+            </button>
+          </aside>
+        )}
+        {campaignSupplyPanel}
         <aside
           className={'cpi-run-status' + (pactOffered ? ' is-choosing' : '')}
           aria-label={t('game.effects')}
@@ -432,6 +578,9 @@ export function InfinitySceneView({
             />
           )}
           <PrismBridge
+            bridgeStyle={bridgeStyle}
+            season={season}
+            weather={activeWeather}
             rows={cinematic?.rows ?? presented.rows}
             feedback={cinematic?.feedback ?? feedback}
             interactive={interactive}
@@ -450,12 +599,16 @@ export function InfinitySceneView({
           {themeId !== 'obsidian' && outcome.phase !== 'finished' && (
             <WorldPathCompanion
               theme={themeId}
+              bridge={bridgeModel(bridgeStyle)}
               cinematic={cinematic}
               standingSide={companionStandingSide(cinematic?.rows ?? presented.rows)}
               sp={state.sp}
               effects={presented.effects}
               reduced={settings.reducedMotion}
               paused={paused}
+              season={season}
+              weather={activeWeather}
+              gear={gear?.worn ? gear.item : undefined}
               reaction={
                 emergency || catastrophic || hostileReveal || cinematic?.feedback?.kind === 'wrong'
                   ? 'panic'
@@ -751,7 +904,7 @@ export function InfinitySceneView({
   );
 }
 
-function makeInitialRun(testEconomy = false): RunState {
+function makeInitialRun(testEconomy = false, fixedRulesetVersion?: string): RunState {
   let discoveredMysteries: EffectKind[] = [];
   try {
     discoveredMysteries = readMysteryJournal(practiceStorage());
@@ -762,11 +915,12 @@ function makeInitialRun(testEconomy = false): RunState {
   crypto.getRandomValues(seed);
   const route = (BigInt(seed[0]) << 32n) | BigInt(seed[1]);
   const mystery = route ^ 0x9e3779b97f4a7c15n;
+  const rulesetVersion = fixedRulesetVersion ?? nextPracticeRuleset(testEconomy);
   return createRun(
     {
       runId: 'practice-' + route.toString(16),
-      rulesetVersion: nextPracticeRuleset(testEconomy),
-      discoveredMysteries,
+      rulesetVersion,
+      ...(usesDiscoveryRules(rulesetVersion) ? { discoveredMysteries } : {}),
       routeRng: createPracticeCursor(route),
       mysteryRng: createPracticeCursor(mystery),
       observedAt: Date.now(),
@@ -786,9 +940,15 @@ interface InfinityRunProps {
   onRestart: () => void;
   guestRewardedAd?: GuestRewardedAd | null;
   initialState: RunState | null;
-  onCheckpoint: (state: RunState) => void;
+  onCheckpoint: (state: RunState, events?: readonly RunEvent[]) => void;
   settings: PracticeSettings;
   onSettingsChange: (next: PracticeSettings) => void;
+  fixedRulesetVersion?: string;
+  weather?: 'clear' | 'rain';
+  campaignMission?: CampaignPresentation;
+  bridgeStyle?: BridgeStyle;
+  campaignSupplies?: CampaignSupplies;
+  onCampaignResourceCommit?: (state: RunState, events: readonly RunEvent[]) => void;
 }
 function InfinityRun({
   trial = false,
@@ -803,13 +963,35 @@ function InfinityRun({
   onCheckpoint,
   settings,
   onSettingsChange,
+  fixedRulesetVersion,
+  weather = 'clear',
+  campaignMission,
+  bridgeStyle,
+  campaignSupplies,
+  onCampaignResourceCommit,
 }: InfinityRunProps) {
   const { t, number } = useLanguage();
   const { store } = useTestStore();
   const runTheme = useThemeId();
+  const isCampaign = !!campaignMission;
+  const model = bridgeModel(bridgeStyle);
+  const bridgeSurface =
+    model === 'trestle'
+      ? 'wood'
+      : model === 'frost'
+        ? 'ice'
+        : model === 'aurora'
+          ? 'trampoline'
+          : model === 'prism'
+            ? 'cosmic'
+            : model === 'jelly' || model === 'lily' || model === 'cookie'
+              ? model
+              : 'glass';
   const [resourceMessage, setResourceMessage] = useState('');
   const [initial] = useState(() =>
-    initialState ? upgradePracticePacing(initialState) : makeInitialRun(!!store && !trial),
+    initialState
+      ? upgradePracticePacing(initialState)
+      : makeInitialRun(!!store && !trial, fixedRulesetVersion),
   );
   const [initialAudioSettings] = useState(settings);
   const lastCommittedActiveMs = useRef(-500);
@@ -859,9 +1041,14 @@ function InfinityRun({
       {
         createMedia: (source) => new Audio(source),
         haptic: optionalHaptic,
+        ...(initial.stream.journey &&
+        parseTileExperiment(initial.rulesetVersion)?.journey !== 'plain'
+          ? { createAmbientContext: () => new AudioContext() }
+          : {}),
       },
       { ...initialAudioSettings, music: false },
       runTheme,
+      bridgeSurface,
     );
     audioRef.current = audio;
     const director = createSceneDirector(
@@ -890,7 +1077,7 @@ function InfinityRun({
         if (hint && hintCaptionGate.claim()) setHintCaptionRow(hint.row);
         if (result.events.length) setSignals((previous) => collectRunSignals(previous, result));
         let earnedNewBest = false;
-        if (!trial && result.events.some((event) => event.type === 'run-ended')) {
+        if (!trial && !isCampaign && result.events.some((event) => event.type === 'run-ended')) {
           try {
             earnedNewBest =
               result.state.storeTest?.assisted && store
@@ -921,7 +1108,7 @@ function InfinityRun({
           result.state.status !== 'playing' ||
           result.state.activeTimeMs - lastCommittedActiveMs.current >= 500
         ) {
-          onCheckpoint(result.state);
+          onCheckpoint(result.state, result.events);
           lastCommittedActiveMs.current = result.state.activeTimeMs;
         }
         setState(result.state);
@@ -984,7 +1171,17 @@ function InfinityRun({
       unsubscribeCheckpoint();
       runtime.dispose();
     };
-  }, [initial, onCheckpoint, initialAudioSettings, hintCaptionGate, store, trial, runTheme]);
+  }, [
+    initial,
+    onCheckpoint,
+    initialAudioSettings,
+    hintCaptionGate,
+    store,
+    trial,
+    runTheme,
+    isCampaign,
+    bridgeSurface,
+  ]);
 
   useEffect(() => {
     audioRef.current?.setSettings({ ...settings, music: false });
@@ -1021,7 +1218,7 @@ function InfinityRun({
     void audioRef.current?.unlock();
   }
 
-  async function issue(command: SessionCommand) {
+  async function issue(command: SessionCommand, beforeCommit?: BeforeRunCommit) {
     const runtime = runtimeRef.current;
     if (
       !runtime ||
@@ -1034,7 +1231,7 @@ function InfinityRun({
     commandLock.current = true;
     setBusy(true);
     try {
-      const result = await runtime.bind(command)();
+      const result = await runtime.bind(command, beforeCommit)();
       setState(result.state);
       if (
         !result.accepted &&
@@ -1300,6 +1497,62 @@ function InfinityRun({
           />
         ) : undefined
       }
+      weather={weather}
+      campaignMission={campaignMission}
+      bridgeStyle={bridgeStyle}
+      onToggleJourneyGear={(wear) => {
+        unlockAudio();
+        void issue({ type: 'journey-gear', wear });
+      }}
+      campaignSupplyPanel={
+        campaignSupplies &&
+        onCampaignResourceCommit &&
+        state.status === 'playing' &&
+        Object.values(campaignSupplies).some(Boolean) ? (
+          <div className="cpi-journey-supplies" aria-label="Crossing supplies">
+            {(
+              [
+                ['sp', '+25 Stability'],
+                ['hint', 'Reserve hint'],
+                ['shield', 'Use shield'],
+              ] as const
+            ).map(
+              ([item, label]) =>
+                campaignSupplies[item] && (
+                  <button
+                    key={item}
+                    type="button"
+                    disabled={
+                      !ready ||
+                      busy ||
+                      paused ||
+                      !!error ||
+                      cinematic !== null ||
+                      state.pact?.phase === 'offered' ||
+                      (item === 'hint' &&
+                        (state.hints > 0 ||
+                          !!state.current.revealedSafeSide ||
+                          !!state.current.noSafeTile)) ||
+                      (item === 'shield' &&
+                        state.effects.some((effect) => effect.kind === 'shield_5s'))
+                    }
+                    onClick={() => {
+                      unlockAudio();
+                      void issue(
+                        item === 'hint'
+                          ? { type: 'journey-hint' }
+                          : { type: 'journey-resource', resource: item },
+                        (result) => onCampaignResourceCommit(result.state, result.events),
+                      );
+                    }}
+                  >
+                    {label}
+                  </button>
+                ),
+            )}
+          </div>
+        ) : undefined
+      }
       state={state}
       feedback={feedback}
       cinematic={cinematic}
@@ -1390,6 +1643,14 @@ export function InfinityPractice({
   guestRewardedAd,
   settings,
   onSettingsChange,
+  fixedRulesetVersion,
+  weather,
+  campaignMission,
+  bridgeStyle,
+  campaignSupplies,
+  onCampaignResourceCommit,
+  newJourney,
+  worldTheme,
 }: {
   trialTheme?: ThemeId;
   onExit: () => void;
@@ -1398,27 +1659,42 @@ export function InfinityPractice({
   onExitCancelled?: () => void;
   exitRequest?: number;
   initialState?: RunState | null;
-  onCheckpoint: (state: RunState) => void;
+  onCheckpoint: (state: RunState, events?: readonly RunEvent[]) => void;
   guestRewardedAd?: GuestRewardedAd | null;
   settings: PracticeSettings;
   onSettingsChange: (next: PracticeSettings) => void;
+  fixedRulesetVersion?: string;
+  weather?: 'clear' | 'rain';
+  campaignMission?: CampaignPresentation;
+  bridgeStyle?: BridgeStyle;
+  campaignSupplies?: CampaignSupplies;
+  onCampaignResourceCommit?: (state: RunState, events: readonly RunEvent[]) => void;
+  newJourney?: () => RunState;
+  worldTheme?: ThemeId;
 }) {
   const themeId = useThemeId();
   const [attempt, setAttempt] = useState(0);
+  const [retryState, setRetryState] = useState<RunState | null>(null);
   const restartLock = useRef(false);
   useEffect(() => {
     restartLock.current = false;
   }, [attempt]);
   return (
-    <ThemeScope theme={trialTheme ?? themeId}>
+    <ThemeScope theme={trialTheme ?? worldTheme ?? themeId}>
       <InfinityRun
         trial={!!trialTheme}
         key={attempt}
-        initialState={attempt === 0 ? initialState : null}
+        initialState={attempt === 0 ? initialState : retryState}
         onCheckpoint={onCheckpoint}
         guestRewardedAd={guestRewardedAd}
         settings={settings}
         onSettingsChange={onSettingsChange}
+        fixedRulesetVersion={fixedRulesetVersion}
+        weather={weather}
+        campaignMission={campaignMission}
+        bridgeStyle={bridgeStyle}
+        campaignSupplies={campaignSupplies}
+        onCampaignResourceCommit={onCampaignResourceCommit}
         onExit={onExit}
         onStore={onStore}
         onViewRankings={onViewRankings}
@@ -1427,6 +1703,7 @@ export function InfinityPractice({
         onRestart={() => {
           if (restartLock.current) return;
           restartLock.current = true;
+          if (newJourney) setRetryState(newJourney());
           setAttempt((n) => n + 1);
         }}
       />

@@ -4,7 +4,7 @@ import { StrictMode } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
-import { SIMULATED_STORE_ENABLED } from './app-profile';
+import { CAMPAIGN_TEST_BUILD, SIMULATED_STORE_ENABLED } from './app-profile';
 import { BrandLaunchGate } from './brand-launch';
 import { TestStoreProvider } from './store-provider';
 import './theme-worlds.css';
@@ -38,7 +38,9 @@ createRoot(root).render(
   <StrictMode>
     <LanguageProvider>
       <BrandLaunchGate>
-        {SIMULATED_STORE_ENABLED ? (
+        {CAMPAIGN_TEST_BUILD ? (
+          <App />
+        ) : SIMULATED_STORE_ENABLED ? (
           <TestStoreProvider>
             <App />
           </TestStoreProvider>

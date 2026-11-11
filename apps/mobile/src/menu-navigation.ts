@@ -3,6 +3,10 @@ import type { PracticeLoad } from './practice-save';
 /** Navigation only. Ranked authority, auth and practice runtime remain separate. */
 export const MENU_VIEWS = [
   'home',
+  'campaign',
+  'bridge-style',
+  'infinity-weather',
+  'supplies',
   'play',
   'practice',
   'tutorial',
@@ -25,6 +29,17 @@ export function viewFromHash(hash: string, practiceHub = true): MenuView {
 
 export function viewHash(view: MenuView): string {
   return '#' + view;
+}
+
+export function menuSection(view: MenuView): MenuView {
+  if (view === 'infinity-weather') return 'journal';
+  if (view === 'bridge-style' || view === 'supplies') return 'store';
+  return view;
+}
+
+export function menuParent(state: unknown): MenuView | null {
+  if (state === null || typeof state !== 'object' || !('cpiParent' in state)) return null;
+  return MENU_VIEWS.find((view) => view === state.cpiParent) ?? null;
 }
 
 /** Active play or a recoverable reward is resumable; a declined death is not. */

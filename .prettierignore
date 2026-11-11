@@ -1,6 +1,7 @@
 # Keep generated files, the separate laboratory, and historical documentation intact.
 **/node_modules/
 **/dist/
+**/dist-campaign-qa/
 **/android/
 **/ios/
 **/build/

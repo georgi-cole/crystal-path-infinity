@@ -6,6 +6,7 @@ import type { HintCue } from './mystery-feedback';
 import type { SurvivalReward } from './run-signals';
 
 export function RunHud({
+  campaign = false,
   row,
   clearedRows,
   sp,
@@ -20,6 +21,7 @@ export function RunHud({
   onHint,
   onPause,
 }: {
+  campaign?: boolean;
   row: string;
   clearedRows: string;
   sp: number;
@@ -42,7 +44,7 @@ export function RunHud({
   return (
     <header className="cpi-hud-header">
       <div className="cpi-hud-position">
-        <span className="cpi-hud-wordmark">Infinity</span>
+        <span className="cpi-hud-wordmark">{campaign ? 'Campaign' : 'Infinity'}</span>
         <strong className="cps-row-display">
           {t('general.row', {
             row: number(row),

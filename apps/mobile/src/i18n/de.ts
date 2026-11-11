@@ -221,7 +221,7 @@ export const de = {
     'Nur lokales Trainingsergebnis. Offizielle Abgabe und Ranglisten sind nicht aktiv.',
   'game.nextRun': 'Nächster Lauf',
   'game.rankingsNotLive': 'Rangliste (noch inaktiv)',
-  'game.returnMenu': 'Zurück zum Menü',
+  'game.returnMenu': 'Zur Startseite',
   'game.deathTitle': 'Die Brücke brach',
   'game.deathWrong': 'Ein falsches Glasfeld verbrauchte alle SP.',
   'game.deathMystery': 'Ein Rätsel-Effekt verbrauchte alle SP.',

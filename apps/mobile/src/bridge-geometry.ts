@@ -1,8 +1,15 @@
 import type { TileSide } from '@crystal-path-infinity/game-core';
+import type { BridgeModel } from './campaign-content';
 
 const WIDTH = 900;
 const HEIGHT = 700;
 const HORIZON = 72;
+
+/** Face and break fragments use the same slim material edge. */
+export const bridgeTileThickness = (model: BridgeModel): number =>
+  ({ original: 8, trestle: 11, frost: 16, lily: 3, jelly: 14, cookie: 12, aurora: 8, prism: 9 })[
+    model
+  ];
 
 /** One projective camera for tile faces, thickness, rails and HTML hit regions. */
 export function projectBridgePoint(x: number, z: number, elevation = 0) {

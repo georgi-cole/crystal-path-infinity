@@ -194,7 +194,7 @@ export const zhHans = {
   'game.resultLocal': '仅为练习结果，正式提交和排行榜尚未开放。',
   'game.nextRun': '下一局',
   'game.rankingsNotLive': '排行榜（未开放）',
-  'game.returnMenu': '返回菜单',
+  'game.returnMenu': '返回首页',
   'game.deathTitle': '桥断裂了',
   'game.deathWrong': '错误玻璃耗尽了SP。',
   'game.deathMystery': '神秘效果耗尽了SP。',
