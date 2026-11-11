@@ -18,6 +18,7 @@ import type { SceneFeedback } from './infinity-scene';
 import {
   bridgePane,
   bridgeTileThickness,
+  bridgeMysteryPlacement,
   projectBridgePoint,
   advancesOneRow,
 } from './bridge-geometry';
@@ -1890,9 +1891,12 @@ export const PrismBridge = memo(function PrismBridge({
                     : '')
                 }
                 data-tier={row.mysteryTier}
-                style={{
-                  top: `${(projectBridgePoint(0, 0.8 + row.distance * 1.15).y / HEIGHT) * 100}%`,
-                }}
+                style={
+                  {
+                    top: `${(bridgeMysteryPlacement(row.distance).y / HEIGHT) * 100}%`,
+                    '--cache-perspective': bridgeMysteryPlacement(row.distance).scale,
+                  } as CSSProperties
+                }
                 aria-label={t('game.mysteryTile', { row: number(row.label) })}
                 onClick={onMystery}
                 disabled={

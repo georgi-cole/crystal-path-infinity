@@ -115,7 +115,7 @@ describe('companions follow only the resolved crystal path', () => {
     const pixelsX = (96 * scale.x * width) / 900;
     const pixelsY = (96 * scale.y * height) / 700;
     expect(pixelsX).toBeCloseTo(pixelsY);
-    expect(pixelsX).toBeGreaterThanOrEqual(68);
-    expect(pixelsX).toBeLessThanOrEqual(112);
+    expect(pixelsX).toBeGreaterThanOrEqual(88);
+    expect(pixelsX).toBeLessThanOrEqual(144);
   });
 });

@@ -7,30 +7,35 @@ import {
   PRACTICE_RNG,
   transitionRun,
 } from '@crystal-path-infinity/game-core';
-import type { RunCommand, RunState } from '@crystal-path-infinity/game-core';
+import type { GearId, RunCommand, RunState } from '@crystal-path-infinity/game-core';
 import {
   EMPTY_CAMPAIGN_PROGRESS,
   claimTestOffer,
   createCampaignInfinityRun,
   infinityProgressFromEvents,
+  equipCampaignGear,
+  gearOffer,
+  ownsCampaignGear,
   journeyRuleset,
   readCampaignSave,
   writeCampaignSave,
 } from '../src/campaign-test';
 import { runCuesFromEvents } from '../src/mystery-feedback';
 
-function fresh(stacks = true) {
+function fresh(stacks = true, gear?: GearId) {
   return createRun(
     {
       runId: 'practice-campaign-infinity-kit-fixture',
       rulesetVersion:
-        journeyRuleset('spring', false, true) + '-supplies' + (stacks ? '-shield-stack' : ''),
+        journeyRuleset('spring', !!gear, true) + '-supplies' + (stacks ? '-shield-stack' : ''),
       routeRng: createPracticeCursor(17),
       mysteryRng: createPracticeCursor(9),
       observedAt: 0,
+      ...(gear ? { journeyGear: gear } : {}),
       journey: {
         version: 1,
         season: 'spring',
+        ...(gear ? { windows: [{ start: 1, weather: 'squall' as const }] } : {}),
         reviveSp: 150,
         marks: Array.from({ length: 10 }, (_, i) => ({ row: i + 1, bothBroken: true as const })),
       },
@@ -48,6 +53,56 @@ function step(state: RunState, command: RunCommand, elapsed = 0) {
 const stock = () => claimTestOffer(EMPTY_CAMPAIGN_PROGRESS, 'shield-pack');
 
 describe('staged Kit and charged shields', () => {
+  it('keeps one worn item while preserving both purchases and the choice across saves', () => {
+    const both = claimTestOffer(
+      claimTestOffer(EMPTY_CAMPAIGN_PROGRESS, gearOffer('sunshades')),
+      gearOffer('storm-boots'),
+    );
+    const changed = equipCampaignGear(equipCampaignGear(both, 'sunshades'), 'storm-boots');
+    expect(changed.gear).toBe('storm-boots');
+    expect(ownsCampaignGear(changed, 'sunshades')).toBe(true);
+    expect(ownsCampaignGear(changed, 'storm-boots')).toBe(true);
+    let saved = '';
+    writeCampaignSave(
+      {
+        setItem: (_key, value) => {
+          saved = value;
+        },
+      },
+      changed,
+      null,
+    );
+    const restored = readCampaignSave({ getItem: () => saved }).progress;
+    expect(restored.gear).toBe('storm-boots');
+    expect(ownsCampaignGear(restored, 'sunshades')).toBe(true);
+    expect(createCampaignInfinityRun(restored).journeyGear?.item).toBe('storm-boots');
+  });
+
+  it('combines gear, bad weather and charged shields without doubling damage or spending extra charges', () => {
+    const initial = fresh(true, 'umbrella');
+    const loaded = step(initial, {
+      type: 'journey-loadout',
+      stabilityDoses: 0,
+      shieldDelta: 2,
+    }).state;
+    const queued = step(loaded, { type: 'journey-gear', row: '1', life: 0, wear: false }).state;
+    const landing = step(queued, { type: 'choose', row: '1', life: 0, side: 'left' });
+    expect(landing.state.sp).toBe(queued.sp);
+    expect(landing.state.journeyShields).toBe(1);
+    expect(landing.state.journeyGear).toEqual({ item: 'umbrella', worn: false, queued: null });
+    expect(landing.events.find((e) => e.type === 'choice-resolved')).toMatchObject({
+      shieldChargeUsed: true,
+      spDelta: 0,
+    });
+    const temporary = {
+      ...loaded,
+      effects: [{ kind: 'shield_5s' as const, startedAt: 0, expiresAt: 5000, nextTickAt: null }],
+    };
+    const protectedLanding = step(temporary, { type: 'choose', row: '1', life: 0, side: 'left' });
+    expect(protectedLanding.state.sp).toBe(temporary.sp);
+    expect(protectedLanding.state.journeyShields).toBe(2);
+  });
+
   it('loads five shields without spending stock, then blocks exactly five cracks', () => {
     let progress = stock(),
       state = fresh();

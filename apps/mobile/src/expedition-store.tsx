@@ -334,7 +334,7 @@ function WorkshopScene({
             phase={breaking ? 'impact' : undefined}
             reducedMotion={reducedMotion}
           />
-          {world !== 'obsidian' && (
+          {(world !== 'obsidian' || gear) && (
             <WorldPathCompanion
               theme={world}
               bridge={bridgeModel(style)}
@@ -619,9 +619,7 @@ function Outfitters({
 }) {
   const { t } = useLanguage();
   const [item, setItem] = useState<GearId | null>(null);
-  const [world, setWorld] = useState<Exclude<ThemeId, 'obsidian'>>(
-    progress.world === 'obsidian' ? 'wilds' : progress.world,
-  );
+  const [world, setWorld] = useState<ThemeId>(progress.world);
   const [season, setSeason] = useState<Season>('spring');
   const [weather, setWeather] = useState<Weather | undefined>('rain');
   const open = (next: GearId | null) => {
@@ -695,14 +693,12 @@ function Outfitters({
         <button
           className="cpi-try-companion"
           type="button"
-          onClick={() =>
-            setWorld(WORLD_ORDER[(WORLD_ORDER.indexOf(world) + 1) % WORLD_ORDER.length])
-          }
+          onClick={() => setWorld(worlds[(worlds.indexOf(world) + 1) % worlds.length])}
           aria-label="Try the next character"
         >
-          <Portrait world={world} />
+          {world !== 'obsidian' && <Portrait world={world} />}
           <span>
-            {t(WORLD_KITS[world].title)} <b>↻</b>
+            {world === 'obsidian' ? 'Black Metal' : t(WORLD_KITS[world].title)} <b>↻</b>
           </span>
         </button>
       </WorkshopScene>

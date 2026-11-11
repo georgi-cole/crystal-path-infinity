@@ -885,7 +885,8 @@ export function MainMenu({
           view !== 'settings' &&
           view !== 'tutorial' &&
           view !== 'journal' &&
-          view !== 'store' && (
+          view !== 'store' &&
+          view !== 'campaign' && (
             <footer className="cpi-menu-footer">
               <span>Crystal Path: Infinity</span>
               <span>
