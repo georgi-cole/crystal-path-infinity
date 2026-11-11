@@ -603,6 +603,110 @@
   inset: 0;
   opacity: 0.88;
 }
+.cpi-metal-showcase {
+  overflow: hidden;
+}
+.cpi-metal-glints {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.cpi-metal-glints polyline {
+  stroke: #d9eff9;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-dasharray: 23 800;
+  filter: drop-shadow(0 0 3px #c2ecff);
+  animation: cpi-metal-glimmer 8s ease-in-out infinite;
+}
+.cpi-metal-glints polyline:nth-child(2) {
+  animation-delay: -3s;
+}
+.cpi-metal-glints polyline:nth-child(3) {
+  animation-delay: -5.5s;
+}
+.cpi-metal-mist {
+  position: absolute;
+  left: -15%;
+  top: 19%;
+  width: 110%;
+  height: 22%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, #adc3d20d, transparent 68%);
+  filter: blur(12px);
+  animation: cpi-metal-mist 22s ease-in-out infinite alternate;
+}
+.cpi-metal-mist.is-far {
+  top: 4%;
+  left: 5%;
+  height: 15%;
+  animation-delay: -11s;
+}
+.cpi-metal-motes i {
+  position: absolute;
+  left: 17%;
+  top: 25%;
+  width: 2px;
+  height: 2px;
+  background: #d8e9f2;
+  border-radius: 50%;
+  box-shadow: 0 0 6px #b9d2e499;
+  opacity: 0.3;
+  animation: cpi-metal-dust 14s ease-in-out infinite alternate;
+}
+.cpi-metal-motes i:nth-child(2) {
+  left: 75%;
+  top: 14%;
+  animation-delay: -7s;
+}
+.cpi-metal-motes i:nth-child(3) {
+  left: 32%;
+  top: 43%;
+  animation-delay: -4s;
+}
+.cpi-metal-motes i:nth-child(4) {
+  left: 84%;
+  top: 38%;
+  animation-delay: -10s;
+}
+.cpi-metal-showcase[data-still='true'] * {
+  animation: none !important;
+}
+@keyframes cpi-metal-glimmer {
+  0%,
+  12% {
+    stroke-dashoffset: 30;
+    opacity: 0;
+  }
+  23%,
+  42% {
+    opacity: 0.65;
+  }
+  62%,
+  100% {
+    stroke-dashoffset: -350;
+    opacity: 0;
+  }
+}
+@keyframes cpi-metal-mist {
+  to {
+    transform: translateX(12%) translateY(-5%);
+    opacity: 0.45;
+  }
+}
+@keyframes cpi-metal-dust {
+  to {
+    transform: translate(6px, -18px);
+    opacity: 0.12;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cpi-metal-showcase * {
+    animation: none !important;
+  }
+}
 .cpi-world-picker {
   display: grid;
   grid-auto-flow: column;

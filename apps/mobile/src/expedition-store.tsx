@@ -23,6 +23,7 @@ import { INFINITY_WEATHER_NAMES } from './journey-copy';
 import { BackButton } from './back-button';
 import { useLanguage } from './language-context';
 import { PrismBridge } from './prism-bridge';
+import { BlackMetalShowcase } from './black-metal-showcase';
 import type { PresentedRow } from './infinity-presentation';
 import { StageAtmosphere } from './stage-atmosphere';
 import type { ThemeId } from './store-catalog';
@@ -197,9 +198,7 @@ function WorldCollection({
                 aria-hidden={!active}
               >
                 {id === 'obsidian' ? (
-                  <div className="cpi-market-original-bridge">
-                    <PrismBridge preview reducedMotion={reducedMotion} />
-                  </div>
+                  <BlackMetalShowcase still={reducedMotion || !active} />
                 ) : (
                   <ThemeArtwork theme={id} companion={false} />
                 )}
