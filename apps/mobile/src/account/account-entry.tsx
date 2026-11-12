@@ -119,6 +119,7 @@ export function AccountEntry({
   }
   async function evaluate() {
     if (!flow) return;
+    const selectedProvider = screenedProvider;
     const pending = flow.checkEligibility(online, { age: Number(age), country });
     sync();
     await pending;
@@ -127,6 +128,11 @@ export function AccountEntry({
       setCountry('');
     }
     sync();
+    if (mounted.current && selectedProvider && flow.snapshot().step === 'eligible') {
+      await runProvider((identity, signal) =>
+        identity.signIn(selectedProvider, signal, flow.identityPermit() ?? undefined),
+      );
+    }
   }
   async function connect(ticket: string, offerProfile = false) {
     if (!binding || !mounted.current) return;
@@ -154,6 +160,9 @@ export function AccountEntry({
       if (controller.signal.aborted) return;
       if (result.status === 'verify_existing') {
         setProviderLink({ token: result.linkToken, resendAt: null });
+        const sent = await binding.identity.requestLinkCode(result.linkToken, controller.signal);
+        if (!controller.signal.aborted)
+          setProviderLink({ token: result.linkToken, resendAt: sent.resendAt });
       } else if (result.status === 'code_sent') {
         setProviderLink((current) => current && { ...current, resendAt: result.resendAt });
       } else if (result.status === 'verified') {
@@ -341,9 +350,8 @@ export function AccountEntry({
           )}
           {providerLink && (
             <>
-              {providerLink.resendAt === null ? (
-                <p>{t('account.verifyExistingHelp')}</p>
-              ) : (
+              <p>{t('account.verifyExistingHelp')}</p>
+              {providerLink.resendAt !== null && (
                 <form
                   onSubmit={(event) => {
                     event.preventDefault();
@@ -433,9 +441,14 @@ export function AccountEntry({
             </form>
           )}
           {step === 'parental_review' && <p role="status">{t('account.parentalReview')}</p>}
-          {screenedProvider && step === 'eligible' && (
-            <IdentityButtons disabled={busy || !online} onChoose={chooseProvider} />
-          )}
+          {screenedProvider &&
+            !providerLink &&
+            step === 'eligible' &&
+            (connecting ? (
+              <p role="status">{t('account.signingIn')}</p>
+            ) : (
+              <IdentityButtons disabled={busy || !online} onChoose={chooseProvider} />
+            ))}
           {emailFlow &&
             !screenedProvider &&
             (step === 'eligible' || (step === 'sending' && !codeStep)) && (

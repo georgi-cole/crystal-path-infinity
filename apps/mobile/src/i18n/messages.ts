@@ -281,7 +281,8 @@ export const en = {
   'account.useAccountEmail': 'Use your Crystal Path email to sign in.',
   'account.betaProviderUnavailable': 'Use an approved beta account while connected from Bulgaria.',
   'account.verifyExisting': 'Verify your account',
-  'account.verifyExistingHelp': 'Confirm your existing Crystal Path account with a one-time code.',
+  'account.verifyExistingHelp':
+    'Connect this sign-in to your existing Crystal Path account with one email code. You only need to do this once. Next time, use Apple or Google directly.',
   'account.otherMethods': 'Other sign-in options',
   'account.restoreFailed': 'Couldn’t restore sign-in.',
   'account.resend': 'Resend code',
