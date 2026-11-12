@@ -1,5 +1,5 @@
 import { Buffer } from 'node:buffer';
-import { generateKeyPairSync, sign } from 'node:crypto';
+import { generateKeyPairSync, sign, verify } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
 import {
   createNativeIdentity,
@@ -141,6 +141,18 @@ describe('staging native provider proof', () => {
     );
     expect((appleExchange?.[1]?.body as URLSearchParams).get('client_id')).toBe(webApple);
     expect((appleExchange?.[1]?.body as URLSearchParams).get('redirect_uri')).toBe(redirectUri);
+    const secret = (appleExchange?.[1]?.body as URLSearchParams).get('client_secret')!;
+    const [header, claims, signature] = secret.split('.');
+    const rawSignature = Buffer.from(signature, 'base64url');
+    expect(rawSignature.length).toBe(64);
+    expect(
+      verify(
+        'sha256',
+        Buffer.from(header + '.' + claims),
+        { key: ec.publicKey, dsaEncoding: 'ieee-p1363' },
+        rawSignature,
+      ),
+    ).toBe(true);
     await expect(
       service.verify(
         'apple',

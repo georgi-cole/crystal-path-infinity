@@ -1,5 +1,5 @@
 import { Buffer } from 'node:buffer';
-import { createPrivateKey, sign } from 'node:crypto';
+import { createPrivateKey } from 'node:crypto';
 import { exactObject, isObject, providerJson } from './private-services.ts';
 
 export type NativeIdentityProvider = 'apple' | 'google';
@@ -234,7 +234,7 @@ export function createNativeIdentity(options: {
     };
   }
 
-  function appleSecret() {
+  async function appleSecret() {
     const iat = Math.floor(now() / 1000);
     const encode = (value: object) => Buffer.from(JSON.stringify(value)).toString('base64url');
     const input =
@@ -247,14 +247,24 @@ export function createNativeIdentity(options: {
         aud: appleIssuer,
         sub: apple.clientId,
       });
-    return (
-      input +
-      '.' +
-      sign('sha256', Buffer.from(input), {
-        key: appleKey,
-        dsaEncoding: 'ieee-p1363',
-      }).toString('base64url')
+    // Supabase's Node compatibility layer ignores dsaEncoding and returns DER.
+    // Web Crypto specifies the fixed-width r||s format required by JWT ES256.
+    const signingKey = await crypto.subtle.importKey(
+      'pkcs8',
+      Uint8Array.from(appleKey.export({ type: 'pkcs8', format: 'der' })),
+      { name: 'ECDSA', namedCurve: 'P-256' },
+      false,
+      ['sign'],
     );
+    const signature = new Uint8Array(
+      await crypto.subtle.sign(
+        { name: 'ECDSA', hash: 'SHA-256' },
+        signingKey,
+        new TextEncoder().encode(input),
+      ),
+    );
+    if (signature.length !== 64) throw new Error('Apple signing unavailable');
+    return input + '.' + Buffer.from(signature).toString('base64url');
   }
 
   function exchange(url: string, form: Record<string, string>) {
@@ -295,7 +305,7 @@ export function createNativeIdentity(options: {
           const result = await exchange(appleIssuer + '/auth/token', {
             grant_type: 'authorization_code',
             client_id: apple.clientId,
-            client_secret: appleSecret(),
+            client_secret: await appleSecret(),
             code,
             ...(options.web ? { redirect_uri: redirect } : {}),
           });
@@ -313,7 +323,7 @@ export function createNativeIdentity(options: {
         method: 'POST',
         body: new URLSearchParams({
           client_id: apple.clientId,
-          client_secret: appleSecret(),
+          client_secret: await appleSecret(),
           token: refreshToken,
           token_type_hint: 'refresh_token',
         }),

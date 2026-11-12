@@ -24,6 +24,40 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 describe('mobile provider handoff', () => {
+  it('recovers a failed OS return only through the server-bound provider proof', async () => {
+    fetcher
+      .mockResolvedValueOnce(Response.json({ status: 'ready', url, state, flowToken }))
+      .mockResolvedValueOnce(Response.json({ status: 'verified', verifiedTicket: ticket }));
+    openProduction.mockRejectedValueOnce(new Error('OS return failed'));
+    const client = createMobileIdentityClient(base, {} as AccountSessionOwner)!;
+    expect(await client.signIn('google', new AbortController().signal, permit)).toMatchObject({
+      status: 'verified',
+      ticket,
+    });
+    expect(JSON.parse(fetcher.mock.calls[1][1]!.body as string)).toEqual({
+      flowToken,
+      eligibilityPermit: permit,
+    });
+  });
+  it('cannot recover an OS failure without a server proof or after cancellation', async () => {
+    fetcher
+      .mockResolvedValueOnce(Response.json({ status: 'ready', url, state, flowToken }))
+      .mockResolvedValueOnce(Response.json({ code: 'expired' }, { status: 410 }));
+    openProduction.mockRejectedValueOnce(new Error('OS return failed'));
+    const client = createMobileIdentityClient(base, {} as AccountSessionOwner)!;
+    await expect(
+      client.signIn('google', new AbortController().signal, permit),
+    ).rejects.toMatchObject({ kind: 'expired' });
+    fetcher.mockReset();
+    fetcher.mockResolvedValueOnce(Response.json({ status: 'ready', url, state, flowToken }));
+    const controller = new AbortController();
+    openProduction.mockImplementationOnce(() => {
+      controller.abort();
+      return Promise.reject(new Error('cancelled'));
+    });
+    await expect(client.signIn('google', controller.signal, permit)).rejects.toThrow();
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
   it('keeps sandbox sign-in on its explicitly enabled staging callback', async () => {
     const staging = 'https://crystal-path-staging-api.kolequant.workers.dev/cpi';
     expect(createMobileIdentityClient(staging, {} as AccountSessionOwner)).toBeNull();
