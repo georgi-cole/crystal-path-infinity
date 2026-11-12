@@ -29,7 +29,7 @@ if (Object.keys(process.env).some((name) => name.startsWith('CPI_RELEASE_')))
 const accountEnv = await pagesAccountBuildEnv(process.env);
 Object.assign(process.env, accountEnv);
 try {
-  await build({ root: app, mode: 'production', base, build: { outDir: output } });
+  await build({ root: app, mode: 'campaign-web', base, build: { outDir: output } });
 } finally {
   for (const name of Object.keys(accountEnv)) delete process.env[name];
 }
@@ -37,6 +37,13 @@ try {
 const manifest = JSON.parse(readFileSync(join(app, 'package.json'), 'utf8'));
 const built = JSON.parse(readFileSync(join(output, 'build-info.json'), 'utf8'));
 assertBuiltEnvironment(built, 'production', manifest.version);
+const campaign = JSON.parse(readFileSync(join(output, 'campaign-web-info.json'), 'utf8'));
+assert.equal(campaign.audience, 'public-browser');
+assert.equal(campaign.campaign, true);
+assert.equal(campaign.missions, 30);
+assert.equal(campaign.simulatedPurchases, false);
+assert.equal(campaign.purchases, 'mobile-app-only');
+assert.equal(campaign.ads, 'unavailable');
 for (const path of ['qa-info.json', 'player-preview-info.json', 'tester', 'player']) {
   assert(!existsSync(join(output, path)), `Review content in the Pages artifact: ${path}`);
 }
@@ -114,7 +121,7 @@ const sourceSha = execFileSync('git', ['rev-parse', 'HEAD'], {
 }).trim();
 const deployment = {
   schemaVersion: 1,
-  kind: 'guest-web-preview',
+  kind: 'campaign-web',
   sourceSha,
   base,
   liveServices: {
@@ -122,7 +129,9 @@ const deployment = {
     ranked: 'disabled',
     ads: 'disabled',
   },
-  purchases: 'unavailable-no-live-billing',
+  purchases: 'mobile-app-only',
+  campaign: true,
+  missions: campaign.missions,
 };
 writeFileSync(join(output, 'deployment-info.json'), JSON.stringify(deployment, null, 2) + '\n');
 const qaDeployment = {

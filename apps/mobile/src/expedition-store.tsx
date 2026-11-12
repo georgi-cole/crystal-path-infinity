@@ -922,7 +922,13 @@ function Supplies({
               {'price' in pack && (
                 <p className="cpi-restock-price">
                   {checkout.price(restock, pack.price)}{' '}
-                  <small>{checkout.live ? 'Store price' : 'Proposed price'}</small>
+                  <small>
+                    {checkout.browser
+                      ? 'Mobile app price'
+                      : checkout.live
+                        ? 'Store price'
+                        : 'Proposed price'}
+                  </small>
                 </p>
               )}
               {locked && (
@@ -1146,7 +1152,7 @@ export function ExpeditionStore({
           onDetail={setDetail}
         />
       )}
-      {checkout.live && (
+      {checkout.live && !checkout.browser && (
         <div className="cpi-market-actions" aria-live="polite">
           {checkout.snapshot.phase === 'error' && (
             <p>The store could not connect. Please try again.</p>
@@ -1181,9 +1187,11 @@ export function ExpeditionStore({
         </div>
       )}
       <p className="cpi-adventure-footnote">
-        {checkout.live
-          ? 'Supplies are saved on this device. Permanent items can be restored after sign-in.'
-          : 'Offline playtest · Test items are free on this device.'}
+        {checkout.browser
+          ? 'Browser progress is saved on this device. Purchases are available in the mobile app; Campaign rewards can be earned and equipped here.'
+          : checkout.live
+            ? 'Supplies are saved on this device. Permanent items can be restored after sign-in.'
+            : 'Offline playtest · Test items are free on this device.'}
       </p>
     </section>
   );
