@@ -1,0 +1,174 @@
+.cpi-screening-room {
+  height: 100dvh;
+  overflow: hidden;
+  background: #060c14;
+  color: #f1e7d1;
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  max-width: 100%;
+}
+.cpi-screening-room header {
+  text-align: center;
+  padding: 1rem 1rem 0.5rem;
+}
+.cpi-screening-room header > span {
+  letter-spacing: 0.24em;
+  font-size: 0.7rem;
+  color: #e5c993;
+}
+.cpi-screening-room header p {
+  margin: 0.3rem 0;
+  font-size: 0.67rem;
+  color: #9aafbc;
+}
+.cpi-screening-room header .cpi-screening-character {
+  padding: 0 0.15rem;
+  border: 0;
+  background: transparent;
+  color: #dfc78f;
+  font: inherit;
+  line-height: inherit;
+}
+.cpi-screening-room nav {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem 0.8rem;
+}
+.cpi-screening-room button {
+  border: 1px solid #bca27145;
+  color: #d6e0e4;
+  background: #111e2b;
+  border-radius: 0.6rem;
+  cursor: pointer;
+  padding: 0.55rem 0.8rem;
+}
+.cpi-screening-room nav button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 13rem;
+  text-align: left;
+  font-size: 0.73rem;
+}
+.cpi-screening-room nav button small {
+  font:
+    1.4rem Georgia,
+    serif;
+  color: #dabd83;
+}
+.cpi-screening-room .cpi-screening-chapters {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  width: min(100%, 58rem);
+  margin: auto;
+  gap: 0.25rem;
+  padding-block: 0.2rem;
+}
+.cpi-screening-room .cpi-screening-chapters button {
+  display: block;
+  padding: 0.4rem 0.2rem;
+  text-align: center;
+  font-size: 0.65rem;
+}
+@media (max-width: 600px) {
+  .cpi-screening-room .cpi-screening-chapters button {
+    font-size: 0.55rem;
+  }
+  .cpi-screening-room nav[aria-label='Mission animations'] button {
+    font-size: 0.53rem;
+  }
+}
+.cpi-screening-room button[aria-pressed='true'] {
+  border-color: #d8b777;
+  background: #3d3429;
+  color: #fff0cd;
+}
+.cpi-screening-stage {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  width: min(100%, 64rem);
+  margin: auto;
+  height: 100%;
+  border: 1px solid #9eafbd30;
+  border-radius: 1rem;
+}
+.cpi-screening-stage .cpi-region-art {
+  position: absolute;
+  inset: 0;
+  z-index: -3;
+}
+.cpi-screening-veil {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(ellipse at 50% 30%, #07152170, #050d17db 95%);
+}
+.cpi-screening-stage .cpi-clear-film {
+  height: 100%;
+}
+.cpi-screening-room footer {
+  padding: 0.7rem 1rem 0.8rem;
+  display: grid;
+  justify-items: center;
+  gap: 0.6rem;
+}
+.cpi-screening-playback,
+.cpi-screening-cues {
+  display: flex;
+  gap: 0.4rem;
+}
+.cpi-screening-cues {
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.cpi-screening-playback button:first-child {
+  background: #d6b577;
+  color: #161b24;
+  font-weight: 700;
+}
+.cpi-screening-cues button {
+  padding: 0.3rem 0.55rem;
+  font-size: 0.67rem;
+  border-radius: 999px;
+  background: transparent;
+}
+.cpi-screening-scrub {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-size: 0.65rem;
+  color: #b6c4cd;
+  width: min(100%, 36rem);
+}
+.cpi-screening-scrub input {
+  flex: 1;
+  accent-color: #d7bb80;
+}
+@media (max-width: 600px) {
+  .cpi-screening-room nav {
+    gap: 0.3rem;
+    padding-inline: 0.5rem;
+  }
+  .cpi-screening-room nav button {
+    display: grid;
+    justify-items: center;
+    padding: 0.45rem;
+    flex: 1;
+    font-size: 0.6rem;
+    gap: 0.2rem;
+  }
+  .cpi-screening-room nav button span {
+    max-width: 6rem;
+  }
+  .cpi-screening-stage {
+    border-radius: 0;
+  }
+  .cpi-screening-room header {
+    padding-top: 0.6rem;
+  }
+  .cpi-screening-playback button {
+    font-size: 0.72rem;
+  }
+}

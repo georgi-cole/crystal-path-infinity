@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { CAMPAIGN_MISSIONS, CHAPTERS, LANDMARK_CLEARS, STYLES } from './campaign-content';
 import type { BridgeSlot, StyleId } from './campaign-content';
 import {
@@ -14,7 +14,8 @@ import type {
   CampaignProgress,
 } from './campaign-test';
 import { AdventureIcon, RegionArt } from './expedition-art';
-import { CompanionSprite } from './theme-art';
+import { CampaignClearCelebration } from './campaign-celebration';
+import { missionRewardItems } from './campaign-reward-presentation';
 import type { ThemeId } from './store-catalog';
 import type { PracticeLoad } from './practice-save';
 import archipelago from './assets/campaign/beacon-archipelago.png?url';
@@ -358,16 +359,14 @@ export function CampaignMissionResult({
       !cleared || reducedMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches,
   );
   useEffect(() => {
-    if (arrived) {
-      result.current?.focus();
-      return;
-    }
-    const timer = window.setTimeout(() => setArrived(true), 1650);
-    return () => window.clearTimeout(timer);
+    if (arrived) result.current?.focus();
   }, [arrived]);
   const routeComplete = mission.id === 'bring-the-dawn-home';
   const landmark = LANDMARK_CLEARS[mission.chapter] === mission.id;
   const style = mission.grant.style;
+  const rewardItems = cleared && firstClear ? missionRewardItems(mission) : [];
+  const showingResult = arrived;
+  const finishCelebration = useCallback(() => setArrived(true), []);
   const name = CAMPAIGN_MISSIONS.find((entry) => entry.id === mission.id)?.name ?? mission.name;
   const story = cleared
     ? firstClear
@@ -385,33 +384,17 @@ export function CampaignMissionResult({
     <main
       className="cpi-crossing-result"
       data-cleared={cleared}
-      data-portal={!arrived}
+      data-portal={!showingResult}
       aria-labelledby="cpi-campaign-result-title"
     >
       <RegionArt chapter={mission.chapter} lit={cleared && landmark} />
-      {!arrived ? (
-        <div className="cpi-crossing-escape" role="status">
-          <h1 id="cpi-campaign-result-title" className="visually-hidden">
-            Crossing complete
-          </h1>
-          <div className="cpi-crossing-portal" aria-hidden="true" />
-          <div className="cpi-portal-runner" aria-hidden="true">
-            {world === 'obsidian' ? (
-              <svg viewBox="0 0 64 76" fill="none">
-                <path
-                  d="M12 63 22 32l-4-8 13-19 14 19-4 8 12 31-12 6-10-5-9 5Z"
-                  fill="#1c283b"
-                  stroke="#ffddaa"
-                  strokeWidth="2"
-                />
-                <path d="m24 28 7-11 9 11-9 6Z" fill="#070c17" />
-                <path d="m28 27 7 0M24 43l7-4 9 5" stroke="#fbe1aa" strokeWidth="2" />
-              </svg>
-            ) : (
-              <CompanionSprite theme={world} reaction="happy" />
-            )}
-          </div>
-        </div>
+      {!showingResult ? (
+        <CampaignClearCelebration
+          mission={mission}
+          world={world}
+          portalOnly={!firstClear}
+          onComplete={finishCelebration}
+        />
       ) : (
         <div
           className="cpi-crossing-result-card"
@@ -451,10 +434,12 @@ export function CampaignMissionResult({
           </div>
           {cleared && firstClear && (
             <div className="cpi-brief-reward">
-              <AdventureIcon name="hint" />
+              <AdventureIcon name={rewardItems[0]?.icon ?? 'hint'} />
               <span>
                 <small>Reward unsealed</small>
-                <strong>{mission.reward}</strong>
+                <strong>
+                  {rewardItems.map((item) => item.label).join(' · ') || mission.reward}
+                </strong>
               </span>
               {style && onEquip && (
                 <button
