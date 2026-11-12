@@ -68,7 +68,7 @@ The PR includes the complete approved 30-mission playtest, seasonal gear/supplie
 
 ## Current offline build · 0.7 · 11 November 2026
 
-This version adds ten crossings beyond the Far Gate, taking the route to 30 missions and seven chapters. The original twenty mission IDs, rewards, routes and revision-0.3 attempts remain intact. New missions use content revision 0.4 and resume with their saved goals and partial progress. The map still reveals only the current crossing and the next one. An old completed twenty-mission save naturally continues with mission 21; Gatekeeper remains the mission-20 milestone, and Dawnkeeper marks mission 30.
+This version adds ten crossings beyond the Far Gate, taking the route to 30 missions and seven chapters. The original twenty mission IDs, rewards, routes and revision-0.3 attempts remain intact. New missions use content revision 0.4 and resume with their saved goals and partial progress. The map still reveals only the current crossing and the next one. An old completed twenty-mission save naturally continues with mission 21; mission 20 is the Far Gate chapter milestone, and mission 30 is the Harbour finale.
 
 ### Missions 21–30
 
@@ -83,7 +83,7 @@ This version adds ten crossings beyond the Far Gate, taking the route to 30 miss
 | 27 | Mind the Melt | Winter · 58 · 190 / 55 | Save and use hints at thaw rows 17 and 41; land safely on both | 2 hints |
 | 28 | Rainbow Relay | Spring · 64 · 205 / 60 | Link three rainbows: all nine marked steps 12–14, 32–34 and 52–54 after showers | 1 continue |
 | 29 | The Night Watch | Autumn · 68 · 230 / 65 | Open free shield caches and block both separate cracked rows, 18 and 47 | 2 shields |
-| 30 | Bring the Dawn Home | Spring · 88 · 300 / 85 | Open caches 13 and 51, spend at most one hint and clear final beacons 86–88 | Pearl Lanterns + 2 Season Changes; Dawnkeeper |
+| 30 | Bring the Dawn Home | Spring · 88 · 300 / 85 | Open caches 13 and 51, spend at most one hint and clear final beacons 86–88 | Pearl Lanterns + 2 Season Changes; Harbour restored |
 
 All ten permit optional existing supplies/gear. Their mandatory hints and shields are included in the starting kit or placed in free caches on the same row as the challenge. Composite goals require every clause. Repeating one shield row cannot substitute for the other. Unrelated hints do not count as either required hinted landing. Each reward is issued only on the first clear; replay can still earn Mastery under the existing clock, gear and supply restrictions.
 
@@ -150,7 +150,7 @@ The map background was generated as a single landscape illustration and saved to
 | # | Crossing | Landing and goal | First clear |
 | --- | --- | --- | --- |
 | 01 | The Coast Is Clear-ish | Row 24, ≥240 SP | +25 reserve SP |
-| 02 | Lens, Actually | Row 36, ≥210 SP, open the lens cache at row 8 | Lens and +1 reserve hint |
+| 02 | Lens, Actually | Row 36, ≥210 SP, open the lens cache at row 8 | +1 reserve hint |
 | 03 | Two Sparks Ahead | Row 48, ≥200 SP, reveal tiles on two different rows | +1 reserve hint |
 | 04 | Light It Up, Keeper! | Row 60, ≥175 SP, final beacon cues | Keeper’s Torches and Lighthouse lit |
 | 05 | Puddle Trouble | Row 50, ≥145 SP, three Spring Rain windows and an authored double crack | Spring Rain in Infinity |
@@ -168,7 +168,7 @@ The map background was generated as a single landscape illustration and saved to
 | 17 | Chasing Prismtails | Row 42, ≥40 SP, clean prism rows 16–18 | Lily Drift and rainbows in Spring Infinity |
 | 18 | Make Mine a Rainbow | Row 53, ≥55 SP, rain then clean rainbow | +25 reserve SP |
 | 19 | A Squall or a Long Walk | Row 48 Squall road or row 58 Echo ridge, ≥50 SP | Autumn in Infinity |
-| 20 | One Last Light | Row 72, ≥70 SP, clean final three beacons after Squall and Gust | Gatekeeper emblem and Far Gate open |
+| 20 | One Last Light | Row 72, ≥70 SP, clean final three beacons after Squall and Gust | Far Gate restored |
 
 The route grants **100 reserve SP, three reserve hints, two continues and one shield** over the route. Eligible crossings allow one 25 SP transfer, reserve hints after supplied hints run out, one shield, and one continue on a fall. A double crack preserves the reserve hint. A continue keeps the same route and objective progress, clears active effects, and returns half the starting Stability rounded up. The active mission definition, route cursor, objectives, spends, and first clear are committed together in one local save. Existing 0.1 and 0.2 in-progress crossings keep their saved rules and goals.
 
@@ -446,3 +446,13 @@ Node 22.23.4: mobile tests 779/779, game-core 315/315, server-core 211/211 and b
 ## 11 November 2026 · CPI-043 · Price/catalog supersession
 
 Earlier offer prices in this proposal remain historical. The [launch catalog decision](CPI-043-adventure-store-catalog.md) defines lower current EUR references, permanent/consumable types and the 13 new store products. Earned-only bridges and torches stay rewards. Registration does not turn simulated beta claims into real purchases or extend the server's grant contract.
+
+## 12 November 2026 · Campaign first-clear reward presentation
+
+In the current feature branch, the first-clear result sequence reveals the saved rewards before a layered vortex opens and the companion enters it. The result card follows. Replays do not repeat the first-clear reward animation; reduced-motion preferences bypass the sequence. The visual reads the existing campaign grant, bridge-style unlock, Infinity season unlock and restored landmark without granting anything itself.
+
+The reward wording now matches those saved outcomes: mission 2's cache is a temporary run event and the first-clear reward is one reserve hint; mission 20 restores the Far Gate without a separate emblem; mission 30 grants Pearl Lanterns and two Season Changes, then restores Cloudrest Harbour. There is no saved Lighthouse Lens, Gatekeeper emblem or Dawnkeeper emblem inventory item. These presentation and wording changes do not alter mission rules, balances or historical play attempts.
+
+The initial animation is superseded by [cinematic presentation revision 2](CAMPAIGN-REWARD-CINEMATICS.md): illustrated first-four rewards, larger traveller, smaller vortex, a readable 7.8-second timeline and a separate local replay/scrubbing screen. The underlying first-clear grant and reduced-motion contracts are preserved.
+
+**13 November 2026:** the owner-approved dimensional collection treatment is extended across all 30 missions, with actual supply/style/season/landmark artwork, correct Saved/Unlocked/Restored wording, bundle presentation and 10% smaller reward frames. The screening room now includes every mission under seven chapter tabs. The dated [complete reward matrix and validation](CAMPAIGN-REWARD-CINEMATICS.md#full-campaign-rollout---13-november-2026) supersede the first-four-only presentation scope; no mission grants or rules change.

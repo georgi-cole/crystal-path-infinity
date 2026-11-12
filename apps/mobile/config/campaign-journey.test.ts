@@ -1,8 +1,16 @@
+import { missionRewardItems } from '../src/campaign-reward-presentation';
+import { STYLE_REWARD_CELLS } from '../src/campaign-reward-art-model';
+import { CampaignClearCelebration } from '../src/campaign-celebration';
 import { describe, expect, it, vi } from 'vitest';
+import { existsSync } from 'node:fs';
+import { THEME_IDS } from '../src/store-catalog';
+import { WORLD_ASSETS } from '../src/world-assets';
+import { equippedCompanionAsset } from '../src/equipped-companions';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import {
   createPracticeCursor,
+  GEAR_IDS,
   createRunSession,
   createRowStream,
   getCurrentRow,
@@ -18,7 +26,7 @@ import {
   transitionRun,
 } from '@crystal-path-infinity/game-core';
 import type { JourneyRoute, RunCommand, RunState } from '@crystal-path-infinity/game-core';
-import { bridgeModel, CAMPAIGN_MISSIONS, missionObjectives } from '../src/campaign-content';
+import { bridgeModel, CAMPAIGN_MISSIONS, missionObjectives, STYLES } from '../src/campaign-content';
 import {
   CAMPAIGN_INFINITY_RULESET,
   CAMPAIGN_TEST_PROGRESS_KEY,
@@ -843,5 +851,226 @@ describe('Beacon Route playtest', () => {
         .rows.slice(1)
         .every((row) => !row.cue),
     ).toBe(true);
+  });
+});
+
+describe('actual campaign reward presentation', () => {
+  it.each(CAMPAIGN_MISSIONS)(
+    '$id has complete illustrated rewards and truthful collection copy',
+    (definition) => {
+      const mission = newMissionSnapshot(definition.id);
+      const rewards = missionRewardItems(mission);
+      expect(rewards.length).toBeGreaterThan(0);
+      expect(new Set(rewards.map((item) => item.label)).size).toBe(rewards.length);
+      for (const reward of rewards) {
+        if (reward.art.type === 'style' && reward.art.id !== 'torches') {
+          expect(STYLE_REWARD_CELLS[reward.art.id]).toBeDefined();
+          expect(STYLES[reward.art.id].unlock).toBe(mission.id);
+        }
+      }
+      const markup = renderToStaticMarkup(
+        createElement(CampaignClearCelebration, { mission, world: 'obsidian' }),
+      );
+      expect(markup).toContain('data-collection="morph"');
+      expect(markup).not.toContain('undefined');
+      const primary = rewards[0];
+      expect(markup).toContain(
+        primary.art.type === 'supply'
+          ? 'Saved!'
+          : primary.art.type === 'landmark'
+            ? 'Restored!'
+            : 'Unlocked!',
+      );
+      if (primary.art.type !== 'supply')
+        expect(markup).not.toContain('Added to your Campaign supplies');
+      for (const reward of rewards.filter((item) => item.art.type !== 'landmark')) {
+        expect(markup).toContain(
+          reward.art.type === 'supply'
+            ? 'cpi-supply-artwork'
+            : reward.art.type === 'style' && reward.art.id === 'torches'
+              ? 'keeper-torches-reward'
+              : reward.art.type === 'style'
+                ? 'cpi-reward-cosmetic-art'
+                : 'cpi-reward-season-art',
+        );
+      }
+    },
+  );
+
+  it('shows both earned cosmetics from the Echo mission, not two hints', () => {
+    const rewards = missionRewardItems(newMissionSnapshot('two-clean-chords'));
+    expect(rewards.map((item) => item.art)).toEqual([
+      { type: 'style', id: 'echo' },
+      { type: 'style', id: 'jelly-cushions' },
+    ]);
+  });
+  it('keeps the full Harbour bundle and landmark distinct', () => {
+    const rewards = missionRewardItems(newMissionSnapshot('bring-the-dawn-home'));
+    expect(rewards.map((item) => item.art)).toEqual([
+      { type: 'style', id: 'harbour-lanterns' },
+      { type: 'supply', offer: 'season-change-pack' },
+      { type: 'landmark', chapter: 'harbour' },
+    ]);
+    expect(rewards[1].label).toBe('+2 Season Changes');
+  });
+  it('renders a restoration rather than inventing an emblem for the Far Gate', () => {
+    const rewards = missionRewardItems(newMissionSnapshot('light-the-far-gate'));
+    expect(rewards).toHaveLength(1);
+    expect(rewards[0].art).toEqual({ type: 'landmark', chapter: 'gate' });
+    expect(rewards[0].label).not.toMatch(/emblem/i);
+  });
+  it('presents only the portal on a replay without repeating the reward', () => {
+    const markup = renderToStaticMarkup(
+      createElement(CampaignClearCelebration, {
+        mission: newMissionSnapshot('first-steps'),
+        world: 'obsidian',
+        portalOnly: true,
+      }),
+    );
+    expect(markup).not.toContain('cpi-film-object');
+    expect(markup).not.toContain('cpi-film-collected');
+    expect(markup).toContain('cpi-film-portal');
+  });
+});
+
+describe('Campaign completion reward integration', () => {
+  it.each(CAMPAIGN_MISSIONS)(
+    '$id saves the real grant before showing its first-clear result and cannot pay twice',
+    (definition) => {
+      const mission = newMissionSnapshot(definition.id);
+      const { progress, state } = demonstrateClear(mission);
+      const firstClear = !progress.cleared.includes(mission.id);
+      const granted = grantCampaignClear(progress, mission, state);
+      let save = '';
+      writeCampaignSave(
+        {
+          setItem: (_, value) => {
+            save = value;
+          },
+        },
+        granted,
+        null,
+      );
+      const restored = readCampaignSave({ getItem: () => save });
+      expect(restored.checkpoint).toBeNull();
+      expect(restored.progress.cleared).toContain(mission.id);
+      for (const [balance, amount] of [
+        ['reserveSp', mission.grant.sp],
+        ['reserveHints', mission.grant.hints],
+        ['continues', mission.grant.continues],
+        ['shields', mission.grant.shields],
+        ['seasonChanges', mission.grant.seasonChanges],
+      ] as const) {
+        expect(restored.progress[balance]).toBe(progress[balance] + (amount ?? 0));
+        expect(grantCampaignClear(restored.progress, mission, state)[balance]).toBe(
+          restored.progress[balance],
+        );
+      }
+      for (const reward of missionRewardItems(mission)) {
+        if (reward.art.type === 'style') {
+          const id = reward.art.id;
+          const slot = STYLES[id].slot;
+          expect(equipBridgeDesign(restored.progress, { [slot]: id }).style[slot]).toBe(id);
+        }
+        if (reward.art.type === 'season')
+          expect(unlockedSeasons(restored.progress)).toContain(reward.art.season);
+      }
+      vi.stubGlobal('window', { matchMedia: () => ({ matches: false }) });
+      try {
+        const markup = renderToStaticMarkup(
+          createElement(CampaignMissionResult, {
+            mission,
+            cleared: true,
+            goalReached: true,
+            firstClear,
+            failureReason: null,
+            stability: state.sp,
+            mastery: false,
+            world: 'obsidian',
+            reducedMotion: false,
+            onContinue: () => {},
+            onRetry: () => {},
+          }),
+        );
+        expect(markup).toContain('cpi-clear-film');
+        expect(markup).toContain('cpi-film-object');
+        expect(markup).toContain('Reward earned:');
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    },
+  );
+
+  it.each(THEME_IDS)(
+    'renders all thirty clear celebrations with the selected %s character',
+    (world) => {
+      for (const definition of CAMPAIGN_MISSIONS) {
+        const markup = renderToStaticMarkup(
+          createElement(CampaignClearCelebration, {
+            mission: newMissionSnapshot(definition.id),
+            world,
+          }),
+        );
+        expect(markup).toContain('data-world="' + world + '"');
+        expect(markup).toContain(
+          world === 'obsidian' ? 'black-metal-traveller-v1.png' : WORLD_ASSETS[world].companion,
+        );
+      }
+      if (world !== 'obsidian')
+        expect(
+          existsSync(new URL('../public/' + WORLD_ASSETS[world].companion, import.meta.url)),
+        ).toBe(true);
+    },
+  );
+
+  it.each(THEME_IDS)(
+    'preserves saved equipped appearances for %s using the real gear sheets',
+    (world) => {
+      for (const gear of GEAR_IDS) {
+        const mission = { ...newMissionSnapshot('first-steps'), gear };
+        const asset = equippedCompanionAsset(world, gear);
+        expect(existsSync(new URL('../public/' + asset, import.meta.url))).toBe(true);
+        const markup = renderToStaticMarkup(
+          createElement(CampaignClearCelebration, { mission, world }),
+        );
+        expect(markup).toContain(asset);
+        expect(markup).toContain('data-gear="' + gear + '"');
+        expect(markup).toContain('is-happy');
+      }
+    },
+  );
+
+  it('opens the real result directly for reduced motion and does not celebrate failed goals', () => {
+    const common = {
+      mission: newMissionSnapshot('first-steps'),
+      goalReached: true,
+      failureReason: null,
+      stability: 300,
+      mastery: false,
+      world: 'jelly' as const,
+      onContinue: () => {},
+      onRetry: () => {},
+    };
+    const reduced = renderToStaticMarkup(
+      createElement(CampaignMissionResult, {
+        ...common,
+        cleared: true,
+        firstClear: true,
+        reducedMotion: true,
+      }),
+    );
+    expect(reduced).not.toContain('cpi-clear-film');
+    expect(reduced).toContain('Reward unsealed');
+    const failed = renderToStaticMarkup(
+      createElement(CampaignMissionResult, {
+        ...common,
+        cleared: false,
+        firstClear: false,
+        reducedMotion: false,
+      }),
+    );
+    expect(failed).not.toContain('cpi-clear-film');
+    expect(failed).not.toContain('Reward unsealed');
+    expect(failed).toContain('Retry free');
   });
 });

@@ -57,6 +57,12 @@ export const journeyRuleset = (
   (safeHints ? '-safe-hints' : '') +
   (missionKit ? '-mission-kit' : '');
 const SEASON_ORDER = ['spring', 'summer', 'autumn', 'winter'] as const satisfies readonly Season[];
+const SEASON_UNLOCK_MISSIONS: Record<Season, CampaignMissionId> = {
+  spring: 'rain-on-glass',
+  summer: 'sun-on-the-cliffs',
+  winter: 'first-snow',
+  autumn: 'two-ways-to-the-gate',
+};
 export type CampaignResource = 'sp' | 'hint' | 'shield' | 'continue';
 export type CampaignApproach = 'main' | 'ridge';
 export const EXTRA_SUPPLY_OFFERS = {
@@ -526,16 +532,14 @@ export function nextCampaignMission(progress: CampaignProgress): CampaignMission
   return CAMPAIGN_MISSIONS.find((mission) => !progress.cleared.includes(mission.id)) ?? null;
 }
 export function unlockedSeasons(progress: Pick<CampaignProgress, 'cleared' | 'offers'>): Season[] {
-  const unlocks: Record<Season, CampaignMissionId> = {
-    spring: 'rain-on-glass',
-    summer: 'sun-on-the-cliffs',
-    winter: 'first-snow',
-    autumn: 'two-ways-to-the-gate',
-  };
   return SEASON_ORDER.filter(
     (season) =>
-      progress.offers.includes('all-seasons') || progress.cleared.includes(unlocks[season]),
+      progress.offers.includes('all-seasons') ||
+      progress.cleared.includes(SEASON_UNLOCK_MISSIONS[season]),
   );
+}
+export function seasonUnlockedByMission(id: CampaignMissionId): Season | undefined {
+  return SEASON_ORDER.find((season) => SEASON_UNLOCK_MISSIONS[season] === id);
 }
 export function selectedInfinitySeason(progress: CampaignProgress): Season | 'plain' {
   const unlocked = unlockedSeasons(progress);
