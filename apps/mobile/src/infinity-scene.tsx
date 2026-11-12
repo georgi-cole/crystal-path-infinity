@@ -1,6 +1,7 @@
 import { nextPracticeRuleset } from './balance-tuning';
 import {
   CAMPAIGN_ENABLED,
+  CAMPAIGN_RELEASE_BUILD,
   PLAYER_PREVIEW_ENABLED,
   QA_TOOLS_ENABLED,
   practiceStorage,
@@ -380,11 +381,13 @@ export function InfinitySceneView({
     ? t('vault.trial')
     : state.storeTest?.assisted
       ? t('vault.assisted')
-      : experiment
-        ? locale === 'bg'
-          ? 'Тест'
-          : 'Playtest'
-        : t('vault.classic');
+      : CAMPAIGN_RELEASE_BUILD
+        ? 'Infinity'
+        : experiment
+          ? locale === 'bg'
+            ? 'Тест'
+            : 'Playtest'
+          : t('vault.classic');
   const notice =
     cinematic?.phase === 'impact'
       ? t(cinematic.feedback?.kind === 'wrong' ? 'game.impactWrong' : 'game.impactSafe')
