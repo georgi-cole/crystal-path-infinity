@@ -63,6 +63,38 @@ function fixture(overrides: Record<string, unknown> = {}) {
 }
 
 describe('staging native provider proof', () => {
+  it('records only provider phase and HTTP status when a provider rejects an exchange', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const { service, fetcher } = fixture();
+      fetcher.mockResolvedValueOnce(
+        Response.json(
+          { error: 'invalid_client', error_description: 'private-provider-response' },
+          { status: 400 },
+        ),
+      );
+      await expect(
+        service.verify(
+          'google',
+          { code: 'private-authorization-code', verifier: 'v'.repeat(43) },
+          nonce,
+        ),
+      ).rejects.toThrow('Provider unavailable');
+      expect(log.mock.calls).toEqual([
+        [
+          JSON.stringify({
+            event: 'identity_provider_http_failure',
+            provider: 'google',
+            stage: 'token',
+            status: 400,
+            oauthError: 'invalid_client',
+          }),
+        ],
+      ]);
+    } finally {
+      log.mockRestore();
+    }
+  });
   it('uses distinct web audiences, the fixed redirect and a server-only Google secret', async () => {
     const webApple = 'com.georgicole.crystalpath.infinity.web';
     const redirectUri = 'https://crystalpath-api.kolequant.xyz/cpi/identity/web-callback';

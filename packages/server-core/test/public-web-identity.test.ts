@@ -229,10 +229,13 @@ describe('public browser provider admission', () => {
       const callback = await mobile.callback(
         new Request(callbackUrl + '?state=' + begin.state + '&code=' + code),
       );
-      const html = await callback.text();
-      expect(html).toContain('com.georgicole.crystalpath.infinity:/signin?state=' + begin.state);
-      expect(html).not.toContain(code);
-      expect(html).not.toContain(begin.flowToken);
+      expect(callback.status).toBe(303);
+      expect(callback.headers.get('location')).toBe(
+        'com.georgicole.crystalpath.infinity:/signin?state=' + begin.state,
+      );
+      expect(callback.headers.get('location')).not.toContain(code);
+      expect(callback.headers.get('location')).not.toContain(begin.flowToken);
+      expect(await callback.text()).toBe('');
       expect(callback.headers.get('cache-control')).toBe('no-store');
       await expect(
         mobile.callback(new Request(callbackUrl + '?state=' + begin.state + '&code=replaced')),
@@ -314,7 +317,7 @@ describe('public browser provider admission', () => {
         body: new URLSearchParams({ state: begin.state, error: 'access_denied' }),
       }),
     );
-    expect(callback.status).toBe(200);
+    expect(callback.status).toBe(303);
     expect(
       await mobile.complete(
         { flowToken: begin.flowToken, eligibilityPermit: permit.permit },

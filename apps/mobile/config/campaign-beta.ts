@@ -8,6 +8,7 @@ export function assertOfflineCampaignBeta(values: Record<string, string | undefi
     'VITE_REWARDED_ADS_ENABLED',
     'VITE_GUEST_REWARDED_ADS_TEST',
     'VITE_GUEST_REWARDED_ADS_LIVE',
+    'VITE_CAMPAIGN_INTERSTITIALS_ENABLED',
     'VITE_IOS_PROVIDER_SIGN_IN',
     'VITE_NATIVE_PROVIDER_SIGN_IN',
   ]) {
