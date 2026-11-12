@@ -76,6 +76,47 @@ function fixture(pending = false) {
   };
 }
 describe('real purchase delivery and recovery ownership', () => {
+  it('moves a verified review grant and its offline transfer into a separate inventory', async () => {
+    const f = fixture();
+    const inventoryToken = 'ba000000-0000-4000-8000-000000000002';
+    vi.mocked(f.gateway.wallet).mockResolvedValue({ ...initial, revision: 10 });
+    const review = { ...initial, inventoryToken, reviewWallet: true, revision: 1, credits: 3 };
+    vi.mocked(f.gateway.verify).mockResolvedValue({
+      status: 'granted',
+      transactionId: proof.transactionId,
+      consumable: true,
+      wallet: review,
+    });
+    await f.flow.load();
+    await f.flow.buy(product.key);
+    expect(f.flow.snapshot().phase).toBe('ready');
+    expect(f.flow.snapshot().wallet).toEqual(review);
+    expect(f.native.purchase).toHaveBeenCalledWith(product, token);
+    const allocation = {
+      operationId: 'bb000000-0000-4000-8000-000000000001',
+      sp: 0,
+      hints: 0,
+      credits: 2,
+      shields: 0,
+      seasonChanges: 0,
+    };
+    Object.assign(f.gateway, {
+      offlineSupplies: {
+        pending: vi.fn(() => Promise.resolve({ allocations: [allocation], wallet: review })),
+        allocate: vi.fn(() => Promise.reject(new Error('No new transfer expected'))),
+        acknowledge: vi.fn(async () => {}),
+      },
+    });
+    const receive = vi.fn(),
+      acknowledged = vi.fn();
+    await f.flow.transferOfflineSupplies({
+      capacity: () => ({ sp: 0, hints: 0, credits: 0, shields: 0, seasonChanges: 0 }),
+      receive,
+      acknowledged,
+    });
+    expect(receive).toHaveBeenCalledWith(allocation, inventoryToken);
+    expect(acknowledged).toHaveBeenCalledWith(allocation.operationId, inventoryToken);
+  });
   it('does not deliver an old account transfer after the account changes during recovery', async () => {
     const f = fixture();
     await f.flow.load();

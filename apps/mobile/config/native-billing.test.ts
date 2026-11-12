@@ -26,6 +26,7 @@ function fixture(platform: 'android' | 'ios') {
     finishTransaction: vi.fn(() => Promise.resolve()),
     acknowledgePurchase: vi.fn(() => Promise.resolve()),
     consumePurchase: vi.fn(() => Promise.resolve()),
+    getAppTransaction: vi.fn(() => Promise.resolve({ appTransaction: { environment: 'Sandbox' } })),
   };
   const adapter = createNativeBillingAdapter({
     platform,
@@ -35,6 +36,20 @@ function fixture(platform: 'android' | 'ios') {
   return { sdk, adapter };
 }
 describe('platform checkout adapter', () => {
+  it('uses the native iOS app environment only as an inventory hint and tolerates unavailable hints', async () => {
+    const f = fixture('ios');
+    expect(await f.adapter.reviewEnvironment?.()).toBe(true);
+    f.sdk.getAppTransaction.mockResolvedValue({ appTransaction: { environment: 'Production' } });
+    expect(await f.adapter.reviewEnvironment?.()).toBe(false);
+    f.sdk.getAppTransaction.mockResolvedValue({ appTransaction: { environment: 'Xcode' } });
+    expect(await f.adapter.reviewEnvironment?.()).toBeUndefined();
+    f.sdk.getAppTransaction.mockRejectedValue(new Error('Unavailable'));
+    expect(await f.adapter.reviewEnvironment?.()).toBeUndefined();
+    expect(f.sdk.purchaseProduct).not.toHaveBeenCalled();
+    const android = fixture('android');
+    expect(await android.adapter.reviewEnvironment?.()).toBeUndefined();
+    expect(android.sdk.getAppTransaction).not.toHaveBeenCalled();
+  });
   it('restores a server-acknowledged world without acknowledging twice, while still consuming resources', async () => {
     const f = fixture('android'),
       acknowledged = { ...transaction, isAcknowledged: true };

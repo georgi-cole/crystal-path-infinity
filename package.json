@@ -49,6 +49,7 @@
     "typescript": "5.9.3",
     "typescript-eslint": "8.72.1",
     "vite": "8.0.16",
-    "vitest": "4.1.2"
+    "vitest": "4.1.2",
+    "wrangler": "4.161.0"
   }
 }

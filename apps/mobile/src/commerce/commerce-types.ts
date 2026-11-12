@@ -18,6 +18,8 @@ export interface PurchaseProof {
   readonly signedTransaction?: string;
 }
 export interface CommerceWallet {
+  readonly inventoryToken?: string;
+  readonly reviewWallet?: boolean;
   readonly revision: number;
   /** Random billing alias issued by our server, never the Auth user ID. */
   readonly accountToken: string;
@@ -31,6 +33,8 @@ export interface CommerceWallet {
   readonly equipped: ThemeId;
 }
 export interface NativeBillingAdapter {
+  /** Presentation hint only; the server independently verifies every receipt. */
+  reviewEnvironment?(this: void): Promise<boolean | undefined>;
   readonly available: boolean;
   readonly platform: BillingPlatform;
   prices(this: void, products: readonly LiveProduct[]): Promise<readonly PricedProduct[]>;
@@ -89,4 +93,8 @@ export class CommerceUnavailable extends Error {
     super('Purchase service unavailable');
     this.name = 'CommerceUnavailable';
   }
+}
+
+export function commerceInventoryToken(wallet: CommerceWallet): string {
+  return wallet.inventoryToken ?? wallet.accountToken;
 }

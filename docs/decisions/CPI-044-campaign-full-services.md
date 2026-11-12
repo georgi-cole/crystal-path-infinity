@@ -4,6 +4,10 @@
 
 Initial checkpoint · 11 November 2026: implementation in progress on `codex/campaign-full-services`; not accepted, merged or distributed. Existing Android57 and iPhone55 are offline Campaign0.7.4 builds and retain free simulated claims. Registered store entries alone do not implement checkout. Later dated sections below record the subsequent staging deployment, reported sandbox purchase/restore acceptance and test distribution.
 
+### Production preparation and sign-in acceptance · 12 November 2026
+
+After updating to69, the owner accepted both Google and Apple sign-in. The detailed earlier failure was from62 and is historical. Production has received the existing Adventure/offline-supply migrations and current merged runtime, with only synthetic cancellation handoffs validated there; purchase/reward flags remain off. This branch adds a separate authenticated review wallet and local inventory for fully provider-verified Sandbox receipts during public-app review. Primary billing account binding and old staging contracts remain compatible; official spending still sees only the primary wallet. Refunds, exports, offline transfer replay and account switching preserve the inventory/environment boundary. [Current implementation, validation and remaining gates](../operations/PRODUCTION_COMMERCE_LAUNCH.md). No public submission or live purchase is claimed.
+
 ### Public-release decision and current integration · 11 November 2026
 
 Owner requested both testing and public distribution, then explicitly chose **finish purchases before public release**, rather than hiding the shop. Public submission stays gated on actual provider checkout, receipt delivery, restoration and resource-use acceptance. Signing an offline beta is not completion of this requirement.

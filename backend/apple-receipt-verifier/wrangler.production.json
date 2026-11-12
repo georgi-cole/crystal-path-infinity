@@ -1,0 +1,13 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "crystal-path-apple-verifier",
+  "account_id": "9274d7feb04a88cdd6f9d40d8ca197af",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-11-12",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": false,
+  "alias": { "node-fetch": "./apple-ocsp-fetch.mjs" },
+  "vars": { "CPI_APPLE_VERIFIER_ENVIRONMENTS": "production-and-review" },
+  "observability": { "enabled": true, "traces": { "enabled": true } }
+}

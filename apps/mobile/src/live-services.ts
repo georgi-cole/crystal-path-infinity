@@ -108,7 +108,12 @@ export function createLiveServices(values: Readonly<Record<string, unknown>>): L
     : null;
   const nativeBilling = values.VITE_PURCHASES_ENABLED === 'true' ? nativeBillingAdapter() : null;
   const commerceGateway = nativeBilling
-    ? createCommerceGateway({ baseUrl: base, platform: nativeBilling.platform, session })
+    ? createCommerceGateway({
+        baseUrl: base,
+        platform: nativeBilling.platform,
+        session,
+        reviewWallet: CAMPAIGN_RELEASE_BUILD ? nativeBilling.reviewEnvironment : undefined,
+      })
     : null;
   return {
     account: {

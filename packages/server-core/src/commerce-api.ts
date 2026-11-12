@@ -89,6 +89,12 @@ export function createCommerceHandler(options: {
       if (!input || typeof input !== 'object' || Array.isArray(input))
         return reply({ code: 'invalid_request' }, 400);
       const value = input as Record<string, unknown>;
+      if (
+        value.reviewWallet !== undefined &&
+        (!options.service.reviewWalletsEnabled || typeof value.reviewWallet !== 'boolean')
+      )
+        return reply({ code: 'invalid_request' }, 400);
+      const reviewChoice = value.reviewWallet;
       const extra =
         route === 'begin'
           ? ['key']
@@ -106,7 +112,11 @@ export function createCommerceHandler(options: {
         (value.platform !== 'android' && value.platform !== 'ios') ||
         value.platform !== actor.platform ||
         Object.keys(value).some(
-          (key) => key !== 'schemaVersion' && key !== 'platform' && !extra.includes(key),
+          (key) =>
+            key !== 'schemaVersion' &&
+            key !== 'platform' &&
+            key !== 'reviewWallet' &&
+            !extra.includes(key),
         )
       )
         return reply({ code: 'invalid_request' }, 400);
@@ -124,31 +134,43 @@ export function createCommerceHandler(options: {
           products: options.service.catalog(actor.subject, value.platform),
         });
       if (route === 'wallet')
-        return reply({ schemaVersion: 1, wallet: await options.service.wallet(actor.subject) });
+        return reply({
+          schemaVersion: 1,
+          wallet: await options.service.wallet(actor.subject, reviewChoice),
+        });
       if (route === 'allocate' && typeof value.operationId === 'string')
         return reply({
           schemaVersion: 1,
-          ...(await options.service.allocate(actor.subject, value.operationId, value.amounts)),
+          ...(await options.service.allocate(
+            actor.subject,
+            value.operationId,
+            value.amounts,
+            reviewChoice,
+          )),
         });
       if (route === 'allocations')
         return reply({
           schemaVersion: 1,
-          ...(await options.service.pendingAllocations(actor.subject)),
+          ...(await options.service.pendingAllocations(actor.subject, reviewChoice)),
         });
       if (route === 'allocation-ack' && typeof value.operationId === 'string')
         return reply({
           schemaVersion: 1,
-          ...(await options.service.acknowledgeAllocation(actor.subject, value.operationId)),
+          ...(await options.service.acknowledgeAllocation(
+            actor.subject,
+            value.operationId,
+            reviewChoice,
+          )),
         });
       if (route === 'begin' && typeof value.key === 'string')
         return reply({
           schemaVersion: 1,
-          ...(await options.service.begin(actor.subject, value.platform, value.key)),
+          ...(await options.service.begin(actor.subject, value.platform, value.key, reviewChoice)),
         });
       if (route === 'equip' && typeof value.theme === 'string')
         return reply({
           schemaVersion: 1,
-          wallet: await options.service.equip(actor.subject, value.theme),
+          wallet: await options.service.equip(actor.subject, value.theme, reviewChoice),
         });
       if (route === 'verify') {
         const proof = parsePurchaseProof(value.proof);

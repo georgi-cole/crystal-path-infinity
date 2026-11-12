@@ -4,6 +4,7 @@ import { namespacePracticeStorage } from './campaign-test';
 import { App } from './App';
 import { createLiveServices } from './live-services';
 import { CommerceContext, useCommerce } from './commerce/commerce-context';
+import { commerceInventoryToken } from './commerce/commerce-types';
 import { ThemeScope } from './store-provider';
 import { nativeGuestAdMobAdapter } from './rewards/native-admob';
 import type { GuestRewardedAd } from './rewards/native-admob';
@@ -50,7 +51,7 @@ function PlayerContent({
   }, [phase]);
   useEffect(() => {
     if (CAMPAIGN_COMMERCE_ENABLED && snapshot.wallet)
-      rememberOfflineOwner(snapshot.wallet.accountToken);
+      rememberOfflineOwner(commerceInventoryToken(snapshot.wallet));
   }, [snapshot.wallet]);
   useEffect(() => {
     if (CAMPAIGN_COMMERCE_ENABLED && snapshot.phase === 'idle' && flow) void flow.load();
@@ -59,7 +60,11 @@ function PlayerContent({
     !['connecting', 'signing_out', 'blocked', 'revocation_unconfirmed'].includes(phase) &&
     (!online || phase !== 'guest');
   const accountToken = CAMPAIGN_COMMERCE_ENABLED
-    ? (snapshot.wallet?.accountToken ?? (allowCached ? (cachedToken ?? undefined) : undefined))
+    ? snapshot.wallet
+      ? commerceInventoryToken(snapshot.wallet)
+      : allowCached
+        ? (cachedToken ?? undefined)
+        : undefined
     : undefined;
   const guestStorage = useMemo(() => practiceStorage(), []);
   const storage = useMemo(

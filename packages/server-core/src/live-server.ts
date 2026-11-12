@@ -103,6 +103,8 @@ export interface LiveServerOptions {
   readonly maintenance: ReturnType<typeof createPurchaseMaintenance>;
   readonly googleJobs?: ReturnType<typeof createGooglePurchaseJobs>;
   readonly appleJobs?: ReturnType<typeof createApplePurchaseJobs>;
+  readonly reviewGoogleJobs?: ReturnType<typeof createGooglePurchaseJobs>;
+  readonly reviewAppleJobs?: ReturnType<typeof createApplePurchaseJobs>;
   readonly webIdentity?: { googleClientId: string; appleClientId: string };
   readonly mobileIdentity?: ReturnType<typeof createMobileIdentity>;
 }
@@ -377,6 +379,22 @@ export function createLiveServer(options: LiveServerOptions) {
           options.appleJobs!.historyPage,
         ),
       );
+    if (options.reviewGoogleJobs)
+      await run('googleReviewRefunds', () =>
+        options.maintenance.synchronize(
+          'google.review',
+          { start, end, page: null },
+          options.reviewGoogleJobs!.voidedPage,
+        ),
+      );
+    if (options.reviewAppleJobs)
+      await run('appleReviewRefunds', () =>
+        options.maintenance.synchronize(
+          'apple.review',
+          { start, end, page: null },
+          options.reviewAppleJobs!.historyPage,
+        ),
+      );
     await run('deletions', async () => {
       const rows = await sqlTransaction(
         options.database,
@@ -431,7 +449,13 @@ export function createLiveServer(options: LiveServerOptions) {
         const body = await privateJson(request, 73_728);
         if (!isObject(body) || typeof body.signedPayload !== 'string')
           return reply({ code: 'invalid_request' }, 400);
-        const event = await options.appleJobs.notification(body.signedPayload);
+        let event;
+        try {
+          event = await options.appleJobs.notification(body.signedPayload);
+        } catch (error) {
+          if (!options.reviewAppleJobs) throw error;
+          event = await options.reviewAppleJobs.notification(body.signedPayload);
+        }
         if (event) await options.maintenance.refund(event, event.reverse === true);
         return reply({ status: 'received' });
       }

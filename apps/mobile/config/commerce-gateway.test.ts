@@ -28,6 +28,39 @@ const session: Pick<
 };
 const scope = {};
 describe('commerce wire contract', () => {
+  it('validates separate inventory identity and never treats a review hint as payment', async () => {
+    const inventoryToken = 'ba000000-0000-4000-8000-000000000002';
+    const review = { ...wallet, inventoryToken, reviewWallet: true };
+    expect(parseCommerceWallet(review)).toEqual(review);
+    for (const invalid of [
+      { ...review, inventoryToken: 1 },
+      { ...review, reviewWallet: 'true' },
+      { ...review, inventoryToken: wallet.accountToken },
+      { ...review, reviewWallet: false },
+    ])
+      expect(parseCommerceWallet(invalid)).toBeNull();
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(Response.json({ schemaVersion: 1, wallet: review }))
+      .mockResolvedValueOnce(
+        Response.json({ schemaVersion: 1, accountToken: wallet.accountToken, sku: 'real.credits' }),
+      );
+    const gateway = createCommerceGateway({
+      baseUrl: 'https://api.example.com/cpi',
+      platform: 'ios',
+      session,
+      fetcher,
+      reviewWallet: () => Promise.resolve(true),
+    })!;
+    expect(await gateway.wallet(new AbortController().signal)).toEqual(review);
+    await gateway.begin('credits.3', 'ios', new AbortController().signal);
+    expect(
+      fetcher.mock.calls.map(([, init]) => JSON.parse(init!.body as string) as unknown),
+    ).toEqual([
+      { schemaVersion: 1, platform: 'ios', reviewWallet: true },
+      { schemaVersion: 1, platform: 'ios', reviewWallet: true, key: 'credits.3' },
+    ]);
+  });
   it('recognizes registered adventure purchases and rejects incorrect consumption types or invented grants', () => {
     expect(
       parseLiveProducts([
