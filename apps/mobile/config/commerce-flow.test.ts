@@ -77,6 +77,50 @@ function fixture(pending = false) {
   };
 }
 describe('real purchase delivery and recovery ownership', () => {
+  it('keeps the shop ready after a successful purchase when optional device inventory sync fails', async () => {
+    const f = fixture();
+    await f.flow.load();
+    await f.flow.buy(product.key);
+    const offline = {
+      pending: vi.fn(() => Promise.reject(new Error('Device sync unavailable'))),
+      allocate: vi.fn(() => Promise.reject(new Error('unused'))),
+      acknowledge: vi.fn(() => Promise.resolve()),
+    };
+    Object.assign(f.gateway, { offlineSupplies: offline });
+    await f.flow.transferOfflineSupplies({
+      capacity: () => ({ sp: 0, hints: 0, credits: 0, shields: 0, seasonChanges: 0 }),
+      receive: () => {},
+      acknowledged: () => {},
+    });
+    expect(f.flow.snapshot()).toMatchObject({
+      phase: 'ready',
+      products: [product],
+      supplySyncIncomplete: true,
+      wallet: { credits: 3 },
+    });
+    await f.flow.buy(product.key);
+    expect(f.native.purchase).toHaveBeenCalledTimes(2);
+    expect(f.flow.snapshot().phase).toBe('ready');
+  });
+  it('ignores an old account receipt when discovering prices and never transfers its ownership', async () => {
+    const f = fixture();
+    const old = {
+      ...proof,
+      transactionId: 'old-build-receipt',
+      accountToken: 'ba000000-0000-4000-8000-000000000099',
+    };
+    vi.mocked(f.native.recover).mockResolvedValueOnce([old]);
+    await f.flow.load();
+    expect(f.flow.snapshot()).toMatchObject({
+      phase: 'ready',
+      products: [product],
+      restoreIncomplete: true,
+    });
+    expect(f.gateway.verify).not.toHaveBeenCalled();
+    expect(f.native.finish).not.toHaveBeenCalled();
+    await f.flow.buy(product.key);
+    expect(f.native.purchase).toHaveBeenCalledOnce();
+  });
   it('refreshes an expired access token before a second checkout or restoring the shop', async () => {
     const f = fixture();
     let now = 1_800_000_000_000;
@@ -153,6 +197,8 @@ describe('real purchase delivery and recovery ownership', () => {
     await f.flow.buy(product.key);
     expect(f.native.purchase).toHaveBeenCalledOnce();
     expect(f.flow.snapshot().wallet?.credits).toBe(3);
+    await f.flow.recover();
+    expect(f.flow.snapshot().restoreIncomplete).toBe(false);
   });
   it('does not let one rejected old receipt block a valid restore or the next purchase', async () => {
     const f = fixture();
@@ -283,7 +329,7 @@ describe('real purchase delivery and recovery ownership', () => {
       },
     };
     await f.flow.transferOfflineSupplies(receiver);
-    expect(f.flow.snapshot().phase).toBe('error');
+    expect(f.flow.snapshot()).toMatchObject({ phase: 'ready', supplySyncIncomplete: true });
     expect(progress.reserveHints).toBe(10);
     await f.flow.transferOfflineSupplies(receiver);
     expect(f.flow.snapshot().phase).toBe('ready');
@@ -316,7 +362,7 @@ describe('real purchase delivery and recovery ownership', () => {
       acknowledged: () => {},
     });
     expect(offline.acknowledge).not.toHaveBeenCalled();
-    expect(f.flow.snapshot().phase).toBe('error');
+    expect(f.flow.snapshot()).toMatchObject({ phase: 'ready', supplySyncIncomplete: true });
   });
   it('restores a verified purchase even when a platform price is unavailable', async () => {
     const f = fixture(true);

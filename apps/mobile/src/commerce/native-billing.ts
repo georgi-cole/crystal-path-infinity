@@ -32,6 +32,21 @@ function bounded(value: unknown, max: number): value is string {
   );
 }
 
+/** Bound non-interactive bridge calls so a missing native reply cannot lock the shop forever. */
+async function nativeResult<T>(result: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      result,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new CommerceUnavailable()), 10000);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** Receipts remain native and unfinished until the server durably grants the purchase. */
 export function createNativeBillingAdapter(options: {
   platform: BillingPlatform;
@@ -43,12 +58,13 @@ export function createNativeBillingAdapter(options: {
   const acknowledged = new WeakSet<PurchaseProof>();
   async function ready() {
     if (!options.available) throw new CommerceUnavailable();
-    configuring ??= sdk.configure({ autoFinishTransactions: false }).catch(() => {
+    configuring ??= nativeResult(sdk.configure({ autoFinishTransactions: false })).catch(() => {
       configuring = null;
       throw new CommerceUnavailable();
     });
     await configuring;
-    if (!(await sdk.isBillingSupported()).isBillingSupported) throw new CommerceUnavailable();
+    if (!(await nativeResult(sdk.isBillingSupported())).isBillingSupported)
+      throw new CommerceUnavailable();
   }
   function proof(transaction: Transaction, accountToken: string): PurchaseProof | null {
     if (
@@ -109,10 +125,12 @@ export function createNativeBillingAdapter(options: {
       if (requested.size !== products.length || requested.size > 50)
         throw new CommerceUnavailable();
       if (!products.length) return [];
-      const response = await sdk.getProducts({
-        productIdentifiers: [...requested.keys()],
-        productType: PURCHASE_TYPE.INAPP,
-      });
+      const response = await nativeResult(
+        sdk.getProducts({
+          productIdentifiers: [...requested.keys()],
+          productType: PURCHASE_TYPE.INAPP,
+        }),
+      );
       return response.products.flatMap((product: Product) => {
         const expected = requested.get(product.identifier);
         return expected && bounded(product.priceString, 120)
@@ -155,12 +173,14 @@ export function createNativeBillingAdapter(options: {
     async recover(accountToken) {
       if (!alias.test(accountToken)) throw new CommerceUnavailable();
       await ready();
-      const unfinished = await sdk.getUnfinishedTransactions();
-      const owned = await sdk.getPurchases({
-        productType: PURCHASE_TYPE.INAPP,
-        appAccountToken: options.platform === 'ios' ? accountToken.toUpperCase() : accountToken,
-        ...(options.platform === 'ios' ? { onlyCurrentEntitlements: true } : {}),
-      });
+      const unfinished = await nativeResult(sdk.getUnfinishedTransactions());
+      const owned = await nativeResult(
+        sdk.getPurchases({
+          productType: PURCHASE_TYPE.INAPP,
+          appAccountToken: options.platform === 'ios' ? accountToken.toUpperCase() : accountToken,
+          ...(options.platform === 'ios' ? { onlyCurrentEntitlements: true } : {}),
+        }),
+      );
       const unique = new Map<string, PurchaseProof>();
       for (const transaction of [...unfinished.transactions, ...owned.purchases]) {
         const receipt = proof(transaction, accountToken);
@@ -172,11 +192,12 @@ export function createNativeBillingAdapter(options: {
       if (receipt.platform !== options.platform) throw new CommerceUnavailable();
       await ready();
       if (options.platform === 'ios')
-        await sdk.finishTransaction({ transactionId: receipt.transactionId });
+        await nativeResult(sdk.finishTransaction({ transactionId: receipt.transactionId }));
       else if (!receipt.purchaseToken) throw new CommerceUnavailable();
-      else if (consumable) await sdk.consumePurchase({ purchaseToken: receipt.purchaseToken });
+      else if (consumable)
+        await nativeResult(sdk.consumePurchase({ purchaseToken: receipt.purchaseToken }));
       else if (!acknowledged.has(receipt))
-        await sdk.acknowledgePurchase({ purchaseToken: receipt.purchaseToken });
+        await nativeResult(sdk.acknowledgePurchase({ purchaseToken: receipt.purchaseToken }));
     },
   };
 }

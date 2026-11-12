@@ -5,6 +5,8 @@ import { crystalGuideBg } from './crystal-guide-messages';
 
 /** Bulgarian preview copy — reviewed by the product owner before public release. */
 export const bg = {
+  'commerce.supplySyncIncomplete':
+    'Някои предмети не можаха да бъдат синхронизирани с това устройство. Можете да пазарувате и да опитате отново чрез възстановяване на покупките.',
   'commerce.restoreIncomplete':
     'Някои предишни покупки не можаха да бъдат проверени. Можете да пазарувате и да опитате възстановяването отново.',
   'rewards.limit': 'Рекламните продължавания свършиха.',
