@@ -129,3 +129,23 @@ test('gateway rejects oversized bodies and missing peer metadata', async () => {
     503,
   );
 });
+
+test('mobile provider callback survives ingress space encoding but cannot change fields or SSV', async (t) => {
+  let route = '/identity/mobile/callback';
+  t.mock.method(globalThis, 'fetch', async (url, init) => {
+    const upstream = new Request(url, init);
+    const normalized = new Request(upstream.url.replaceAll('%20', '+'), upstream);
+    const context = await verifyGatewayRequest(normalized, env.CPI_GATEWAY_KEY);
+    assert.equal(context?.country ?? null, route === '/rewards/ssv' ? null : 'BG');
+    const tampered = new Request(normalized.url.replace('openid', 'changed'), normalized);
+    assert.equal(await verifyGatewayRequest(tampered, env.CPI_GATEWAY_KEY), null);
+    return new Response('ok');
+  });
+  for (route of ['/identity/mobile/callback', '/rewards/ssv']) {
+    const request = new Request('https://api.example/cpi' + route + '?scope=openid%20email', {
+      headers: { 'cf-connecting-ip': '192.0.2.3' },
+    });
+    Object.defineProperty(request, 'cf', { value: { country: 'BG' } });
+    assert.equal((await worker.fetch(request, env)).status, 200);
+  }
+});

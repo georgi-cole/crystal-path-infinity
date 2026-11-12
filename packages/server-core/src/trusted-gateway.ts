@@ -44,11 +44,17 @@ export async function verifyGatewayRequest(
   }
   // Mount-independent suffix is signed, so proxy and edge use identical bytes.
   const route = request.headers.get('x-cpi-route') ?? '';
-  if (
-    !/^\/[a-z/]+(?:\?[^\r\n]*)?$/.test(route) ||
-    !url.pathname.endsWith(route.split('?')[0]) ||
-    url.search !== (route.includes('?') ? route.slice(route.indexOf('?')) : '')
-  )
+  const routePath = route.split('?')[0];
+  const routeSearch = route.includes('?') ? route.slice(route.indexOf('?')) : '';
+  // Supabase's ingress can serialize provider query spaces as '+' instead of
+  // '%20'. Mobile identity consumes decoded fields, so permit equivalent ordered
+  // fields there while still authenticating the ORIGINAL Worker-signed bytes.
+  // SSV and all other routes retain byte-for-byte query matching.
+  const sameQuery =
+    url.search === routeSearch ||
+    (routePath === '/identity/mobile/callback' &&
+      new URLSearchParams(url.search).toString() === new URLSearchParams(routeSearch).toString());
+  if (!/^\/[a-z/]+(?:\?[^\r\n]*)?$/.test(route) || !url.pathname.endsWith(routePath) || !sameQuery)
     return null;
   const canonical = [request.method, route, timestamp, country, peer, bodyHash.digest('hex')].join(
     '\n',
