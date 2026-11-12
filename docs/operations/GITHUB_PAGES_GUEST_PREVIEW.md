@@ -1,5 +1,42 @@
 # GitHub Pages guest game preview
 
+## Current publication contract - 13 November 2026 (CPI-048)
+
+This dated update supersedes the classic guest-only game description below; the
+older rollout notes remain historical. The owner authorized publishing the current
+Campaign and Infinity game at the same public URL.
+
+The Pages script builds Vite mode `campaign-web`, with the existing project asset
+base. It enables the current 30-mission Campaign, Infinity, rewards/cinematics,
+Discoveries, weather, character artwork and store previews. It does not publish QA
+controls or free test claims. `campaign-web-info.json` records this contract, and
+`deployment-info.json` records the deployed commit and account configuration.
+
+Paid offers show mobile-app reference prices and disabled **Available in the app**
+actions. There is no browser billing provider, restore operation, native entitlement
+import, mock checkout, rewarded ad, interstitial or synthetic ad reward. Earned
+Campaign items can still be equipped. Native checkout and advertising are unchanged.
+
+The existing main-only production account opt-in and exact-origin gateway check
+remain in place, including the separate web-provider opt-in. Sign-in availability
+is still governed by the live account service. It does not synchronize this local
+Campaign progress or restore native entitlements. Browser saves use
+`cpi.campaign-web.v1:`; old classic and QA saves remain untouched. Clearing site data
+removes the local save. These are local results, not official ranked records.
+
+Configuration validation rejects native billing, ad inventory, ranked services,
+release metadata and test-service switches in this profile. The Pages output is
+checked for the public-browser metadata contract and absence of QA wallet/test
+controls. Only reviewed main publication uploads `dist-pages`; PRs validate only.
+
+Source acceptance: 1,513 application tests, 18 Pages policy/account tests, typecheck,
+lint, formatting and development/staging/production/Pages builds passed. Local
+project-base browser checks cover current Campaign navigation, mission start, hint,
+pause/save and resume after reload. Browser acceptance does not verify mobile
+purchases or native ads. Live commit/metadata and UI acceptance must follow merge.
+
+## Historical rollout notes
+
 Related release work: [CPI-038 / #38](https://github.com/georgi-cole/crystal-path-infinity/issues/38).
 
 The owner authorized a public browser preview for clicking through and testing

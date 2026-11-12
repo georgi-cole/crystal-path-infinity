@@ -2,6 +2,7 @@ import {
   CAMPAIGN_ENABLED,
   CAMPAIGN_TEST_BUILD,
   CAMPAIGN_COMMERCE_ENABLED,
+  CAMPAIGN_WEB_BUILD,
   PLAYER_PREVIEW_ENABLED,
   practiceStorage,
   QA_TOOLS_ENABLED,
@@ -875,7 +876,8 @@ export function App({
   const changeCampaignWorld = (world: ThemeId) => {
     const owned = commerceSnapshot.wallet?.owned ??
       campaignProgressRef.current.ownedWorlds ?? ['obsidian'];
-    if (CAMPAIGN_COMMERCE_ENABLED && !owned.includes(world)) {
+    if ((CAMPAIGN_COMMERCE_ENABLED || CAMPAIGN_WEB_BUILD) && !owned.includes(world)) {
+      if (CAMPAIGN_WEB_BUILD) return;
       if (!commerceSnapshot.wallet) {
         navigate('profile');
         return;
@@ -899,6 +901,7 @@ export function App({
       commitCampaignProgress({ ...current, clockFree: !current.clockFree });
   };
   const claimCampaignOffer = (offer: CampaignOffer) => {
+    if (CAMPAIGN_WEB_BUILD) return;
     if (!CAMPAIGN_TEST_BUILD) {
       if (!commerceSnapshot.wallet) {
         navigate('profile');
