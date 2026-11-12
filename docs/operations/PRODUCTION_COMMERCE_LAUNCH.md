@@ -1,6 +1,8 @@
 # Production commerce launch · 12 November 2026
 
-Status: Android62 available internally and queued for production review; Apple71 processed, submission still pending. Latest source and evidence follow; older dated checkpoints remain historical.
+Status: Android62 available internally and in production review; Apple71 processed, submission still pending. Latest source and evidence follow; older dated checkpoints remain historical.
+
+Subsequent confirmation on12 November: Google's quick checks completed. Publishing overview explicitly says **Your changes are now in review**, and the production row identifies **1.0.1 (62) · Campaign adventure**. The final review-status proof image is saved outside Git. This supersedes the queued/checking status below; it is not approval or public availability.
 
 ## Corrected production candidates and store submission · 12 November 2026
 
