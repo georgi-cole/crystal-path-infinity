@@ -1,4 +1,4 @@
-import { CommerceUnavailable } from './commerce-types';
+import { CommerceUnavailable, commerceInventoryToken } from './commerce-types';
 import type {
   CommerceGateway,
   CommerceWallet,
@@ -98,7 +98,8 @@ export class CommerceFlow {
     if (
       this.state.wallet &&
       (wallet.accountToken !== this.state.wallet.accountToken ||
-        wallet.revision < this.state.wallet.revision)
+        (commerceInventoryToken(wallet) === commerceInventoryToken(this.state.wallet) &&
+          wallet.revision < this.state.wallet.revision))
     )
       throw new CommerceUnavailable();
     this.update({ ...this.state, wallet });
@@ -143,13 +144,14 @@ export class CommerceFlow {
       if (!current()) return;
       this.accept(pending.wallet);
       const accountToken = pending.wallet.accountToken;
+      const inventoryToken = commerceInventoryToken(pending.wallet);
       const deliver = async (allocation: OfflineAllocation) => {
         if (!current()) return;
         // The receiver must persist both grant and receipt in one local write before ack.
-        receiver.receive(allocation, accountToken);
+        receiver.receive(allocation, inventoryToken);
         if (!current()) return;
         await gateway.acknowledge(allocation.operationId, signal);
-        if (current()) receiver.acknowledged(allocation.operationId, accountToken);
+        if (current()) receiver.acknowledged(allocation.operationId, inventoryToken);
       };
       for (const allocation of pending.allocations) {
         await deliver(allocation);
@@ -165,6 +167,8 @@ export class CommerceFlow {
         const reply = await gateway.allocate(operationId, amounts, signal);
         if (!current()) return;
         this.accept(reply.wallet, accountToken);
+        if (commerceInventoryToken(reply.wallet) !== inventoryToken)
+          throw new CommerceUnavailable();
         await deliver(reply.allocation);
       }
       if (current()) this.update({ ...this.state, phase: 'ready' });

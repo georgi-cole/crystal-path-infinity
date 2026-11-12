@@ -103,6 +103,8 @@ export interface LiveServerOptions {
   readonly maintenance: ReturnType<typeof createPurchaseMaintenance>;
   readonly googleJobs?: ReturnType<typeof createGooglePurchaseJobs>;
   readonly appleJobs?: ReturnType<typeof createApplePurchaseJobs>;
+  readonly reviewGoogleJobs?: ReturnType<typeof createGooglePurchaseJobs>;
+  readonly reviewAppleJobs?: ReturnType<typeof createApplePurchaseJobs>;
   readonly webIdentity?: { googleClientId: string; appleClientId: string };
   readonly mobileIdentity?: ReturnType<typeof createMobileIdentity>;
 }
@@ -226,12 +228,15 @@ export function createLiveServer(options: LiveServerOptions) {
     authenticate,
     allowOrigin,
     rateLimit,
-    checkoutReady: (platform) =>
+    checkoutReady: (platform, reviewWallet) =>
       sqlTransaction(options.database, async (connection) => {
         const result = await connection.query(
           'select 1 from cpi_private.provider_sync where name=$1 and caught_up_at>$2 and (last_failure_at is null or last_failure_at<last_success_at)',
           [
-            (platform === 'android' ? 'google.' : 'apple.') + options.environment,
+            (platform === 'android' ? 'google.' : 'apple.') +
+              (reviewWallet === true && options.commerce.reviewWalletsEnabled
+                ? 'review'
+                : options.environment),
             Date.now() - 2 * 3600_000,
           ],
         );
@@ -377,6 +382,22 @@ export function createLiveServer(options: LiveServerOptions) {
           options.appleJobs!.historyPage,
         ),
       );
+    if (options.reviewGoogleJobs)
+      await run('googleReviewRefunds', () =>
+        options.maintenance.synchronize(
+          'google.review',
+          { start, end, page: null },
+          options.reviewGoogleJobs!.voidedPage,
+        ),
+      );
+    if (options.reviewAppleJobs)
+      await run('appleReviewRefunds', () =>
+        options.maintenance.synchronize(
+          'apple.review',
+          { start, end, page: null },
+          options.reviewAppleJobs!.historyPage,
+        ),
+      );
     await run('deletions', async () => {
       const rows = await sqlTransaction(
         options.database,
@@ -431,7 +452,13 @@ export function createLiveServer(options: LiveServerOptions) {
         const body = await privateJson(request, 73_728);
         if (!isObject(body) || typeof body.signedPayload !== 'string')
           return reply({ code: 'invalid_request' }, 400);
-        const event = await options.appleJobs.notification(body.signedPayload);
+        let event;
+        try {
+          event = await options.appleJobs.notification(body.signedPayload);
+        } catch (error) {
+          if (!options.reviewAppleJobs) throw error;
+          event = await options.reviewAppleJobs.notification(body.signedPayload);
+        }
         if (event) await options.maintenance.refund(event, event.reverse === true);
         return reply({ status: 'received' });
       }

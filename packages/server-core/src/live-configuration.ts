@@ -161,6 +161,23 @@ export function readLiveConfiguration(env: (name: string) => string | undefined)
     throw new Error('Independent Apple Sandbox verifier key is required');
   const purchaseEnvironment =
     environment === 'production' ? ('production' as const) : ('sandbox' as const);
+  const reviewPurchasesEnabled = env('CPI_PURCHASE_REVIEW_ENABLED') === 'true';
+  if (
+    (env('CPI_PURCHASE_REVIEW_ENABLED') !== undefined &&
+      !['true', 'false'].includes(env('CPI_PURCHASE_REVIEW_ENABLED')!)) ||
+    (reviewPurchasesEnabled && (environment !== 'production' || !purchasesEnabled))
+  )
+    throw new Error('Review purchases require an explicit production commerce configuration');
+  const appleProductionVerifierKey =
+    environment === 'production' && purchasePlatforms.includes('ios')
+      ? require('CPI_APPLE_PRODUCTION_VERIFIER_KEY')
+      : undefined;
+  if (
+    appleProductionVerifierKey &&
+    (!/^[a-f0-9]{64}$/.test(appleProductionVerifierKey) ||
+      keys.includes(appleProductionVerifierKey))
+  )
+    throw new Error('Independent production Apple verifier key is required');
   const publicWebEntry =
     environment === 'production' &&
     projectRef === 'wtldjvzvpcfkwfacgsqj' &&
@@ -262,6 +279,8 @@ export function readLiveConfiguration(env: (name: string) => string | undefined)
     rewardsEnabled,
     purchaseEnvironment,
     appleSandboxVerifierKey,
+    appleProductionVerifierKey,
+    reviewPurchasesEnabled,
     databaseUrl: require('CPI_DATABASE_URL'),
     databaseCa: env('CPI_DATABASE_CA')?.replaceAll('\\n', '\n'),
     serviceKey: require('SUPABASE_SERVICE_ROLE_KEY'),

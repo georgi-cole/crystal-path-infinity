@@ -20,7 +20,8 @@ type PurchaseSdk = Pick<
   | 'finishTransaction'
   | 'acknowledgePurchase'
   | 'consumePurchase'
->;
+> &
+  Partial<Pick<typeof NativePurchases, 'getAppTransaction'>>;
 const alias = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function bounded(value: unknown, max: number): value is string {
   return (
@@ -82,6 +83,25 @@ export function createNativeBillingAdapter(options: {
   return {
     available: options.available,
     platform: options.platform,
+    async reviewEnvironment() {
+      if (!options.available || options.platform !== 'ios' || !sdk.getAppTransaction)
+        return undefined;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        const response = await Promise.race([
+          sdk.getAppTransaction(),
+          new Promise<undefined>((resolve) => {
+            timer = setTimeout(() => resolve(undefined), 5000);
+          }),
+        ]);
+        const environment = response?.appTransaction.environment;
+        return environment === 'Sandbox' ? true : environment === 'Production' ? false : undefined;
+      } catch {
+        return undefined;
+      } finally {
+        clearTimeout(timer);
+      }
+    },
     async prices(products) {
       await ready();
       const requested = new Map(products.map((product) => [product.sku, product]));

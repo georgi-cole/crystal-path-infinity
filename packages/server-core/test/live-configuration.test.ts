@@ -47,6 +47,40 @@ function config(overrides: Record<string, string> = {}) {
 }
 
 describe('live purchase configuration', () => {
+  it('requires explicit production review support and an independent hosted Apple verifier', () => {
+    expect(() =>
+      readLiveConfiguration((name) => config({ CPI_PURCHASE_REVIEW_ENABLED: 'true' })[name]),
+    ).toThrow('Review purchases require an explicit production commerce configuration');
+    const products = JSON.parse(androidManifest) as {
+      products: Record<string, unknown>[];
+      status: string;
+    };
+    const values = config({
+      CPI_ENVIRONMENT: 'production',
+      CPI_PROJECT_REF: 'c'.repeat(20),
+      SUPABASE_URL: 'https://' + 'c'.repeat(20) + '.supabase.co',
+      CPI_PURCHASE_REVIEW_ENABLED: 'true',
+      CPI_COMMERCE_PRODUCTS: JSON.stringify({
+        ...products,
+        products: [...products.products, { ...products.products[0], platform: 'ios' }],
+      }),
+      CPI_APPLE_ISSUER_ID: 'fixture-issuer',
+      CPI_APPLE_KEY_ID: 'fixture-key',
+      CPI_APPLE_PRIVATE_KEY: 'fixture-private-key',
+    });
+    expect(() => readLiveConfiguration((name) => values[name])).toThrow(
+      'CPI_APPLE_PRODUCTION_VERIFIER_KEY',
+    );
+    values.CPI_APPLE_PRODUCTION_VERIFIER_KEY = '1'.repeat(64);
+    expect(() => readLiveConfiguration((name) => values[name])).toThrow(
+      'Independent production Apple verifier key is required',
+    );
+    values.CPI_APPLE_PRODUCTION_VERIFIER_KEY = 'a'.repeat(64);
+    expect(readLiveConfiguration((name) => values[name])).toMatchObject({
+      reviewPurchasesEnabled: true,
+      purchaseEnvironment: 'production',
+    });
+  });
   it('isolates sandbox browser-provider credentials from the existing native iPhone and production identities', () => {
     const values = config({
       CPI_NATIVE_IDENTITY_ENABLED: 'true',

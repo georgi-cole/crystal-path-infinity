@@ -79,7 +79,7 @@ jobs:
           npm exec --yes --package=deno@2.9.6 -- deno task --config supabase/functions/cpi-api/deno.json test
           npm exec --yes --package=deno@2.9.6 -- deno task --config supabase/functions/cpi-live/deno.json check
           npm exec --yes --package=deno@2.9.6 -- deno task --config supabase/functions/cpi-live/deno.json test
-          node --experimental-strip-types --test backend/tests/gateway.test.mjs backend/tests/web-identity-callback.test.mjs
+          node --experimental-strip-types --test backend/tests/gateway.test.mjs backend/tests/web-identity-callback.test.mjs backend/tests/apple-receipt-verifier.test.mjs
       - name: Test unsigned packaging safeguards and artifact verification
         run: |
           node --experimental-strip-types --test .github/scripts/unsigned-beta.test.mjs
@@ -538,6 +538,7 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261111000100_mobile_identity_handoff.sql
           psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261111000200_adventure_commerce.sql
           psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261111000300_offline_supplies.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261112000100_review_purchase_inventory.sql
           psql -X -v ON_ERROR_STOP=1 -f backend/live-runtime-role.sql
           node --experimental-strip-types backend/tests/commerce-integration.mjs
           node --experimental-strip-types backend/tests/live-services-integration.mjs

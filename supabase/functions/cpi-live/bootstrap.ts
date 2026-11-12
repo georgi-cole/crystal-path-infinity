@@ -1,5 +1,7 @@
 import pg from 'pg';
 import { createAppleSandboxVerifier } from '../../../packages/server-core/src/apple-sandbox-verifier.ts';
+import { createAppleProductionVerifier } from '../../../packages/server-core/src/apple-production-verifier.ts';
+import { withVerifiedReviewPurchases } from '../../../packages/server-core/src/purchase-review-verification.ts';
 import { createBoundedAppleApiClient } from '../../../packages/server-core/src/apple-api-client.ts';
 import { readLiveConfiguration } from '../../../packages/server-core/src/live-configuration.ts';
 import { createProjectSqlPool } from '../../../packages/server-core/src/supabase-database.ts';
@@ -98,7 +100,9 @@ export function createCpiLiveFunction(env: (name: string) => string | undefined)
         : null;
       const appleSignedVerifier = config.appleSandboxVerifierKey
         ? createAppleSandboxVerifier(config.appleSandboxVerifierKey)
-        : undefined;
+        : config.appleProductionVerifierKey
+          ? createAppleProductionVerifier(config.appleProductionVerifierKey, 'production')
+          : undefined;
       const appleJobs = appleApi
         ? createApplePurchaseJobs({
             roots: [APPLE_ROOT_G3],
@@ -126,19 +130,84 @@ export function createCpiLiveFunction(env: (name: string) => string | undefined)
             api: appleApi,
           })
         : null;
+      const reviewGoogleJobs =
+        config.reviewPurchasesEnabled && googleToken
+          ? createGooglePurchaseJobs({
+              packageName: 'com.georgicole.crystalpath.infinity',
+              environment: 'sandbox',
+              accessToken: googleToken,
+            })
+          : undefined;
+      const reviewGoogleVerify =
+        config.reviewPurchasesEnabled && googleToken
+          ? createGooglePurchaseVerifier({
+              packageName: 'com.georgicole.crystalpath.infinity',
+              environment: 'sandbox',
+              accessToken: googleToken,
+            })
+          : null;
+      const reviewAppleApi =
+        config.reviewPurchasesEnabled && appleApi
+          ? createBoundedAppleApiClient({
+              signingKey: config.applePrivateKey!,
+              keyId: config.appleKeyId!,
+              issuerId: config.appleIssuerId!,
+              bundleId: 'com.georgicole.crystalpath.infinity',
+              environment: 'sandbox',
+            })
+          : null;
+      const reviewAppleSignedVerifier =
+        reviewAppleApi && config.appleProductionVerifierKey
+          ? createAppleProductionVerifier(config.appleProductionVerifierKey, 'sandbox')
+          : undefined;
+      const reviewAppleJobs =
+        reviewAppleApi && reviewAppleSignedVerifier
+          ? createApplePurchaseJobs({
+              roots: [APPLE_ROOT_G3],
+              signedVerifier: reviewAppleSignedVerifier,
+              bundleId: 'com.georgicole.crystalpath.infinity',
+              appleAppId: 6831790531,
+              environment: 'sandbox',
+              api: reviewAppleApi,
+            })
+          : undefined;
+      const reviewAppleVerify =
+        reviewAppleApi && reviewAppleSignedVerifier
+          ? createApplePurchaseVerifier({
+              roots: [APPLE_ROOT_G3],
+              signedVerifier: reviewAppleSignedVerifier,
+              bundleId: 'com.georgicole.crystalpath.infinity',
+              appleAppId: 6831790531,
+              environment: 'sandbox',
+              api: reviewAppleApi,
+            })
+          : null;
+      const googlePurchase =
+        googleVerify && reviewGoogleVerify
+          ? withVerifiedReviewPurchases(googleVerify, reviewGoogleVerify)
+          : googleVerify;
+      const applePurchase =
+        appleVerify && reviewAppleVerify
+          ? withVerifiedReviewPurchases(appleVerify, reviewAppleVerify)
+          : appleVerify;
       const verifyPurchase: PurchaseVerifier = (proof) =>
-        proof.platform === 'android' && googleVerify
-          ? googleVerify(proof)
-          : proof.platform === 'ios' && appleVerify
-            ? appleVerify(proof)
+        proof.platform === 'android' && googlePurchase
+          ? googlePurchase(proof)
+          : proof.platform === 'ios' && applePurchase
+            ? applePurchase(proof)
             : Promise.resolve({ status: 'rejected' });
       const maintenance = createPurchaseMaintenance({
         database,
         crypto,
-        acknowledgeAndroid: (proof) =>
-          googleJobs
-            ? googleJobs.acknowledge(proof)
-            : Promise.reject(new Error('Purchases disabled')),
+        acknowledgeAndroid: async (proof) => {
+          if (!googleJobs) throw new Error('Purchases disabled');
+          try {
+            await googleJobs.acknowledge(proof);
+          } catch (error) {
+            if (!reviewGoogleJobs) throw error;
+            await reviewGoogleJobs.acknowledge(proof);
+          }
+        },
       });
       const live = createLiveServer({
         database,
@@ -174,10 +243,13 @@ export function createCpiLiveFunction(env: (name: string) => string | undefined)
           verifyPurchase,
           economyReady: config.purchasesEnabled,
           completionCrypto: crypto,
+          reviewWallets: config.reviewPurchasesEnabled,
         }),
         maintenance,
         googleJobs,
         appleJobs,
+        reviewGoogleJobs,
+        reviewAppleJobs,
       });
       handler = (request) => {
         const url = new URL(request.url);

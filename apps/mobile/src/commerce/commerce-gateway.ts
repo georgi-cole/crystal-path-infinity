@@ -45,6 +45,10 @@ export function parseOfflineAllocation(value: unknown): OfflineAllocation | null
 export function parseCommerceWallet(value: unknown): CommerceWallet | null {
   if (
     !record(value) ||
+    ((value.inventoryToken !== undefined || value.reviewWallet !== undefined) &&
+      (typeof value.inventoryToken !== 'string' ||
+        !tokenPattern.test(value.inventoryToken) ||
+        typeof value.reviewWallet !== 'boolean')) ||
     !integer(value.revision) ||
     !integer(value.sp) ||
     !integer(value.hints) ||
@@ -67,7 +71,18 @@ export function parseCommerceWallet(value: unknown): CommerceWallet | null {
     !value.owned.includes(value.equipped)
   )
     return null;
+  if (
+    typeof value.inventoryToken === 'string' &&
+    (value.inventoryToken.toLowerCase() === value.accountToken.toLowerCase()) === value.reviewWallet
+  )
+    return null;
   return {
+    ...(value.inventoryToken === undefined
+      ? {}
+      : {
+          inventoryToken: value.inventoryToken.toLowerCase(),
+          reviewWallet: value.reviewWallet as boolean,
+        }),
     revision: value.revision,
     accountToken: value.accountToken.toLowerCase(),
     sp: value.sp,
@@ -137,6 +152,7 @@ export function createCommerceGateway(options: {
     'accountScope' | 'subscribeAccountScope' | 'withAccountRequest'
   >;
   fetcher?: typeof fetch;
+  reviewWallet?: () => Promise<boolean | undefined>;
 }): CommerceGateway | null {
   let base: URL;
   try {
@@ -158,6 +174,10 @@ export function createCommerceGateway(options: {
   const endpoint = base.origin + base.pathname.replace(/\/$/, '') + '/commerce/';
   const fetcher = options.fetcher ?? fetch;
   const session = options.session;
+  let selectedScope: object | null = null;
+  let reviewChoice: boolean | undefined;
+  let selecting: Promise<void> | undefined;
+  const responseScopes = new WeakMap<object, object | null>();
   async function post(
     route:
       | 'catalog'
@@ -172,6 +192,16 @@ export function createCommerceGateway(options: {
     signal: AbortSignal,
   ) {
     return session.withAccountRequest(async (lease) => {
+      const scope = session.accountScope();
+      if (scope !== selectedScope || !selecting) {
+        selectedScope = scope;
+        reviewChoice = undefined;
+        selecting = Promise.resolve(options.reviewWallet?.()).then((choice) => {
+          if (selectedScope === scope && session.accountScope() === scope) reviewChoice = choice;
+        });
+      }
+      await selecting;
+      if (session.accountScope() !== scope) throw new CommerceUnavailable();
       const controller = new AbortController();
       const abort = () => controller.abort();
       signal.addEventListener('abort', abort, { once: true });
@@ -179,7 +209,7 @@ export function createCommerceGateway(options: {
       if (signal.aborted || lease.signal.aborted) abort();
       const timeout = setTimeout(abort, 15000);
       try {
-        return await json(
+        const result = await json(
           await fetcher(endpoint + route, {
             method: 'POST',
             headers: {
@@ -187,7 +217,12 @@ export function createCommerceGateway(options: {
               'content-type': 'application/json',
               authorization: 'Bearer ' + lease.accessToken,
             },
-            body: JSON.stringify({ schemaVersion: 1, platform: options.platform, ...payload }),
+            body: JSON.stringify({
+              schemaVersion: 1,
+              platform: options.platform,
+              ...(reviewChoice === undefined ? {} : { reviewWallet: reviewChoice }),
+              ...payload,
+            }),
             credentials: 'omit',
             redirect: 'error',
             referrerPolicy: 'no-referrer',
@@ -195,6 +230,9 @@ export function createCommerceGateway(options: {
             signal: controller.signal,
           }),
         );
+        if (session.accountScope() !== scope) throw new CommerceUnavailable();
+        if (result && typeof result === 'object') responseScopes.set(result, scope);
+        return result;
       } finally {
         clearTimeout(timeout);
         signal.removeEventListener('abort', abort);
@@ -206,6 +244,13 @@ export function createCommerceGateway(options: {
     const parsed =
       record(value) && value.schemaVersion === 1 ? parseCommerceWallet(value.wallet) : null;
     if (!parsed) throw new CommerceUnavailable();
+    if (
+      parsed.reviewWallet !== undefined &&
+      record(value) &&
+      responseScopes.get(value) === selectedScope &&
+      selectedScope === session.accountScope()
+    )
+      reviewChoice = parsed.reviewWallet;
     return parsed;
   }
   return {

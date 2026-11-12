@@ -649,7 +649,8 @@ export function App({
       !CAMPAIGN_COMMERCE_ENABLED ||
       !commerceAccountToken ||
       !commerceSnapshot.wallet ||
-      commerceSnapshot.wallet.accountToken !== commerceAccountToken
+      (commerceSnapshot.wallet.inventoryToken ?? commerceSnapshot.wallet.accountToken) !==
+        commerceAccountToken
     )
       return;
     try {
