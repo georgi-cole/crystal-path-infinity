@@ -228,12 +228,15 @@ export function createLiveServer(options: LiveServerOptions) {
     authenticate,
     allowOrigin,
     rateLimit,
-    checkoutReady: (platform) =>
+    checkoutReady: (platform, reviewWallet) =>
       sqlTransaction(options.database, async (connection) => {
         const result = await connection.query(
           'select 1 from cpi_private.provider_sync where name=$1 and caught_up_at>$2 and (last_failure_at is null or last_failure_at<last_success_at)',
           [
-            (platform === 'android' ? 'google.' : 'apple.') + options.environment,
+            (platform === 'android' ? 'google.' : 'apple.') +
+              (reviewWallet === true && options.commerce.reviewWalletsEnabled
+                ? 'review'
+                : options.environment),
             Date.now() - 2 * 3600_000,
           ],
         );

@@ -10,7 +10,7 @@ export function createCommerceHandler(options: {
     purchasesAllowed: boolean;
     platform: 'android' | 'ios' | 'web';
   } | null>;
-  checkoutReady?(platform: 'android' | 'ios'): Promise<boolean>;
+  checkoutReady?(platform: 'android' | 'ios', reviewWallet?: boolean): Promise<boolean>;
   allowOrigin(origin: string | null): boolean;
   rateLimit(request: Request, subject: string | null): Promise<boolean>;
 }) {
@@ -124,7 +124,7 @@ export function createCommerceHandler(options: {
       if (
         (route === 'catalog' || route === 'begin') &&
         options.checkoutReady &&
-        !(await options.checkoutReady(value.platform))
+        !(await options.checkoutReady(value.platform, reviewChoice))
       )
         return reply({ code: 'commerce_unavailable' }, 503);
       if (route === 'catalog')
