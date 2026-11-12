@@ -91,6 +91,26 @@ test('gateway preserves encoded SSV query bytes', async () => {
     globalThis.fetch = original;
   }
 });
+test('gateway signs and preserves the provider callback query for mobile identity', async (t) => {
+  t.mock.method(globalThis, 'fetch', async (url, init) => {
+    const upstream = new Request(url, init);
+    assert.equal(new URL(upstream.url).pathname, '/functions/v1/cpi-live/identity/mobile/callback');
+    assert.equal(
+      new URL(upstream.url).search,
+      '?state=' + 'A'.repeat(43) + '&code=provider%2Bproof&scope=openid+email',
+    );
+    assert.equal((await verifyGatewayRequest(upstream, env.CPI_GATEWAY_KEY))?.country, 'BG');
+    return new Response('ok');
+  });
+  const request = new Request(
+    'https://api.example/cpi/identity/mobile/callback?state=' +
+      'A'.repeat(43) +
+      '&code=provider%2Bproof&scope=openid+email',
+    { headers: { 'cf-connecting-ip': '192.0.2.3' } },
+  );
+  Object.defineProperty(request, 'cf', { value: { country: 'BG' } });
+  assert.equal((await worker.fetch(request, env)).status, 200);
+});
 test('gateway rejects oversized bodies and missing peer metadata', async () => {
   assert.equal(
     (

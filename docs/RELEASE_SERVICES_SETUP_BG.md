@@ -257,6 +257,8 @@ Staging `cpi-live` включва потвърдените 18 Apple и 18 Google
 5. Пълен export с повече от една страница, изтриване през приложението и `account.html` и обработване на заявка, получена на публичния адрес за поддръжка. Провери, че production показва само действителните възможности.
 6. Подписани сборки, правилни store декларации за данни/възраст/реклами, работещ support адрес и публични правила за поверителност/условия.
 
+**Основна покупка и Restore · 12 ноември 2026 г.** Собственикът потвърди успешно преминаване на покупка и Restore в Android `1.0.1 (59)` и TestFlight `1.0.1 (62)`. Устройствата, SKU и идентификаторите на транзакциите не са записани. Това покрива само докладвания успешен поток; отказ, pending, refund/reversal, повторно начисляване на консуматив и реално изразходване остават за приемане. След обновяването на staging Google receipt ключа редовете `google.staging` и `apple.staging` са наваксали и завършили успешно; production не е променян. Детайлният запис е в [CPI-044](decisions/CPI-044-campaign-full-services.md#tester-reported-purchase-and-restore-acceptance--12-november-2026).
+
 Едва тогава включваме production backend, одобрените country/SDK/operations редове и клиентските флагове за реалните услуги. Наличната unsigned preparation сборка остава с изключени live услуги; нейният предпазен механизъм не се премахва. Новите официални опити ползват `infinity-v11-live`; започнатите v1 опити запазват старите правила и отделното възстановяване.
 
 ## Проверки и текущи ограничения
@@ -295,6 +297,16 @@ npm run native:generate -- --platform ios --environment production
 ```
 
 Двете AdMob приложения показват Requires review и Limited ad serving. Публикуваните store записи трябва да бъдат свързани и прегледани. Точният запис на издателя е наличен в [app-ads.txt на developer сайта](https://georgi-cole.github.io/app-ads.txt). Черновата в App Store Connect използва [публичния сайт на играта](https://georgi-cole.github.io/crystal-path-infinity/) в Marketing URL. В Google Play полето Website вече води към поддръжката на същия хост. [AdMob app readiness](https://support.google.com/admob/answer/10564477).
+
+### Staging Google sign-in и Campaign interstitial одит · 12 ноември 2026
+
+Собственикът съобщава, че rewarded рекламите работят на телефон; платформата и build number не са уточнени. За Google входа staging логът показва `POST /identity/mobile/begin` 200 в 13:35:12 (София) и Google callback 503 в 13:35:17. Read-only проверката потвърди migration `20261111000100` и наличието на `account_mobile_identity.response_encrypted`; точната причина за callback грешката не е видима в запазения лог. Това не е успешно приет Google вход и не е основание за нов телефонен build.
+
+Campaign завършването в текущия source не показва interstitial и `publisher.ts` няма interstitial единици. Свързан е само rewarded пътят. Interstitial след завършен Mission остава предложена позиция с честотен лимит; не е конфигурирана услуга. Състоянието е записано и в [CPI-044](decisions/CPI-044-campaign-full-services.md).
+
+**Последваща реализация · 12 ноември 2026 · CPI-044 working branch:** iOS/Android Campaign interstitials са свързани в клиента за services build. Първите две първи победи са без реклама; после най-много всяка трета победа, до две реклами за отворения процес; replay, неуспех и последната мисия са без interstitial. Отказ/липса/грешка не блокира връщането към картата. Services build използва само официалните demo IDs: Android `ca-app-pub-3940256099942544/1033173712`, iOS `ca-app-pub-3940256099942544/4411468910`. В AdMob са създадени и живите единици Android `ca-app-pub-9243398419153145/4558989155` и iOS `ca-app-pub-9243398419153145/5066255614`; Google предупреждава, че новите единици може да чакат до час. Двете приложения все още изискват review и показват Limited ad serving; това не е доказателство за доставена реклама. Преди production показване свържи публикуваните store listings и завърши AdMob прегледа.
+
+Server branch-ът коригира диагностиката за mobile callback: безопасен event записва фиксирания етап/status/error class и само валиден SQLSTATE; няма OAuth code/state, email, provider body или error message. Тестовете доказват правилния `410 expired` за изтекъл handoff и липса на тайни в log fixture-а. Това не е Google sign-in fix: root cause на предишния staging 503 остава неизвестен, локално няма staging deploy credential, а code change още не е внедрена. Нужен е staging deploy и след това реален вход на телефона. Предишният стар запис по-горе е исторически и се заменя само за състоянието на interstitial source, не за приемането на sign-in.
 # Offline Campaign TestFlight preparation · 11 November 2026 · CPI-042
 
 App Store Connect was inspected after sign-in and showed 1.0.0 (45) in internal testing. This candidate advances the marketing version to 1.0.1; the feature playtest stays 0.7.4. A new workflow counter will identify the uploaded build. This is a candidate version, not a submitted public App Store release.
@@ -311,3 +323,7 @@ The current [product mapping, prices and console status](decisions/CPI-043-adven
 
 
 **CPI-043 · final catalog save, 11 November:** Google now shows 31 products after the reviewed batch was applied: 13 new Draft buy options and the original 18 active options. Price decreases were applied without changing product identities or release availability. Apple also contains 31 draft records. Registration does not enable real purchases; fulfilment, restoration and sandbox acceptance remain prerequisites. See CPI-043 for exact prices, IDs and build evidence.
+
+### Staging diagnostics deployed · 12 November 2026, 14:35 Europe/Sofia
+
+The saved Supabase CLI login was available through its credential store. After TypeScript and Deno checks (3 smoke tests passed), the updated `cpi-live` was deployed only to Crystal Path Infinity Staging (`yfntwewvfsvljxcztoyp`). Both Google and Apple synthetic eligibility → begin → cancellation callback → completion ceremonies returned 200 / `cancelled`. A second Google probe with a full provider-shaped query also returned 200 / `cancelled`. These probes create no account and do not establish successful provider authentication. The owner reports Apple also fails in the installed app, despite earlier success. A real Apple/Google phone retry is pending against the refreshed service; no root-cause or complete-login success claim is made. Existing phone builds can retry sign-in without reinstalling. Campaign interstitial changes still require a new distributed client build.

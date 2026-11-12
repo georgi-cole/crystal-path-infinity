@@ -21,12 +21,16 @@ import { createLeaderboardClient } from './leaderboard/leaderboard-client';
 import { createNameReportClient } from './leaderboard/name-report-client';
 import { createRewardClient } from './rewards/reward-client';
 import { createRankedRewardFlowFactory } from './rewards/reward-flow-factory';
-import { nativeAdMobAdapter } from './rewards/native-admob';
+import { nativeAdMobAdapter, nativeCampaignInterstitialAdapter } from './rewards/native-admob';
 import { nativeBillingAdapter } from './commerce/native-billing';
 import { createCommerceGateway } from './commerce/commerce-gateway';
 import { CommerceFlow } from './commerce/commerce-flow';
 import { PUBLISHER, DEMO_ADMOB } from '../config/publisher';
-import { SIMULATED_STORE_ENABLED, CAMPAIGN_SERVICES_BUILD } from './app-profile';
+import {
+  SIMULATED_STORE_ENABLED,
+  CAMPAIGN_SERVICES_BUILD,
+  CAMPAIGN_RELEASE_BUILD,
+} from './app-profile';
 
 export interface LiveServices {
   readonly account: ApprovedAccountServices;
@@ -80,6 +84,17 @@ export function createLiveServices(values: Readonly<Record<string, unknown>>): L
       : null;
   const platform = Capacitor.getPlatform();
   const inventory = import.meta.env.MODE === 'production' ? PUBLISHER.admob : DEMO_ADMOB;
+  const campaignInterstitialInventory = CAMPAIGN_SERVICES_BUILD
+    ? DEMO_ADMOB
+    : CAMPAIGN_RELEASE_BUILD
+      ? PUBLISHER.admob
+      : null;
+  const campaignInterstitial =
+    values.VITE_CAMPAIGN_INTERSTITIALS_ENABLED === 'true' &&
+    campaignInterstitialInventory &&
+    (platform === 'android' || platform === 'ios')
+      ? nativeCampaignInterstitialAdapter(campaignInterstitialInventory[platform].interstitial)
+      : null;
   const ad =
     values.VITE_REWARDED_ADS_ENABLED === 'true' && (platform === 'android' || platform === 'ios')
       ? nativeAdMobAdapter(inventory[platform].rewarded)
@@ -99,6 +114,7 @@ export function createLiveServices(values: Readonly<Record<string, unknown>>): L
     account: {
       ...account,
       adPrivacyOptions: ad?.available ? () => ad.showPrivacyOptions() : undefined,
+      campaignInterstitial: campaignInterstitial?.available ? campaignInterstitial : null,
       rankedClient: ranked,
       leaderboardClient: createLeaderboardClient(base, session),
       nameReportClient: createNameReportClient(base, session),

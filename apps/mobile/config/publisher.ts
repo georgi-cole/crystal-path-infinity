@@ -8,10 +8,12 @@ export const PUBLISHER = /* @__PURE__ */ Object.freeze({
     android: {
       appId: 'ca-app-pub-9243398419153145~7433632761',
       rewarded: 'ca-app-pub-9243398419153145/5387868010',
+      interstitial: 'ca-app-pub-9243398419153145/4558989155',
     },
     ios: {
       appId: 'ca-app-pub-9243398419153145~7303584917',
       rewarded: 'ca-app-pub-9243398419153145/4563926844',
+      interstitial: 'ca-app-pub-9243398419153145/5066255614',
     },
   },
 });
@@ -25,9 +27,11 @@ export const DEMO_ADMOB = /* @__PURE__ */ Object.freeze({
   android: {
     appId: 'ca-app-pub-3940256099942544~3347511713',
     rewarded: 'ca-app-pub-3940256099942544/5224354917',
+    interstitial: 'ca-app-pub-3940256099942544/1033173712',
   },
   ios: {
     appId: 'ca-app-pub-3940256099942544~1458002511',
     rewarded: 'ca-app-pub-3940256099942544/1712485313',
+    interstitial: 'ca-app-pub-3940256099942544/4411468910',
   },
 });

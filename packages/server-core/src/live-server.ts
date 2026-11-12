@@ -49,6 +49,45 @@ function reply(value: unknown, status = 200) {
     },
   });
 }
+type MobileIdentityStage = 'gateway' | 'rate_limit' | 'callback' | 'complete';
+function logMobileIdentityFailure(
+  operation: 'callback' | 'complete',
+  stage: MobileIdentityStage,
+  status: number,
+  error?: unknown,
+) {
+  const code =
+    error && typeof error === 'object' && 'code' in error && typeof error.code === 'string'
+      ? error.code
+      : undefined;
+  console.error(
+    JSON.stringify({
+      event: 'mobile_identity_failure',
+      operation,
+      stage,
+      status,
+      ...(error ? { errorName: error instanceof Error ? error.name.slice(0, 48) : 'Unknown' } : {}),
+      ...(code && /^[A-Z0-9]{5}$/.test(code) ? { databaseCode: code } : {}),
+    }),
+  );
+}
+function mobileIdentityFailure(
+  operation: 'callback' | 'complete',
+  stage: MobileIdentityStage,
+  error: unknown,
+) {
+  const status = error instanceof AccountIssuerError ? error.status : 503;
+  if (status >= 500) logMobileIdentityFailure(operation, stage, status, error);
+  const code =
+    status === 410
+      ? 'expired'
+      : status === 429
+        ? 'rate_limited'
+        : status >= 500
+          ? 'service_unavailable'
+          : 'invalid_request';
+  return reply({ code }, status);
+}
 export interface LiveServerOptions {
   readonly database: SqlPool;
   readonly issuer: AccountIssuer;
@@ -367,6 +406,8 @@ export function createLiveServer(options: LiveServerOptions) {
     return reply({ tasks, failures }, failures.length ? 503 : 200);
   }
   return async (request: Request): Promise<Response> => {
+    let identityOperation: 'callback' | 'complete' | null = null;
+    let identityStage: MobileIdentityStage = 'gateway';
     try {
       const url = new URL(request.url);
       if (url.protocol !== 'https:' || url.username || url.password || url.hash)
@@ -394,20 +435,32 @@ export function createLiveServer(options: LiveServerOptions) {
         if (event) await options.maintenance.refund(event, event.reverse === true);
         return reply({ status: 'received' });
       }
+      if (url.pathname === basePath + '/identity/mobile/callback') identityOperation = 'callback';
+      else if (url.pathname === basePath + '/identity/mobile/complete')
+        identityOperation = 'complete';
       if (!url.pathname.startsWith(basePath + '/')) return reply({ code: 'not_found' }, 404);
       const provider = url.pathname === basePath + '/rewards/ssv';
       if (!provider) {
         if (Number(request.headers.get('content-length') ?? 0) > 80_000)
           return reply({ code: 'invalid_request' }, 413);
         const context = await verifyGatewayRequest(request, options.gatewayKey);
-        if (!context) return reply({ code: 'service_unavailable' }, 503);
+        if (!context) {
+          if (identityOperation) logMobileIdentityFailure(identityOperation, 'gateway', 503);
+          return reply({ code: 'service_unavailable' }, 503);
+        }
         contexts.set(request, context);
       }
+      if (identityOperation) identityStage = 'rate_limit';
       if (!(await rateLimit(request, null))) return reply({ code: 'rate_limited' }, 429);
       // Provider navigation is not a CORS account request. Its unpredictable
       // state only stores an untrusted proof; completion needs the app-held token.
       if (options.mobileIdentity && url.pathname === basePath + '/identity/mobile/callback') {
-        return await options.mobileIdentity.callback(request);
+        identityStage = 'callback';
+        try {
+          return await options.mobileIdentity.callback(request);
+        } catch (error) {
+          return mobileIdentityFailure('callback', 'callback', error);
+        }
       }
       if (!allowOrigin(request.headers.get('origin'))) return reply({ code: 'origin_denied' }, 403);
       if (request.method === 'OPTIONS') {
@@ -449,24 +502,34 @@ export function createLiveServer(options: LiveServerOptions) {
         let response: Response;
         try {
           const input = await privateJson(request);
+          if (url.pathname.endsWith('/complete')) {
+            identityOperation = 'complete';
+            identityStage = 'complete';
+          }
           response = reply(
             url.pathname.endsWith('/begin')
               ? await options.mobileIdentity.begin(input, context, actor)
               : await options.mobileIdentity.complete(input, context, actor),
           );
         } catch (error) {
-          const status = error instanceof AccountIssuerError ? error.status : 503;
-          response = reply(
-            {
-              code:
-                status === 410
-                  ? 'expired'
-                  : status === 429
-                    ? 'rate_limited'
-                    : 'service_unavailable',
-            },
-            status,
-          );
+          if (url.pathname.endsWith('/complete'))
+            response = mobileIdentityFailure('complete', 'complete', error);
+          else {
+            const status = error instanceof AccountIssuerError ? error.status : 503;
+            response = reply(
+              {
+                code:
+                  status === 410
+                    ? 'expired'
+                    : status === 429
+                      ? 'rate_limited'
+                      : status >= 500
+                        ? 'service_unavailable'
+                        : 'invalid_request',
+              },
+              status,
+            );
+          }
         }
         const origin = request.headers.get('origin');
         if (origin) response.headers.set('access-control-allow-origin', origin);
@@ -521,7 +584,8 @@ export function createLiveServer(options: LiveServerOptions) {
       const origin = request.headers.get('origin');
       if (origin) response.headers.set('access-control-allow-origin', origin);
       return response;
-    } catch {
+    } catch (error) {
+      if (identityOperation) return mobileIdentityFailure(identityOperation, identityStage, error);
       return reply({ code: 'service_unavailable' }, 503);
     }
   };

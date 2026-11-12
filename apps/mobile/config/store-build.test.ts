@@ -21,6 +21,7 @@ describe('store build identity', () => {
       VITE_ACCOUNT_SERVICES_ENABLED: 'true',
       VITE_PURCHASES_ENABLED: 'true',
       VITE_GUEST_REWARDED_ADS_TEST: 'true',
+      VITE_CAMPAIGN_INTERSTITIALS_ENABLED: 'true',
       VITE_NATIVE_PROVIDER_SIGN_IN: 'true',
       VITE_ACCOUNT_API_BASE_URL: STAGING_ACCOUNT_GATEWAY,
     };

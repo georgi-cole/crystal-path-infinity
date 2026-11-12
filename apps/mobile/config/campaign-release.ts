@@ -1,3 +1,5 @@
+import { PUBLISHER } from './publisher.ts';
+
 /** Public Campaign builds use real commerce and the separate production account server. */
 export function assertCampaignRelease(values: Readonly<Record<string, string | undefined>>) {
   for (const name of [
@@ -7,11 +9,17 @@ export function assertCampaignRelease(values: Readonly<Record<string, string | u
     'VITE_PURCHASES_ENABLED',
     'VITE_NATIVE_PROVIDER_SIGN_IN',
     'VITE_GUEST_REWARDED_ADS_LIVE',
+    'VITE_CAMPAIGN_INTERSTITIALS_ENABLED',
   ]) {
     if (values[name] !== 'true') throw new Error('Public Campaign requires ' + name);
   }
   if (values.VITE_ACCOUNT_API_BASE_URL !== 'https://crystalpath-api.kolequant.xyz/cpi')
     throw new Error('Public Campaign requires the production account gateway.');
+  if (
+    !/^ca-app-pub-\d+\/\d+$/.test(PUBLISHER.admob.android.interstitial ?? '') ||
+    !/^ca-app-pub-\d+\/\d+$/.test(PUBLISHER.admob.ios.interstitial ?? '')
+  )
+    throw new Error('Public Campaign requires a registered interstitial unit for each platform.');
   if (
     [
       'CPI_CAMPAIGN_BETA',

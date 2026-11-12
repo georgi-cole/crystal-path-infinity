@@ -92,7 +92,8 @@ import type { RankedClient } from './ranked/ranked-client';
 import { RankedScene } from './ranked/ranked-scene';
 import type { AccountControlsClient } from './account/account-controls-model';
 import type { RewardFlow } from './rewards/reward-flow';
-import type { GuestRewardedAd } from './rewards/native-admob';
+import type { CampaignInterstitialAd, GuestRewardedAd } from './rewards/native-admob';
+import { createCampaignInterstitialCadence } from './rewards/campaign-interstitial-policy';
 import type { SavedPendingClient } from './ranked/saved-pending-client';
 import { SavedRuns } from './ranked/saved-pending-view';
 import type { AccountEntryBinding } from './account/account-entry';
@@ -116,6 +117,7 @@ export interface ApprovedAccountServices {
   nameReportClient?: NameReportClient | null;
   rankedClient?: RankedClient | null;
   rewardFlowFactory?: ((runId: string) => RewardFlow | null) | null;
+  campaignInterstitial?: CampaignInterstitialAd | null;
   savedPendingClient?: SavedPendingClient | null;
   accountControlsClient?: AccountControlsClient | null;
   countries?: readonly { countryCode: string; continentCode: string }[];
@@ -260,6 +262,8 @@ export function App({
     mastery: boolean;
   } | null>(null);
   const campaignOutcomeRef = useRef(false);
+  const campaignInterstitialCadence = useRef(createCampaignInterstitialCadence());
+  const campaignContinueInFlight = useRef(false);
   const campaignMission =
     game?.mode === 'campaign' && game.campaignMissionId
       ? campaignMissionSnapshot(campaignProgress, game.campaignMissionId)
@@ -953,6 +957,27 @@ export function App({
     setView(destination);
     window.history.replaceState({ cpiNavigation: true }, '', viewHash(destination));
   };
+  const continueCampaignResult = () => {
+    if (campaignContinueInFlight.current) return;
+    campaignContinueInFlight.current = true;
+    void (async () => {
+      try {
+        const outcome = campaignOutcome;
+        const showInterstitial =
+          outcome?.cleared === true &&
+          outcome.firstClear &&
+          outcome.mission.id !== 'bring-the-dawn-home' &&
+          campaignInterstitialCadence.current.recordFirstClear();
+        const ad = services?.campaignInterstitial;
+        if (showInterstitial && ad?.available) await ad.show(new AbortController().signal);
+      } catch {
+        // An unavailable ad never holds back earned Campaign progress.
+      } finally {
+        campaignContinueInFlight.current = false;
+        closePractice('campaign');
+      }
+    })();
+  };
   const cancelGameExit = () => {
     backExitInFlight.current = false;
   };
@@ -1023,7 +1048,7 @@ export function App({
               ? changeBridgeStyle
               : undefined
           }
-          onContinue={() => closePractice('campaign')}
+          onContinue={continueCampaignResult}
           onRetry={() => {
             const missionId = campaignOutcome.mission.id;
             gameRef.current = null;
