@@ -328,7 +328,7 @@ export const CAMPAIGN_MISSIONS = [
     300,
     210,
     'Open the lens cache at row 8 and reach the landing.',
-    'Lighthouse Lens and +1 reserve hint',
+    '+1 reserve hint',
     { hints: 1 },
     { goal: { type: 'mystery', row: 8 }, marks: [{ row: 8, encounter: 'heal_10' }] },
   ),
@@ -622,7 +622,7 @@ export const CAMPAIGN_MISSIONS = [
     230,
     70,
     'Survive Squall, Gust and Squall, then take the last three beacon steps cleanly.',
-    'Gatekeeper emblem and Far Gate restored',
+    'Far Gate restored',
     {},
     {
       assist: true,
@@ -869,7 +869,7 @@ export const CAMPAIGN_MISSIONS = [
     300,
     85,
     'Open the dawn caches at rows 13 and 51. Spend at most one hint, then cross the final three beacons cleanly to light Cloudrest Harbour.',
-    'Pearl Lanterns, +2 Season Changes and Dawnkeeper emblem',
+    'Pearl Lanterns, +2 Season Changes and Harbour restored',
     { style: 'harbour-lanterns', seasonChanges: 2 },
     {
       revision: '0.4',
