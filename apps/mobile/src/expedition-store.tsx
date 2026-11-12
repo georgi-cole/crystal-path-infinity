@@ -1151,6 +1151,17 @@ export function ExpeditionStore({
           {checkout.snapshot.phase === 'error' && (
             <p>The store could not connect. Please try again.</p>
           )}
+          {checkout.snapshot.restoreIncomplete && checkout.snapshot.phase !== 'error' && (
+            <p>
+              Some earlier purchases could not be checked. You can still shop and retry Restore.
+            </p>
+          )}
+          {checkout.snapshot.supplySyncIncomplete && checkout.snapshot.phase !== 'error' && (
+            <p>
+              Some items could not be synced to this device. You can still shop; use Restore to
+              retry.
+            </p>
+          )}
           {checkout.snapshot.phase === 'pending' && (
             <p>Payment is pending. Your items will arrive after it is approved.</p>
           )}

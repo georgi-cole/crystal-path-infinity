@@ -670,6 +670,7 @@ export function App({
       game ||
       !['store', 'supplies', 'bridge-style'].includes(view) ||
       !commerceAccountToken ||
+      commerceSnapshot.supplySyncIncomplete ||
       commerceSnapshot.phase !== 'ready' ||
       !commerceSnapshot.wallet
     )
@@ -689,6 +690,7 @@ export function App({
   }, [
     commerceAccountToken,
     commerceSnapshot.phase,
+    commerceSnapshot.supplySyncIncomplete,
     commerceSnapshot.wallet,
     game,
     view,

@@ -296,6 +296,10 @@ export const en = {
     'Your profile, purchases and verified runs use online services. Local practice stays on this device.',
   'settings.accountToolsUnavailable': 'You are signed in. Account tools are unavailable right now.',
   'commerce.restore': 'Restore purchases',
+  'commerce.supplySyncIncomplete':
+    'Some items could not be synced to this device. You can still shop; use Restore to retry.',
+  'commerce.restoreIncomplete':
+    'Some earlier purchases could not be checked. You can still shop and retry Restore.',
   'commerce.retry': 'Try again',
   'commerce.pending': 'Waiting for purchase confirmation. You have not received the items yet.',
   'commerce.error': 'Could not confirm your purchase. Try restoring purchases.',
