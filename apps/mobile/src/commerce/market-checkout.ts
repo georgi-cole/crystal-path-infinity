@@ -23,7 +23,8 @@ export function useMarketCheckout() {
       (CAMPAIGN_COMMERCE_ENABLED &&
         (!Capacitor.isNativePlatform() ||
           busy ||
-          (!!snapshot.wallet && (snapshot.phase !== 'ready' || !product(key(offer)))))),
+          (!!snapshot.wallet &&
+            (!['ready', 'error'].includes(snapshot.phase) || !product(key(offer)))))),
     label: (offer: string) =>
       !Capacitor.isNativePlatform()
         ? 'Available in the app'

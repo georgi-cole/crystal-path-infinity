@@ -258,11 +258,21 @@ export function StoreVault({
         )}
         {!SIMULATED_STORE_ENABLED &&
           liveStore &&
-          (liveBusy || live.phase === 'pending' || live.phase === 'error') && (
+          (liveBusy ||
+            live.phase === 'pending' ||
+            live.phase === 'error' ||
+            live.restoreIncomplete ||
+            live.supplySyncIncomplete) && (
             <div className="cpi-vault-notice" role="status">
               {liveBusy && <p>{t('commerce.busy')}</p>}
+              {live.supplySyncIncomplete && live.phase !== 'error' && (
+                <p>{t('commerce.supplySyncIncomplete')}</p>
+              )}
               {live.phase === 'pending' && <p>{t('commerce.pending')}</p>}
               {live.phase === 'error' && <p>{t('commerce.error')}</p>}
+              {live.restoreIncomplete && live.phase !== 'error' && (
+                <p>{t('commerce.restoreIncomplete')}</p>
+              )}
             </div>
           )}
         {(error || notice) && (

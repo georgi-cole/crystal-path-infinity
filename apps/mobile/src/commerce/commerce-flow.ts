@@ -22,6 +22,8 @@ export interface CommerceSnapshot {
     | 'error';
   readonly products: readonly PricedProduct[];
   readonly wallet: CommerceWallet | null;
+  readonly restoreIncomplete?: boolean;
+  readonly supplySyncIncomplete?: boolean;
 }
 const empty: CommerceSnapshot = { phase: 'idle', products: [], wallet: null };
 
@@ -71,6 +73,7 @@ export class CommerceFlow {
   private async operation(
     phase: CommerceSnapshot['phase'],
     work: (current: () => boolean, signal: AbortSignal) => Promise<void>,
+    failureState?: () => Partial<CommerceSnapshot>,
   ) {
     if (this.disposed || this.busy || !this.native.available || !this.gateway.accountScope())
       return;
@@ -87,7 +90,7 @@ export class CommerceFlow {
     try {
       await work(current, controller.signal);
     } catch {
-      if (current()) this.update({ ...this.state, phase: 'error' });
+      if (current()) this.update({ ...this.state, phase: 'error', ...failureState?.() });
     } finally {
       this.busy = false;
       if (this.controller === controller) this.controller = null;
@@ -106,18 +109,37 @@ export class CommerceFlow {
   }
   load = async (): Promise<void> =>
     this.operation('loading', async (current, signal) => {
-      this.update({ ...this.state, products: [] });
+      this.update({
+        ...this.state,
+        products: [],
+        restoreIncomplete: false,
+        supplySyncIncomplete: false,
+      });
       const wallet = await this.gateway.wallet(signal);
       if (!current()) return;
       this.accept(wallet);
       // Settle paid pending/unfinished transactions when the player opens the store,
       // including after an app close. This never opens a new checkout.
-      const receipts = await this.native.recover(wallet.accountToken);
-      if (!current()) return;
-      for (const receipt of receipts.slice(0, 20)) {
-        await this.deliver(receipt, current, signal);
+      let restoreIncomplete: boolean;
+      try {
+        const receipts = await this.native.recover(wallet.accountToken);
         if (!current()) return;
+        restoreIncomplete = receipts.length > 20;
+        for (const receipt of receipts.slice(0, 20)) {
+          try {
+            restoreIncomplete =
+              !(await this.deliver(receipt, current, signal)) || restoreIncomplete;
+          } catch {
+            // A previous receipt must not prevent current product discovery. Never finish it unverified.
+            restoreIncomplete = true;
+          }
+          if (!current()) return;
+        }
+      } catch {
+        restoreIncomplete = true;
       }
+      if (!current()) return;
+      this.update({ ...this.state, restoreIncomplete });
       const catalog = await this.gateway.catalog(signal);
       if (!current()) return;
       const products = await this.native.prices(catalog);
@@ -137,42 +159,46 @@ export class CommerceFlow {
     receive(allocation: OfflineAllocation, accountToken: string): void;
     acknowledged(operationId: string, accountToken: string): void;
   }): Promise<void> =>
-    this.operation('loading', async (current, signal) => {
-      const gateway = this.gateway.offlineSupplies;
-      if (!gateway) throw new CommerceUnavailable();
-      const pending = await gateway.pending(signal);
-      if (!current()) return;
-      this.accept(pending.wallet);
-      const accountToken = pending.wallet.accountToken;
-      const inventoryToken = commerceInventoryToken(pending.wallet);
-      const deliver = async (allocation: OfflineAllocation) => {
+    this.operation(
+      'loading',
+      async (current, signal) => {
+        const gateway = this.gateway.offlineSupplies;
+        if (!gateway) throw new CommerceUnavailable();
+        const pending = await gateway.pending(signal);
         if (!current()) return;
-        // The receiver must persist both grant and receipt in one local write before ack.
-        receiver.receive(allocation, inventoryToken);
-        if (!current()) return;
-        await gateway.acknowledge(allocation.operationId, signal);
-        if (current()) receiver.acknowledged(allocation.operationId, inventoryToken);
-      };
-      for (const allocation of pending.allocations) {
-        await deliver(allocation);
-        if (!current()) return;
-      }
-      const amounts = receiver.capacity(pending.wallet);
-      if (Object.values(amounts).some((amount) => amount > 0)) {
-        const bytes = crypto.getRandomValues(new Uint8Array(16));
-        bytes[6] = (bytes[6] & 15) | 64;
-        bytes[8] = (bytes[8] & 63) | 128;
-        const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
-        const operationId = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
-        const reply = await gateway.allocate(operationId, amounts, signal);
-        if (!current()) return;
-        this.accept(reply.wallet, accountToken);
-        if (commerceInventoryToken(reply.wallet) !== inventoryToken)
-          throw new CommerceUnavailable();
-        await deliver(reply.allocation);
-      }
-      if (current()) this.update({ ...this.state, phase: 'ready' });
-    });
+        this.accept(pending.wallet);
+        const accountToken = pending.wallet.accountToken;
+        const inventoryToken = commerceInventoryToken(pending.wallet);
+        const deliver = async (allocation: OfflineAllocation) => {
+          if (!current()) return;
+          // The receiver must persist both grant and receipt in one local write before ack.
+          receiver.receive(allocation, inventoryToken);
+          if (!current()) return;
+          await gateway.acknowledge(allocation.operationId, signal);
+          if (current()) receiver.acknowledged(allocation.operationId, inventoryToken);
+        };
+        for (const allocation of pending.allocations) {
+          await deliver(allocation);
+          if (!current()) return;
+        }
+        const amounts = receiver.capacity(pending.wallet);
+        if (Object.values(amounts).some((amount) => amount > 0)) {
+          const bytes = crypto.getRandomValues(new Uint8Array(16));
+          bytes[6] = (bytes[6] & 15) | 64;
+          bytes[8] = (bytes[8] & 63) | 128;
+          const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+          const operationId = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+          const reply = await gateway.allocate(operationId, amounts, signal);
+          if (!current()) return;
+          this.accept(reply.wallet, accountToken);
+          if (commerceInventoryToken(reply.wallet) !== inventoryToken)
+            throw new CommerceUnavailable();
+          await deliver(reply.allocation);
+        }
+        if (current()) this.update({ ...this.state, phase: 'ready', supplySyncIncomplete: false });
+      },
+      () => ({ phase: this.state.products.length ? 'ready' : 'error', supplySyncIncomplete: true }),
+    );
   private async deliver(
     receipt: PurchaseProof,
     current: () => boolean,
@@ -222,7 +248,12 @@ export class CommerceFlow {
         if (!current()) return;
         pending = !(await this.deliver(receipt, current, signal)) || pending;
       }
-      if (current()) this.update({ ...this.state, phase: pending ? 'pending' : 'ready' });
+      if (current())
+        this.update({
+          ...this.state,
+          phase: pending ? 'pending' : 'ready',
+          restoreIncomplete: pending,
+        });
     });
   equip = async (theme: ThemeId): Promise<void> =>
     this.operation('loading', async (current, signal) => {

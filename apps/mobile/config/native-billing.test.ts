@@ -36,6 +36,81 @@ function fixture(platform: 'android' | 'ios') {
   return { sdk, adapter };
 }
 describe('platform checkout adapter', () => {
+  it('bounds a missing finish reply after purchase without finishing an unverified receipt', async () => {
+    const f = fixture('ios');
+    const outcome = await f.adapter.purchase(product, token);
+    if (outcome.status !== 'purchased') throw new Error('fixture');
+    f.sdk.finishTransaction.mockImplementation(() => new Promise<void>(() => {}));
+    vi.useFakeTimers();
+    try {
+      const finishing = expect(f.adapter.finish(outcome.proof, false)).rejects.toThrow(
+        'Purchase service unavailable',
+      );
+      await vi.advanceTimersByTimeAsync(10001);
+      await finishing;
+      expect(f.sdk.finishTransaction).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  it('bounds stalled purchase-history lookup so a later price request can still succeed', async () => {
+    const f = fixture('ios');
+    f.sdk.getPurchases.mockImplementationOnce(() => new Promise(() => {}));
+    vi.useFakeTimers();
+    try {
+      const recovering = expect(f.adapter.recover(token)).rejects.toThrow(
+        'Purchase service unavailable',
+      );
+      await vi.advanceTimersByTimeAsync(10001);
+      await recovering;
+      expect(await f.adapter.prices([product])).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  it('keeps an interactive Apple checkout locked until the player answers it', async () => {
+    const f = fixture('ios');
+    let complete!: (value: typeof transaction) => void;
+    f.sdk.purchaseProduct.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          complete = resolve;
+        }),
+    );
+    let answered = false;
+    vi.useFakeTimers();
+    try {
+      const buying = f.adapter.purchase(product, token).then((value) => {
+        answered = true;
+        return value;
+      });
+      await vi.advanceTimersByTimeAsync(60000);
+      expect(answered).toBe(false);
+      complete(transaction);
+      expect((await buying).status).toBe('purchased');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  it('restores current iOS entitlements and unfinished consumables without replaying revoked history', async () => {
+    const f = fixture('ios');
+    const revoked = {
+      ...transaction,
+      transactionId: 'revoked-order',
+      revocationDate: '2026-11-12T00:00:00Z',
+    };
+    f.sdk.getUnfinishedTransactions.mockResolvedValue({ transactions: [revoked, transaction] });
+    f.sdk.getPurchases.mockResolvedValue({ purchases: [revoked] });
+    expect(await f.adapter.recover(token)).toEqual([
+      expect.objectContaining({ transactionId: transaction.transactionId }),
+    ]);
+    expect(f.sdk.getPurchases).toHaveBeenCalledWith({
+      productType: 'inapp',
+      appAccountToken: token.toUpperCase(),
+      onlyCurrentEntitlements: true,
+    });
+    expect(f.sdk.finishTransaction).not.toHaveBeenCalled();
+  });
   it('uses the native iOS app environment only as an inventory hint and tolerates unavailable hints', async () => {
     const f = fixture('ios');
     expect(await f.adapter.reviewEnvironment?.()).toBe(true);
