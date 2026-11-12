@@ -2,6 +2,7 @@ import { nextPracticeRuleset } from './balance-tuning';
 import {
   CAMPAIGN_ENABLED,
   CAMPAIGN_RELEASE_BUILD,
+  CAMPAIGN_WEB_BUILD,
   PLAYER_PREVIEW_ENABLED,
   QA_TOOLS_ENABLED,
   practiceStorage,
@@ -381,7 +382,7 @@ export function InfinitySceneView({
     ? t('vault.trial')
     : state.storeTest?.assisted
       ? t('vault.assisted')
-      : CAMPAIGN_RELEASE_BUILD
+      : CAMPAIGN_RELEASE_BUILD || CAMPAIGN_WEB_BUILD
         ? 'Infinity'
         : experiment
           ? locale === 'bg'
