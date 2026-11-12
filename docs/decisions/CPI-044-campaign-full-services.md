@@ -1,5 +1,7 @@
 # CPI-044 · Full-game service acceptance builds
 
+**12 November 2026 · production distribution checkpoint.** The owner accepted both provider sign-ins on TestFlight69. Corrected source `271261e` passed full exact-source native checks `43254538909`; Android1.0.1(62) is available to internal testers and queued for production review with current artwork. iPhone1.0.1(71) is VALID / APP_STORE_ELIGIBLE after upload `43257735888`, with tester assignment/public submission still pending Apple console sign-in. Twenty visible Apple products are READY_TO_SUBMIT; Hints10 and Sunshades remain. The [dated production record](../operations/PRODUCTION_COMMERCE_LAUNCH.md) distinguishes production deployment, verified Sandbox helper evidence, queued review and unverified phone/live-payment outcomes. No new rule, price, revenue assumption or simulated acceptance is introduced.
+
 11 November 2026 · [issue120](https://github.com/georgi-cole/crystal-path-infinity/issues/120)
 
 Initial checkpoint · 11 November 2026: implementation in progress on `codex/campaign-full-services`; not accepted, merged or distributed. Existing Android57 and iPhone55 are offline Campaign0.7.4 builds and retain free simulated claims. Registered store entries alone do not implement checkout. Later dated sections below record the subsequent staging deployment, reported sandbox purchase/restore acceptance and test distribution.

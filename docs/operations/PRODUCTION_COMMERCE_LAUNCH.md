@@ -1,6 +1,22 @@
 # Production commerce launch · 12 November 2026
 
-Status: work in progress on `codex/production-release-20261112`. Not submitted or published.
+Status: Android62 available internally and queued for production review; Apple71 processed, submission still pending. Latest source and evidence follow; older dated checkpoints remain historical.
+
+## Corrected production candidates and store submission · 12 November 2026
+
+PR129 merged as `271261e8a92fca7bb2e948e1f904240483d2a992`. Exact-main manual full-service checks [43254538909](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/43254538909) passed quality, PostgreSQL access controls and both native build/launch jobs. Inspected screenshots show the expected development baseline; these checks do not claim Campaign phone checkout. Reports record Android three cold starts and iPhone two cold starts, real OS lifecycle round trips and zero unexpected runtime errors. No simulator gate was bypassed.
+
+Android **1.0.1 (62)** is compiled and signed from this source with native billing/ads and the production gateway. Its manifest records `campaign-release`, no simulated purchases and no demonstration ads. Signature and bundletool validation passed. SHA256: `09312f6da2c864f22f843ea6d2d17e12fb944e97647c961056bf634061f5f992`. Google Play internal release8 is **Active / Available to internal testers**. The public candidate was promoted from this exact uploaded bundle; previous44 is excluded. Supported devices are unchanged. Nonblocking warnings concern the larger artwork package and an absent deobfuscation file; minification is disabled.
+
+Google's old44 review was withdrawn into editable changes, preserving the app declarations and territories. The replacement **1.0.1 (62) · Campaign adventure** and13 changes were sent using the production review flow. Publishing overview shows **Changes in review** while automated quick checks run, with forwarding to review contingent on their success. Managed publishing remains off. This is a queued review submission, not approval or a public rollout already completed.
+
+Six new screenshots use current Campaign, Infinity, companions, bridges, fitted gear and Mystery assets. Google received the1080×1920 JPEG set in that order; its AI asset declaration accurately labels generated/edited artwork. The current30-mission description and new images are saved. Apple1206×2622 counterparts are prepared and visually checked but not uploaded yet. The older Revised screenshots depict an obsolete shop and are superseded. Local originals, captures and proof images remain outside Git under the protected production StoreMedia directory.
+
+iPhone upload [43257735888](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/43257735888) succeeded as **1.0.1 (71)** from exact source `271261e`. App Store Connect confirms **VALID / APP_STORE_ELIGIBLE**. Its OS-only encryption answer, internal tester assignment and public submission remain pending; successful processing does not establish distribution. Earlier70/61 are superseded candidates, not public releases.
+
+Apple purchase metadata was completed through the signed-in owner console with existing prices, all-country product availability, item review screenshots and reviewer navigation notes. English World names now identify the actual companions; legacy immutable product IDs are preserved. A subsequent authenticated API read confirms **20 READY_TO_SUBMIT / 11 MISSING_METADATA** across31 registrations: the remaining visible products are **Hints10 and Sunshades**; the other nine are legacy-only products outside this public shop. Availability and ready metadata are not approval. Authentication expired before the last two and the app submission; the owner was asked to sign back in. Google authenticated catalog audit confirms all six World titles already identify their companions, so no redundant catalog write was made.
+
+The production backend remains source `a17d866`, unchanged by PR129's client label correction. Hosted canonical Sandbox verification and failure-path checks retain their earlier scope. Production phone purchase/Restore acceptance, Campaign interstitial presentation and Apple live reconciliation after the first public release remain unverified. No new payment, revenue, price change or historical acceptance is inferred from this distribution work.
 
 ## Subsequent deployment and candidate checkpoint · 12 November 2026
 
