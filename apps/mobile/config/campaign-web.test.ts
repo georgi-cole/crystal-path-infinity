@@ -69,6 +69,21 @@ describe('public browser Campaign', () => {
       }),
     ).toThrow();
   });
+  it('keeps enabled browser sign-in separate from native purchase and ad services', async () => {
+    vi.stubEnv('MODE', 'campaign-web');
+    vi.stubGlobal('window', { location: { origin: 'https://georgi-cole.github.io' } });
+    const { createLiveServices } = await import('../src/live-services');
+    const services = createLiveServices({
+      VITE_ACCOUNT_SERVICES_ENABLED: 'true',
+      VITE_ACCOUNT_API_BASE_URL: 'https://crystalpath-api.kolequant.xyz/cpi',
+      VITE_WEB_PROVIDER_SIGN_IN: 'true',
+    });
+    expect(services?.account.accountEntry?.identity).toBeTruthy();
+    expect(services?.commerce).toBeNull();
+    expect(services?.account.campaignInterstitial).toBeUndefined();
+    expect(services?.account.rewardFlowFactory).toBeUndefined();
+    expect(services?.account.rankedClient).toBeUndefined();
+  });
   it.each(['worlds', 'bridges', 'gear', 'supplies'] as const)(
     'renders %s without free claims, restoration or misleading billing errors',
     async (initial) => {

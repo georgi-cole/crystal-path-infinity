@@ -30,6 +30,7 @@ import {
   SIMULATED_STORE_ENABLED,
   CAMPAIGN_SERVICES_BUILD,
   CAMPAIGN_RELEASE_BUILD,
+  CAMPAIGN_WEB_BUILD,
 } from './app-profile';
 
 export interface LiveServices {
@@ -74,7 +75,7 @@ export function createLiveServices(values: Readonly<Record<string, unknown>>): L
     accountControlsClient: createAccountControlsClient(base, session),
     profileClient: createProfileClient(base, session),
   };
-  if (!native) return { account, commerce: null };
+  if (CAMPAIGN_WEB_BUILD || !native) return { account, commerce: null };
 
   // Enabling production accounts must not silently activate ranked admission.
   const ranked =

@@ -1,5 +1,7 @@
 # GitHub Pages guest game preview
 
+**13 November 2026 publication correction.** Main run `43329745995` correctly blocked publication because account-enabled compilation retained unused native demo-ad inventory. `campaign-web` now statically returns account-only services, removing native billing/ad paths from the browser bundle. Validate both existing account opt-ins with the same Pages script and unchanged no-demo/no-simulated-wallet assertions; no ad flags are enabled. The failed run did not replace the live site.
+
 ## Current publication contract - 13 November 2026 (CPI-048)
 
 This dated update supersedes the classic guest-only game description below; the
