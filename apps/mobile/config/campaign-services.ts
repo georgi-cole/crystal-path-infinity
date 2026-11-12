@@ -8,6 +8,7 @@ export function assertCampaignServices(values: Readonly<Record<string, string | 
     'VITE_ACCOUNT_SERVICES_ENABLED',
     'VITE_PURCHASES_ENABLED',
     'VITE_GUEST_REWARDED_ADS_TEST',
+    'VITE_CAMPAIGN_INTERSTITIALS_ENABLED',
     'VITE_NATIVE_PROVIDER_SIGN_IN',
   ]) {
     if (values[name] !== 'true') throw new Error('Campaign services requires ' + name);

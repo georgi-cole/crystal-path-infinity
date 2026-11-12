@@ -136,7 +136,15 @@ export function createMobileIdentityClient(
       url.searchParams.get('redirect_uri') !== base + '/identity/mobile/callback'
     )
       throw new AccountGatewayError('unavailable');
-    const returned = await bridge.openProduction({ url: begin.url, state: begin.state });
+    let returned: Awaited<ReturnType<typeof bridge.openProduction>>;
+    try {
+      returned = await bridge.openProduction({ url: begin.url, state: begin.state });
+    } catch (error) {
+      if (signal.aborted) throw error;
+      // A failed OS return cannot authorize sign-in. The server may finish only
+      // if the provider already delivered a proof bound to this app-held token.
+      return post('mobile/complete', { flowToken: begin.flowToken, eligibilityPermit });
+    }
     if (returned.status === 'cancelled') return { status: 'cancelled' };
     if (returned.status !== 'returned') throw new AccountGatewayError('unavailable');
     return post('mobile/complete', { flowToken: begin.flowToken, eligibilityPermit });

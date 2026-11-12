@@ -1,5 +1,5 @@
 import { Buffer } from 'node:buffer';
-import { createPrivateKey, sign } from 'node:crypto';
+import { createPrivateKey } from 'node:crypto';
 import { exactObject, isObject, providerJson } from './private-services.ts';
 
 export type NativeIdentityProvider = 'apple' | 'google';
@@ -96,6 +96,67 @@ export function createNativeIdentity(options: {
     },
   };
 
+  function identityJson(
+    provider: NativeIdentityProvider,
+    stage: 'keys' | 'token',
+    url: string,
+    init: RequestInit,
+  ) {
+    return providerJson(url, init, async (input, request) => {
+      const response = await fetcher(input, request);
+      if (!response.ok) {
+        let oauthError: string | undefined;
+        const reader = response.clone().body?.getReader();
+        if (reader) {
+          try {
+            let size = 0,
+              text = '';
+            const decoder = new TextDecoder();
+            for (;;) {
+              const part = await reader.read();
+              if (part.done) break;
+              size += part.value.byteLength;
+              if (size > 4096) break;
+              text += decoder.decode(part.value, { stream: true });
+            }
+            if (size <= 4096) {
+              const failure: unknown = JSON.parse(text + decoder.decode());
+              if (
+                isObject(failure) &&
+                typeof failure.error === 'string' &&
+                [
+                  'invalid_client',
+                  'invalid_grant',
+                  'invalid_request',
+                  'unauthorized_client',
+                  'unsupported_grant_type',
+                  'server_error',
+                  'temporarily_unavailable',
+                ].includes(failure.error)
+              )
+                oauthError = failure.error;
+            }
+          } catch {
+            /* Provider messages and credentials never enter diagnostics. */
+          } finally {
+            await reader.cancel().catch(() => {});
+            reader.releaseLock();
+          }
+        }
+        console.error(
+          JSON.stringify({
+            event: 'identity_provider_http_failure',
+            provider,
+            stage,
+            status: response.status,
+            ...(oauthError ? { oauthError } : {}),
+          }),
+        );
+      }
+      return response;
+    });
+  }
+
   async function verifyToken(
     provider: NativeIdentityProvider,
     input: unknown,
@@ -128,7 +189,7 @@ export function createNativeIdentity(options: {
     )
       throw new NativeIdentityRejected();
     const subject = requiredString(value.sub, /^[A-Za-z0-9._-]{1,255}$/);
-    const body = await providerJson(jwks, {}, fetcher);
+    const body = await identityJson(provider, 'keys', jwks, {});
     if (!isObject(body) || !Array.isArray(body.keys) || body.keys.length > 32)
       throw new Error('Provider keys unavailable');
     const key = (body.keys as unknown[]).find(
@@ -173,7 +234,7 @@ export function createNativeIdentity(options: {
     };
   }
 
-  function appleSecret() {
+  async function appleSecret() {
     const iat = Math.floor(now() / 1000);
     const encode = (value: object) => Buffer.from(JSON.stringify(value)).toString('base64url');
     const input =
@@ -186,26 +247,32 @@ export function createNativeIdentity(options: {
         aud: appleIssuer,
         sub: apple.clientId,
       });
-    return (
-      input +
-      '.' +
-      sign('sha256', Buffer.from(input), {
-        key: appleKey,
-        dsaEncoding: 'ieee-p1363',
-      }).toString('base64url')
+    // Supabase's Node compatibility layer ignores dsaEncoding and returns DER.
+    // Web Crypto specifies the fixed-width r||s format required by JWT ES256.
+    const signingKey = await crypto.subtle.importKey(
+      'pkcs8',
+      Uint8Array.from(appleKey.export({ type: 'pkcs8', format: 'der' })),
+      { name: 'ECDSA', namedCurve: 'P-256' },
+      false,
+      ['sign'],
     );
+    const signature = new Uint8Array(
+      await crypto.subtle.sign(
+        { name: 'ECDSA', hash: 'SHA-256' },
+        signingKey,
+        new TextEncoder().encode(input),
+      ),
+    );
+    if (signature.length !== 64) throw new Error('Apple signing unavailable');
+    return input + '.' + Buffer.from(signature).toString('base64url');
   }
 
   function exchange(url: string, form: Record<string, string>) {
-    return providerJson(
-      url,
-      {
-        method: 'POST',
-        body: new URLSearchParams(form),
-        headers: { accept: 'application/json' },
-      },
-      fetcher,
-    );
+    return identityJson(url === appleIssuer + '/auth/token' ? 'apple' : 'google', 'token', url, {
+      method: 'POST',
+      body: new URLSearchParams(form),
+      headers: { accept: 'application/json' },
+    });
   }
 
   return {
@@ -238,7 +305,7 @@ export function createNativeIdentity(options: {
           const result = await exchange(appleIssuer + '/auth/token', {
             grant_type: 'authorization_code',
             client_id: apple.clientId,
-            client_secret: appleSecret(),
+            client_secret: await appleSecret(),
             code,
             ...(options.web ? { redirect_uri: redirect } : {}),
           });
@@ -256,7 +323,7 @@ export function createNativeIdentity(options: {
         method: 'POST',
         body: new URLSearchParams({
           client_id: apple.clientId,
-          client_secret: appleSecret(),
+          client_secret: await appleSecret(),
           token: refreshToken,
           token_type_hint: 'refresh_token',
         }),

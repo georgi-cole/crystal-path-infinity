@@ -16,6 +16,7 @@ describe('offline signed Campaign beta isolation', () => {
       'VITE_REWARDED_ADS_ENABLED',
       'VITE_GUEST_REWARDED_ADS_TEST',
       'VITE_GUEST_REWARDED_ADS_LIVE',
+      'VITE_CAMPAIGN_INTERSTITIALS_ENABLED',
       'VITE_IOS_PROVIDER_SIGN_IN',
       'VITE_NATIVE_PROVIDER_SIGN_IN',
       'VITE_ACCOUNT_API_BASE_URL',
@@ -46,6 +47,7 @@ describe('full-game service acceptance isolation', () => {
       VITE_PURCHASES_ENABLED: 'true',
       VITE_NATIVE_PROVIDER_SIGN_IN: 'true',
       VITE_GUEST_REWARDED_ADS_TEST: 'true',
+      VITE_CAMPAIGN_INTERSTITIALS_ENABLED: 'true',
       VITE_ACCOUNT_API_BASE_URL: 'https://crystal-path-staging-api.kolequant.workers.dev/cpi',
     };
     expect(() => assertCampaignServices(values)).not.toThrow();

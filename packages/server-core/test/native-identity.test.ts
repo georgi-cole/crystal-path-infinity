@@ -1,5 +1,5 @@
 import { Buffer } from 'node:buffer';
-import { generateKeyPairSync, sign } from 'node:crypto';
+import { generateKeyPairSync, sign, verify } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
 import {
   createNativeIdentity,
@@ -63,6 +63,38 @@ function fixture(overrides: Record<string, unknown> = {}) {
 }
 
 describe('staging native provider proof', () => {
+  it('records only provider phase and HTTP status when a provider rejects an exchange', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const { service, fetcher } = fixture();
+      fetcher.mockResolvedValueOnce(
+        Response.json(
+          { error: 'invalid_client', error_description: 'private-provider-response' },
+          { status: 400 },
+        ),
+      );
+      await expect(
+        service.verify(
+          'google',
+          { code: 'private-authorization-code', verifier: 'v'.repeat(43) },
+          nonce,
+        ),
+      ).rejects.toThrow('Provider unavailable');
+      expect(log.mock.calls).toEqual([
+        [
+          JSON.stringify({
+            event: 'identity_provider_http_failure',
+            provider: 'google',
+            stage: 'token',
+            status: 400,
+            oauthError: 'invalid_client',
+          }),
+        ],
+      ]);
+    } finally {
+      log.mockRestore();
+    }
+  });
   it('uses distinct web audiences, the fixed redirect and a server-only Google secret', async () => {
     const webApple = 'com.georgicole.crystalpath.infinity.web';
     const redirectUri = 'https://crystalpath-api.kolequant.xyz/cpi/identity/web-callback';
@@ -109,6 +141,18 @@ describe('staging native provider proof', () => {
     );
     expect((appleExchange?.[1]?.body as URLSearchParams).get('client_id')).toBe(webApple);
     expect((appleExchange?.[1]?.body as URLSearchParams).get('redirect_uri')).toBe(redirectUri);
+    const secret = (appleExchange?.[1]?.body as URLSearchParams).get('client_secret')!;
+    const [header, claims, signature] = secret.split('.');
+    const rawSignature = Buffer.from(signature, 'base64url');
+    expect(rawSignature.length).toBe(64);
+    expect(
+      verify(
+        'sha256',
+        Buffer.from(header + '.' + claims),
+        { key: ec.publicKey, dsaEncoding: 'ieee-p1363' },
+        rawSignature,
+      ),
+    ).toBe(true);
     await expect(
       service.verify(
         'apple',

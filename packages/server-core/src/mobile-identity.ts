@@ -145,19 +145,18 @@ export function createMobileIdentity(options: {
         );
       });
       const target = returnBase + '?state=' + state;
-      const nonce = crypto.token();
-      return new Response(
-        `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Return to Crystal Path</title><script nonce="${nonce}">location.replace(${JSON.stringify(target)})</script><p><a href="${target}">Return to Crystal Path</a></p>`,
-        {
-          headers: {
-            'content-type': 'text/html; charset=utf-8',
-            'cache-control': 'no-store',
-            'referrer-policy': 'no-referrer',
-            'x-content-type-options': 'nosniff',
-            'content-security-policy': `default-src 'none'; script-src 'nonce-${nonce}'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'`,
-          },
+      // Edge ingress downgrades HTML to plain text. An HTTP redirect is captured
+      // directly by ASWebAuthenticationSession / Android's registered callback.
+      return new Response(null, {
+        status: 303,
+        headers: {
+          location: target,
+          'cache-control': 'no-store',
+          'referrer-policy': 'no-referrer',
+          'x-content-type-options': 'nosniff',
+          'content-security-policy': "default-src 'none'; frame-ancestors 'none'",
         },
-      );
+      });
     },
     async complete(
       input: unknown,

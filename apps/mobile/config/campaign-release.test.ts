@@ -7,6 +7,7 @@ const values = {
   VITE_PURCHASES_ENABLED: 'true',
   VITE_NATIVE_PROVIDER_SIGN_IN: 'true',
   VITE_GUEST_REWARDED_ADS_LIVE: 'true',
+  VITE_CAMPAIGN_INTERSTITIALS_ENABLED: 'true',
   VITE_ACCOUNT_API_BASE_URL: 'https://crystalpath-api.kolequant.xyz/cpi',
   CPI_STORE_VERSION: '1.0.1',
   CPI_STORE_BUILD_NUMBER: '60',

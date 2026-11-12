@@ -1,6 +1,11 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import type { PluginListenerHandle } from '@capacitor/core';
-import { AdMob, AdmobConsentStatus, MaxAdContentRating } from '@capacitor-community/admob';
+import {
+  AdMob,
+  AdmobConsentStatus,
+  InterstitialAdPluginEvents,
+  MaxAdContentRating,
+} from '@capacitor-community/admob';
 import { GOOGLE_ADS_SDK } from '../../config/native-integrations';
 import type { GuestAdUnits } from '../../config/guest-ad-inventory';
 import { permitMatchesAdapter } from './reward-flow';
@@ -34,6 +39,8 @@ type ConsentSdk = Pick<
   typeof AdMob,
   'requestConsentInfo' | 'showConsentForm' | 'showPrivacyOptionsForm' | 'initialize'
 >;
+type CampaignInterstitialSdk = ConsentSdk &
+  Pick<typeof AdMob, 'prepareInterstitial' | 'showInterstitial' | 'addListener'>;
 const ratings = {
   G: MaxAdContentRating.General,
   PG: MaxAdContentRating.ParentalGuidance,
@@ -355,5 +362,92 @@ export function nativeAdMobAdapter(adUnitId: string) {
     adUnitId,
     available:
       Capacitor.isPluginAvailable('AdMob') && Capacitor.isPluginAvailable('CpiRewardedAds'),
+  });
+}
+
+export interface CampaignInterstitialAd {
+  readonly available: boolean;
+  show(signal: AbortSignal): Promise<'closed' | 'unavailable' | 'error'>;
+}
+
+function waitForCampaignAd<T>(pending: Promise<T>, signal: AbortSignal): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const abort = () => reject(new RewardUnavailable());
+    if (signal.aborted) return abort();
+    signal.addEventListener('abort', abort, { once: true });
+    void pending.then(resolve, reject).finally(() => signal.removeEventListener('abort', abort));
+  });
+}
+
+/** Campaign ads are optional, non-rewarded, and use the same conservative UMP defaults as guests. */
+export function createCampaignInterstitialAdapter(options: {
+  platform: 'android' | 'ios';
+  adUnitId: string;
+  available: boolean;
+  sdk?: CampaignInterstitialSdk;
+}): CampaignInterstitialAd {
+  const sdk = options.sdk ?? AdMob;
+  let presenting = false;
+  return {
+    available: options.available && unitPattern.test(options.adUnitId),
+    async show(signal) {
+      if (!options.available || !unitPattern.test(options.adUnitId)) return 'unavailable';
+      if (presenting || signal.aborted) return 'error';
+      presenting = true;
+      let dismissed: PluginListenerHandle | null = null;
+      let failedToShow: PluginListenerHandle | null = null;
+      try {
+        const loading = AbortSignal.any([signal, AbortSignal.timeout(20_000)]);
+        const check = () => {
+          if (loading.aborted) throw new RewardUnavailable();
+        };
+        await waitForCampaignAd(initializeAdMob(sdk, guestPrivacy, check, true), loading);
+        check();
+        const loaded = await waitForCampaignAd(
+          sdk.prepareInterstitial({ adId: options.adUnitId, npa: true }),
+          loading,
+        );
+        check();
+        if (!loaded.adUnitId) return 'error';
+
+        let settle!: (result: 'closed' | 'error') => void;
+        const outcome = new Promise<'closed' | 'error'>((resolve) => {
+          settle = resolve;
+        });
+        let finished = false;
+        const finish = (result: 'closed' | 'error') => {
+          if (finished) return;
+          finished = true;
+          settle(result);
+        };
+        dismissed = await sdk.addListener(InterstitialAdPluginEvents.Dismissed, () =>
+          finish('closed'),
+        );
+        failedToShow = await sdk.addListener(InterstitialAdPluginEvents.FailedToShow, () =>
+          finish('error'),
+        );
+        check();
+        const showing = AbortSignal.any([signal, AbortSignal.timeout(120_000)]);
+        await waitForCampaignAd(sdk.showInterstitial({ adId: loaded.adUnitId }), showing);
+        return await waitForCampaignAd(outcome, showing);
+      } catch {
+        return signal.aborted ? 'unavailable' : 'error';
+      } finally {
+        await dismissed?.remove().catch(() => {});
+        await failedToShow?.remove().catch(() => {});
+        presenting = false;
+      }
+    },
+  };
+}
+
+export function nativeCampaignInterstitialAdapter(adUnitId: string | undefined) {
+  const platform = Capacitor.getPlatform();
+  if (platform !== 'android' && platform !== 'ios') return null;
+  if (!adUnitId) return null;
+  return createCampaignInterstitialAdapter({
+    platform,
+    adUnitId,
+    available: Capacitor.isPluginAvailable('AdMob'),
   });
 }

@@ -61,7 +61,8 @@ export const bg = {
   'account.useAccountEmail': 'Влез с имейла си за Crystal Path.',
   'account.betaProviderUnavailable': 'Използвай одобрен тестов акаунт и връзка от България.',
   'account.verifyExisting': 'Потвърди акаунта си',
-  'account.verifyExistingHelp': 'Потвърди акаунта си в Crystal Path с еднократен код.',
+  'account.verifyExistingHelp':
+    'Свържи този вход със съществуващия си акаунт в Crystal Path с един код по имейл. Това е нужно само веднъж. Следващия път влез директно с Apple или Google.',
   'account.otherMethods': 'Други начини за вход',
   'profile.setupTitle': 'Твоят профил',
   'profile.optionalNickname': 'Псевдоним (по избор)',
