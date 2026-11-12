@@ -119,11 +119,9 @@ export class AccountSessionOwner {
     };
   }
 
-  /** Opaque local identity generation; never a subject, token or request field. */
+  /** Local identity fence, not authorization. Requests renew expired access through withAccountRequest. */
   accountScope(): object | null {
-    return (this.phase === 'active' || this.phase === 'refreshing') &&
-      this.current &&
-      this.current.expiresAt > this.now() + 5_000
+    return (this.phase === 'active' || this.phase === 'refreshing') && this.current
       ? this.accountEpoch
       : null;
   }

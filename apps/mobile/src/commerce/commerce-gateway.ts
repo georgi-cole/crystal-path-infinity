@@ -176,6 +176,7 @@ export function createCommerceGateway(options: {
   const session = options.session;
   let selectedScope: object | null = null;
   let reviewChoice: boolean | undefined;
+  let environmentKnown = false;
   let selecting: Promise<void> | undefined;
   const responseScopes = new WeakMap<object, object | null>();
   async function post(
@@ -193,12 +194,21 @@ export function createCommerceGateway(options: {
   ) {
     return session.withAccountRequest(async (lease) => {
       const scope = session.accountScope();
-      if (scope !== selectedScope || !selecting) {
+      const changed = scope !== selectedScope;
+      if (changed) {
         selectedScope = scope;
         reviewChoice = undefined;
-        selecting = Promise.resolve(options.reviewWallet?.()).then((choice) => {
-          if (selectedScope === scope && session.accountScope() === scope) reviewChoice = choice;
-        });
+        environmentKnown = false;
+      }
+      if (changed || !selecting || (route === 'wallet' && !environmentKnown)) {
+        selecting = Promise.resolve()
+          .then(() => options.reviewWallet?.())
+          .catch(() => undefined)
+          .then((choice) => {
+            if (selectedScope !== scope || session.accountScope() !== scope) return;
+            environmentKnown = typeof choice === 'boolean';
+            if (environmentKnown) reviewChoice = choice;
+          });
       }
       await selecting;
       if (session.accountScope() !== scope) throw new CommerceUnavailable();

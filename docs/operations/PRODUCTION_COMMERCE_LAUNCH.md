@@ -1,5 +1,22 @@
 # Production commerce launch · 12 November 2026
 
+## Build71 purchase incident and client correction · 12 November 2026
+
+The owner's build71 report supersedes any assumption that the submitted candidate has passed phone checkout acceptance: initial shop connection failed, Restore temporarily enabled checkout, Pawrachute World completed, then another checkout and Restore failed. Existing build71 is not modified by this source correction. No new signed replacement, Apple approval or successful phone retest is implied.
+
+Read-only production diagnostics at approximately21:32UTC confirmed one iOS Sandbox `theme.puppy` delivery at20:56UTC, retained in its owner's separate review inventory. That owner has one production session, issued on build71; there are no older production sessions for that owner to purge. The review inventory remains preferred and contains the purchased World. `apple.review` reconciliation is fresh and healthy. `apple.production` still has the separately documented pre-first-release authorization failure; it is not represented as healthy. No account, provider link, session or purchase data was deleted during diagnosis. No raw receipt, token, account UUID or email is included in this record.
+
+Four failing regressions were reproduced against build71 source before the correction:
+
+- After15minutes idle, `CommerceFlow` sees a null identity scope and returns before `withAccountRequest` can renew the expired access token; a subsequent buy or Restore cannot recover. The local identity fence now survives access-token expiry, while every authenticated call still renews/validates access and logout/rejected refresh immediately clears the scope.
+- A native recovery outage prevents all product loading. Product discovery now proceeds with a visible incomplete-restore notice, without claiming the failed restore succeeded.
+- One rejected historical receipt prevents delivery of later valid receipts and product discovery. Recovery failures are isolated per receipt; unverified receipts are never finished or granted.
+- If native app-environment detection is initially unavailable, its primary-inventory fallback remains cached for the session. A shop reload now retries an unresolved hint. The hint remains presentation/routing input; the server independently verifies payment environment.
+
+iOS recovery asks for current entitlements plus unfinished transactions and ignores transactions marked revoked, rather than replaying all finished purchase history. Unfinished consumables remain recoverable. The Campaign shop allows another attempt with already-loaded products after a purchase error, using the same authenticated permit and verification gates. No receipt-verification, reconciliation-freshness or cross-account rule is bypassed.
+
+Phone acceptance required for the replacement: Apple sign-in; prices load; buy one World; buy a different item; wait more than15minutes and repeat; close/reopen and Restore; verify permanent ownership; repeat after a temporary network failure. Automated client regressions and native launch checks do not replace that acceptance. Gameplay, prices, revenue assumptions and historical test results are unchanged.
+
 Status: Android62 available internally and in production review with the corrected Google Data safety declaration after successful automatic checks. Apple71 is available in TestFlight and the public app plus22 purchases are Waiting for Review. Latest source and evidence follow; older dated checkpoints remain historical.
 
 ## Completed Apple submission and privacy corrections · 12 November 2026

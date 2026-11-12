@@ -36,6 +36,25 @@ function fixture(platform: 'android' | 'ios') {
   return { sdk, adapter };
 }
 describe('platform checkout adapter', () => {
+  it('restores current iOS entitlements and unfinished consumables without replaying revoked history', async () => {
+    const f = fixture('ios');
+    const revoked = {
+      ...transaction,
+      transactionId: 'revoked-order',
+      revocationDate: '2026-11-12T00:00:00Z',
+    };
+    f.sdk.getUnfinishedTransactions.mockResolvedValue({ transactions: [revoked, transaction] });
+    f.sdk.getPurchases.mockResolvedValue({ purchases: [revoked] });
+    expect(await f.adapter.recover(token)).toEqual([
+      expect.objectContaining({ transactionId: transaction.transactionId }),
+    ]);
+    expect(f.sdk.getPurchases).toHaveBeenCalledWith({
+      productType: 'inapp',
+      appAccountToken: token.toUpperCase(),
+      onlyCurrentEntitlements: true,
+    });
+    expect(f.sdk.finishTransaction).not.toHaveBeenCalled();
+  });
   it('uses the native iOS app environment only as an inventory hint and tolerates unavailable hints', async () => {
     const f = fixture('ios');
     expect(await f.adapter.reviewEnvironment?.()).toBe(true);

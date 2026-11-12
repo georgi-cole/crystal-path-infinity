@@ -28,6 +28,48 @@ const session: Pick<
 };
 const scope = {};
 describe('commerce wire contract', () => {
+  it('retries an unavailable native environment hint when the player reopens the shop', async () => {
+    const review = {
+      ...wallet,
+      inventoryToken: 'ba000000-0000-4000-8000-000000000002',
+      reviewWallet: true,
+    };
+    const reviewWallet = vi
+      .fn<() => Promise<boolean | undefined>>()
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValue(true);
+    const fetcher = vi.fn<typeof fetch>((url, init) => {
+      const input = JSON.parse(init!.body as string) as { reviewWallet?: boolean };
+      const address = typeof url === 'string' ? url : url instanceof URL ? url.href : url.url;
+      return Promise.resolve(
+        Response.json(
+          address.endsWith('/begin')
+            ? { schemaVersion: 1, accountToken: wallet.accountToken, sku: 'real.credits' }
+            : {
+                schemaVersion: 1,
+                wallet: input.reviewWallet
+                  ? review
+                  : { ...wallet, inventoryToken: wallet.accountToken, reviewWallet: false },
+              },
+        ),
+      );
+    });
+    const gateway = createCommerceGateway({
+      baseUrl: 'https://api.example.com/cpi',
+      platform: 'ios',
+      session,
+      fetcher,
+      reviewWallet,
+    })!;
+    const signal = new AbortController().signal;
+    expect((await gateway.wallet(signal)).reviewWallet).toBe(false);
+    expect((await gateway.wallet(signal)).reviewWallet).toBe(true);
+    await gateway.begin('credits.3', 'ios', signal);
+    expect(reviewWallet).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(fetcher.mock.calls.at(-1)![1]!.body as string)).toMatchObject({
+      reviewWallet: true,
+    });
+  });
   it('validates separate inventory identity and never treats a review hint as payment', async () => {
     const inventoryToken = 'ba000000-0000-4000-8000-000000000002';
     const review = { ...wallet, inventoryToken, reviewWallet: true };

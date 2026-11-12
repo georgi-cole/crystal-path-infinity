@@ -8,6 +8,7 @@ import type {
 } from '../src/commerce/commerce-types';
 import { EMPTY_CAMPAIGN_PROGRESS } from '../src/campaign-test';
 import { receiveOfflineSupplies, offlineSupplyCapacity } from '../src/commerce/campaign-inventory';
+import { AccountSessionOwner, RefreshCredentialRejected } from '../src/account/session-owner';
 const token = 'ba000000-0000-4000-8000-000000000001';
 const product = {
   key: 'credits.3',
@@ -76,6 +77,98 @@ function fixture(pending = false) {
   };
 }
 describe('real purchase delivery and recovery ownership', () => {
+  it('refreshes an expired access token before a second checkout or restoring the shop', async () => {
+    const f = fixture();
+    let now = 1_800_000_000_000;
+    const response = (refreshToken: string) => ({
+      status: 'active',
+      subject: token,
+      accessToken: 'access-token-0123456789ABCDEF',
+      refreshToken,
+      expiresAt: now + 900_000,
+    });
+    const refresh = vi.fn(() => Promise.resolve(response('refresh-next-device-0123456789ABCDEF')));
+    const owner = new AccountSessionOwner(
+      {
+        supported: true,
+        read: () => Promise.resolve(null),
+        write: () => Promise.resolve(),
+        clear: () => Promise.resolve(),
+      },
+      {
+        exchange: () => Promise.resolve(response('refresh-first-device-0123456789ABCDEF')),
+        refresh,
+        revoke: () => Promise.resolve({ status: 'revoked' }),
+      },
+      () => now,
+    );
+    expect(await owner.exchangeVerifiedTicket('verified-ticket-0123456789-abcdef')).toBe(true);
+    const gateway = {
+      ...f.gateway,
+      accountScope: () => owner.accountScope(),
+      subscribeAccountScope: (observer: () => void) => owner.subscribeAccountScope(observer),
+      wallet: vi.fn(() => owner.withAccountRequest(() => Promise.resolve(initial))),
+      begin: vi.fn(() =>
+        owner.withAccountRequest(() => Promise.resolve({ accountToken: token, sku: product.sku })),
+      ),
+    };
+    const flow = new CommerceFlow(gateway, f.native);
+    await flow.load();
+    await flow.buy(product.key);
+    now += 901_000;
+    expect(owner.snapshot().canUseAccount).toBe(false);
+    await flow.buy(product.key);
+    expect(refresh).toHaveBeenCalledOnce();
+    expect(f.native.purchase).toHaveBeenCalledTimes(2);
+    expect(flow.snapshot().phase).toBe('ready');
+    // Restore must reach the refresh path too, even after another full idle period.
+    refresh.mockImplementation(() =>
+      Promise.resolve(response('refresh-third-device-0123456789ABCDEF')),
+    );
+    gateway.wallet.mockImplementation(() =>
+      owner.withAccountRequest(() => Promise.resolve({ ...initial, revision: 1, credits: 3 })),
+    );
+    now += 901_000;
+    await flow.load();
+    expect(refresh).toHaveBeenCalledTimes(2);
+    expect(flow.snapshot().phase).toBe('ready');
+    refresh.mockRejectedValueOnce(new RefreshCredentialRejected());
+    now += 901_000;
+    await flow.buy(product.key);
+    expect(refresh).toHaveBeenCalledTimes(3);
+    expect(f.native.purchase).toHaveBeenCalledTimes(2);
+    expect(flow.snapshot()).toMatchObject({ phase: 'unavailable', wallet: null, products: [] });
+    flow.dispose();
+    owner.dispose();
+  });
+  it('keeps current products purchasable when previous purchase recovery is unavailable', async () => {
+    const f = fixture();
+    vi.mocked(f.native.recover).mockRejectedValueOnce(new Error('Previous purchases unavailable'));
+    await f.flow.load();
+    expect(f.flow.snapshot()).toMatchObject({
+      phase: 'ready',
+      products: [product],
+      restoreIncomplete: true,
+    });
+    await f.flow.buy(product.key);
+    expect(f.native.purchase).toHaveBeenCalledOnce();
+    expect(f.flow.snapshot().wallet?.credits).toBe(3);
+  });
+  it('does not let one rejected old receipt block a valid restore or the next purchase', async () => {
+    const f = fixture();
+    const old = { ...proof, transactionId: 'old-revoked-order' };
+    vi.mocked(f.native.recover).mockResolvedValueOnce([old, proof]);
+    vi.mocked(f.gateway.verify).mockResolvedValueOnce({ status: 'rejected' });
+    await f.flow.load();
+    expect(f.flow.snapshot()).toMatchObject({
+      phase: 'ready',
+      restoreIncomplete: true,
+      wallet: { credits: 3 },
+    });
+    expect(f.native.finish).toHaveBeenCalledExactlyOnceWith(proof, true);
+    await f.flow.buy(product.key);
+    expect(f.native.purchase).toHaveBeenCalledOnce();
+  });
   it('moves a verified review grant and its offline transfer into a separate inventory', async () => {
     const f = fixture();
     const inventoryToken = 'ba000000-0000-4000-8000-000000000002';

@@ -22,6 +22,7 @@ export interface CommerceSnapshot {
     | 'error';
   readonly products: readonly PricedProduct[];
   readonly wallet: CommerceWallet | null;
+  readonly restoreIncomplete?: boolean;
 }
 const empty: CommerceSnapshot = { phase: 'idle', products: [], wallet: null };
 
@@ -106,18 +107,32 @@ export class CommerceFlow {
   }
   load = async (): Promise<void> =>
     this.operation('loading', async (current, signal) => {
-      this.update({ ...this.state, products: [] });
+      this.update({ ...this.state, products: [], restoreIncomplete: false });
       const wallet = await this.gateway.wallet(signal);
       if (!current()) return;
       this.accept(wallet);
       // Settle paid pending/unfinished transactions when the player opens the store,
       // including after an app close. This never opens a new checkout.
-      const receipts = await this.native.recover(wallet.accountToken);
-      if (!current()) return;
-      for (const receipt of receipts.slice(0, 20)) {
-        await this.deliver(receipt, current, signal);
+      let restoreIncomplete: boolean;
+      try {
+        const receipts = await this.native.recover(wallet.accountToken);
         if (!current()) return;
+        restoreIncomplete = receipts.length > 20;
+        for (const receipt of receipts.slice(0, 20)) {
+          try {
+            restoreIncomplete =
+              !(await this.deliver(receipt, current, signal)) || restoreIncomplete;
+          } catch {
+            // A previous receipt must not prevent current product discovery. Never finish it unverified.
+            restoreIncomplete = true;
+          }
+          if (!current()) return;
+        }
+      } catch {
+        restoreIncomplete = true;
       }
+      if (!current()) return;
+      this.update({ ...this.state, restoreIncomplete });
       const catalog = await this.gateway.catalog(signal);
       if (!current()) return;
       const products = await this.native.prices(catalog);

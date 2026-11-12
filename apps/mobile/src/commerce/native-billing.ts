@@ -54,6 +54,7 @@ export function createNativeBillingAdapter(options: {
     if (
       !alias.test(accountToken) ||
       transaction.appAccountToken?.toLowerCase() !== accountToken.toLowerCase() ||
+      !!transaction.revocationDate ||
       !bounded(transaction.productIdentifier, 200) ||
       !bounded(transaction.transactionId, 200)
     )
@@ -158,6 +159,7 @@ export function createNativeBillingAdapter(options: {
       const owned = await sdk.getPurchases({
         productType: PURCHASE_TYPE.INAPP,
         appAccountToken: options.platform === 'ios' ? accountToken.toUpperCase() : accountToken,
+        ...(options.platform === 'ios' ? { onlyCurrentEntitlements: true } : {}),
       });
       const unique = new Map<string, PurchaseProof>();
       for (const transaction of [...unfinished.transactions, ...owned.purchases]) {

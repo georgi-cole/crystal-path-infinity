@@ -5,6 +5,8 @@ import { crystalGuideBg } from './crystal-guide-messages';
 
 /** Bulgarian preview copy — reviewed by the product owner before public release. */
 export const bg = {
+  'commerce.restoreIncomplete':
+    'Някои предишни покупки не можаха да бъдат проверени. Можете да пазарувате и да опитате възстановяването отново.',
   'rewards.limit': 'Рекламните продължавания свършиха.',
   'rewards.quota': 'Използвани продължавания: {applied}.',
   'rewards.leave': 'Към началния екран',
