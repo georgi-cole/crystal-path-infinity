@@ -1,5 +1,67 @@
 # Production commerce launch · 12 November 2026
 
+## Matching mobile replacements and Pages - 13 November 2026
+
+The owner authorized refreshing TestFlight, both production submissions and Pages
+with PR #131 plus the latest Campaign rewards/artwork. Source
+`14f7d3a8c1fb4261e20a01a8de58a6443caaeec2` includes PR #131 (`dd8ea96`),
+PR #133 reward cinematics and PR #135/#136 browser publication. Marketing version stays
+**1.0.1** because the first public releases are still in review; platform counters
+are Android **63** and iPhone **72**.
+
+Exact-source full-service checks [43340757079](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/43340757079)
+passed with native purchases and AdMob enabled. Both startup screenshots were
+inspected. Android records three cold-start/lifecycle attempts, iPhone two, with
+zero external runtime errors. These are development compatibility checks, not
+new phone checkout acceptance.
+
+Android 63 was built locally from that clean source with the registered production
+identity, production account gateway, native purchases/ads and `campaign-release`.
+JAR signature verification and bundletool validation passed. Signed AAB SHA256:
+`c39cd213d16eaa0f80a2e1a5e4a7ee3dd62afd9fea44839543d4ae85730a057a`.
+Google Play internal release 9 is Active / Available to internal testers. The same
+bundle replaced 62 in production. Google automatic checks passed and Publishing
+overview explicitly confirms **Your changes are now in review** for 63. Managed
+publishing remains off. The listing, privacy declarations and countries remain
+in the existing submission. Supported devices are unchanged; the only validation
+warning is an absent deobfuscation file (minification remains disabled). Play's
+new-install estimate is 51.7 MB. API preparation could not be validated with the
+existing service-account permission, so the reviewed console flow performed the
+actual upload, internal publication and production review restart; permissions
+were not expanded.
+
+iPhone [upload 43341954534](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/43341954534)
+succeeded as **1.0.1 (72)**. Apple confirms VALID / APP_STORE_ELIGIBLE. The existing
+OS-only encryption answer is saved, the Crystal Path Internal QA group is
+assigned, automatic notifications are enabled and status is IN_BETA_TESTING.
+Focused notes cover successive purchases, Restore on another device, more than
+15 minutes idle, network recovery and mission rewards. Apple console confirms **23 Items Submitted**, now **Waiting for Review**, in
+submission `da654c48-01bc-4b64-86ce-c4938960dc71`: iOS 1.0.1 build 72 plus all 22
+visible store purchases. The bulk attachment initially added only Bounce
+Boulevard and reported a generic retry error for the other products. Each
+remaining product was added sequentially and its Ready for Review state verified
+before the final 23-item submission. No legacy-only registrations were added.
+The older 71 submission was withdrawn by the developer to replace its binary,
+which is not an Apple rejection. Automatic release after approval is preserved.
+Existing store media, contact information, prices and privacy declarations are
+preserved. Apple export compliance and distribution used the signed-in owner
+console where the upload API key did not permit the operation; no key permissions
+were expanded. Store proof screenshots are retained privately outside Git.
+
+Pages is already published at the same source: `campaign-web`, 30 missions,
+production web accounts enabled, browser-local progress, mobile-only purchases
+and no browser ads. Deployment [43331901379](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/43331901379)
+and live metadata/UI checks passed. Documentation-only follow-ups may change the
+published source SHA without changing that runtime.
+
+No backend migration or production service setting changed for these client
+replacements. No new measured purchase, ad revenue or physical-device acceptance
+is claimed. Retest the build 71 incident on 72/63: first purchase, a different
+second purchase, same-account Restore on a second device, expiry after15 minutes
+idle and recovery after a temporary outage. Store review and approval are not
+public availability; previous Sandbox and sign-in acceptance retain their date
+and build scope. Game rules, prices and business assumptions are unchanged.
+
 ## Subsequent clarification and post-purchase sync correction · 13 November 2026
 
 The owner clarified that all displayed prices become dimmed/disabled after the successful World purchase; another product cannot be selected. The15-minute expiry defect below remains a separately reproduced bug and is not treated as a complete explanation of an immediate lockout. An additional failing regression reproduces the reported shop-wide state transition: a successful grant is followed by an optional offline inventory-sync error, and build71 places the entire shop in error. The correction keeps a loaded shop ready, marks the device sync incomplete, preserves the verified inventory, and prevents automatic repeated sync attempts until explicit reload/retry. Explicit delivery retry still uses the existing allocation acknowledgement/idempotency rules.
