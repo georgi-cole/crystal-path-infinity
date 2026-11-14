@@ -48,3 +48,42 @@ formatting and development/staging/production builds also pass.
 Native CI, replacement TestFlight distribution and authenticated phone acceptance
 must be recorded separately when observed. This record does not claim Google live
 ad approval or a completed phone acceptance run.
+
+## Checked merge and upload receipt
+
+[PR #140](https://github.com/georgi-cole/crystal-path-infinity/pull/140) passed
+all selected checks, including both native launches, and was squash-merged as
+`1a9297af13c91c66449a0b2a8ad6d2563c7ed774`. Its tree
+`e4eeebba459795c01e4b82921be9590f5e272d8c` matches the checked PR source.
+The exact main commit then passed App quality, backend, Planning, web builds,
+both native launches and the aggregate gate in
+[43650709219](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/43650709219).
+The iOS evidence reports profile `full` and zero unexpected runtime errors.
+
+Signed [TestFlight run 76](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/43651887268)
+used that exact main SHA on its first attempt. Upload and public production-profile
+options were true; Campaign beta/services, external beta, staging rewarded-ad test
+and review-source options were false. This retains production ranked services
+and version-specific AdMob test mode for marketing version 1.0.2. It does not
+submit a public App Store release or enable ranked ad starts.
+
+Xcode reported Upload succeeded / EXPORT SUCCEEDED at
+**2026-11-14T23:13:37Z** (15 November, 01:13 Sofia time). Signing cleanup and the
+workflow completed successfully. Logs confirm marketing version **1.0.2** and
+native build **76**. App Store Connect independently lists **Version 1.0.2,
+Build (76) - Processing**. Tester distribution and phone acceptance remain pending
+at this upload checkpoint.
+
+## Internal availability - 15 November, Sofia time
+
+Apple completed processing for build ID `87b40408-c762-414e-bf14-605b2ed3206a`.
+The existing OS-only encryption declaration was saved. Build **1.0.2 (76)** was
+assigned to **Crystal Path Internal QA**, with one internal tester. Build-specific
+What to Test notes for both ranked entry points, crossings, pause/resume, Home
+re-entry and ranking refresh were saved. The same notes distinguish Offline
+Infinity test ads from still-disabled ranked ad continues and pending live Google
+verification. The owner can update from build 75 through TestFlight.
+
+No external beta or public App Store submission was made. Authenticated phone
+acceptance, Google live ad readiness and the owner's new Campaign audio files
+remain pending; local/browser and native-startup evidence do not replace those.
