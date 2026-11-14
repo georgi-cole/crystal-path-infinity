@@ -103,3 +103,25 @@ leaves server-verified ad starts disabled. A rolled-back effective-role prefligh
 and independent World/BG/EU reads passed. All original runtime-source GitHub checks,
 including both native launch checks, passed. Phone ranked acceptance, AdMob
 verification, audio assets and replacement distribution remain pending.
+
+## TestFlight upload receipt - 14 November 2026, 21:50 UTC
+
+PR #138 is merged. Exact source `08a90c8058d7b83ab2c88c4e9f2222532180205c`
+passed its required full native and application checks. Signed
+[workflow 75](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/43644569608)
+uploaded **1.0.2 (75)** successfully; App Store Connect shows Processing.
+Internal group assignment, test notes and phone acceptance remain pending here.
+
+AdMob test mode is enabled specifically for 1.0.2, acknowledged by the signed
+upload environment. It must be disabled before a later public launch of that
+version. Google still reports Not verified / Requires review despite the matching
+public publisher file and App Store developer link. Production ranking admission
+is enabled; server-verified ranked ad starts remain disabled. The three new audio
+assets remain pending. This is not public release approval or live-ad acceptance.
+[Detailed source, retry and upload evidence](../operations/APPSTORE_LAUNCH_FIXES_20261114.md).
+
+
+**15 November 2026, Sofia:** Apple processing and the encryption declaration are
+complete. Build 1.0.2 (75) is assigned to Crystal Path Internal QA (one tester),
+with saved test notes. The owner can update through TestFlight. Phone acceptance
+and live-ad readiness remain pending; no public review was submitted.
