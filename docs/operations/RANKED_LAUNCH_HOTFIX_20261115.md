@@ -73,3 +73,17 @@ workflow completed successfully. Logs confirm marketing version **1.0.2** and
 native build **76**. App Store Connect independently lists **Version 1.0.2,
 Build (76) - Processing**. Tester distribution and phone acceptance remain pending
 at this upload checkpoint.
+
+## Internal availability - 15 November, Sofia time
+
+Apple completed processing for build ID `87b40408-c762-414e-bf14-605b2ed3206a`.
+The existing OS-only encryption declaration was saved. Build **1.0.2 (76)** was
+assigned to **Crystal Path Internal QA**, with one internal tester. Build-specific
+What to Test notes for both ranked entry points, crossings, pause/resume, Home
+re-entry and ranking refresh were saved. The same notes distinguish Offline
+Infinity test ads from still-disabled ranked ad continues and pending live Google
+verification. The owner can update from build 75 through TestFlight.
+
+No external beta or public App Store submission was made. Authenticated phone
+acceptance, Google live ad readiness and the owner's new Campaign audio files
+remain pending; local/browser and native-startup evidence do not replace those.
