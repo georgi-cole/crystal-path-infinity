@@ -113,6 +113,9 @@ export interface RewardFlowOptions {
   readonly onGateChange: (blocked: boolean) => void;
   /** Refresh the authoritative ranked controller before enabling any gameplay. */
   readonly synchronizeRun: (runId: string) => Promise<boolean>;
+  /** An already-confirmed live run needs no ad-status service to start playing.
+   * Used only before this flow has observed or requested any reward. */
+  readonly hasConfirmedPlayingRun?: () => boolean;
   readonly online?: boolean;
   readonly now?: () => number;
   readonly newId?: () => string;
@@ -369,6 +372,22 @@ export class RewardFlow {
     this.syncAccount();
     if (this.disposed || !this.scope || !this.online || !this.options.client) return;
     if (this.statusFlight) return this.statusFlight;
+    if (
+      this.phase === 'unavailable' &&
+      this.view === null &&
+      !this.createKey &&
+      !this.request &&
+      !this.busy &&
+      !this.fullscreen &&
+      this.options.hasConfirmedPlayingRun?.()
+    ) {
+      // No reward is granted or applied here. The ranked authority already
+      // confirmed play; keep the global fullscreen-ad arbiter gate intact.
+      this.phase = 'playing';
+      this.problem = null;
+      this.emit();
+      return;
+    }
     const epoch = this.epoch;
     const controller = new AbortController();
     this.statusRequest = controller;

@@ -20,9 +20,7 @@ export async function enterRankedPlay(
     if (!isCurrent()) return;
     if (!activeRunId) {
       if (['idle', 'finished'].includes(client.snapshot().phase)) await client.start();
-      return;
-    }
-    await client.recover(activeRunId);
+    } else await client.recover(activeRunId);
   } else if (current.phase === 'recovery') {
     await client.recover(current.run.runId);
   }
@@ -31,8 +29,13 @@ export async function enterRankedPlay(
   if (!isCurrent() || phase !== 'ready' || !run) return;
   if (hasUnclaimedAd(run)) {
     // Archive keeps the checkpoint and its pending or earned continuation recoverable.
-    if ((await client.archivePending(run.runId)) && isCurrent()) await client.start();
-  } else if (run.status === 'playing' && run.paused) {
+    if (!(await client.archivePending(run.runId)) || !isCurrent()) return;
+    await client.start();
+  }
+  // Start and recovery both return paused checkpoints. Play must explicitly
+  // resume the confirmed run before exposing its bridge to input.
+  const next = client.snapshot();
+  if (isCurrent() && next.phase === 'ready' && next.run?.status === 'playing' && next.run.paused) {
     await client.command({ type: 'resume' });
   }
 }

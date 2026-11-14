@@ -13,6 +13,7 @@ import type {
   StoredRankedRun,
 } from '../../../packages/server-core/src/ranked.ts';
 import { getCurrentRow } from '@crystal-path-infinity/game-core';
+import { createRankedRewardFlowFactory } from '../src/rewards/reward-flow-factory';
 
 const NOW = 1_800_000_000_000;
 const USER_A = '11111111-1111-4111-8111-111111111111';
@@ -551,6 +552,79 @@ describe('strict ranked public wire projection', () => {
     expect(parseRankedReply(latest)).not.toBeNull();
     await command({ type: 'end' });
     expect(latest.snapshot.status).toBe('finished');
+
+    // Exercise the public Play entry against the actual live rules authority,
+    // including reward-service unavailability, rather than only wire fixtures.
+    const live = new RankedAuthority({
+      repository,
+      now: () => now,
+      newId,
+      newSecret: () => 'b'.repeat(64),
+      rulesetVersion: 'infinity-v11-live',
+    });
+    const f = await fixture(async (url, init) => {
+      now += 100;
+      const body: unknown = JSON.parse(init.body as string);
+      return response(
+        await (url.endsWith('/active')
+          ? live.active(actor, body)
+          : url.endsWith('/start')
+            ? live.start(actor, body)
+            : url.endsWith('/recover')
+              ? live.recover(actor, body)
+              : live.execute(actor, body)),
+      );
+    });
+    await enterRankedPlay(f.client, () => true);
+    expect(f.client.snapshot()).toMatchObject({
+      phase: 'ready',
+      run: {
+        status: 'playing',
+        paused: false,
+        rulesetVersion: 'infinity-v11-live',
+        lastClearedRow: '0',
+      },
+    });
+    const rewardStatus = vi.fn().mockRejectedValue(new Error('rewards disabled'));
+    const factory = createRankedRewardFlowFactory({
+      rankedClient: f.client,
+      client: {
+        accountScope: () => f.owner.accountScope(),
+        subscribeAccountScope: () => () => {},
+        status: rewardStatus,
+        eligibility: () => Promise.resolve(null),
+        intent: () => Promise.reject(new Error('rewards disabled')),
+        applyGrant: () => Promise.resolve(false),
+      },
+    });
+    const flow = factory(f.client.snapshot().run!.runId)!;
+    await flow.recover();
+    expect(flow.snapshot().inputBlocked).toBe(false);
+    for (let step = 0; step < 3; step++) {
+      const run = f.client.snapshot().run!;
+      await f.client.command({
+        type: 'choose',
+        row: run.currentRow,
+        life: run.revivesApplied,
+        side: getCurrentRow(record.state).safeSide,
+      });
+      expect(f.client.snapshot()).toMatchObject({
+        phase: 'ready',
+        run: {
+          paused: false,
+          lastClearedRow: String(step + 1),
+        },
+      });
+    }
+    await f.client.command({ type: 'pause' });
+    expect(f.client.snapshot().run?.paused).toBe(true);
+    await enterRankedPlay(f.client, () => true);
+    expect(f.client.snapshot().run?.paused).toBe(false);
+    await f.client.command({ type: 'end' });
+    expect(f.client.snapshot().phase).toBe('finished');
+    expect(rewardStatus).not.toHaveBeenCalled();
+    flow.dispose();
+    f.owner.dispose();
   });
   it('preserves adjacent huge rows/sequences and accepts only bounded safe public fields', () => {
     const valid = reply('9007199254740993', '9007199254740992');
@@ -857,6 +931,41 @@ describe('account scope privacy fence', () => {
 });
 
 describe('ranked scene confirmed-state presentation', () => {
+  it('opens a new paused server checkpoint, resumes it and accepts repeated crossings', async () => {
+    let sequence = 1;
+    let cleared = 0;
+    let paused = true;
+    const commands: string[] = [];
+    const f = await fixture((url, init) => {
+      if (url.endsWith('/active')) return Promise.resolve(response({ status: 'none' }));
+      if (url.endsWith('/action')) {
+        const input = JSON.parse(init.body as string) as {
+          sequence: string;
+          command: { type: string; row: string };
+        };
+        expect(input.sequence).toBe(String(sequence));
+        commands.push(input.command.type);
+        if (input.command.type === 'resume') paused = false;
+        if (input.command.type === 'choose') {
+          expect(paused).toBe(false);
+          expect(input.command.row).toBe(String(cleared + 1));
+          cleared++;
+        }
+        sequence++;
+      }
+      return Promise.resolve(response(reply(String(sequence), String(cleared), '1', paused)));
+    });
+    await enterRankedPlay(f.client, () => true);
+    expect(f.client.snapshot()).toMatchObject({ phase: 'ready', run: { paused: false } });
+    for (const side of ['left', 'right', 'left'] as const) {
+      const run = f.client.snapshot().run!;
+      await f.client.command({ type: 'choose', side, row: run.currentRow, life: 0 });
+    }
+    expect(commands).toEqual(['resume', 'choose', 'choose', 'choose']);
+    expect(f.client.snapshot().run?.lastClearedRow).toBe('3');
+    f.client.dispose();
+  });
+
   function client(state: RankedClientState): RankedClient {
     return {
       snapshot: () => state,

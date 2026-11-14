@@ -146,6 +146,65 @@ function fixture() {
   };
 }
 describe('CPI-029 explicit ranked/reward flow binding', () => {
+  it('does not freeze a confirmed playable run when optional reward status is unavailable', async () => {
+    const f = fixture();
+    const run = f.ranked.snapshot().run!;
+    f.setState({
+      run: { ...run, status: 'playing', paused: false, sp: 300, death: null, revivesApplied: 1 },
+    });
+    f.status.mockRejectedValue(new Error('reward service is disabled'));
+    const flow = f.factory(RUN)!;
+    await flow.recover();
+    expect(flow.snapshot()).toMatchObject({
+      phase: 'playing',
+      inputBlocked: false,
+      canWatch: false,
+    });
+    expect(f.status).not.toHaveBeenCalled();
+    expect(f.apply).not.toHaveBeenCalled();
+    expect(f.recover).not.toHaveBeenCalled();
+    // Once death occurs, the real reward endpoint is required; no local grant.
+    f.setState({ run });
+    await flow.recover();
+    expect(f.status).toHaveBeenCalledOnce();
+    expect(f.apply).not.toHaveBeenCalled();
+    flow.dispose();
+  });
+  it.each(['pending', 'retry', 'recovery', 'lease_lost'] as const)(
+    'does not unblock uncertain ranked state %s without reward verification',
+    async (phase) => {
+      const f = fixture();
+      const run = f.ranked.snapshot().run!;
+      f.setState({ phase, run: { ...run, status: 'playing', revivesApplied: 1 } });
+      f.status.mockRejectedValue(new Error('reward service is disabled'));
+      const flow = f.factory(RUN)!;
+      await flow.recover();
+      expect(flow.snapshot().inputBlocked).toBe(true);
+      expect(f.status).toHaveBeenCalledOnce();
+      flow.dispose();
+    },
+  );
+  it.each(['pending', 'owed'] as const)(
+    'keeps a %s reward blocked even with a playing checkpoint',
+    async (kind) => {
+      const f = fixture();
+      const run = f.ranked.snapshot().run!;
+      f.setState({
+        run: {
+          ...run,
+          status: 'playing',
+          rewardPending: kind === 'pending',
+          revivesApplied: kind === 'pending' ? 1 : 0,
+        },
+      });
+      f.status.mockRejectedValue(new Error('reward service is disabled'));
+      const flow = f.factory(RUN)!;
+      await flow.recover();
+      expect(flow.snapshot().inputBlocked).toBe(true);
+      expect(f.status).toHaveBeenCalledOnce();
+      flow.dispose();
+    },
+  );
   it('preserves fixed operation failures from the ranked lease/apply queue and keeps the owed grant', async () => {
     const f = fixture();
     f.apply.mockImplementationOnce(() => {
