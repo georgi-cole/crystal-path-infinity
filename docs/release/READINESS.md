@@ -119,3 +119,9 @@ public publisher file and App Store developer link. Production ranking admission
 is enabled; server-verified ranked ad starts remain disabled. The three new audio
 assets remain pending. This is not public release approval or live-ad acceptance.
 [Detailed source, retry and upload evidence](../operations/APPSTORE_LAUNCH_FIXES_20261114.md).
+
+
+**15 November 2026, Sofia:** Apple processing and the encryption declaration are
+complete. Build 1.0.2 (75) is assigned to Crystal Path Internal QA (one tester),
+with saved test notes. The owner can update through TestFlight. Phone acceptance
+and live-ad readiness remain pending; no public review was submitted.

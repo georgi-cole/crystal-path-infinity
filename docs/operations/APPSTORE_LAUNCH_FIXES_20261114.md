@@ -240,3 +240,14 @@ build number **75**. App Store Connect independently shows **Version 1.0.2, Buil
 75 - Processing** (build ID `17d9ad66-ab49-4f9e-ad95-11341ddecb64`).
 This checkpoint is upload acceptance, not internal tester availability or phone
 acceptance. Group distribution and test notes are the next steps after processing.
+
+
+### Internal availability - 15 November 2026, Sofia time
+
+Apple completed processing. The OS-only encryption declaration was saved, build
+1.0.2 (75) became Ready to Submit, and the existing Crystal Path Internal QA group
+was assigned with one tester. Build-specific What to Test notes were saved for
+rankings, local ad tests and Campaign transitions. The owner can now update through
+TestFlight. No external beta or public App Store review was submitted. Phone
+acceptance, live Google ad verification, ranked ad revives and new audio assets
+remain pending.

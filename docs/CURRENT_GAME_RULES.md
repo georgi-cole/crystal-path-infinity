@@ -338,3 +338,9 @@ ranked ad starts remain separate pending gates. Campaign and existing local
 Infinity scores stay unranked. No quotas, rewards, prices or historical run rules
 changed. See the dated
 [launch/distribution evidence](operations/APPSTORE_LAUNCH_FIXES_20261114.md).
+
+
+**15 November 2026, Sofia:** Apple processing and the encryption declaration are
+complete. Build 1.0.2 (75) is assigned to Crystal Path Internal QA (one tester),
+with saved test notes. The owner can update through TestFlight. Phone acceptance
+and live-ad readiness remain pending; no public review was submitted.
