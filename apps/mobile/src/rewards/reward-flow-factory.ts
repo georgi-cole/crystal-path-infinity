@@ -51,6 +51,17 @@ export function createRankedRewardFlowFactory(options: {
       runId,
       client: bound,
       adapter: options.adapter,
+      hasConfirmedPlayingRun: () => {
+        if (!current()) return false;
+        const state = ranked.snapshot();
+        return (
+          state.phase === 'ready' &&
+          !state.canRetry &&
+          state.run?.status === 'playing' &&
+          !state.run.rewardPending &&
+          state.run.revivesGranted === state.run.revivesApplied
+        );
+      },
       onGateChange: (blocked) => {
         if (current()) options.onGateChange?.(runId, blocked);
       },
