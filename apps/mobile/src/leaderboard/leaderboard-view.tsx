@@ -177,10 +177,6 @@ export function LeaderboardView({
     : '';
   return (
     <section className="cpi-leaderboard" aria-label={t('general.rankings')}>
-      <p>{t('leaderboard.declared')}</p>
-      <p className="cpi-leaderboard-rules">
-        {t('leaderboard.ruleset', { ruleset: rulesetVersion })}
-      </p>
       {!client ? (
         <p role="status">{t('leaderboard.unavailable')}</p>
       ) : (
@@ -211,6 +207,7 @@ export function LeaderboardView({
             {scope !== 'world' && (
               <label className="cpi-leaderboard-region">
                 {t('leaderboard.region')}
+                <small>{t('leaderboard.declared')}</small>
                 <select value={region} onChange={(event) => setRegion(event.target.value)}>
                   <option value="">{t('leaderboard.chooseRegion')}</option>
                   {scope === 'continent'
@@ -244,9 +241,13 @@ export function LeaderboardView({
                       ? t(data ? 'leaderboard.refreshing' : 'leaderboard.loading')
                       : null}
               </div>
-              {online && current?.phase === 'error' && (
-                <button type="button" onClick={() => setAttempt((value) => value + 1)}>
-                  {t('leaderboard.retry')}
+              {online && (
+                <button
+                  type="button"
+                  disabled={current?.phase === 'loading'}
+                  onClick={() => setAttempt((value) => value + 1)}
+                >
+                  {t(current?.phase === 'error' ? 'leaderboard.retry' : 'leaderboard.refresh')}
                 </button>
               )}
               {data && (

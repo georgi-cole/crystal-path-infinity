@@ -28,6 +28,8 @@ import {
 import type { PracticeLoad, PracticeSettings, PracticeStorage } from './practice-save';
 import { InfinityPractice } from './infinity-scene';
 import { useHomeSoundtrack } from './soundtrack';
+import { useMissionAudio } from './mission-audio';
+import type { MissionAudioPhase } from './mission-audio';
 import { BrandLaunchActive } from './brand-launch-state';
 import {
   campaignFailureReason,
@@ -263,8 +265,8 @@ export function App({
     mastery: boolean;
   } | null>(null);
   const campaignOutcomeRef = useRef(false);
-  const campaignInterstitialCadence = useRef(createCampaignInterstitialCadence());
-  const campaignContinueInFlight = useRef(false);
+  const [missionPhase, setMissionPhase] = useState<MissionAudioPhase>('landing');
+  const finishMissionCelebration = useCallback(() => setMissionPhase('result'), []);
   const campaignMission =
     game?.mode === 'campaign' && game.campaignMissionId
       ? campaignMissionSnapshot(campaignProgress, game.campaignMissionId)
@@ -308,8 +310,26 @@ export function App({
   const [online, setOnline] = useState(
     () => typeof navigator === 'undefined' || navigator.onLine !== false,
   );
+  useEffect(() => {
+    if (!campaignOutcome?.cleared) return;
+    const reduced =
+      settings.reducedMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // Preserve the final contact/impact/travel beat before fading into the reward film.
+    const cue = window.setTimeout(() => setMissionPhase('transition'), reduced ? 100 : 900);
+    const film = window.setTimeout(() => setMissionPhase('celebration'), reduced ? 200 : 1250);
+    return () => {
+      window.clearTimeout(cue);
+      window.clearTimeout(film);
+    };
+  }, [campaignOutcome, settings.reducedMotion]);
+  const campaignInterstitialCadence = useRef(createCampaignInterstitialCadence());
+  const campaignContinueInFlight = useRef(false);
+  useMissionAudio(
+    game?.mode === 'campaign' && campaignOutcome?.cleared ? missionPhase : null,
+    settings,
+  );
   const rankedClient =
-    accountScope && profile?.profile !== null ? (services?.rankedClient ?? null) : null;
+    accountScope && profile?.profile != null ? (services?.rankedClient ?? null) : null;
   const setupProfile = view === 'profile' && accountScope !== null && setupScope === accountScope;
   useEffect(() => {
     if (!profileClient || !accountScope || !online) return;
@@ -786,6 +806,7 @@ export function App({
     if (gameRef.current) return;
     campaignOutcomeRef.current = false;
     setCampaignOutcome(null);
+    setMissionPhase('landing');
     const next: GameOwner = {
       initial,
       mode,
@@ -1036,7 +1057,11 @@ export function App({
     );
 
   if (game)
-    if (game.mode === 'campaign' && campaignOutcome)
+    if (
+      game.mode === 'campaign' &&
+      campaignOutcome &&
+      (!campaignOutcome.cleared || missionPhase === 'celebration' || missionPhase === 'result')
+    )
       return (
         <CampaignMissionResult
           mission={campaignOutcome.mission}
@@ -1049,6 +1074,7 @@ export function App({
           warning={storageWarning}
           world={campaignProgress.world}
           reducedMotion={settings.reducedMotion}
+          onCelebrationComplete={finishMissionCelebration}
           onEquip={
             campaignOutcome.firstClear && campaignOutcome.mission.grant.style
               ? changeBridgeStyle
@@ -1069,51 +1095,61 @@ export function App({
   if (game)
     return (
       <>
-        <InfinityPractice
-          key={game.token}
-          initialState={game.initial}
-          onExit={() => closePractice(game.mode === 'campaign' ? 'campaign' : 'home')}
-          onStore={() => {
-            setStoreEntry('essentials');
-            closePractice('store');
-          }}
-          onViewRankings={() => closePractice('rankings')}
-          onExitCancelled={cancelGameExit}
-          exitRequest={exitRequest}
-          onCheckpoint={game.trialTheme ? ignoreTrialCheckpoint : onCheckpoint}
-          trialTheme={game.trialTheme}
-          guestRewardedAd={guestRewardedAd}
-          newJourney={
-            game.mode === 'infinity' && CAMPAIGN_ENABLED && !game.trialTheme
-              ? newInfinityRun
-              : game.mode === 'campaign' && campaignMission
-                ? () => newCampaignRun(campaignMission.id, campaignMission.approach).initial
+        <div inert={!!campaignOutcome}>
+          <InfinityPractice
+            key={game.token}
+            initialState={game.initial}
+            onExit={() => closePractice(game.mode === 'campaign' ? 'campaign' : 'home')}
+            onStore={() => {
+              setStoreEntry('essentials');
+              closePractice('store');
+            }}
+            onViewRankings={() => closePractice('rankings')}
+            onExitCancelled={cancelGameExit}
+            exitRequest={exitRequest}
+            onCheckpoint={game.trialTheme ? ignoreTrialCheckpoint : onCheckpoint}
+            trialTheme={game.trialTheme}
+            guestRewardedAd={guestRewardedAd}
+            suspended={!!campaignOutcome}
+            newJourney={
+              game.mode === 'infinity' && CAMPAIGN_ENABLED && !game.trialTheme
+                ? newInfinityRun
+                : game.mode === 'campaign' && campaignMission
+                  ? () => newCampaignRun(campaignMission.id, campaignMission.approach).initial
+                  : undefined
+            }
+            weather={
+              game.mode === 'campaign' && game.campaignMissionId
+                ? campaignMissionSnapshot(campaignProgress, game.campaignMissionId).weather
+                : (game.weather ?? 'clear')
+            }
+            campaignMission={campaignMissionPresentation}
+            bridgeStyle={CAMPAIGN_ENABLED ? campaignProgress.style : undefined}
+            worldTheme={CAMPAIGN_ENABLED ? campaignProgress.world : undefined}
+            infinitySupplies={
+              game.mode === 'infinity' && CAMPAIGN_ENABLED && !game.trialTheme
+                ? {
+                    sp: campaignProgress.reserveSp,
+                    hint: campaignProgress.reserveHints,
+                    shield: campaignProgress.shields,
+                    continue: campaignProgress.continues,
+                  }
                 : undefined
-          }
-          weather={
-            game.mode === 'campaign' && game.campaignMissionId
-              ? campaignMissionSnapshot(campaignProgress, game.campaignMissionId).weather
-              : (game.weather ?? 'clear')
-          }
-          campaignMission={campaignMissionPresentation}
-          bridgeStyle={CAMPAIGN_ENABLED ? campaignProgress.style : undefined}
-          worldTheme={CAMPAIGN_ENABLED ? campaignProgress.world : undefined}
-          infinitySupplies={
-            game.mode === 'infinity' && CAMPAIGN_ENABLED && !game.trialTheme
-              ? {
-                  sp: campaignProgress.reserveSp,
-                  hint: campaignProgress.reserveHints,
-                  shield: campaignProgress.shields,
-                  continue: campaignProgress.continues,
-                }
-              : undefined
-          }
-          onInfinitySupplyCommit={
-            game.mode === 'infinity' && CAMPAIGN_ENABLED ? commitInfinitySupply : undefined
-          }
-          settings={settings}
-          onSettingsChange={changeSettings}
-        />
+            }
+            onInfinitySupplyCommit={
+              game.mode === 'infinity' && CAMPAIGN_ENABLED ? commitInfinitySupply : undefined
+            }
+            settings={settings}
+            onSettingsChange={changeSettings}
+          />
+        </div>
+        {campaignOutcome?.cleared && missionPhase === 'transition' && (
+          <div
+            className="cpi-mission-departure"
+            data-reduced-motion={settings.reducedMotion}
+            aria-hidden="true"
+          />
+        )}
         {storageWarning && (
           <div role="alert" className="cpi-storage-warning">
             {storageWarning}
@@ -1212,9 +1248,10 @@ export function App({
             onProfileSaved={onProfileSaved}
             onSkipProfile={finishProfileSetup}
             leaderboardClient={services?.leaderboardClient}
-            leaderboardCountries={services?.countries}
+            leaderboardCountries={profile?.countries ?? services?.countries}
             pendingPersonalResult={services?.pendingPersonalResult || activeRun?.rewardPending}
             rankedClient={rankedClient}
+            rankedServicesAvailable={Boolean(services?.rankedClient)}
             savedRuns={
               rankedClient &&
               services?.savedPendingClient && (

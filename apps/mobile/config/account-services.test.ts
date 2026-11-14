@@ -71,7 +71,7 @@ describe('approved account services remain separate from default guest play', ()
     expect(settings).toContain('No account is connected.');
     expect(settings).toContain('cpi-settings-disclosure');
     expect(settings).not.toContain('Confirm account deletion</button>');
-    expect(menu('play')).toContain('Practice');
+    expect(menu('play')).toContain('Offline Infinity');
     expect(menu('play')).not.toContain('Start verified run</button>');
   });
 });

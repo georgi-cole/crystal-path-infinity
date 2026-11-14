@@ -8,6 +8,7 @@ const values = {
   VITE_NATIVE_PROVIDER_SIGN_IN: 'true',
   VITE_GUEST_REWARDED_ADS_LIVE: 'true',
   VITE_CAMPAIGN_INTERSTITIALS_ENABLED: 'true',
+  VITE_RANKED_SERVICES_ENABLED: 'true',
   VITE_ACCOUNT_API_BASE_URL: 'https://crystalpath-api.kolequant.xyz/cpi',
   CPI_STORE_VERSION: '1.0.1',
   CPI_STORE_BUILD_NUMBER: '60',
@@ -28,7 +29,6 @@ describe('public Campaign boundary', () => {
       'VITE_GUEST_REWARDED_ADS_TEST',
       'VITE_IOS_PROVIDER_SIGN_IN',
       'VITE_WEB_PROVIDER_SIGN_IN',
-      'VITE_RANKED_SERVICES_ENABLED',
     ])
       expect(() => assertCampaignRelease({ ...values, [name]: 'true' })).toThrow();
     expect(() =>

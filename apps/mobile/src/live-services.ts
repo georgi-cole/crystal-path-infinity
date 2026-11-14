@@ -84,7 +84,10 @@ export function createLiveServices(values: Readonly<Record<string, unknown>>): L
       ? createRankedClient({ baseUrl: base, session })
       : null;
   const platform = Capacitor.getPlatform();
-  const inventory = import.meta.env.MODE === 'production' ? PUBLISHER.admob : DEMO_ADMOB;
+  const inventory =
+    __CPI_BUILD_INFO__.environment === 'production' && !CAMPAIGN_SERVICES_BUILD
+      ? PUBLISHER.admob
+      : DEMO_ADMOB;
   const campaignInterstitialInventory = CAMPAIGN_SERVICES_BUILD
     ? DEMO_ADMOB
     : CAMPAIGN_RELEASE_BUILD

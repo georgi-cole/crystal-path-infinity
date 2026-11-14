@@ -273,6 +273,7 @@ export interface MainMenuProps {
   leaderboardCountries?: readonly { countryCode: string; continentCode: string }[];
   pendingPersonalResult?: boolean;
   rankedClient?: RankedClient | null;
+  rankedServicesAvailable?: boolean;
   savedRuns?: ReactNode;
   accountControlsClient?: AccountControlsClient | null;
   accountScope?: object | null;
@@ -329,10 +330,12 @@ function MenuHome({
   onNew,
   tutorialProgress,
   rankedClient,
+  rankedServicesAvailable,
   settings,
   canSignIn,
   campaignProgress = EMPTY_CAMPAIGN_PROGRESS,
   onStartTestInfinity = onNew,
+  online,
 }: Pick<
   MainMenuProps,
   | 'saved'
@@ -342,6 +345,8 @@ function MenuHome({
   | 'onNew'
   | 'tutorialProgress'
   | 'rankedClient'
+  | 'rankedServicesAvailable'
+  | 'online'
   | 'settings'
   | 'campaignProgress'
   | 'onStartTestInfinity'
@@ -378,31 +383,37 @@ function MenuHome({
       <nav className="cpi-menu-actions" aria-label={t('menu.main')}>
         <MenuAction
           label={
-            CAMPAIGN_ENABLED
-              ? canResume
-                ? 'Resume Infinity'
-                : 'Infinity'
-              : t(canResume && !rankedClient ? 'general.resume' : 'general.play')
+            online && (rankedClient || rankedServicesAvailable)
+              ? t('leaderboard.play')
+              : CAMPAIGN_ENABLED
+                ? canResume
+                  ? 'Resume Infinity'
+                  : 'Infinity'
+                : t(canResume && !rankedClient ? 'general.resume' : 'general.play')
           }
           icon="play"
           variant="primary"
           description={
-            CAMPAIGN_ENABLED
-              ? canResume
-                ? 'Continue your endless crossing'
-                : 'Go as far as you can'
-              : undefined
+            online && (rankedClient || rankedServicesAvailable)
+              ? t('leaderboard.playDescription')
+              : CAMPAIGN_ENABLED
+                ? canResume
+                  ? 'Continue your endless crossing'
+                  : 'Go as far as you can'
+                : undefined
           }
           onClick={
-            CAMPAIGN_ENABLED
-              ? canResume
-                ? onResume
-                : onStartTestInfinity
-              : rankedClient
-                ? () => onOpen('play')
-                : canResume
+            online && (rankedClient || rankedServicesAvailable)
+              ? () => onOpen('play')
+              : CAMPAIGN_ENABLED
+                ? canResume
                   ? onResume
-                  : onNew
+                  : onStartTestInfinity
+                : rankedClient
+                  ? () => onOpen('play')
+                  : canResume
+                    ? onResume
+                    : onNew
           }
         />
         <MenuAction
@@ -444,11 +455,9 @@ function MenuHome({
             <span className="cpi-menu-resume-copy">
               {t('menu.savedPractice', { row: number(saved.state.currentRow) })}
             </span>
-            {!CAMPAIGN_ENABLED && (
-              <button type="button" onClick={onResume}>
-                {t('general.resume')}
-              </button>
-            )}
+            <button type="button" onClick={onResume}>
+              {t('general.resume')}
+            </button>
             <button className="cpi-menu-resume-new" type="button" onClick={onNew}>
               {t('general.new')}
             </button>
@@ -542,6 +551,7 @@ export function MainMenu({
   settings,
   musicAwaitingGesture,
   onActivateMusic,
+  rankedServicesAvailable = false,
   onOpen,
   onBack,
   onResume,
@@ -621,6 +631,8 @@ export function MainMenu({
               onNew={onNew}
               tutorialProgress={tutorialProgress}
               rankedClient={rankedClient}
+              rankedServicesAvailable={rankedServicesAvailable}
+              online={online}
               settings={settings}
               canSignIn={Boolean(accountEntry) && !accountConnected}
               campaignProgress={campaignProgress}
@@ -732,16 +744,44 @@ export function MainMenu({
           />
         ) : view === 'play' ? (
           <MenuPanel title={t('general.play')}>
-            <p role="status">{t(online ? 'ranked.unavailable' : 'ranked.offline')}</p>
+            <p role="status">
+              {t(
+                online && accountEntry
+                  ? 'leaderboard.connectDescription'
+                  : online
+                    ? 'ranked.unavailable'
+                    : 'ranked.offline',
+              )}
+            </p>
+            {online && accountEntry && (
+              <MenuAction
+                label={t('leaderboard.connect')}
+                icon="profile"
+                variant="primary"
+                onClick={() => onOpen('profile')}
+              />
+            )}
             <MenuAction
-              label={t('general.practice')}
+              label={t('leaderboard.offlinePlay')}
               icon="practice"
-              variant="primary"
+              variant="secondary"
               onClick={canResumePractice(saved) ? onResume : onNew}
             />
           </MenuPanel>
         ) : view === 'rankings' ? (
           <MenuPanel title={t('general.rankings')}>
+            <p>{t('leaderboard.infinityOnly')}</p>
+            {best !== null && <p>{t('menu.localBestRow', { row: number(best) })}</p>}
+            <MenuAction
+              label={t(rankedClient ? 'leaderboard.play' : 'leaderboard.connect')}
+              description={t(
+                rankedClient ? 'leaderboard.playDescription' : 'leaderboard.connectDescription',
+              )}
+              icon="play"
+              variant="primary"
+              onClick={() => onOpen(rankedClient ? 'play' : 'profile')}
+            />
+            <p className="cpi-menu-fine-print">{t('leaderboard.standardRules')}</p>
             {leaderboardClient && (
               <LeaderboardView
                 client={leaderboardClient}

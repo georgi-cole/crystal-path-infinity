@@ -87,3 +87,13 @@ The release owner must fill this record after the evidence exists:
 - Named release/incident owners, numerical rollout bounds and stop criteria, backup/recovery drill evidence and explicit approval decision.
 
 Until that record is accepted, keep the live issuer, ranked/ad starts and provider configuration disabled. A source merge, an unsigned artifact or a green synthetic test does not change this decision.
+# Launch correction candidate · 14 November 2026
+
+Version 1.0.2 prepares an explicit Ranked Infinity entry, clearer ranking/ad copy,
+bounded guest ad initialization, and final-row Campaign transition/audio hooks.
+The released 1.0.1 (72) is unchanged until a replacement is built and distributed.
+The iOS AdMob App Store link is now saved; publisher verification still blocks
+claiming successful ad readiness. Production ranked/reward admission and physical
+phone acceptance remain unverified. No live database policy was changed.
+[Detailed evidence and acceptance checklist](../operations/APPSTORE_LAUNCH_FIXES_20261114.md).
+
