@@ -167,3 +167,76 @@ in [43638361769](https://github.com/georgi-cole/crystal-path-infinity/actions/ru
 and iOS archive compilation in [43638361742](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/43638361742).
 No replacement store binary has been distributed. Physical-device ranked play,
 Google ad verification/readiness and the owner's three audio files remain pending.
+
+## TestFlight 1.0.2 preparation and source verification - 14 November 2026
+
+PR #138 passed all selected checks and was squash-merged as
+`08a90c8058d7b83ab2c88c4e9f2222532180205c` (tree
+`e6a25e51465c6c227d073138a8b3f39e21abb81a`). The exact merged source then
+passed App quality, backend checks, both native launch checks, Planning and the
+aggregate required gate in
+[43642617328](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/43642617328).
+
+The first post-merge iOS job
+[132593904454](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/43642617328/job/132593904454)
+compiled the app, but failed at 21:35 UTC while stopping Apple's Settings app
+during simulator provisioning. It exceeded the existing 60-second limit before
+game installation or game launch verification. That failure is retained.
+A fresh-runner retry,
+[132596430466](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/43642617328/job/132596430466),
+passed full game launch/lifecycle verification. No source, timeout or verification
+gate was changed to obtain that result.
+
+The owner requested TestFlight inspection. A new manual
+[run 75](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/43644569608)
+uses that exact checked main SHA with `upload_to_testflight=true` and
+`public_release=true`; Campaign beta/services, external beta, rewarded-ads staging
+test and review-source options are false. This selects production account/ranking
+services and the real owned ad units. AdMob's console test mode, described below,
+configures 1.0.2 for test requests; phone ad presentation is still unverified. It is separate from the staging demo-ad
+build profile. No public App Store submission was requested.
+
+### AdMob configuration and remaining live-ad gate
+
+AdMob test mode was enabled specifically for iOS marketing version **1.0.2**.
+After observing that saved setting, the owner completed GitHub identity
+confirmation and `CPI_IOS_ADMOB_TEST_VERSION` in `cpi-ios-testflight` was updated
+from 1.0.1 to 1.0.2. This is manual testing with no ad revenue. Disable 1.0.2 test
+mode before any later public launch of that version; record that separate
+release decision. The current public 1.0.1 was not placed into test mode.
+
+The public App Store page shows its Developer Website link as
+`https://georgi-cole.github.io/crystal-path-infinity/`.
+`https://georgi-cole.github.io/app-ads.txt` publicly serves the exact publisher
+entry AdMob requests; `/robots.txt` returns 404 rather than a denying rule.
+AdMob still reports **Not verified / Requires review**. A fresh Verify app /
+Check for updates attempt still reports a publisher-file mismatch despite that
+matching public entry. A cached listing/crawl is a possible explanation, not a
+confirmed diagnosis. No publisher file or website-domain change was made.
+
+Google's [troubleshooting guidance](https://support.google.com/admob/answer/9776740)
+allows up to 24 hours to detect listing/developer-site changes and crawl the file.
+[App readiness review](https://support.google.com/admob/answer/10564477) typically
+takes 2-3 days after
+[successful app verification](https://support.google.com/admob/answer/14538460).
+If the verification error persists after the crawl window, escalate with the exact
+store, developer and publisher-file URLs and observed error. Do not describe the
+app as already under review or live ads as working.
+
+Production policy remains revision 2: ranked starts enabled; server-verified
+ranked ad starts disabled pending callback acceptance. Local Infinity ad tests
+are separate. New ranked runs can be inspected after sign-in/profile completion;
+Campaign and existing local Infinity scores remain unranked. The owner's three
+optional celebration audio files are still absent; the transition and audio hooks
+are included. Prices, rewards, continuation quotas, business assumptions and
+historical results are unchanged.
+
+### Upload receipt - 14 November 2026, 21:50 UTC
+
+The signed archive passed verification. Xcode reported Upload succeeded and
+EXPORT SUCCEEDED at **2026-11-14T21:50:10Z** in run 75; the workflow and signing
+cleanup completed successfully. Logs confirm marketing version **1.0.2** and native
+build number **75**. App Store Connect independently shows **Version 1.0.2, Build
+75 - Processing** (build ID `17d9ad66-ab49-4f9e-ad95-11341ddecb64`).
+This checkpoint is upload acceptance, not internal tester availability or phone
+acceptance. Group distribution and test notes are the next steps after processing.
