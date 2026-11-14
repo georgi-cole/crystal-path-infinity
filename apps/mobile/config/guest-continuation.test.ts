@@ -156,7 +156,7 @@ describe('native ad continuations for a local guest run', () => {
         ad(() => Promise.resolve('no_fill')),
         signal,
       ),
-    ).resolves.toBe('unavailable');
+    ).resolves.toBe('no_fill');
     expect(f.runtime.getState()).toEqual(dead);
     const request = new AbortController();
     const late = ad((_signal, earned) => {
@@ -164,9 +164,7 @@ describe('native ad continuations for a local guest run', () => {
       earned();
       return Promise.resolve('error');
     });
-    await expect(watchGuestContinuation(f.runtime, late, request.signal)).resolves.toBe(
-      'unavailable',
-    );
+    await expect(watchGuestContinuation(f.runtime, late, request.signal)).resolves.toBe('error');
     expect(guestAdOffer(f.runtime.getState())?.grantsRemaining).toBe(10);
   });
 

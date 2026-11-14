@@ -333,6 +333,7 @@ export function CampaignMissionResult({
   world,
   reducedMotion,
   onContinue,
+  onCelebrationComplete,
   onRetry,
   onRevive,
   onEquip,
@@ -348,6 +349,7 @@ export function CampaignMissionResult({
   world: ThemeId;
   reducedMotion: boolean;
   onContinue: () => void;
+  onCelebrationComplete?: () => void;
   onRetry: () => void;
   onRevive?: () => void;
   onEquip?: (slot: BridgeSlot, item: StyleId) => void;
@@ -359,8 +361,11 @@ export function CampaignMissionResult({
       !cleared || reducedMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches,
   );
   useEffect(() => {
-    if (arrived) result.current?.focus();
-  }, [arrived]);
+    if (arrived) {
+      result.current?.focus();
+      if (cleared) onCelebrationComplete?.();
+    }
+  }, [arrived, cleared, onCelebrationComplete]);
   const routeComplete = mission.id === 'bring-the-dawn-home';
   const landmark = LANDMARK_CLEARS[mission.chapter] === mission.id;
   const style = mission.grant.style;

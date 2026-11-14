@@ -164,6 +164,39 @@ describe('native rewarded adapter and privacy boundary', () => {
 });
 
 describe('native guest ad inventory', () => {
+  it('releases a cancelled guest attempt even when native inventory never replies', async () => {
+    const f = fixture();
+    vi.mocked(f.native.inventory).mockImplementation(() => new Promise(() => {}));
+    const request = new AbortController();
+    const earned = vi.fn();
+    const watching = f.guest.watch(request.signal, earned);
+    request.abort();
+    await expect(watching).resolves.toBe('error');
+    expect(f.sdk.requestConsentInfo).not.toHaveBeenCalled();
+    expect(f.native.load).not.toHaveBeenCalled();
+    expect(earned).not.toHaveBeenCalled();
+  });
+  it('does not initialize or load after a cancelled consent request eventually replies', async () => {
+    const f = fixture();
+    let release!: (value: Awaited<ReturnType<typeof f.sdk.requestConsentInfo>>) => void;
+    f.sdk.requestConsentInfo.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+    );
+    const request = new AbortController();
+    const watching = f.guest.watch(request.signal, vi.fn());
+    await vi.waitFor(() => expect(f.sdk.requestConsentInfo).toHaveBeenCalled());
+    request.abort();
+    await expect(watching).resolves.toBe('error');
+    release({ status: AdmobConsentStatus.REQUIRED, canRequestAds: false });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(f.sdk.showConsentForm).not.toHaveBeenCalled();
+    expect(f.sdk.initialize).not.toHaveBeenCalled();
+    expect(f.native.load).not.toHaveBeenCalled();
+  });
   const demo = { VITE_GUEST_REWARDED_ADS_TEST: 'true' };
   const staging = { VITE_ACCOUNT_API_BASE_URL: STAGING_ACCOUNT_GATEWAY + '/' };
   const live = { VITE_GUEST_REWARDED_ADS_LIVE: 'true', CPI_NATIVE_ADS: 'true' };

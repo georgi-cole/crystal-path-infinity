@@ -1,5 +1,29 @@
 # Текущи правила и икономика
 
+**14 November 2026 · 21:10 UTC · production ranked admission corrected.**
+The production gateway and its separate Supabase project are now verified. The
+server had retained its initial disabled v1 policy. After a rolled-back check under
+the effective runtime role, audited policy revision 2 enables v11-live ranked starts
+and retains v1/v11 recovery. World, Bulgaria and Europe leaderboard reads succeed
+with zero players. Server-verified ad starts remain disabled. The published build 72
+still needs the new client entry; no phone ranking acceptance or local-score backfill
+is claimed. Runtime-source CI, including both native launch checks, passed.
+[Production evidence and remaining acceptance](operations/APPSTORE_LAUNCH_FIXES_20261114.md#production-access-and-ranked-admission--14-november-2026-2110-utc).
+
+**14 November 2026 · CPI-023/CPI-025/CPI-044 · 1.0.2 launch correction candidate.**
+Only online, server-authoritative Infinity runs enter rankings; Campaign follows the
+same mission definitions for everyone and remains non-ranked. The public candidate
+exposes the existing Ranked Infinity route separately from offline seasonal saves,
+removes internal ranking terminology, and preserves country filters and refresh.
+Local historical scores are not imported or relabelled. Successful Campaign landings
+now finish their final movement before a short fade into the reward film, with three
+optional owner-supplied audio hooks and music continuing through the result modal.
+Ad failures distinguish empty inventory from load errors without spending continues.
+The missing iOS AdMob store link was saved; Google publisher verification is still
+outstanding. No replacement binary, live ad delivery or ranked phone acceptance is
+claimed. Existing rules, prices, quotas and business assumptions are unchanged.
+[Findings, audio filenames and release checks](operations/APPSTORE_LAUNCH_FIXES_20261114.md).
+
 **13 November 2026 · CPI-044 · matching replacements distributed/submitted.** Source `14f7d3a` includes PR #131 shop recovery, PR #133 Campaign rewards and the current Pages profile. Full exact-source native checks with ads and purchases enabled passed in `43340757079`; startup screenshots were inspected and both platforms report zero external runtime errors. Android **1.0.1 (63)** is available internally and Google explicitly confirms its replacement production submission is in review after automatic checks passed. iPhone **1.0.1 (72)** uploaded in `43341954534`, is VALID / APP_STORE_ELIGIBLE and IN_BETA_TESTING for the existing internal QA group, with OS-only encryption answered and automatic tester notifications enabled. Apple confirms **23 Items Submitted / Waiting for Review**: build 72 plus all 22 visible purchases in `da654c48-01bc-4b64-86ce-c4938960dc71`. Older 71 was withdrawn to replace its binary, not rejected by Apple. Pages already serves the same runtime source with 30 missions and browser-only purchase/ad restrictions. Store approvals and new phone purchase/Restore acceptance remain pending; no game rules, prices, server configuration or business assumptions changed. [Release evidence and retest scope](operations/PRODUCTION_COMMERCE_LAUNCH.md).
 
 **13 November 2026 · CPI-048 · Pages publication correction.** The first main publication was blocked by the existing no-demo-ad safeguard: enabling production web accounts retained unused native demonstration inventory in the compiled bundle. The browser profile now returns account-only services before native ad/billing construction, allowing the bundler to remove those paths. Both account-disabled and account-enabled Pages builds must pass the unchanged bundle safeguards before publication. No ad was served, purchase made or new browser version deployed by the failed run. Native behavior and prices are unchanged.

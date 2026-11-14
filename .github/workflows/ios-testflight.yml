@@ -77,7 +77,7 @@ jobs:
       VITE_GUEST_REWARDED_ADS_TEST: ${{ (inputs.rewarded_ads_test || inputs.campaign_services) && 'true' || 'false' }}
       VITE_GUEST_REWARDED_ADS_LIVE: ${{ inputs.public_release && 'true' || 'false' }}
       VITE_CAMPAIGN_INTERSTITIALS_ENABLED: ${{ (inputs.campaign_services || inputs.public_release) && !inputs.campaign_beta && 'true' || 'false' }}
-      VITE_RANKED_SERVICES_ENABLED: 'false'
+      VITE_RANKED_SERVICES_ENABLED: ${{ inputs.public_release && 'true' || 'false' }}
       VITE_REWARDED_ADS_ENABLED: ${{ (inputs.rewarded_ads_test || inputs.campaign_services || inputs.public_release) && 'true' || 'false' }}
       VITE_CLIENT_BUILD: ${{ github.run_number }}
     steps:

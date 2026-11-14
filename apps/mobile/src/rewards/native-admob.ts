@@ -275,15 +275,23 @@ export function createGuestAdMobAdapter(options: AdMobOptions): GuestRewardedAd 
     async watch(signal, onEarned) {
       if (watching || signal.aborted) return 'error';
       watching = true;
+      let stage = 'inventory';
       try {
+        const loading = AbortSignal.any([signal, AbortSignal.timeout(20_000)]);
         const check = () => {
-          if (signal.aborted) throw new RewardUnavailable();
+          if (loading.aborted) throw new RewardUnavailable();
         };
-        const inventory = await native.inventory();
+        const inventory = await waitForCampaignAd(native.inventory(), loading);
         check();
-        if (inventory.sdkVersion !== GOOGLE_ADS_SDK[options.platform]) return 'error';
+        if (inventory.sdkVersion !== GOOGLE_ADS_SDK[options.platform]) {
+          console.warn('CPI ad unavailable', { stage: 'sdk_version', platform: options.platform });
+          return 'error';
+        }
         // UMP protects guests of unknown age. Ad requests use the child-directed tag.
-        await initializeAdMob(sdk, guestPrivacy, check, true);
+        stage = 'consent';
+        await waitForCampaignAd(initializeAdMob(sdk, guestPrivacy, check, true), loading);
+        check();
+        stage = 'load';
         const loaded = await loadRewardedAd(
           native,
           options.adUnitId,
@@ -293,8 +301,16 @@ export function createGuestAdMobAdapter(options: AdMobOptions): GuestRewardedAd 
           signal,
           () => watching,
         );
-        if (loaded.status !== 'loaded') return loaded.status;
+        if (loaded.status !== 'loaded') {
+          console.warn('CPI ad unavailable', {
+            stage,
+            platform: options.platform,
+            status: loaded.status,
+          });
+          return loaded.status;
+        }
         try {
+          stage = 'show';
           const { ad } = loaded;
           return await new Promise<'closed' | 'error'>((resolve) => {
             const presentation = new AbortController();
@@ -329,6 +345,8 @@ export function createGuestAdMobAdapter(options: AdMobOptions): GuestRewardedAd 
           loaded.ad.dispose();
         }
       } catch {
+        if (!signal.aborted)
+          console.warn('CPI ad unavailable', { stage, platform: options.platform });
         return 'error';
       } finally {
         watching = false;

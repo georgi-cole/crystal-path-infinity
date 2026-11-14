@@ -257,12 +257,12 @@ describe('CPI-015 HUD and result state contract', () => {
     expect(view.canViewRankings).toBe(true);
     expect(view.localResult).toBe(true);
     const html = markup(end.state, { personalBest: '348', newPersonalBest: true });
-    expect(html).toContain('OFFLINE PRACTICE · NOT VERIFIED');
+    expect(html).toContain(en['game.practiceUnverified']);
     expect(html).toContain(en['game.rowsCleared']);
     expect(html).toContain(en['game.bestNew']);
     expect(html).toContain('348');
     expect(html).toContain(en['game.nextRun']);
-    expect(html).toContain('Rankings (not live)');
+    expect(html).toContain(en['general.rankings']);
     expect(html).toContain('Return home');
     expect(html).not.toContain('Victory');
   });

@@ -903,7 +903,7 @@ export function InfinitySceneView({
                       {t('game.nextRun')}
                     </button>
                     <button type="button" onClick={onViewRankings}>
-                      {t('game.rankingsNotLive')}
+                      {t('general.rankings')}
                     </button>
                     <button type="button" onClick={onExit}>
                       {t('game.returnMenu')}
@@ -1034,6 +1034,7 @@ interface InfinityRunProps {
   exitRequest: number;
   onRestart: () => void;
   guestRewardedAd?: GuestRewardedAd | null;
+  suspended?: boolean;
   initialState: RunState | null;
   onCheckpoint: (state: RunState, events?: readonly RunEvent[]) => void;
   settings: PracticeSettings;
@@ -1058,6 +1059,7 @@ function InfinityRun({
   exitRequest,
   onRestart,
   guestRewardedAd,
+  suspended = false,
   initialState,
   onCheckpoint,
   settings,
@@ -1122,13 +1124,15 @@ function InfinityRun({
   const [hintCaptionRow, setHintCaptionRow] = useState<string | null>(null);
   const [hintCaptionGate] = useState(() => createHintCaptionGate(() => practiceStorage()));
   const [confirmEnd, setConfirmEnd] = useState(false);
-  const [guestAdPhase, setGuestAdPhase] = useState<'idle' | 'watching' | 'offline' | 'unavailable'>(
-    'idle',
-  );
+  const [guestAdPhase, setGuestAdPhase] = useState<
+    'idle' | 'watching' | 'offline' | 'unavailable' | 'no_fill' | 'error'
+  >('idle');
   const guestAdRequest = useRef<AbortController | null>(null);
   useSoundtrack(
     state.status === 'playing' ? 'run' : cinematic?.fatal ? null : 'ended',
-    settings.music && (state.status !== 'playing' || (ready && !paused && !confirmEnd && !error)),
+    !suspended &&
+      settings.music &&
+      (state.status !== 'playing' || (ready && !paused && !confirmEnd && !error)),
     settings.music && (!!cinematic?.fatal || confirmEnd || guestAdPhase === 'watching'),
   );
   const [personalBest, setPersonalBest] = useState<string | null>(null);
@@ -1297,6 +1301,10 @@ function InfinityRun({
   ]);
 
   useEffect(() => {
+    if (suspended) void runtimeRef.current?.hold('user').catch(() => {});
+  }, [suspended]);
+
+  useEffect(() => {
     audioRef.current?.setSettings({ ...settings, music: false });
   }, [settings]);
 
@@ -1336,6 +1344,7 @@ function InfinityRun({
       const runtime = runtimeRef.current;
       if (
         !runtime ||
+        suspended ||
         !ready ||
         (paused && command.type !== 'end') ||
         commandLock.current ||
@@ -1373,7 +1382,7 @@ function InfinityRun({
         setBusy(false);
       }
     },
-    [ready, paused, onInfinitySupplyCommit],
+    [ready, paused, suspended, onInfinitySupplyCommit],
   );
 
   const chooseTile = useCallback(
@@ -1650,9 +1659,13 @@ function InfinityRun({
     try {
       const result = await watchGuestContinuation(runtime, guestRewardedAd, request.signal);
       if (!request.signal.aborted && runtimeRef.current === runtime)
-        setGuestAdPhase(result === 'unavailable' ? 'unavailable' : 'idle');
+        setGuestAdPhase(
+          ['unavailable', 'no_fill', 'error'].includes(result)
+            ? (result as 'unavailable' | 'no_fill' | 'error')
+            : 'idle',
+        );
     } catch {
-      if (!request.signal.aborted && runtimeRef.current === runtime) setGuestAdPhase('unavailable');
+      if (!request.signal.aborted && runtimeRef.current === runtime) setGuestAdPhase('error');
     } finally {
       if (guestAdRequest.current === request) {
         guestAdRequest.current = null;
@@ -1739,9 +1752,15 @@ function InfinityRun({
                     ? t('rewards.loading')
                     : t('rewards.watchRestore', { sp: number(adOffer.restoreSp) })}
                 </button>
-                {(guestAdPhase === 'unavailable' || guestAdPhase === 'offline') && (
+                {['unavailable', 'offline', 'no_fill', 'error'].includes(guestAdPhase) && (
                   <span role="status">
-                    {t(guestAdPhase === 'offline' ? 'rewards.guestOffline' : 'rewards.noFill')}
+                    {t(
+                      guestAdPhase === 'offline'
+                        ? 'rewards.guestOffline'
+                        : guestAdPhase === 'no_fill'
+                          ? 'rewards.noFill'
+                          : 'rewards.loadError',
+                    )}
                   </span>
                 )}
               </>
@@ -1753,7 +1772,7 @@ function InfinityRun({
         store && state.storeTest && !trial ? (
           <RunReserves
             state={state}
-            busy={busy}
+            busy={busy || suspended}
             onUse={useResource}
             message={resourceMessage}
             onOpenStore={
@@ -1890,7 +1909,7 @@ function InfinityRun({
       signals={signals}
       hintCaptionRow={hintCaptionRow}
       ready={ready}
-      busy={busy}
+      busy={busy || suspended}
       paused={paused}
       error={error}
       onChoose={chooseTile}
@@ -1963,6 +1982,7 @@ export function InfinityPractice({
   initialState = null,
   onCheckpoint,
   guestRewardedAd,
+  suspended = false,
   settings,
   onSettingsChange,
   fixedRulesetVersion,
@@ -1983,6 +2003,7 @@ export function InfinityPractice({
   initialState?: RunState | null;
   onCheckpoint: (state: RunState, events?: readonly RunEvent[]) => void;
   guestRewardedAd?: GuestRewardedAd | null;
+  suspended?: boolean;
   settings: PracticeSettings;
   onSettingsChange: (next: PracticeSettings) => void;
   fixedRulesetVersion?: string;
@@ -2013,6 +2034,7 @@ export function InfinityPractice({
         initialState={attempt === 0 ? initialState : retryState}
         onCheckpoint={onCheckpoint}
         guestRewardedAd={guestRewardedAd}
+        suspended={suspended}
         settings={settings}
         onSettingsChange={onSettingsChange}
         fixedRulesetVersion={fixedRulesetVersion}

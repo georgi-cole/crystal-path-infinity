@@ -6,6 +6,15 @@
   height: min(85dvh, 49rem);
   margin: auto;
   color: #fff1cf;
+  animation: cpi-mission-arrival 350ms ease-out both;
+}
+@keyframes cpi-mission-arrival {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 .cpi-film-floor {
   position: absolute;
@@ -666,5 +675,31 @@
   }
   .cpi-film-copy h2 {
     font-size: 1.6rem;
+  }
+}
+.cpi-mission-departure {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  pointer-events: all;
+  background: #0a1224;
+  animation: cpi-mission-fade-out 350ms ease-in both;
+}
+
+@keyframes cpi-mission-fade-out {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.cpi-mission-departure[data-reduced-motion='true'] {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cpi-mission-departure {
+    animation: none;
   }
 }

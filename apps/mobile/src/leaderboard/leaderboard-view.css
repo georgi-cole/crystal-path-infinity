@@ -40,6 +40,36 @@
   height: 1.25rem;
 }
 
+.cpi-leaderboard .cpi-leaderboard-filters label:has(input[type='radio']) {
+  position: relative;
+  justify-content: center;
+  flex: 1 1 6rem;
+  border: 1px solid #52627e;
+  border-radius: 0.75rem;
+  padding: 0.55rem 0.75rem;
+  cursor: pointer;
+}
+
+.cpi-leaderboard .cpi-leaderboard-filters input[type='radio'] {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  padding: 0;
+}
+
+.cpi-leaderboard-filters label:has(input:checked) {
+  border-color: #afccdc;
+  background: #afccdc20;
+  color: #fff;
+}
+
+.cpi-leaderboard-filters label:focus-within {
+  outline: 3px solid #b2f5ff;
+  outline-offset: 3px;
+}
+
 .cpi-leaderboard-region {
   flex: 1 1 100%;
   flex-wrap: wrap;

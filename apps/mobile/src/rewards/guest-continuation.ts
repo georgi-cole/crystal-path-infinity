@@ -51,7 +51,11 @@ export async function watchGuestContinuation(
       }
     })
     .catch(() => 'error' as const);
-  if (!(await recording)) return dismissed === 'closed' && !recording ? 'dismissed' : 'unavailable';
+  if (!(await recording)) {
+    if (dismissed === 'no_fill') return 'no_fill';
+    if (dismissed === 'error') return 'error';
+    return dismissed === 'closed' && !recording ? 'dismissed' : 'unavailable';
+  }
   // An earned continuation is already checkpointed while the ad is open.
   // If closing/applying is interrupted, the saved grant can be used on Resume.
   if (dismissed === 'closed' && !signal.aborted) {
