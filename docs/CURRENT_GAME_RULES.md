@@ -1,5 +1,15 @@
 # Текущи правила и икономика
 
+**14 November 2026 · 21:10 UTC · production ranked admission corrected.**
+The production gateway and its separate Supabase project are now verified. The
+server had retained its initial disabled v1 policy. After a rolled-back check under
+the effective runtime role, audited policy revision 2 enables v11-live ranked starts
+and retains v1/v11 recovery. World, Bulgaria and Europe leaderboard reads succeed
+with zero players. Server-verified ad starts remain disabled. The published build 72
+still needs the new client entry; no phone ranking acceptance or local-score backfill
+is claimed. Runtime-source CI, including both native launch checks, passed.
+[Production evidence and remaining acceptance](operations/APPSTORE_LAUNCH_FIXES_20261114.md#production-access-and-ranked-admission--14-november-2026-2110-utc).
+
 **14 November 2026 · CPI-023/CPI-025/CPI-044 · 1.0.2 launch correction candidate.**
 Only online, server-authoritative Infinity runs enter rankings; Campaign follows the
 same mission definitions for everyone and remains non-ranked. The public candidate

@@ -93,7 +93,13 @@ Version 1.0.2 prepares an explicit Ranked Infinity entry, clearer ranking/ad cop
 bounded guest ad initialization, and final-row Campaign transition/audio hooks.
 The released 1.0.1 (72) is unchanged until a replacement is built and distributed.
 The iOS AdMob App Store link is now saved; publisher verification still blocks
-claiming successful ad readiness. Production ranked/reward admission and physical
-phone acceptance remain unverified. No live database policy was changed.
+claiming successful ad readiness. At that initial checkpoint, production ranked
+admission was unverified and no live database policy had changed.
 [Detailed evidence and acceptance checklist](../operations/APPSTORE_LAUNCH_FIXES_20261114.md).
 
+**Follow-up, 14 November 2026, 21:10 UTC:** production access is verified. Audited
+policy revision 2 enables v11-live ranked starts, retains historical recovery and
+leaves server-verified ad starts disabled. A rolled-back effective-role preflight
+and independent World/BG/EU reads passed. All original runtime-source GitHub checks,
+including both native launch checks, passed. Phone ranked acceptance, AdMob
+verification, audio assets and replacement distribution remain pending.

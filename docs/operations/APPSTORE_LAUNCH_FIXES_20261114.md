@@ -60,10 +60,10 @@ Campaign remains non-ranked: everyone follows the same 30 mission definitions.
 No new server ruleset, season/gear score import, local-score upload, leaderboard
 backfill or historical-result conversion is implemented by this correction.
 
-Production server admission/reward policy must be checked before phone acceptance.
-The currently signed-in Supabase browser account lists staging/development projects
-but does not expose the production project recorded in the launch documentation.
-No production operations policy or reward approval was changed in this session.
+At the initial diagnostic checkpoint, the signed-in Supabase browser account listed
+staging/development projects but did not expose the production project. No production
+policy or reward approval had changed at that checkpoint. The later access and
+ranking correction are recorded below.
 
 ## Mission success transition and audio contract
 
@@ -120,3 +120,50 @@ balance: 6; CI routing: 17. Development, staging, production and configured publ
 Campaign builds compile. Planning validation and its 13 tests pass. No new native
 archive, Simulator/Emulator result or physical-device acceptance is claimed here.
 The local browser preview could not reach the sandboxed development server.
+
+## Production access and ranked admission · 14 November 2026, 21:10 UTC
+
+The live Cloudflare worker `crystal-path-production-api` was inspected in its
+owning account. Its `crystalpath-api.kolequant.xyz` domain routes to
+`https://wtldjvzvpcfkwfacgsqj.supabase.co/functions/v1/cpi-live`. The exact Supabase
+project is now accessible in the owner's other account; its generic display name
+had hidden its connection to Crystal Path. No new project was created.
+
+A read-only production query found policy revision 1, ranked/ad starts disabled,
+`service_not_ready`, v1 starts/recovery, and zero ranked runs/verified results.
+The v11 economy/resource tables and review-inventory migration are installed.
+The runtime login is a member of `service_role` and explicitly switches to that
+role. Under that effective role, policy reads, start authorization and leaderboard
+reads are permitted; changing the operator policy is correctly not permitted.
+
+A transaction temporarily applied the candidate policy, switched to `service_role`,
+checked v11 ranked admission, v1/v11 recovery and the World leaderboard, then rolled
+back. A final read confirmed revision 1 was unchanged. The approved ranking fix was
+then applied through the audited, revision-checked operator function:
+
+```sql
+select cpi_private.set_operations_policy(
+  1, true, false, 1, 1,
+  'infinity-v11-live', array['infinity-v1','infinity-v11-live'],
+  'none', 'owner:rankings-fix-20261114'
+);
+```
+
+The committed result is revision **2**, updated **2026-11-14T21:10:11.710808Z**:
+ranked starts enabled, v11-live starts, maintenance `none`, both v1 and v11-live
+recovery retained. Existing build floors remain 1 so previously authenticated
+sessions are not stranded. Ad starts remain disabled; no ad approvals, grant rules,
+authentication, purchase verification, account data or historical scores changed.
+
+An independent read confirmed the saved policy and successful World, Bulgaria and
+Europe leaderboard queries, all currently with zero players. This validates the
+database admission/read path; it is not an authenticated phone run or an HTTP
+end-to-end test. Build 72 still launches local Infinity. It needs the client update
+from this PR before players can use the new ranked entry. Existing local scores
+remain local.
+
+All checks for runtime source `f8e2a8a` passed, including Android and iOS launch checks
+in [43638361769](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/43638361769)
+and iOS archive compilation in [43638361742](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/43638361742).
+No replacement store binary has been distributed. Physical-device ranked play,
+Google ad verification/readiness and the owner's three audio files remain pending.
