@@ -326,7 +326,7 @@ export function App({
   }, [campaignOutcome, missionPhase, settings.reducedMotion]);
   const campaignInterstitialCadence = useRef(createCampaignInterstitialCadence());
   const campaignContinueInFlight = useRef(false);
-  useMissionAudio(
+  const dismissMissionAudio = useMissionAudio(
     game?.mode === 'campaign' && campaignOutcome
       ? campaignOutcome.cleared
         ? missionPhase
@@ -1027,6 +1027,7 @@ export function App({
   };
   const continueCampaignResult = () => {
     if (campaignContinueInFlight.current) return;
+    dismissMissionAudio();
     campaignContinueInFlight.current = true;
     void (async () => {
       try {

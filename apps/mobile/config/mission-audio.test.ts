@@ -164,6 +164,23 @@ describe('Campaign mission audio lifecycle', () => {
     vi.advanceTimersByTime(6000);
     expect(complete).not.toHaveBeenCalled();
   });
+  it('stops on Continue before an interstitial and cannot resume under the ad', () => {
+    const { audio, tracks } = fixture();
+    audio.update('result', enabled);
+    audio.dismiss();
+    audio.setForeground(false);
+    audio.setForeground(true);
+    audio.update('result', enabled);
+    audio.activate();
+    expect(tracks.get('music')!.play).toHaveBeenCalledTimes(1);
+    expect(tracks.get('music')!.currentTime).toBe(0);
+    audio.update(null, enabled);
+    audio.update('celebration', enabled);
+    expect(tracks.get('music')!.play).toHaveBeenCalledTimes(2);
+    expect(tracks.get('music')!.currentTime).toBe(3);
+    audio.dispose();
+  });
+
   it('stops delayed music playback after disposal and retries blocked music on a later gesture', async () => {
     const { audio, tracks } = fixture();
     const music = tracks.get('music')!;

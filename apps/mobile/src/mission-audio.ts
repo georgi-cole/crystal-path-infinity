@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { getGameplayLifecycle } from './gameplay-lifecycle';
 import type { PracticeSettings } from './practice-save';
 
@@ -34,6 +34,7 @@ export function createMissionAudio(
   let foreground = true;
   let enabled = { soundEffects: false, music: false };
   let disposed = false;
+  let dismissed = false;
   let musicPlaying = false;
   let musicNeedsStart = true;
   let musicEpoch = 0;
@@ -69,6 +70,7 @@ export function createMissionAudio(
   function wantsMusic() {
     return (
       !disposed &&
+      !dismissed &&
       foreground &&
       enabled.music &&
       (phase === 'transition' || phase === 'celebration' || phase === 'result')
@@ -117,6 +119,7 @@ export function createMissionAudio(
       if (next !== phase) {
         clearCue();
         phase = next;
+        if (next === null || next === 'landing' || next === 'failed') dismissed = false;
         if (next === 'landing' || next === 'failed') {
           const epoch = cueEpoch;
           cueDone = false;
@@ -190,6 +193,13 @@ export function createMissionAudio(
       syncMusic();
     },
     activate: syncMusic,
+    dismiss() {
+      dismissed = true;
+      clearCue();
+      syncMusic();
+      stop(tracks.music);
+      musicNeedsStart = true;
+    },
     dispose() {
       disposed = true;
       clearCue();
@@ -247,4 +257,5 @@ export function useMissionAudio(
     };
   }, []);
   useEffect(() => owner.current?.update(phase, settings), [phase, settings]);
+  return useCallback(() => owner.current?.dismiss(), []);
 }
