@@ -574,6 +574,25 @@ describe('Beacon Route playtest', () => {
     );
   });
 
+  it('retains the first cleared crossing on the map without the journal, including after the finale', () => {
+    for (const count of [3, CAMPAIGN_MISSIONS.length]) {
+      const hub = renderToStaticMarkup(
+        createElement(CampaignMissionHub, {
+          progress: {
+            ...EMPTY_CAMPAIGN_PROGRESS,
+            cleared: CAMPAIGN_MISSIONS.slice(0, count).map((m) => m.id),
+          },
+          saved: { status: 'empty' },
+          onStartMission: () => {},
+        }),
+      );
+      expect(hub).toContain('The Coast Is Clear-ish · Cleared');
+      expect(hub).toContain('Lens, Actually · Cleared');
+      expect(hub).not.toContain('Crossing journal');
+      expect(hub).not.toContain('Previous chapter');
+    }
+  });
+
   it('keeps later new missions mysterious and treats the old finale as a milestone', () => {
     const progress = {
       ...EMPTY_CAMPAIGN_PROGRESS,

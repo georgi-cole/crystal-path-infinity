@@ -3304,3 +3304,180 @@
     animation: none !important;
   }
 }
+
+/* Swipeable crossings keep the focused signal between its two neighbours. */
+.cpi-map-crossings {
+  position: absolute;
+  inset: 38% 0 10%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  touch-action: pan-x;
+}
+.cpi-map-crossings::-webkit-scrollbar {
+  display: none;
+}
+.cpi-map-stops {
+  display: flex;
+  height: 100%;
+}
+.cpi-map-stops::before,
+.cpi-map-stops::after {
+  content: '';
+  flex: 0 0 calc(100% / 3);
+}
+.cpi-map-stop {
+  position: relative;
+  flex: 0 0 calc(100% / 3);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+  opacity: 0.68;
+  transition: opacity 200ms;
+}
+.cpi-map-stop::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  border-top: 2px dotted #f5deb69c;
+  content: '';
+  z-index: -1;
+}
+.cpi-map-stop:first-child::before {
+  left: 50%;
+}
+.cpi-map-stop:last-child::before {
+  right: 50%;
+}
+.cpi-map-stop[data-focused='true'] {
+  opacity: 1;
+}
+.cpi-map-stop .cpi-map-pin {
+  position: static;
+  transform: none;
+  flex: none;
+  width: 2.9rem;
+  min-width: 2.9rem;
+  height: 2.9rem;
+  padding: 0;
+  transition:
+    transform 200ms,
+    box-shadow 200ms;
+}
+.cpi-map-stop[data-focused='true'] .cpi-map-pin {
+  transform: scale(1.2);
+  box-shadow:
+    0 0 0 0.3rem #ffe5af40,
+    0 0 1.8rem #f9d79055;
+}
+.cpi-map-stop .cpi-map-pin[aria-pressed='true'] {
+  outline: none;
+}
+.cpi-map-stop-label {
+  padding: 0.2rem 0.38rem;
+  border-radius: 0.25rem;
+  color: #fff0d5;
+  background: #0b1c2ce8;
+  font-size: 0.65rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.cpi-map-stop[data-focused='true'] .cpi-map-stop-label {
+  color: #ffe0a0;
+}
+.cpi-menu-view--campaign .cpi-beacon-route.has-briefing .cpi-expedition-map {
+  min-height: 10.5rem;
+}
+.cpi-beacon-route.has-briefing .cpi-map-crossings {
+  inset: 43% 0 3%;
+}
+.cpi-beacon-route .cpi-crossing-brief {
+  border-color: #d5bb7761;
+}
+.cpi-beacon-route .cpi-brief-content {
+  gap: 0.5rem;
+}
+.cpi-beacon-route .cpi-brief-facts {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0.7rem 0 0.45rem;
+}
+.cpi-beacon-route .cpi-brief-facts > div:last-child {
+  grid-column: auto;
+}
+.cpi-beacon-route .cpi-brief-facts > div {
+  align-items: flex-start;
+  padding: 0.65rem;
+  border: 1px solid #d5c99a24;
+  background: linear-gradient(140deg, #13273b, #0b1726);
+}
+.cpi-beacon-route .cpi-brief-facts strong {
+  font-size: 0.9rem;
+}
+.cpi-brief-kit {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.45rem 0.2rem 0.7rem;
+  color: var(--exp-muted);
+  font-size: 0.72rem;
+}
+.cpi-brief-kit svg {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  color: #eac589;
+}
+.cpi-brief-kit strong {
+  display: block;
+  color: #f2e9d4;
+  font-weight: 600;
+  margin-top: 0.12rem;
+}
+.cpi-beacon-route .cpi-brief-reward {
+  padding: 0.6rem;
+  border-width: 0 0 0 2px;
+  border-radius: 0 0.35rem 0.35rem 0;
+  background: linear-gradient(90deg, #a17c3338, #6a50240d);
+}
+.cpi-beacon-route .cpi-brief-actions {
+  margin-top: 0.25rem;
+}
+.cpi-beacon-route .cpi-brief-actions .cpi-adventure-button {
+  width: 100%;
+  min-height: 2.8rem;
+  justify-content: space-between;
+  padding-inline: 1rem;
+}
+.cpi-menu-view--campaign .cpi-brief-content > small {
+  margin: 0;
+  text-align: center;
+  font-size: 0.64rem;
+}
+.cpi-beacon-route .cpi-brief-scroll {
+  padding: 0.1rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cpi-map-stop,
+  .cpi-map-stop .cpi-map-pin {
+    transition: none;
+  }
+}
+@media (max-height: 650px) {
+  .cpi-menu-view--campaign .cpi-beacon-route.has-briefing .cpi-expedition-map {
+    min-height: 8rem;
+  }
+  .cpi-beacon-route.has-briefing .cpi-map-crossings {
+    inset: 40% 0 0;
+  }
+  .cpi-menu-view--campaign .has-briefing .cpi-map-heading h1 {
+    font-size: 1.05rem;
+  }
+}

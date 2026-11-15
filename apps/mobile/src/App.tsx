@@ -269,6 +269,7 @@ export function App({
   } | null>(null);
   const campaignOutcomeRef = useRef(false);
   const [missionPhase, setMissionPhase] = useState<MissionAudioPhase>('landing');
+  const finishMissionLanding = useCallback(() => setMissionPhase('transition'), []);
   const finishMissionCelebration = useCallback(() => setMissionPhase('result'), []);
   const campaignMission =
     game?.mode === 'campaign' && game.campaignMissionId
@@ -314,22 +315,25 @@ export function App({
     () => typeof navigator === 'undefined' || navigator.onLine !== false,
   );
   useEffect(() => {
-    if (!campaignOutcome?.cleared) return;
+    if (!campaignOutcome?.cleared || missionPhase !== 'transition') return;
     const reduced =
       settings.reducedMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    // Preserve the final contact/impact/travel beat before fading into the reward film.
-    const cue = window.setTimeout(() => setMissionPhase('transition'), reduced ? 100 : 900);
-    const film = window.setTimeout(() => setMissionPhase('celebration'), reduced ? 200 : 1250);
+    // The complete cue has finished; bridge the music into the vortex with a short fade.
+    const film = window.setTimeout(() => setMissionPhase('celebration'), reduced ? 100 : 350);
     return () => {
-      window.clearTimeout(cue);
       window.clearTimeout(film);
     };
-  }, [campaignOutcome, settings.reducedMotion]);
+  }, [campaignOutcome, missionPhase, settings.reducedMotion]);
   const campaignInterstitialCadence = useRef(createCampaignInterstitialCadence());
   const campaignContinueInFlight = useRef(false);
-  useMissionAudio(
-    game?.mode === 'campaign' && campaignOutcome?.cleared ? missionPhase : null,
+  const dismissMissionAudio = useMissionAudio(
+    game?.mode === 'campaign' && campaignOutcome
+      ? campaignOutcome.cleared
+        ? missionPhase
+        : 'failed'
+      : null,
     settings,
+    finishMissionLanding,
   );
   const rankedClient =
     accountScope && profile?.profile != null ? (services?.rankedClient ?? null) : null;
@@ -1023,6 +1027,7 @@ export function App({
   };
   const continueCampaignResult = () => {
     if (campaignContinueInFlight.current) return;
+    dismissMissionAudio();
     campaignContinueInFlight.current = true;
     void (async () => {
       try {
