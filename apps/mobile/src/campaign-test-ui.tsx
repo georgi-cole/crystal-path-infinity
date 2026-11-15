@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { CAMPAIGN_MISSIONS, CHAPTERS, LANDMARK_CLEARS, STYLES } from './campaign-content';
 import type { BridgeSlot, StyleId } from './campaign-content';
 import {
@@ -22,15 +22,7 @@ import archipelago from './assets/campaign/beacon-archipelago.png?url';
 import './campaign-test-ui.css';
 import './expedition.css';
 
-const completed = [
-  { left: '18%', top: '79%' },
-  { left: '30%', top: '73%' },
-] as const;
-const undiscovered = [
-  { left: '59%', top: '49%', opacity: 0.82 },
-  { left: '73%', top: '36%', opacity: 0.58 },
-  { left: '83%', top: '29%', opacity: 0.33 },
-] as const;
+const chapters = Object.keys(CHAPTERS);
 
 export function CampaignMissionHub({
   progress,
@@ -43,7 +35,9 @@ export function CampaignMissionHub({
 }) {
   const [approach, setApproach] = useState<CampaignApproach>('main');
   const [selectedId, setSelectedId] = useState<CampaignMissionId | null>(null);
-  const briefing = useRef<HTMLHeadingElement>(null);
+  const route = useRef<HTMLDivElement>(null);
+  const swiping = useRef(false);
+  const swipeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const current = nextCampaignMission(progress);
   const index = current ? CAMPAIGN_MISSIONS.indexOf(current) : CAMPAIGN_MISSIONS.length;
   const upcoming = current ? CAMPAIGN_MISSIONS[index + 1] : undefined;
@@ -64,20 +58,47 @@ export function CampaignMissionHub({
     BigInt(saved.state.lastClearedRow) < BigInt(pending.targetRow) &&
     running;
   const mission = selected ? (resume ? pending : newMissionSnapshot(selected.id, approach)) : null;
-  const chapter = current?.chapter ?? 'harbour';
+  const focused = selected ?? current ?? CAMPAIGN_MISSIONS[CAMPAIGN_MISSIONS.length - 1];
+  const chapter = focused.chapter;
   const briefChapter = mission?.chapter ?? chapter;
   const lit = progress.cleared.includes(LANDMARK_CLEARS[briefChapter]);
-  const later = current ? CAMPAIGN_MISSIONS.length - index - 1 : 0;
   const clearedCount = cleared.length;
-  const chapterNumber = Object.keys(CHAPTERS).indexOf(chapter) + 1;
+  const chapterNumber = chapters.indexOf(chapter) + 1;
+  const stops = CAMPAIGN_MISSIONS.slice(0, current ? index + 2 : CAMPAIGN_MISSIONS.length);
   const openBriefing = (id: CampaignMissionId) => {
+    swiping.current = false;
     setApproach('main');
-    setSelectedId((previous) => (previous === id ? null : id));
+    setSelectedId(id);
   };
 
-  useEffect(() => {
-    if (selectedId) briefing.current?.focus({ preventScroll: true });
-  }, [selectedId]);
+  useLayoutEffect(() => {
+    const viewport = route.current;
+    if (!viewport) return;
+    const center = (animate = false) => {
+      const stop = viewport.querySelector<HTMLElement>('[data-focused="true"]');
+      if (!stop) return;
+      swiping.current = false;
+      viewport.scrollTo({
+        left: stop.offsetLeft + stop.offsetWidth / 2 - viewport.clientWidth / 2,
+        behavior:
+          animate &&
+          !viewport.closest('.cpi-reduced-motion') &&
+          !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+            ? 'smooth'
+            : 'auto',
+      });
+    };
+    center(!!selectedId);
+    let width = viewport.clientWidth;
+    const resize = new ResizeObserver(() => {
+      if (viewport.clientWidth === width) return;
+      width = viewport.clientWidth;
+      center();
+    });
+    resize.observe(viewport);
+    return () => resize.disconnect();
+  }, [focused.id, selectedId]);
+  useEffect(() => () => clearTimeout(swipeTimer.current), []);
 
   return (
     <section
@@ -89,92 +110,107 @@ export function CampaignMissionHub({
         <div className="cpi-expedition-map-fog" aria-hidden="true" />
         <header className="cpi-map-heading">
           <p className="cpi-adventure-kicker">
-            Campaign · Chapter {chapterNumber} of {Object.keys(CHAPTERS).length}
+            Campaign · Chapter {chapterNumber} of {chapters.length}
           </p>
           <h1 id="cpi-campaign-hub-title" data-menu-heading tabIndex={-1}>
             The Beacon Route
           </h1>
           <p>{CHAPTERS[chapter].name}</p>
         </header>
-        <svg
-          className="cpi-map-trail"
-          viewBox="0 0 1000 1000"
-          preserveAspectRatio="none"
-          aria-hidden="true"
+        <div
+          className="cpi-map-crossings"
+          ref={route}
+          role="region"
+          aria-label="Crossings. Swipe to explore or use the left and right arrow keys."
+          tabIndex={0}
+          onPointerDown={() => {
+            swiping.current = true;
+          }}
+          onWheel={() => {
+            swiping.current = true;
+          }}
+          onKeyDown={(event) => {
+            if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+            event.preventDefault();
+            const offset = event.key === 'ArrowLeft' ? -1 : 1;
+            const stop = stops[CAMPAIGN_MISSIONS.indexOf(focused) + offset];
+            if (stop) openBriefing(stop.id);
+          }}
+          onScroll={(event) => {
+            if (!swiping.current) return;
+            const viewport = event.currentTarget;
+            clearTimeout(swipeTimer.current);
+            swipeTimer.current = setTimeout(() => {
+              if (!swiping.current) return;
+              const center = viewport.scrollLeft + viewport.clientWidth / 2;
+              const pins = [...viewport.querySelectorAll<HTMLElement>('.cpi-map-stop')];
+              const closest = pins.reduce(
+                (best, pin) =>
+                  Math.abs(pin.offsetLeft + pin.offsetWidth / 2 - center) <
+                  Math.abs(best.offsetLeft + best.offsetWidth / 2 - center)
+                    ? pin
+                    : best,
+                pins[0],
+              );
+              const stop = stops[pins.indexOf(closest)];
+              if (stop) openBriefing(stop.id);
+            }, 140);
+          }}
         >
-          <path
-            className="cpi-map-trail-shadow"
-            d="M145 854C163 812 172 798 180 790S260 765 300 730 380 663 440 600"
-          />
-          <path
-            className="cpi-map-trail-lit"
-            d="M145 854C163 812 172 798 180 790S260 765 300 730 380 663 440 600"
-          />
-          {later > 0 && (
-            <path
-              className="cpi-map-trail-future"
-              d={
-                later === 1
-                  ? 'M440 600C500 523 550 537 590 490'
-                  : later === 2
-                    ? 'M440 600C500 523 550 537 590 490S671 398 730 360'
-                    : 'M440 600C500 523 550 537 590 490S671 398 730 360 795 312 830 290 882 250 920 210'
-              }
-            />
-          )}
-        </svg>
-        {cleared.slice(-2).map((entry, i, pins) => (
-          <button
-            type="button"
-            key={entry.id}
-            className="cpi-map-pin is-cleared"
-            style={completed[i + completed.length - pins.length]}
-            aria-label={entry.name + ' · Cleared'}
-            aria-pressed={selectedId === entry.id}
-            onClick={() => openBriefing(entry.id)}
-          >
-            <AdventureIcon name="check" />
-          </button>
-        ))}
-        {undiscovered.slice(1, later).map((position, i) => (
-          <span key={i} className="cpi-map-pin is-unexplored" style={position} aria-hidden="true">
-            <AdventureIcon name="lock" />
-          </span>
-        ))}
-        {current ? (
-          <button
-            type="button"
-            className="cpi-map-pin is-next"
-            aria-label={current.name + ' · Current crossing'}
-            aria-pressed={selectedId === current.id}
-            onClick={() => openBriefing(current.id)}
-          >
-            <AdventureIcon name="lantern" />
-            <span>Current</span>
-          </button>
-        ) : (
-          <span className="cpi-map-pin is-next is-complete" aria-hidden="true">
-            <AdventureIcon name="check" />
-            <span>Dawnkeeper</span>
-          </span>
-        )}
-        {upcoming && (
-          <button
-            type="button"
-            className="cpi-map-pin is-upcoming"
-            aria-label={upcoming.name + ' · Upcoming crossing'}
-            aria-pressed={selectedId === upcoming.id}
-            onClick={() => openBriefing(upcoming.id)}
-          >
-            <AdventureIcon name="compass" />
-            <span>Up next</span>
-          </button>
-        )}
+          <div className="cpi-map-stops">
+            {stops.map((entry, i) => {
+              const completed = progress.cleared.includes(entry.id);
+              const active = current?.id === entry.id;
+              const next = upcoming?.id === entry.id;
+              return (
+                <div className="cpi-map-stop" key={entry.id} data-focused={focused.id === entry.id}>
+                  <button
+                    type="button"
+                    className={
+                      'cpi-map-pin ' +
+                      (completed
+                        ? 'is-cleared'
+                        : active
+                          ? 'is-next'
+                          : next
+                            ? 'is-upcoming'
+                            : 'is-unexplored')
+                    }
+                    aria-label={
+                      entry.name +
+                      (completed
+                        ? ' · Cleared'
+                        : active
+                          ? ' · Current crossing'
+                          : ' · Upcoming crossing')
+                    }
+                    aria-pressed={selectedId === entry.id}
+                    aria-current={active ? 'step' : undefined}
+                    onClick={() => openBriefing(entry.id)}
+                  >
+                    <AdventureIcon
+                      name={completed ? 'check' : active ? 'lantern' : next ? 'compass' : 'lock'}
+                    />
+                  </button>
+                  <span className="cpi-map-stop-label">
+                    {active
+                      ? 'Current'
+                      : next
+                        ? 'Up next'
+                        : 'Crossing ' + String(i + 1).padStart(2, '0')}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
         <footer className="cpi-map-legend">
           <span>
             <AdventureIcon name="lantern" /> {clearedCount} / {CAMPAIGN_MISSIONS.length} signals lit
           </span>
-          {later > 1 && <span className="cpi-map-uncharted">Uncharted beyond the fog</span>}
+          <span className="cpi-map-uncharted">
+            {!current ? 'Every signal is lit' : 'Swipe to explore'}
+          </span>
         </footer>
       </div>
 
@@ -197,7 +233,7 @@ export function CampaignMissionHub({
                 Crossing {String(selectedIndex + 1).padStart(2, '0')}
                 {replay ? ' · Cleared' : ''}
               </p>
-              <h2 id="cpi-brief-title" tabIndex={-1} ref={briefing}>
+              <h2 id="cpi-brief-title" aria-live="polite">
                 {selected.name}
               </h2>
               <p className="cpi-brief-story">{mission.objective}</p>
@@ -238,20 +274,20 @@ export function CampaignMissionHub({
                     </span>
                   </div>
                 )}
-                <div>
-                  <AdventureIcon name="pack" />
-                  <span>
-                    <small>Starting kit</small>
-                    <strong>
-                      {mission.startingSp} Stability · {mission.startingHints} hints
-                    </strong>
-                  </span>
-                </div>
               </div>
+              <p className="cpi-brief-kit">
+                <AdventureIcon name="pack" />
+                <span>
+                  Mission kit{' '}
+                  <strong>
+                    {mission.startingSp} Stability · {mission.startingHints} hints
+                  </strong>
+                </span>
+              </p>
               <div className="cpi-brief-reward">
                 <AdventureIcon name="hint" />
                 <span>
-                  <small>First clear reward</small>
+                  <small>{replay ? 'First clear reward · collected' : 'First clear reward'}</small>
                   <strong>{mission.reward}</strong>
                 </span>
               </div>
@@ -278,7 +314,9 @@ export function CampaignMissionHub({
               </button>
             </div>
             <small className="cpi-adventure-footnote">
-              Mission kit only. Store supplies are for Infinity.
+              {replay
+                ? 'Replay for Mastery. Rewards are earned once.'
+                : 'Store supplies are saved for Infinity.'}
             </small>
           </div>
         </article>
@@ -292,31 +330,6 @@ export function CampaignMissionHub({
           </div>
         </article>
       ) : null}
-
-      {clearedCount > 0 && (
-        <details className="cpi-adventure-disclosure cpi-trail-journal">
-          <summary>
-            Crossing journal <span>{progress.mastered.length} mastered</span>
-          </summary>
-          {cleared.map((entry) => (
-            <div className="cpi-journal-stop" key={entry.id}>
-              <AdventureIcon name={progress.mastered.includes(entry.id) ? 'hint' : 'check'} />
-              <span>
-                <strong>{entry.name}</strong>
-                <small>{progress.mastered.includes(entry.id) ? 'Mastered' : 'Cleared'}</small>
-              </span>
-              <button
-                className="cpi-adventure-button is-quiet"
-                type="button"
-                aria-label={'View ' + entry.name}
-                onClick={() => openBriefing(entry.id)}
-              >
-                View crossing
-              </button>
-            </div>
-          ))}
-        </details>
-      )}
     </section>
   );
 }
