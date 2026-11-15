@@ -1,5 +1,8 @@
 # Текущи правила и икономика
 
+**15 November 2026 · 13:11 UTC · Campaign refinement uploaded.** [PR #144](https://github.com/georgi-cole/crystal-path-infinity/pull/144) merged as `ab4fdf91ec783120965ebdc5d749a7a3d4a90a3b`; all required checks and full native launch checks passed on that exact main source. TestFlight **1.0.2 (78)** was signed and uploaded successfully. The controlled App Store Connect session needs owner sign-in before Apple processing/compliance, tester assignment and test notes can be verified. Availability on TestFlight and physical-device acceptance are not yet claimed. [Release evidence and remaining acceptance](operations/CAMPAIGN_REFINEMENT_20261115.md#merged-source-and-signed-upload--15-november-2026-1311-utc).
+
+
 **15 November 2026 · Campaign refinement candidate.** The map now retains every cleared crossing on a swipeable route, with the focused crossing between its neighbors; mission 1 remains available for replay. The Crossing journal is hidden and saved clear/Mastery records remain intact. Briefings use a compact goal, kit and reward layout. The owner's failure and complete cues each play once; after completion, Campaign music starts at 0:03 and continues through the vortex and summary. Audio settings, background pause and a silent-media fallback are retained. This is presentation only: mission rules, grants, inventories, prices, Infinity scores and server rules are unchanged. [Behavior and delivery record](operations/CAMPAIGN_REFINEMENT_20261115.md).
 
 

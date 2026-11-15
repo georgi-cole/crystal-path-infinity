@@ -31,3 +31,15 @@ Validation results, checked source and any TestFlight distribution are recorded 
 Local verification: 153 focused Campaign/audio tests passed. In the local browser at a 390 × 844 CSS viewport, horizontal scrolling reached mission 1, tapping mission 2 centered it between 1 and 3, and its full briefing/action fit without document overflow or internal scrolling. All 30 cleared crossings remained selectable after the finale. The original audio decoded as 3.55 s complete, 10.08 s failed and 168.36 s campaign music: one completion playback ended before the music started at exactly 3.00 s; it continued through the summary, and a failed outcome played the failure cue once and stopped success music. This is browser presentation evidence, not iPhone audio acceptance.
 
 Local required checks passed: 997 mobile, 315 core and 236 server tests (1,548 application tests), six balance tests, typecheck, lint, formatting and development/staging/production builds. Planning validation (13 tests) and CI routing (17 tests) also passed. Native launch and TestFlight delivery remain pending.
+
+## Merged source and signed upload — 15 November 2026, 13:11 UTC
+
+- [PR #144](https://github.com/georgi-cole/crystal-path-infinity/pull/144) merged as `ab4fdf91ec783120965ebdc5d749a7a3d4a90a3b` after all required checks passed on its final head `be60847c0e84983c6b86629d676ec4c38c5ae4dd`.
+- The exact merged commit passed [main checks 43716096103](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/43716096103): quality, backend access tests, Android launch and full iPhone launch. Android verified three cold starts and real Home/resume; iPhone verified two cold starts and Settings/reactivation. Both reported zero blocking errors. The native launch screenshots were inspected.
+- [TestFlight run 43717377492](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/43717377492) successfully signed and uploaded **1.0.2 (78)** from that same source. Xcode reported Upload succeeded at **13:11:41 UTC**, followed by EXPORT SUCCEEDED; the workflow completed successfully.
+- The upload retained the existing **1.0.2 AdMob test override**. The job summary confirms rewarded ads test mode. This establishes a test-ad binary, not Google production ad-serving approval.
+- App Store Connect's controlled browser session requires the owner to sign in. Apple processing, encryption/compliance status, internal QA assignment and the new What to Test notes have therefore **not yet been verified or completed** for build 78. No tester availability or physical iPhone audio acceptance is claimed.
+- No App Store public review or external beta review was submitted, and no backend deployment was performed for this presentation change.
+
+The remaining acceptance is to sign in to App Store Connect, inspect build 78, finish any compliance metadata, assign the existing internal QA group if needed, save the test instructions and inspect the swipe/audio flow on an iPhone.
+
