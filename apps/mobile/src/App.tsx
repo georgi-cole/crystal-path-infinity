@@ -90,6 +90,7 @@ import { useLanguage } from './language-context';
 import type { AccountSessionOwner } from './account/session-owner';
 import type { OwnerProfile, ProfileClient } from './account/profile-client';
 import type { LeaderboardClient } from './leaderboard/leaderboard-client';
+import type { LocalScoreClient, ScoreSyncState } from './leaderboard/local-score-client';
 import type { NameReportClient } from './leaderboard/name-report-client';
 import type { RankedClient } from './ranked/ranked-client';
 import { RankedScene } from './ranked/ranked-scene';
@@ -119,6 +120,7 @@ export interface ApprovedAccountServices {
   leaderboardClient?: LeaderboardClient | null;
   nameReportClient?: NameReportClient | null;
   rankedClient?: RankedClient | null;
+  localScoreClient?: LocalScoreClient | null;
   rewardFlowFactory?: ((runId: string) => RewardFlow | null) | null;
   campaignInterstitial?: CampaignInterstitialAd | null;
   savedPendingClient?: SavedPendingClient | null;
@@ -165,6 +167,7 @@ const ignoreTrialCheckpoint = () => {};
 
 interface GameOwner {
   mode: 'infinity' | 'campaign';
+  scoreOwner?: string | null;
   weather?: 'clear' | 'rain';
   campaignMissionId?: CampaignMissionId;
   trialTheme?: ThemeId;
@@ -330,6 +333,23 @@ export function App({
   );
   const rankedClient =
     accountScope && profile?.profile != null ? (services?.rankedClient ?? null) : null;
+  const localScores = services?.localScoreClient ?? null;
+  const subscribeScores = useCallback(
+    (observer: () => void) => localScores?.subscribe(observer) ?? (() => {}),
+    [localScores],
+  );
+  const readScores = useCallback(() => localScores?.snapshot() ?? null, [localScores]);
+  const scoreSync: ScoreSyncState | null = useSyncExternalStore(
+    subscribeScores,
+    readScores,
+    readScores,
+  );
+  useEffect(() => {
+    localScores?.setOnline(online);
+  }, [localScores, online]);
+  useEffect(() => {
+    if (accountScope && profile?.profile) localScores?.bindOwner(profile.profile.publicId);
+  }, [localScores, accountScope, profile]);
   const setupProfile = view === 'profile' && accountScope !== null && setupScope === accountScope;
   useEffect(() => {
     if (!profileClient || !accountScope || !online) return;
@@ -374,7 +394,16 @@ export function App({
       ? rewardOwner.flow
       : null;
   useEffect(() => {
-    if (view !== 'play' || !accountScope || !rankedClient || !rewardFactory || !rankedRunId) return;
+    if (
+      view !== 'play' ||
+      !savedRun ||
+      savedRun.scope !== accountScope ||
+      !accountScope ||
+      !rankedClient ||
+      !rewardFactory ||
+      !rankedRunId
+    )
+      return;
     const flow = rewardFactory(rankedRunId);
     if (!flow) return;
     let active = true;
@@ -393,7 +422,7 @@ export function App({
       active = false;
       flow.dispose();
     };
-  }, [accountScope, rankedClient, rewardFactory, rankedRunId, view]);
+  }, [accountScope, rankedClient, rewardFactory, rankedRunId, view, savedRun]);
 
   useEffect(() => {
     let active = true;
@@ -768,6 +797,13 @@ export function App({
         }
         return;
       }
+      if (owner?.mode === 'infinity' && !owner.trialTheme) {
+        localScores?.record(
+          state,
+          owner.scoreOwner ?? null,
+          state.status === 'playing' && state.lastClearedRow === '0',
+        );
+      }
       if (CAMPAIGN_ENABLED && state.runId.startsWith('practice-campaign-infinity-')) {
         if (state !== infinityCheckpointRef.current)
           commitCampaignProgress(
@@ -794,7 +830,7 @@ export function App({
         );
       }
     },
-    [store, commitCampaignProgress, storage, deviceStorage],
+    [store, commitCampaignProgress, storage, deviceStorage, localScores],
   );
 
   const startPractice = (
@@ -810,6 +846,7 @@ export function App({
     const next: GameOwner = {
       initial,
       mode,
+      scoreOwner: mode === 'infinity' ? (localScores?.currentOwner() ?? null) : null,
       weather,
       campaignMissionId,
       token: ++gameSequence.current,
@@ -1099,6 +1136,11 @@ export function App({
           <InfinityPractice
             key={game.token}
             initialState={game.initial}
+            scoreStatus={
+              game.mode === 'infinity' && !game.trialTheme && game.scoreOwner
+                ? (scoreSync?.phase ?? 'idle')
+                : null
+            }
             onExit={() => closePractice(game.mode === 'campaign' ? 'campaign' : 'home')}
             onStore={() => {
               setStoreEntry('essentials');
@@ -1158,7 +1200,7 @@ export function App({
       </>
     );
 
-  if (!confirmNew && view === 'play' && rankedClient)
+  if (!confirmNew && view === 'play' && rankedClient && savedRun?.scope === accountScope)
     return (
       <RankedScene
         client={rankedClient}
@@ -1222,7 +1264,12 @@ export function App({
             settings={settings}
             musicAwaitingGesture={musicAwaitingGesture}
             onActivateMusic={activateMusic}
-            onOpen={navigate}
+            onOpen={(next) => {
+              if (next === 'play') {
+                if (canResumePractice(visibleSaved)) resumePractice();
+                else requestNewPractice();
+              } else navigate(next);
+            }}
             onBack={back}
             onResume={resumePractice}
             onNew={requestNewPractice}
@@ -1252,6 +1299,9 @@ export function App({
             pendingPersonalResult={services?.pendingPersonalResult || activeRun?.rewardPending}
             rankedClient={rankedClient}
             rankedServicesAvailable={Boolean(services?.rankedClient)}
+            localInfinity
+            leaderboardCountryCode={profile?.profile?.countryCode}
+            pendingLocalScore={scoreSync?.pending?.rows}
             savedRuns={
               rankedClient &&
               services?.savedPendingClient && (

@@ -14,6 +14,20 @@ import { storeEn } from './store-messages';
 import { supportEn } from './support-messages';
 
 export const en = {
+  'leaderboard.playLocal': 'Play Infinity',
+  'leaderboard.resumeLocal': 'Resume Infinity',
+  'leaderboard.localDescription': 'Your next personal best starts here',
+  'leaderboard.you': 'You',
+  'leaderboard.top10': 'Top 10',
+  'leaderboard.emptyBoard': 'The next name here could be yours.',
+  'leaderboard.firstScore': 'Finish an Infinity run to join the rankings.',
+  'leaderboard.positionUnavailable': 'Connect to see your position.',
+  'leaderboard.scoreQueued': 'Score saved. It will sync when you are online.',
+  'leaderboard.scoreSent': 'Your score has joined the rankings.',
+  'leaderboard.scoreSaveError': 'Your score could not be saved. Check your device storage.',
+  'leaderboard.scoreOnDevice':
+    'Saved on this device. Your personal best appears in Rankings after it syncs.',
+  'leaderboard.localResult': 'Your best Infinity score joins the worldwide rankings.',
   ...storeEn,
   ...supportEn,
   ...crystalGuideEn,

@@ -12,6 +12,7 @@ import { SignedInProfile } from './account/profile-menu';
 import type { OwnerProfile, ProfileClient } from './account/profile-client';
 import { LeaderboardView } from './leaderboard/leaderboard-view';
 import type { LeaderboardClient } from './leaderboard/leaderboard-client';
+import { LOCAL_INFINITY_BOARD } from '@crystal-path-infinity/game-core';
 import type { RankedClient } from './ranked/ranked-client';
 import { AccountControls } from './account/account-controls';
 import type { AccountControlsClient } from './account/account-controls-model';
@@ -274,6 +275,9 @@ export interface MainMenuProps {
   pendingPersonalResult?: boolean;
   rankedClient?: RankedClient | null;
   rankedServicesAvailable?: boolean;
+  localInfinity?: boolean;
+  leaderboardCountryCode?: string | null;
+  pendingLocalScore?: string | null;
   savedRuns?: ReactNode;
   accountControlsClient?: AccountControlsClient | null;
   accountScope?: object | null;
@@ -331,6 +335,7 @@ function MenuHome({
   tutorialProgress,
   rankedClient,
   rankedServicesAvailable,
+  localInfinity = false,
   settings,
   canSignIn,
   campaignProgress = EMPTY_CAMPAIGN_PROGRESS,
@@ -346,6 +351,7 @@ function MenuHome({
   | 'tutorialProgress'
   | 'rankedClient'
   | 'rankedServicesAvailable'
+  | 'localInfinity'
   | 'online'
   | 'settings'
   | 'campaignProgress'
@@ -383,37 +389,45 @@ function MenuHome({
       <nav className="cpi-menu-actions" aria-label={t('menu.main')}>
         <MenuAction
           label={
-            online && (rankedClient || rankedServicesAvailable)
-              ? t('leaderboard.play')
-              : CAMPAIGN_ENABLED
-                ? canResume
-                  ? 'Resume Infinity'
-                  : 'Infinity'
-                : t(canResume && !rankedClient ? 'general.resume' : 'general.play')
+            localInfinity
+              ? t(canResume ? 'leaderboard.resumeLocal' : 'leaderboard.playLocal')
+              : online && (rankedClient || rankedServicesAvailable)
+                ? t('leaderboard.play')
+                : CAMPAIGN_ENABLED
+                  ? canResume
+                    ? 'Resume Infinity'
+                    : 'Infinity'
+                  : t(canResume && !rankedClient ? 'general.resume' : 'general.play')
           }
           icon="play"
           variant="primary"
           description={
-            online && (rankedClient || rankedServicesAvailable)
-              ? t('leaderboard.playDescription')
-              : CAMPAIGN_ENABLED
-                ? canResume
-                  ? 'Continue your endless crossing'
-                  : 'Go as far as you can'
-                : undefined
+            localInfinity
+              ? t('leaderboard.localDescription')
+              : online && (rankedClient || rankedServicesAvailable)
+                ? t('leaderboard.playDescription')
+                : CAMPAIGN_ENABLED
+                  ? canResume
+                    ? 'Continue your endless crossing'
+                    : 'Go as far as you can'
+                  : undefined
           }
           onClick={
-            online && (rankedClient || rankedServicesAvailable)
-              ? () => onOpen('play')
-              : CAMPAIGN_ENABLED
-                ? canResume
-                  ? onResume
-                  : onStartTestInfinity
-                : rankedClient
-                  ? () => onOpen('play')
-                  : canResume
+            localInfinity
+              ? canResume
+                ? onResume
+                : onStartTestInfinity
+              : online && (rankedClient || rankedServicesAvailable)
+                ? () => onOpen('play')
+                : CAMPAIGN_ENABLED
+                  ? canResume
                     ? onResume
-                    : onNew
+                    : onStartTestInfinity
+                  : rankedClient
+                    ? () => onOpen('play')
+                    : canResume
+                      ? onResume
+                      : onNew
           }
         />
         <MenuAction
@@ -552,6 +566,9 @@ export function MainMenu({
   musicAwaitingGesture,
   onActivateMusic,
   rankedServicesAvailable = false,
+  localInfinity = false,
+  leaderboardCountryCode = null,
+  pendingLocalScore = null,
   onOpen,
   onBack,
   onResume,
@@ -632,6 +649,7 @@ export function MainMenu({
               tutorialProgress={tutorialProgress}
               rankedClient={rankedClient}
               rankedServicesAvailable={rankedServicesAvailable}
+              localInfinity={localInfinity}
               online={online}
               settings={settings}
               canSignIn={Boolean(accountEntry) && !accountConnected}
@@ -742,6 +760,18 @@ export function MainMenu({
             initialFilter={storeEntry}
             onReturnToRun={canResumePractice(saved) ? onResume : undefined}
           />
+        ) : view === 'play' && localInfinity ? (
+          <MenuPanel title={t('general.play')}>
+            <MenuAction
+              label={t(
+                canResumePractice(saved) ? 'leaderboard.resumeLocal' : 'leaderboard.playLocal',
+              )}
+              description={t('leaderboard.localDescription')}
+              icon="play"
+              variant="primary"
+              onClick={canResumePractice(saved) ? onResume : onNew}
+            />
+          </MenuPanel>
         ) : view === 'play' ? (
           <MenuPanel title={t('general.play')}>
             <p role="status">
@@ -770,24 +800,25 @@ export function MainMenu({
           </MenuPanel>
         ) : view === 'rankings' ? (
           <MenuPanel title={t('general.rankings')}>
-            <p>{t('leaderboard.infinityOnly')}</p>
-            {best !== null && <p>{t('menu.localBestRow', { row: number(best) })}</p>}
-            <MenuAction
-              label={t(rankedClient ? 'leaderboard.play' : 'leaderboard.connect')}
-              description={t(
-                rankedClient ? 'leaderboard.playDescription' : 'leaderboard.connectDescription',
-              )}
-              icon="play"
-              variant="primary"
-              onClick={() => onOpen(rankedClient ? 'play' : 'profile')}
-            />
-            <p className="cpi-menu-fine-print">{t('leaderboard.standardRules')}</p>
+            {!localInfinity && (
+              <MenuAction
+                label={t(rankedClient ? 'leaderboard.play' : 'leaderboard.connect')}
+                description={t(
+                  rankedClient ? 'leaderboard.playDescription' : 'leaderboard.connectDescription',
+                )}
+                icon="play"
+                variant="primary"
+                onClick={() => onOpen(rankedClient ? 'play' : 'profile')}
+              />
+            )}
             {leaderboardClient && (
               <LeaderboardView
                 client={leaderboardClient}
                 online={online}
-                rulesetVersion={LIVE_RULESET_VERSION}
+                rulesetVersion={localInfinity ? LOCAL_INFINITY_BOARD : LIVE_RULESET_VERSION}
                 countries={leaderboardCountries}
+                countryCode={leaderboardCountryCode}
+                pendingScore={pendingLocalScore}
                 pendingPersonalResult={pendingPersonalResult}
                 reportClient={nameReportClient}
               />
@@ -816,8 +847,17 @@ export function MainMenu({
               </>
             )}
             <MenuAction
-              label={t('menu.practiceOffline')}
-              icon="practice"
+              label={
+                localInfinity
+                  ? t(
+                      canResumePractice(saved)
+                        ? 'leaderboard.resumeLocal'
+                        : 'leaderboard.playLocal',
+                    )
+                  : t('menu.practiceOffline')
+              }
+              icon="play"
+              variant={localInfinity ? 'primary' : 'secondary'}
               onClick={canResumePractice(saved) ? onResume : onNew}
             />
           </MenuPanel>

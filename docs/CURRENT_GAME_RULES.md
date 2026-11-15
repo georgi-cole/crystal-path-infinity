@@ -1,5 +1,7 @@
 # Текущи правила и икономика
 
+**15 November 2026 · CPI-023/CPI-025/CPI-044 · local Infinity candidate.** New Infinity runs use the existing on-device seasonal game, clock, controls, gear and local save, including offline play. Only a finished positive row score is queued for the signed-in profile; a small best-result summary syncs asynchronously with duplicate protection and retries. Campaign missions and World previews never publish scores. The new `infinity-device-v1` board stores device-reported results separately from legacy server-verified runs; it does not claim replay verification. Ranking screens display the top 10 and the player's own position. Legacy saved ranked runs retain their old recovery path. Existing prices, supplies, ad limits and credit limits are unchanged. This entry describes a candidate; backend deployment and TestFlight acceptance are recorded separately in [the rollout record](operations/LOCAL_INFINITY_20261115.md). Earlier server-only statements below describe the historical builds.
+
 **14 November 2026 · 21:10 UTC · production ranked admission corrected.**
 The production gateway and its separate Supabase project are now verified. The
 server had retained its initial disabled v1 policy. After a rolled-back check under

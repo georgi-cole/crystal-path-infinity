@@ -1,5 +1,6 @@
 import type { SqlConnection, SqlPool } from './database.ts';
 import { createMountedPath } from './server-route.ts';
+import { LOCAL_INFINITY_BOARD, parseInfinityScore } from '@crystal-path-infinity/game-core';
 
 export interface LeaderboardReadQuery {
   readonly rulesetVersion: string;
@@ -13,6 +14,8 @@ export interface VerifiedLeaderboardAccount {
   readonly leaderboardAllowed: boolean;
 }
 export interface LeaderboardApiOptions {
+  readonly deviceScores?: boolean;
+  readonly rateLimitScore?: (subject: string) => Promise<boolean>;
   /** Explicit fixed service mount, e.g. '/cpi'; default is the root namespace. */
   readonly basePath?: string;
   readonly database: SqlPool;
@@ -86,7 +89,7 @@ function parseQuery(value: unknown, options: LeaderboardApiOptions): Leaderboard
     mappingVersion: value.mappingVersion,
   };
 }
-function entry(raw: unknown): PublicEntry | null {
+function entry(raw: unknown, maxRevives = 10): PublicEntry | null {
   if (
     !object(raw) ||
     !decimal(raw.rank, true) ||
@@ -109,7 +112,7 @@ function entry(raw: unknown): PublicEntry | null {
     typeof raw.revivesToReachScore !== 'number' ||
     !Number.isInteger(raw.revivesToReachScore) ||
     raw.revivesToReachScore < 0 ||
-    raw.revivesToReachScore > 10 ||
+    raw.revivesToReachScore > maxRevives ||
     !date(raw.achievedAt)
   )
     return null;
@@ -155,8 +158,10 @@ function projection(
         : item.continentCode === query.region));
   const top100: PublicEntry[] = [];
   const count = BigInt(raw.count);
+  const limit = query.rulesetVersion === LOCAL_INFINITY_BOARD ? 10n : 100n;
+  const maxRevives = query.rulesetVersion === LOCAL_INFINITY_BOARD ? 15 : 10;
   for (const [index, value] of raw.top100.entries()) {
-    const item = entry(value);
+    const item = entry(value, maxRevives);
     if (
       !item ||
       !scoped(item) ||
@@ -166,20 +171,20 @@ function projection(
       return null;
     top100.push(item);
   }
-  if (BigInt(top100.length) !== (count < 100n ? count : 100n)) return null;
-  const own = raw.own === null ? null : entry(raw.own);
+  if (BigInt(top100.length) !== (count < limit ? count : limit)) return null;
+  const own = raw.own === null ? null : entry(raw.own, maxRevives);
   if (raw.own !== null && (!own || !scoped(own) || BigInt(own.rank) > count)) return null;
   if (own && top100.some((item) => item.publicId === own.publicId && item.rank !== own.rank))
     return null;
   if (
     own &&
-    BigInt(own.rank) <= 100n &&
+    BigInt(own.rank) <= limit &&
     JSON.stringify(top100.find((item) => item.rank === own.rank)) !== JSON.stringify(own)
   )
     return null;
   const neighbors: PublicEntry[] = [];
   for (const value of raw.neighbors) {
-    const item = entry(value);
+    const item = entry(value, maxRevives);
     if (
       !item ||
       !own ||
@@ -192,7 +197,7 @@ function projection(
     )
       return null;
     if (
-      BigInt(item.rank) <= 100n &&
+      BigInt(item.rank) <= limit &&
       JSON.stringify(top100.find((candidate) => candidate.rank === item.rank)) !==
         JSON.stringify(item)
     )
@@ -267,7 +272,9 @@ export function createLeaderboardHandler(options: LeaderboardApiOptions) {
       const url = new URL(request.url);
       if (url.protocol !== 'https:' || url.search || url.hash)
         return reply({ code: 'invalid_request' }, 400, origin);
-      if (mountedPath(url.pathname) !== '/leaderboard/read')
+      const path = mountedPath(url.pathname);
+      const scoreSubmission = path === '/infinity/score' && options.deviceScores === true;
+      if (path !== '/leaderboard/read' && !scoreSubmission)
         return reply({ code: 'not_found' }, 404, origin);
       if (request.method === 'OPTIONS') {
         const headers = (request.headers.get('access-control-request-headers') ?? '')
@@ -302,6 +309,28 @@ export function createLeaderboardHandler(options: LeaderboardApiOptions) {
         request.headers.get('content-type')?.split(';')[0].trim() !== 'application/json'
       )
         return reply({ code: 'invalid_request' }, 400, origin);
+      if (scoreSubmission) {
+        if (!subject) return reply({ code: 'account_required' }, 401, origin);
+        if (options.rateLimitScore && !(await options.rateLimitScore(subject)))
+          return reply({ code: 'rate_limited' }, 429, origin);
+        let input: unknown;
+        try {
+          input = await body(request);
+        } catch {
+          return reply({ code: 'invalid_request' }, 400, origin);
+        }
+        const score = parseInfinityScore(input);
+        if (!score) return reply({ code: 'invalid_score' }, 400, origin);
+        connection = await options.database.connect();
+        const saved = await connection.query(
+          'select cpi_private.submit_infinity_score($1::uuid,$2::uuid,$3::text,$4::integer,$5::bigint) as result',
+          [subject, score.runId, score.rows, score.revives, score.activeTimeMs],
+        );
+        const result = saved.rows[0]?.result;
+        if (!object(result) || result.status !== 'saved' || result.runId !== score.runId)
+          return reply({ code: 'service_unavailable' }, 503, origin);
+        return reply({ status: 'saved', runId: score.runId }, 200, origin);
+      }
       let query: LeaderboardReadQuery | null;
       try {
         query = parseQuery(await body(request), options);
@@ -316,7 +345,9 @@ export function createLeaderboardHandler(options: LeaderboardApiOptions) {
       try {
         // One stable SQL statement; there is no open transaction to leak on failure.
         result = await connection.query(
-          'select cpi_private.read_leaderboard($1::text,$2::text,$3::text,$4::text,$5::uuid) as board',
+          query.rulesetVersion === LOCAL_INFINITY_BOARD
+            ? 'select cpi_private.read_infinity_scores($1::text,$2::text,$3::text,$4::text,$5::uuid) as board'
+            : 'select cpi_private.read_leaderboard($1::text,$2::text,$3::text,$4::text,$5::uuid) as board',
           [query.rulesetVersion, query.scope, query.region, query.mappingVersion, subject],
         );
       } catch {

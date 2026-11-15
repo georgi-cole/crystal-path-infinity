@@ -136,6 +136,7 @@ const EMPTY_KIT_SELECTION: KitSelection = {
 };
 type InfinitySupplies = Readonly<Record<'sp' | 'hint' | 'shield' | 'continue', number>>;
 export interface InfinitySceneViewProps {
+  readonly scoreStatus?: 'idle' | 'queued' | 'uploading' | 'synced' | 'error' | null;
   readonly weather?: 'clear' | 'rain';
   readonly campaignMission?: CampaignPresentation;
   readonly bridgeStyle?: BridgeStyle;
@@ -183,6 +184,7 @@ export interface InfinitySceneViewProps {
 }
 
 export function InfinitySceneView({
+  scoreStatus = null,
   resourcePanel,
   guestContinuePanel,
   trial = false,
@@ -380,15 +382,17 @@ export function InfinitySceneView({
   );
   const modeLabel = trial
     ? t('vault.trial')
-    : state.storeTest?.assisted
-      ? t('vault.assisted')
-      : CAMPAIGN_RELEASE_BUILD || CAMPAIGN_WEB_BUILD
-        ? 'Infinity'
-        : experiment
-          ? locale === 'bg'
-            ? 'Тест'
-            : 'Playtest'
-          : t('vault.classic');
+    : scoreStatus
+      ? 'Infinity'
+      : state.storeTest?.assisted
+        ? t('vault.assisted')
+        : CAMPAIGN_RELEASE_BUILD || CAMPAIGN_WEB_BUILD
+          ? 'Infinity'
+          : experiment
+            ? locale === 'bg'
+              ? 'Тест'
+              : 'Playtest'
+            : t('vault.classic');
   const notice =
     cinematic?.phase === 'impact'
       ? t(cinematic.feedback?.kind === 'wrong' ? 'game.impactWrong' : 'game.impactSafe')
@@ -758,7 +762,9 @@ export function InfinitySceneView({
           <span aria-hidden="true">—</span>
           {t(petWorld ? 'vault.petGuidance' : 'game.bridgeGuidance')}
           <span aria-hidden="true">—</span>
-          <span className="visually-hidden">{t('game.crossingNote')}</span>
+          <span className="visually-hidden">
+            {t(scoreStatus ? 'leaderboard.localResult' : 'game.crossingNote')}
+          </span>
         </p>
       </div>
       <EffectConsumption
@@ -814,7 +820,7 @@ export function InfinitySceneView({
                     : t('game.confirmUnfinished')}
                 </p>
                 {outcome.forfeitsGrant && <p role="alert">{t('game.confirmForfeit')}</p>}
-                <p>{t('game.confirmLocal')}</p>
+                <p>{t(scoreStatus ? 'leaderboard.localResult' : 'game.confirmLocal')}</p>
                 <div className="cpi-overlay-actions">
                   <button
                     type="button"
@@ -849,7 +855,9 @@ export function InfinitySceneView({
                 <div>
                   {rescueNote}
                   <p className="cpi-run-status-label">
-                    {t(state.storeTest?.assisted ? 'vault.assisted' : 'game.practiceUnverified')}
+                    {scoreStatus
+                      ? 'Infinity'
+                      : t(state.storeTest?.assisted ? 'vault.assisted' : 'game.practiceUnverified')}
                   </p>
                   <div className="cpi-result-score">
                     <span>{t(petWorld ? 'vault.rowsExplored' : 'game.rowsCleared')}</span>
@@ -896,7 +904,19 @@ export function InfinitySceneView({
                   {localizedDeathReason && <p>{localizedDeathReason}</p>}
                   {newPersonalBest && <p className="cpi-new-best">{t('game.bestNew')}</p>}
                   <p>
-                    {t(state.storeTest?.assisted ? 'vault.assistedResult' : 'game.resultLocal')}
+                    {t(
+                      scoreStatus === 'synced'
+                        ? 'leaderboard.scoreSent'
+                        : scoreStatus === 'error'
+                          ? 'leaderboard.scoreSaveError'
+                          : scoreStatus === 'queued' || scoreStatus === 'uploading'
+                            ? 'leaderboard.scoreQueued'
+                            : scoreStatus
+                              ? 'leaderboard.scoreOnDevice'
+                              : state.storeTest?.assisted
+                                ? 'vault.assistedResult'
+                                : 'game.resultLocal',
+                    )}
                   </p>
                   <div className="cpi-overlay-actions cpi-result-actions">
                     <button type="button" data-cpi-overlay-primary onClick={onRestart}>
@@ -1026,6 +1046,7 @@ function makeInitialRun(testEconomy = false, fixedRulesetVersion?: string): RunS
 }
 
 interface InfinityRunProps {
+  scoreStatus?: InfinitySceneViewProps['scoreStatus'];
   trial?: boolean;
   onExit: () => void;
   onStore?: () => void;
@@ -1051,6 +1072,7 @@ interface InfinityRunProps {
   ) => void;
 }
 function InfinityRun({
+  scoreStatus,
   trial = false,
   onExit,
   onStore,
@@ -1892,6 +1914,7 @@ function InfinityRun({
         ) : undefined
       }
       state={state}
+      scoreStatus={scoreStatus}
       feedback={feedback}
       cinematic={cinematic}
       mysteryFeedback={mysteryFeedback}
@@ -1973,6 +1996,7 @@ function InfinityRun({
 
 /** A new attempt and an explicitly resumed checkpoint have distinct owners. */
 export function InfinityPractice({
+  scoreStatus,
   trialTheme,
   onExit,
   onStore,
@@ -1994,6 +2018,7 @@ export function InfinityPractice({
   newJourney,
   worldTheme,
 }: {
+  scoreStatus?: InfinitySceneViewProps['scoreStatus'];
   trialTheme?: ThemeId;
   onExit: () => void;
   onStore?: () => void;
@@ -2029,6 +2054,7 @@ export function InfinityPractice({
   return (
     <ThemeScope theme={trialTheme ?? worldTheme ?? themeId}>
       <InfinityRun
+        scoreStatus={scoreStatus}
         trial={!!trialTheme}
         key={attempt}
         initialState={attempt === 0 ? initialState : retryState}

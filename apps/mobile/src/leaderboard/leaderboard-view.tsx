@@ -14,6 +14,7 @@ import type {
   LeaderboardSnapshot,
 } from './leaderboard-client';
 import './leaderboard-view.css';
+import './leaderboard-game.css';
 import { ACCOUNT_COUNTRIES } from '../account/country-codes';
 import { NameReportButton } from './name-report';
 import type { NameReportClient } from './name-report-client';
@@ -44,46 +45,49 @@ export function LeaderboardTable({
   const { t, number, locale } = useLanguage();
   const countries = new Intl.DisplayNames([locale], { type: 'region' });
   return (
-    <div className="cpi-leaderboard-table-wrap" tabIndex={0} role="region" aria-label={caption}>
-      <table className="cpi-leaderboard-table">
-        <caption>{caption}</caption>
-        <thead>
-          <tr>
-            <th scope="col">{t('leaderboard.rank')}</th>
-            <th scope="col">{t('leaderboard.player')}</th>
-            <th scope="col">{t('leaderboard.rows')}</th>
-            <th scope="col">{t('leaderboard.revives')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {entries.map((item) => (
-            <tr
+    <div className="cpi-ranking-list-wrap">
+      <ol className="cpi-ranking-list" aria-label={caption}>
+        {entries.slice(0, 10).map((item) => {
+          const yours = ownPublicId === item.publicId;
+          return (
+            <li
               key={item.publicId}
-              className={ownPublicId === item.publicId ? 'cpi-leaderboard-own' : undefined}
+              className={'cpi-ranking-row' + (yours ? ' cpi-leaderboard-own' : '')}
+              data-place={item.rank}
             >
-              <td>{number(item.rank)}</td>
-              <th scope="row">
-                <span>{item.username}</span>
-                <small>
-                  {item.countryCode
-                    ? (countries.of(item.countryCode) ?? item.countryCode)
-                    : t('leaderboard.countryUnknown')}
-                </small>
+              <span
+                className="cpi-ranking-place"
+                aria-label={t('leaderboard.rank') + ' ' + number(item.rank)}
+              >
+                {number(item.rank)}
+              </span>
+              <div className="cpi-ranking-player">
+                <span className="cpi-ranking-name">
+                  <bdi>{item.username}</bdi>
+                  {yours && <small className="cpi-ranking-you">{t('leaderboard.you')}</small>}
+                </span>
+                {item.countryCode && (
+                  <small className="cpi-ranking-country">
+                    {countries.of(item.countryCode) ?? item.countryCode}
+                  </small>
+                )}
+              </div>
+              <span className="cpi-ranking-score">
+                <strong dir="auto">{number(item.lastClearedRow)}</strong>
+                <small>{t('leaderboard.rows')}</small>
+              </span>
+              {!yours && (
                 <NameReportButton
                   client={reportClient}
                   targetPublicId={item.publicId}
                   username={item.username}
                   online={online}
                 />
-              </th>
-              <td className="cpi-leaderboard-score" dir="auto">
-                {number(item.lastClearedRow)}
-              </td>
-              <td>{number(item.revivesToReachScore)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+              )}
+            </li>
+          );
+        })}
+      </ol>
     </div>
   );
 }
@@ -105,6 +109,8 @@ export function LeaderboardView({
   countries = [],
   pendingPersonalResult = false,
   reportClient = null,
+  countryCode = null,
+  pendingScore = null,
 }: {
   client: LeaderboardClient | null;
   online: boolean;
@@ -113,8 +119,10 @@ export function LeaderboardView({
   countries?: readonly { countryCode: string; continentCode: string }[];
   pendingPersonalResult?: boolean;
   reportClient?: NameReportClient | null;
+  countryCode?: string | null;
+  pendingScore?: string | null;
 }) {
-  const { t, number, locale } = useLanguage();
+  const { t, locale } = useLanguage();
   const [scope, setScope] = useState<LeaderboardQuery['scope']>('world');
   const [region, setRegion] = useState('');
   const [attempt, setAttempt] = useState(0);
@@ -154,7 +162,7 @@ export function LeaderboardView({
       }
     });
     return () => controller.abort();
-  }, [cache, online, valid, key, query, attempt, accountScope, readScope]);
+  }, [cache, online, valid, key, query, attempt, accountScope, readScope, pendingScore]);
 
   // Never display the previous filter or previous client's results while a
   // new effect is starting. Offline snapshots contain no own-account links.
@@ -170,11 +178,8 @@ export function LeaderboardView({
     current?.phase === 'ready' &&
     accountScope !== null &&
     current.accountScope === accountScope;
-  const date = data
-    ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(
-        new Date(data.updatedAt),
-      )
-    : '';
+  const ownInTop =
+    !!own && data?.top100.slice(0, 10).some((entry) => entry.publicId === own.publicId);
   return (
     <section className="cpi-leaderboard" aria-label={t('general.rankings')}>
       {!client ? (
@@ -192,7 +197,14 @@ export function LeaderboardView({
                   checked={scope === value}
                   onChange={() => {
                     setScope(value);
-                    setRegion('');
+                    setRegion(
+                      value === 'country'
+                        ? (countryCode ?? '')
+                        : value === 'continent'
+                          ? (countries.find((item) => item.countryCode === countryCode)
+                              ?.continentCode ?? '')
+                          : '',
+                    );
                   }}
                 />
                 {t(
@@ -207,7 +219,6 @@ export function LeaderboardView({
             {scope !== 'world' && (
               <label className="cpi-leaderboard-region">
                 {t('leaderboard.region')}
-                <small>{t('leaderboard.declared')}</small>
                 <select value={region} onChange={(event) => setRegion(event.target.value)}>
                   <option value="">{t('leaderboard.chooseRegion')}</option>
                   {scope === 'continent'
@@ -243,28 +254,43 @@ export function LeaderboardView({
               </div>
               {online && (
                 <button
+                  className="cpi-ranking-refresh"
                   type="button"
+                  aria-label={t('leaderboard.refresh')}
                   disabled={current?.phase === 'loading'}
                   onClick={() => setAttempt((value) => value + 1)}
                 >
-                  {t(current?.phase === 'error' ? 'leaderboard.retry' : 'leaderboard.refresh')}
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M19 8a8 8 0 1 0 1 7M19 3v6h-6" />
+                  </svg>
                 </button>
               )}
               {data && (
                 <>
-                  <p>{t('leaderboard.total', { count: number(data.count) })}</p>
-                  <p className="cpi-leaderboard-date">{t('leaderboard.updated', { date })}</p>
+                  <div className="cpi-ranking-banner">
+                    <svg viewBox="0 0 48 48" aria-hidden="true">
+                      <path d="M14 7h20v12c0 9-20 9-20 0ZM14 12H7v6c0 6 7 7 10 7m17-13h7v6c0 6-7 7-10 7M24 28v9m-9 4h18" />
+                    </svg>
+                    <h2>{t('leaderboard.top10')}</h2>
+                  </div>
                   {data.top100.length === 0 ? (
-                    <p role="status">{t('leaderboard.empty')}</p>
+                    <div className="cpi-ranking-first" role="status">
+                      <span aria-hidden="true">✧</span>
+                      <p>{t('leaderboard.emptyBoard')}</p>
+                    </div>
                   ) : (
                     <LeaderboardTable
-                      entries={data.top100}
-                      caption={t('leaderboard.top')}
+                      entries={data.top100.slice(0, 10)}
+                      caption={t('leaderboard.top10')}
                       ownPublicId={own?.publicId}
                       reportClient={reportClient}
                       online={online}
                     />
                   )}
+                </>
+              )}
+              {!ownInTop && (data || pendingScore) && (
+                <div className="cpi-ranking-personal">
                   <h2>{t('leaderboard.own')}</h2>
                   {own ? (
                     <LeaderboardTable
@@ -275,28 +301,33 @@ export function LeaderboardView({
                       online={online}
                     />
                   ) : (
-                    <p>{t(ownKnown ? 'leaderboard.noOwn' : 'leaderboard.ownUnavailable')}</p>
+                    <div className="cpi-ranking-first">
+                      <span aria-hidden="true">✧</span>
+                      {pendingScore ? (
+                        <>
+                          <strong>{pendingScore}</strong>
+                          <p>{t('leaderboard.scoreQueued')}</p>
+                        </>
+                      ) : (
+                        <p>
+                          {t(
+                            ownKnown ? 'leaderboard.firstScore' : 'leaderboard.positionUnavailable',
+                          )}
+                        </p>
+                      )}
+                    </div>
                   )}
-                  {own && data.neighbors.length > 1 && (
-                    <LeaderboardTable
-                      entries={data.neighbors}
-                      caption={t('leaderboard.nearby')}
-                      ownPublicId={own.publicId}
-                      reportClient={reportClient}
-                      online={online}
-                    />
-                  )}
-                </>
+                </div>
               )}
             </>
           )}
         </>
       )}
-      {pendingPersonalResult && <p role="status">{t('leaderboard.pending')}</p>}
-      <details>
-        <summary>{t('leaderboard.tieTitle')}</summary>
-        <p>{t('leaderboard.tie')}</p>
-      </details>
+      {(pendingPersonalResult || pendingScore) && (
+        <p className="cpi-ranking-sync" role="status">
+          {t('leaderboard.scoreQueued')}
+        </p>
+      )}
     </section>
   );
 }

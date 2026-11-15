@@ -1,4 +1,5 @@
 import type { AccountSessionOwner } from '../account/session-owner';
+import { LOCAL_INFINITY_BOARD } from '@crystal-path-infinity/game-core';
 
 export const CONTINENTS = ['AF', 'AS', 'EU', 'NA', 'SA', 'OC', 'AN'] as const;
 export type Continent = (typeof CONTINENTS)[number];
@@ -72,7 +73,7 @@ export function validLeaderboardQuery(query: LeaderboardQuery): boolean {
           : query.scope === 'continent' && CONTINENTS.includes(query.region as Continent)))
   );
 }
-function entry(value: unknown): LeaderboardEntry | null {
+function entry(value: unknown, maxRevives = 10): LeaderboardEntry | null {
   if (
     !record(value) ||
     !decimal(value.rank, true) ||
@@ -94,7 +95,7 @@ function entry(value: unknown): LeaderboardEntry | null {
     typeof value.revivesToReachScore !== 'number' ||
     !Number.isInteger(value.revivesToReachScore) ||
     value.revivesToReachScore < 0 ||
-    value.revivesToReachScore > 10 ||
+    value.revivesToReachScore > maxRevives ||
     !timestamp(value.achievedAt)
   )
     return null;
@@ -135,6 +136,8 @@ export function parseLeaderboard(
   const top100: LeaderboardEntry[] = [];
   const neighbors: LeaderboardEntry[] = [];
   const count = BigInt(value.count);
+  const limit = query.rulesetVersion === LOCAL_INFINITY_BOARD ? 10n : 100n;
+  const maxRevives = query.rulesetVersion === LOCAL_INFINITY_BOARD ? 15 : 10;
   const scoped = (item: LeaderboardEntry) =>
     query.scope === 'world' ||
     (item.mappingVersion === query.mappingVersion &&
@@ -142,7 +145,7 @@ export function parseLeaderboard(
         ? item.countryCode === query.region
         : item.continentCode === query.region));
   for (const [index, raw] of value.top100.entries()) {
-    const item = entry(raw);
+    const item = entry(raw, maxRevives);
     if (
       !item ||
       !scoped(item) ||
@@ -152,17 +155,17 @@ export function parseLeaderboard(
       return null;
     top100.push(item);
   }
-  if (BigInt(top100.length) !== (count < 100n ? count : 100n)) return null;
-  const own = value.own === null ? null : entry(value.own);
+  if (BigInt(top100.length) !== (count < limit ? count : limit)) return null;
+  const own = value.own === null ? null : entry(value.own, maxRevives);
   if (value.own !== null && (!own || !scoped(own) || BigInt(own.rank) > count)) return null;
   if (own && top100.some((item) => item.publicId === own.publicId && item.rank !== own.rank))
     return null;
-  if (own && BigInt(own.rank) <= 100n) {
+  if (own && BigInt(own.rank) <= limit) {
     const matching = top100.find((item) => item.rank === own.rank);
     if (JSON.stringify(matching) !== JSON.stringify(own)) return null;
   }
   for (const raw of value.neighbors) {
-    const item = entry(raw);
+    const item = entry(raw, maxRevives);
     if (
       !item ||
       !own ||
@@ -175,7 +178,7 @@ export function parseLeaderboard(
     )
       return null;
     if (
-      BigInt(item.rank) <= 100n &&
+      BigInt(item.rank) <= limit &&
       JSON.stringify(top100.find((candidate) => candidate.rank === item.rank)) !==
         JSON.stringify(item)
     )

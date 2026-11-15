@@ -1,6 +1,10 @@
 import { Buffer } from 'node:buffer';
 import { timingSafeEqual } from 'node:crypto';
-import { LIVE_RULESET_VERSION, RULESET_VERSION } from '@crystal-path-infinity/game-core';
+import {
+  LIVE_RULESET_VERSION,
+  RULESET_VERSION,
+  LOCAL_INFINITY_BOARD,
+} from '@crystal-path-infinity/game-core';
 import type { SqlPool } from './database.ts';
 import type { AccountIssuer } from './account-issuer.ts';
 import { AccountIssuerError } from './account-issuer.ts';
@@ -221,6 +225,7 @@ export function createLiveServer(options: LiveServerOptions) {
     verifyReauthentication: options.issuer.verifyReauthentication,
     revokeAllSessions: options.issuer.revokeAllSessions,
     includeCommerce: true,
+    includeDeviceScores: true,
   });
   const commerce = createCommerceHandler({
     basePath,
@@ -276,7 +281,9 @@ export function createLiveServer(options: LiveServerOptions) {
         allowOrigin,
         rateLimit,
         allowPublicRead: () => false,
-        allowedRulesets: [RULESET_VERSION, LIVE_RULESET_VERSION],
+        allowedRulesets: [RULESET_VERSION, LIVE_RULESET_VERSION, LOCAL_INFINITY_BOARD],
+        deviceScores: true,
+        rateLimitScore: (subject) => options.rateLimit('infinity-score:' + subject, 10, 60_000),
         allowedMappingVersions: ['cpi-regions-2026-11-v1'],
       }),
       moderation: createModerationHandler({

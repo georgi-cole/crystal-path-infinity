@@ -37,6 +37,7 @@ const routes: Readonly<Record<string, Route>> = {
   '/ranked/archive': { handler: 'pendingRuns', metric: 'ranked_archive' },
   '/ranked/saved': { handler: 'pendingRuns', metric: 'ranked_saved' },
   '/leaderboard/read': { handler: 'leaderboard', metric: 'leaderboard_read' },
+  '/infinity/score': { handler: 'leaderboard', metric: null },
   '/account/export': { handler: 'account', metric: 'account_export' },
   '/account/delete': { handler: 'account', metric: 'account_delete' },
   '/account/status': { handler: 'account', metric: 'account_status' },

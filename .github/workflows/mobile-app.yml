@@ -539,6 +539,8 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261111000200_adventure_commerce.sql
           psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261111000300_offline_supplies.sql
           psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261112000100_review_purchase_inventory.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261115000100_local_infinity_scores.sql
+          psql -X -v ON_ERROR_STOP=1 -f backend/tests/local-infinity-scores.sql
           psql -X -v ON_ERROR_STOP=1 -f backend/live-runtime-role.sql
           node --experimental-strip-types backend/tests/commerce-integration.mjs
           node --experimental-strip-types backend/tests/live-services-integration.mjs

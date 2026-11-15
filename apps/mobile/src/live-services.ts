@@ -18,6 +18,8 @@ import { createMobileIdentityClient } from './account/mobile-identity-client';
 import { createRankedClient } from './ranked/ranked-client';
 import { createSavedPendingClient } from './ranked/saved-pending-client';
 import { createLeaderboardClient } from './leaderboard/leaderboard-client';
+import { createLocalScoreClient } from './leaderboard/local-score-client';
+import { practiceStorage } from './app-profile';
 import { createNameReportClient } from './leaderboard/name-report-client';
 import { createRewardClient } from './rewards/reward-client';
 import { createRankedRewardFlowFactory } from './rewards/reward-flow-factory';
@@ -125,6 +127,9 @@ export function createLiveServices(values: Readonly<Record<string, unknown>>): L
       adPrivacyOptions: ad?.available ? () => ad.showPrivacyOptions() : undefined,
       campaignInterstitial: campaignInterstitial?.available ? campaignInterstitial : null,
       rankedClient: ranked,
+      localScoreClient: ranked
+        ? createLocalScoreClient({ baseUrl: base, session, storage: practiceStorage() })
+        : null,
       leaderboardClient: createLeaderboardClient(base, session),
       nameReportClient: createNameReportClient(base, session),
       savedPendingClient: createSavedPendingClient(base, session),

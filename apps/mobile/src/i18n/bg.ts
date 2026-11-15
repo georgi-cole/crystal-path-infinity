@@ -5,6 +5,17 @@ import { crystalGuideBg } from './crystal-guide-messages';
 
 /** Bulgarian preview copy — reviewed by the product owner before public release. */
 export const bg = {
+  'leaderboard.playLocal': 'Играй Infinity',
+  'leaderboard.resumeLocal': 'Продължи Infinity',
+  'leaderboard.localDescription': 'Следващият ти личен рекорд започва тук',
+  'leaderboard.you': 'Ти',
+  'leaderboard.top10': 'Топ 10',
+  'leaderboard.emptyBoard': 'Следващото име тук може да бъде твоето.',
+  'leaderboard.firstScore': 'Завърши Infinity игра, за да влезеш в класацията.',
+  'leaderboard.positionUnavailable': 'Свържи се, за да видиш позицията си.',
+  'leaderboard.scoreQueued': 'Резултатът е запазен. Ще се изпрати, когато си онлайн.',
+  'leaderboard.scoreSent': 'Резултатът ти е в класацията.',
+  'leaderboard.localResult': 'Най-добрият ти Infinity резултат влиза в световната класация.',
   'commerce.supplySyncIncomplete':
     'Някои предмети не можаха да бъдат синхронизирани с това устройство. Можете да пазарувате и да опитате отново чрез възстановяване на покупките.',
   'commerce.restoreIncomplete':

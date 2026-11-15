@@ -58,6 +58,19 @@ function board(query = WORLD, count = 105): LeaderboardSnapshot {
 const signal = () => new AbortController().signal;
 
 describe('CPI-024 lossless public leaderboard projection', () => {
+  it('renders at most ten compact scores with a single highlighted own entry', () => {
+    const html = renderToStaticMarkup(
+      createElement(LeaderboardTable, {
+        entries: Array.from({ length: 12 }, (_, i) => player(i + 1)),
+        caption: 'Top 10',
+        ownPublicId: player(4).publicId,
+      }),
+    );
+    expect(html.match(/class="cpi-ranking-row/g)).toHaveLength(10);
+    expect(html.match(/cpi-leaderboard-own/g)).toHaveLength(1);
+    expect(html).not.toContain('player_11');
+    expect(html).not.toContain('<table');
+  });
   it('retains rank 101, neighbors and exact adjacent large scores', () => {
     const parsed = parseLeaderboard(board(), WORLD);
     expect(parsed?.own?.rank).toBe('101');
@@ -124,7 +137,7 @@ describe('CPI-024 lossless public leaderboard projection', () => {
         ownPublicId: player(101).publicId,
       }),
     );
-    expect(html).toContain('scope="row"');
+    expect(html).toContain('aria-label="Rank 101"');
     expect(html).toContain('cpi-leaderboard-own');
     expect(html).toContain('Bulgaria');
     expect(html).toContain('101');
@@ -137,7 +150,7 @@ describe('CPI-024 lossless public leaderboard projection', () => {
       createElement(LeaderboardView, { client: null, online: true, pendingPersonalResult: true }),
     );
     expect(html).toContain('Verified rankings are not available yet');
-    expect(html).toContain('awaiting verification');
+    expect(html).toContain('Score saved. It will sync when you are online.');
     expect(html).not.toContain('<table');
     expect(html).not.toContain('player_');
   });
