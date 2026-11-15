@@ -40,7 +40,7 @@ export interface PracticeRuntime {
   readonly dispose: () => RunState;
 }
 
-/** Local practice only. Ranked actions/time go through the future server authority. */
+/** Device-owned gameplay and time. End-of-run score sync is outside this runtime. */
 export function createPracticeRuntime(options: PracticeRuntimeOptions): PracticeRuntime {
   let current = options.lifecycle.getSnapshot();
   let observationOffset: number | undefined;

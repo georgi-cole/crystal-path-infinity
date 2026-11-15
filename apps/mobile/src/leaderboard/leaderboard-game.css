@@ -1,0 +1,286 @@
+.cpi-menu-view--rankings .cpi-menu-panel {
+  padding: 1.15rem;
+  background: linear-gradient(150deg, #292429ed, #11151ded);
+  border-color: #b8ac9966;
+}
+.cpi-menu-view--rankings .cpi-menu-panel > h1 {
+  margin-bottom: 1rem;
+  font-size: clamp(1.9rem, 8vw, 2.65rem);
+  letter-spacing: -0.04em;
+}
+.cpi-menu-view--rankings .cpi-menu-panel > .cpi-menu-action {
+  margin-top: 1rem;
+}
+.cpi-leaderboard {
+  position: relative;
+  gap: 0.85rem;
+  color: #f0edf5;
+}
+.cpi-leaderboard .cpi-leaderboard-filters {
+  flex-wrap: nowrap;
+  gap: 0.2rem;
+  padding: 0.25rem;
+  border: 1px solid #aeb8c92c;
+  border-radius: 0.9rem;
+  background: #080b1180;
+}
+.cpi-leaderboard .cpi-leaderboard-filters:has(select) {
+  flex-wrap: wrap;
+}
+.cpi-leaderboard .cpi-leaderboard-filters label:has(input[type='radio']) {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 2.7rem;
+  padding: 0.5rem 0.25rem;
+  border: 1px solid transparent;
+  border-radius: 0.65rem;
+  color: #a7afbc;
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+.cpi-leaderboard .cpi-leaderboard-filters label:has(input:checked) {
+  color: #f9e0a6;
+  border-color: #d6b67a65;
+  background: linear-gradient(135deg, #76613a66, #332d2599);
+  box-shadow:
+    0 1px 5px #0004,
+    inset 0 1px 0 #fff2;
+}
+.cpi-leaderboard .cpi-leaderboard-region {
+  justify-content: space-between;
+  padding: 0.3rem 0.5rem;
+}
+.cpi-leaderboard .cpi-leaderboard-region select {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.85rem;
+  background: #10131c;
+  border-color: #ffffff26;
+}
+.cpi-ranking-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.35rem 0.15rem;
+}
+.cpi-ranking-banner svg {
+  width: 2.25rem;
+  height: 2.25rem;
+  fill: #cba05c14;
+  stroke: #e4c287;
+  stroke-width: 2.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 9px #dcb86b50);
+}
+.cpi-ranking-banner h2 {
+  margin: 0;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+  letter-spacing: 0.14em;
+  font-weight: 750;
+  color: #edcf98;
+}
+.cpi-leaderboard .cpi-ranking-refresh {
+  position: absolute;
+  top: 4rem;
+  right: 0;
+  min-height: 2.3rem;
+  min-width: 2.3rem;
+  width: 2.3rem;
+  padding: 0.5rem;
+  border: 1px solid #d4c6ac33;
+  border-radius: 50%;
+  background: #171a23;
+}
+.cpi-leaderboard:has(.cpi-leaderboard-region) .cpi-ranking-refresh {
+  position: static;
+  justify-self: end;
+}
+.cpi-ranking-refresh svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: #d4c7af;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.cpi-ranking-list {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.cpi-ranking-row {
+  display: grid;
+  grid-template-columns: 2.1rem minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 3.65rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid #b6bbc71a;
+  border-radius: 0.8rem;
+  background: linear-gradient(110deg, #ffffff08, #ffffff02);
+  box-shadow: inset 0 1px 0 #ffffff04;
+}
+.cpi-ranking-place {
+  display: grid;
+  place-items: center;
+  height: 2.15rem;
+  width: 2.15rem;
+  color: #a2a7b6;
+  font-size: 1rem;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+.cpi-ranking-row[data-place='1'] {
+  border-color: #d3a95644;
+  background: linear-gradient(110deg, #72522545, #3b302119);
+}
+.cpi-ranking-row[data-place='1'] .cpi-ranking-place {
+  color: #ffe5a4;
+  background: linear-gradient(135deg, #a88038, #574323);
+  clip-path: polygon(50% 0, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+  text-shadow: 0 1px 3px #0008;
+}
+.cpi-ranking-row[data-place='2'] .cpi-ranking-place {
+  color: #e3ebf7;
+  background: #6f7c932e;
+  border: 1px solid #b0bdcf4d;
+  border-radius: 50%;
+}
+.cpi-ranking-row[data-place='3'] .cpi-ranking-place {
+  color: #e0b194;
+  background: #98684b29;
+  border: 1px solid #ad7d5c55;
+  border-radius: 50%;
+}
+.cpi-ranking-player {
+  min-width: 0;
+  display: grid;
+  gap: 0.18rem;
+}
+.cpi-ranking-name {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.93rem;
+  font-weight: 650;
+}
+.cpi-ranking-name bdi {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cpi-ranking-country {
+  color: #9a9fac;
+  font-size: 0.68rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cpi-ranking-score {
+  display: grid;
+  gap: 0.1rem;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+.cpi-ranking-score strong {
+  color: #edeaf1;
+  font-size: 1.15rem;
+  line-height: 1;
+  font-weight: 750;
+}
+.cpi-ranking-score small {
+  color: #a8a4b1;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.cpi-ranking-row.cpi-leaderboard-own {
+  border-color: #bad9e18c;
+  background: linear-gradient(110deg, #45748a55, #243f4b55);
+  box-shadow:
+    inset 3px 0 0 #b8d7e4,
+    0 0 18px #8fc8e00a;
+}
+.cpi-ranking-you {
+  color: #b4d9e9;
+  padding: 0.15rem 0.3rem;
+  border: 1px solid #adcfdd44;
+  border-radius: 0.3rem;
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.cpi-leaderboard .cpi-ranking-row .cpi-name-report-open {
+  min-width: 1.6rem;
+  width: 1.6rem;
+  min-height: 2.25rem;
+  margin: 0 -0.4rem 0 0;
+  padding: 0.15rem;
+  border: 0;
+  background: transparent;
+  color: #9ba1ae;
+  font-size: 0;
+}
+.cpi-ranking-row .cpi-name-report-open::after {
+  content: '⋮';
+  font-size: 1.1rem;
+}
+.cpi-ranking-personal {
+  margin-top: 0.5rem;
+  border-top: 1px solid #c4cad42b;
+  padding-top: 0.9rem;
+}
+.cpi-ranking-personal > h2 {
+  margin: 0 0 0.6rem;
+  color: #b8d4e3;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+.cpi-ranking-first {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
+  border: 1px solid #b1c9d440;
+  border-radius: 0.85rem;
+  padding: 1rem;
+  background: #7594ac0c;
+  color: #c3c3ce;
+}
+.cpi-ranking-first > span {
+  color: #cfb077;
+  font-size: 1.9rem;
+}
+.cpi-ranking-first > strong {
+  font-size: 1.5rem;
+}
+.cpi-ranking-first p {
+  flex: 1;
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+.cpi-ranking-sync {
+  color: #b5c7d6;
+  font-size: 0.8rem;
+  text-align: center;
+}
+@media (max-width: 360px) {
+  .cpi-ranking-row {
+    gap: 0.4rem;
+    padding-inline: 0.45rem;
+  }
+  .cpi-ranking-name {
+    font-size: 0.83rem;
+  }
+  .cpi-ranking-score strong {
+    font-size: 1rem;
+  }
+}

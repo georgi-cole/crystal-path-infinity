@@ -33,6 +33,7 @@ export interface AccountLifecycleOptions {
   readonly revocationTimeoutMs?: number;
   /** Enabled only by the new host with the separately migrated private purchase/account tables. */
   readonly includeCommerce?: boolean;
+  readonly includeDeviceScores?: boolean;
 }
 export interface AccountDeletionStatus {
   readonly requestId: string;
@@ -495,8 +496,19 @@ export function createAccountLifecycleHandler(options: AccountLifecycleOptions) 
               next: { ...parsed.next, allocation: allocations.next },
             };
           }
+          let deviceInfinityBest: unknown = null;
+          if (options.includeDeviceScores) {
+            const ownScore = await connection.query(
+              'select cpi_private.export_infinity_score($1::uuid) as score',
+              [actor.subject],
+            );
+            deviceInfinityBest = json(ownScore.rows[0]?.score) ?? null;
+            if (deviceInfinityBest !== null && !object(deviceInfinityBest))
+              throw new Error('Invalid score export');
+          }
           return {
             ...data,
+            ...(options.includeDeviceScores ? { deviceInfinityBest } : {}),
             reports: reports.reports,
             rewards: rewards.rewards,
             adAuthorizations: authorizations.adAuthorizations,

@@ -16,3 +16,4 @@ export * from './tile-experiments.ts';
 export * from './journey.ts';
 export * from './journey-gear.ts';
 export * from './business-economy.ts';
+export * from './submitted-score.ts';

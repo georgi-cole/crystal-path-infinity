@@ -1,5 +1,7 @@
 # Текущи правила и икономика
 
+**15 November 2026 · CPI-023/CPI-025/CPI-044 · local Infinity candidate.** New Infinity runs use the existing on-device seasonal game, clock, controls, gear and local save, including offline play. Only a finished positive row score is queued for the signed-in profile; a small best-result summary syncs asynchronously with duplicate protection and retries. Campaign missions and World previews never publish scores. The new `infinity-device-v1` board stores device-reported results separately from legacy server-verified runs; it does not claim replay verification. Ranking screens display the top 10 and the player's own position. Legacy saved ranked runs retain their old recovery path. Existing prices, supplies, ad limits and credit limits are unchanged. This entry describes a candidate; backend deployment and TestFlight acceptance are recorded separately in [the rollout record](operations/LOCAL_INFINITY_20261115.md). Earlier server-only statements below describe the historical builds.
+
 **14 November 2026 · 21:10 UTC · production ranked admission corrected.**
 The production gateway and its separate Supabase project are now verified. The
 server had retained its initial disabled v1 policy. After a rolled-back check under
@@ -324,23 +326,13 @@ Reward labels were corrected alongside the reveal: mission 2 grants one reserve 
 **13 November 2026 · complete Campaign reward presentation, local feature branch:** the approved transformation now covers all 30 first-clear rewards. Supplies show Saved, permanent cosmetics/seasons/weather show Unlocked, and the Far Gate milestone shows Restored. Each confirmation names its actual outcomes; bundled supplies and cosmetics have accompanying artwork. Reward frames are 10% smaller than the approved trial. All 30 are selectable in the local preview by chapter. Existing grants, eligibility, replay, reduced-motion and save behavior are preserved. [Full reward mapping, artwork and validation](decisions/CAMPAIGN-REWARD-CINEMATICS.md#full-campaign-rollout---13-november-2026).
 
 **CPI-047 integration acceptance, same feature branch:** tests now demonstrate and persist the actual first clear of every mission, check its supply/style/season outcomes after reload, and reject duplicate replay grants. The real result uses the selected character; all seven Worlds and supported saved equipped appearances have coverage. A stable completion callback prevents unrelated screen updates from resetting the cinema timer. The storage-free preview is now `/src/reward-preview.html`, with a Character control. This is proposed client code in [issue #132](https://github.com/georgi-cole/crystal-path-infinity/issues/132), not a published build. See the dated [integration evidence](decisions/CAMPAIGN-REWARD-CINEMATICS.md#cpi-047-integration-verification--13-november-2026).
+ 
+## TestFlight preparation - 14 November 2026
 
-## TestFlight 1.0.2 (75) - 14 November 2026, 21:50 UTC
-
-PR #138 merged as `08a90c8058d7b83ab2c88c4e9f2222532180205c` after successful
-checks. That exact merged source passed full Android/iOS verification and was
-signed/uploaded as 1.0.2 (75). Apple is processing it at this checkpoint; internal
-distribution and physical-device acceptance are still pending.
-
-The candidate uses production v11-live Ranked Infinity and version-specific AdMob
-test mode. Test ads earn no revenue. Live Google ad readiness and server-verified
-ranked ad starts remain separate pending gates. Campaign and existing local
-Infinity scores stay unranked. No quotas, rewards, prices or historical run rules
-changed. See the dated
-[launch/distribution evidence](operations/APPSTORE_LAUNCH_FIXES_20261114.md).
-
-
-**15 November 2026, Sofia:** Apple processing and the encryption declaration are
-complete. Build 1.0.2 (75) is assigned to Crystal Path Internal QA (one tester),
-with saved test notes. The owner can update through TestFlight. Phone acceptance
-and live-ad readiness remain pending; no public review was submitted.
+PR #138 merged with the Ranked Infinity entry and the production v11-live admission
+correction. The upcoming 1.0.2 TestFlight version uses production account/ranking
+services and version-specific AdMob test mode for manual ad inspection. Test ads
+earn no revenue; public ad readiness and server-verified ranked ad starts remain
+separate pending gates. Campaign and offline Infinity do not publish ranked scores.
+Existing runs retain their rules. See the dated
+[launch and distribution evidence](operations/APPSTORE_LAUNCH_FIXES_20261114.md).

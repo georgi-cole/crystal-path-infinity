@@ -29,6 +29,14 @@ function menu(view: MainMenuProps['view'], overrides: Partial<MainMenuProps> = {
   );
 }
 describe('approved account services remain separate from default guest play', () => {
+  it('offers local Infinity from home, rankings and the play deep link while offline', () => {
+    for (const view of ['home', 'rankings', 'play'] as const) {
+      const html = menu(view, { localInfinity: true, online: false });
+      expect(html).toContain('Play Infinity');
+      expect(html).not.toContain('Start verified run');
+      expect(html).not.toContain('Ranked Infinity');
+    }
+  });
   it('does not invoke account services during default bootstrap or server rendering', () => {
     expect(renderToStaticMarkup(createElement(App))).toContain('Finding the edge');
     expect(
