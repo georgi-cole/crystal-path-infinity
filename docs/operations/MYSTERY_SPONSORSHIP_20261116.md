@@ -27,3 +27,7 @@ Tests exercise exact-once grants, stale IDs, legacy exclusion, typed reward amou
 Before public store publication, the exact candidate still needs required remote checks, a signed native build and real-device test-ad acceptance (completion, skip/no-fill, audio/timer restoration and restart after earning). Store processing/review and actual production inventory remain external outcomes. Never validate this by clicking live production ads.
 
 No prices, purchase grants or historical simulation results change. Revenue uplift has not been measured. Compare offer acceptance, ads per active minute, mission completion, post-ad exit, retention and purchases before tightening cadence or increasing reward sizes.
+
+## Follow-up candidate after build 85 - 16 November 2026
+
+The candidate behavior described above records build 85's initial policy. The next client replaces the separate popup with compact choices in the existing box hologram. Eligibility starts after four ordinary openings since an actual offer and waits for a compatible box; mystery ad separation is 60 active seconds. Two declines still quiet offers for five active minutes, and Campaign interstitial checks retain 90-second separation. Rewards, pending receipts, objective exclusions and SDK completion guarantees are unchanged. See [the follow-up implementation and evidence](MYSTERY_HOLOGRAM_20261116.md). This is not evidence of a real-phone ad watch or store publication.

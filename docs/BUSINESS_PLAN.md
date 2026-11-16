@@ -135,3 +135,9 @@ The current local client branch reduces safe/wrong step presentation locks from 
 ## Optional mystery advertising candidate — 16 November 2026
 
 Recurring optional mystery rewards are implemented as a source candidate for Infinity and Campaign. A fifth-opened-cache opportunity, compatible outcomes, a 90-second gameplay cooldown and mission exclusions determine the real offer frequency; declines can create a five-minute quiet period. No predicted impressions or revenue uplift is added. Local gameplay rewards use the existing native SDK completion boundary and require physical-device test-ad acceptance before public publication. Record conversion, impressions per active minute, post-ad exit, mission completion, retention and shop purchases; preserve historical simulations. [Candidate scope and validation](operations/MYSTERY_SPONSORSHIP_20261116.md).
+
+## 16 November 2026 - optional mystery offer follow-up (candidate)
+
+Owner testing reported sparse offers and an intrusive separate popup. The candidate places compact optional choices in the existing mystery hologram and becomes eligible after four ordinary openings, waiting for a compatible box. Mystery cooldown becomes 60 active seconds; two declines still quiet offers for five active minutes, and forced Campaign interstitial spacing stays 90 seconds. No forced mystery ad, price change or larger reward is introduced. Campaign task/Mastery safeguards and existing earned receipts remain intact.
+
+The expected effect is more visible, less disruptive opportunities; no impression, revenue or retention uplift has been measured. Compare actual offers, acceptance, ads per active minute, post-ad exits, completion, retention and purchases before increasing density further. Prior simulations and build-85 policy/results remain historical. Details: [mystery hologram candidate](operations/MYSTERY_HOLOGRAM_20261116.md).

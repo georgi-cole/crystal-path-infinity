@@ -1,4 +1,5 @@
 import type { PracticeRuntime } from '../practice-runtime';
+import type { PactOption } from '@crystal-path-infinity/game-core';
 import type { GuestRewardedAd } from './native-admob';
 import type { CampaignTask } from '../campaign-objectives';
 import { mysteryCadence } from './mystery-cadence';
@@ -39,4 +40,17 @@ export async function watchMysterySponsor(
   const granted = await pending?.catch(() => false);
   if (outcome !== 'no_fill') mysteryCadence().adEnded();
   return granted ? 'earned' : outcome === 'closed' ? 'dismissed' : outcome;
+}
+
+export async function chooseMysteryAlternative(
+  runtime: PracticeRuntime,
+  offerId: string,
+  option: PactOption,
+  release: () => Promise<unknown>,
+) {
+  const dismissed = await runtime.bind({ type: 'sponsor-dismiss', offerId })();
+  if (!dismissed.accepted) return false;
+  mysteryCadence().decline();
+  await release();
+  return (await runtime.bind({ type: 'pact', option })()).accepted;
 }
