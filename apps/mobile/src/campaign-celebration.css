@@ -703,3 +703,143 @@
     animation: none;
   }
 }
+
+/* A few composited layers keep the earned signal alive after the reward film. */
+.cpi-crossing-result[data-cleared='true'] .cpi-crossing-result-card {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  animation: cpi-signal-arrive 500ms ease-out both;
+}
+.cpi-crossing-result[data-cleared='true'] .cpi-crossing-result-card::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  width: 80%;
+  height: 48%;
+  left: 10%;
+  top: -18%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, #efc66521, transparent 70%);
+  pointer-events: none;
+}
+.cpi-crossing-result[data-cleared='true'] .cpi-result-medal {
+  position: relative;
+  isolation: isolate;
+  animation: cpi-signal-float 4.5s ease-in-out infinite;
+}
+.cpi-crossing-result[data-cleared='true'] .cpi-result-medal::before {
+  content: '';
+  position: absolute;
+  inset: -12px;
+  z-index: -1;
+  border: 1px solid #e8c47866;
+  border-radius: 50%;
+  animation: cpi-signal-ring 4.5s ease-in-out infinite;
+  pointer-events: none;
+}
+.cpi-crossing-result[data-cleared='true'] .cpi-result-medal::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0 84%, #fff1c194 88%, transparent 94%);
+  mask-image: radial-gradient(circle, transparent 61%, #000 63% 69%, transparent 71%);
+  animation: cpi-signal-orbit 9s linear infinite;
+  pointer-events: none;
+}
+.cpi-crossing-result[data-cleared='true'] .cpi-result-medal svg {
+  transform-origin: 50% 60%;
+  animation: cpi-signal-sway 5s ease-in-out infinite;
+}
+.cpi-crossing-result[data-cleared='true'] .cpi-brief-reward {
+  position: relative;
+  overflow: hidden;
+}
+.cpi-crossing-result[data-cleared='true'] .cpi-brief-reward::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -40%;
+  width: 30%;
+  background: linear-gradient(100deg, transparent, #ffedb51f, transparent);
+  transform: skewX(-20deg);
+  animation: cpi-reward-glimmer 7s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes cpi-signal-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes cpi-signal-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+@keyframes cpi-signal-sway {
+  0%,
+  100% {
+    transform: rotate(-3deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+}
+@keyframes cpi-signal-ring {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+@keyframes cpi-signal-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes cpi-reward-glimmer {
+  0%,
+  65% {
+    transform: translateX(0) skewX(-20deg);
+    opacity: 0;
+  }
+  70% {
+    opacity: 1;
+  }
+  95%,
+  100% {
+    transform: translateX(550%) skewX(-20deg);
+    opacity: 0;
+  }
+}
+.cpi-crossing-result-card[data-reduced-motion='true'],
+.cpi-crossing-result-card[data-reduced-motion='true'] *,
+.cpi-crossing-result-card[data-reduced-motion='true']::before,
+.cpi-crossing-result-card[data-reduced-motion='true'] *::before,
+.cpi-crossing-result-card[data-reduced-motion='true'] *::after {
+  animation: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cpi-crossing-result-card,
+  .cpi-crossing-result-card *,
+  .cpi-crossing-result-card::before,
+  .cpi-crossing-result-card *::before,
+  .cpi-crossing-result-card *::after {
+    animation: none !important;
+  }
+}

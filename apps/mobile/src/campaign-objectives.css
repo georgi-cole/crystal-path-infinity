@@ -1,0 +1,115 @@
+.cpi-mission-orders {
+  color: #efe6d2;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid #d3ba7540;
+  border-radius: 0.65rem;
+  background: linear-gradient(125deg, #172b3bea, #101b2beb);
+  text-align: left;
+  font: 500 0.76rem/1.35 var(--cpi-font-body);
+}
+.cpi-mission-orders h3 {
+  margin: 0 0 0.45rem;
+  font-size: 0.9rem;
+  color: #f9dfaa;
+}
+.cpi-mission-destination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0.5rem;
+}
+.cpi-mission-orders svg {
+  width: 1.3rem;
+  height: 1.3rem;
+  flex: none;
+  color: #dfbf7f;
+}
+.cpi-mission-destination > span {
+  margin-left: auto;
+  color: #d3d7d9;
+  font-size: 0.7rem;
+}
+.cpi-mission-task-list {
+  display: grid;
+  gap: 0.4rem;
+  list-style: none;
+  padding: 0.5rem 0 0;
+  margin: 0.45rem 0 0;
+  border-top: 1px solid #cbb47626;
+}
+.cpi-mission-task-list > li {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 1.9rem;
+}
+.cpi-mission-task-copy {
+  display: grid;
+  flex: 1;
+  gap: 0.25rem;
+}
+.cpi-mission-task-list > li > strong {
+  flex: none;
+  color: #ffe3a8;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+.cpi-mission-row-marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+.cpi-mission-row-marks small {
+  display: grid;
+  place-items: center;
+  min-width: 1.4rem;
+  height: 1.3rem;
+  padding: 0 0.2rem;
+  background: #ad854622;
+  border: 1px solid #caab6855;
+  border-radius: 45% 45% 30% 30%;
+  color: #e2c88d;
+  font-size: 0.62rem;
+}
+.cpi-mission-task-list > li[data-done='true'] > svg,
+.cpi-mission-row-marks small[data-done='true'] {
+  color: #bcf0d1;
+  border-color: #9bd9bb77;
+  background-color: #25614a44;
+}
+.cpi-mission-task-list > li[data-missed='true'],
+.cpi-mission-row-marks small[data-missed='true'] {
+  color: #ffc3ac;
+  border-color: #dca88a88;
+}
+.cpi-mission-orders.is-compact {
+  flex: none;
+  align-self: center;
+  position: relative;
+  z-index: 2;
+  width: min(100%, 32rem);
+  padding: 0.4rem 0.65rem;
+  font-size: 0.67rem;
+}
+.cpi-mission-orders.is-compact h3 {
+  display: none;
+}
+.is-compact .cpi-mission-task-list {
+  gap: 0.25rem;
+  padding-top: 0.3rem;
+  margin-top: 0.3rem;
+}
+.is-compact .cpi-mission-task-list > li {
+  min-height: 1.2rem;
+}
+.is-compact .cpi-mission-row-marks {
+  display: none;
+}
+.cpi-pause-layout > .cpi-mission-orders {
+  margin-top: 0.35rem;
+  max-height: 30dvh;
+  overflow-y: auto;
+}
+.cpi-brief-scroll > .cpi-mission-orders {
+  margin: 0.6rem 0;
+}

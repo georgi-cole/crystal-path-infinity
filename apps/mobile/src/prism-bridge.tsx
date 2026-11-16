@@ -1379,6 +1379,11 @@ export const PrismBridge = memo(function PrismBridge({
                         previous={priorDeck}
                         step={camera.row}
                         fill={model === 'aurora' ? '#233248' : surfacePaint}
+                        style={
+                          {
+                            '--cpi-surface-paint': model === 'aurora' ? '#233248' : surfacePaint,
+                          } as CSSProperties
+                        }
                         stroke={
                           model === 'lily'
                             ? '#a2b970'

@@ -29,10 +29,11 @@ function menu(view: MainMenuProps['view'], overrides: Partial<MainMenuProps> = {
   );
 }
 describe('approved account services remain separate from default guest play', () => {
-  it('offers local Infinity from home, rankings and the play deep link while offline', () => {
+  it('offers local Infinity from home and the play deep link while keeping rankings focused on scores', () => {
     for (const view of ['home', 'rankings', 'play'] as const) {
       const html = menu(view, { localInfinity: true, online: false });
-      expect(html).toContain('Play Infinity');
+      if (view === 'rankings') expect(html).not.toContain('Play Infinity');
+      else expect(html).toContain('Play Infinity');
       expect(html).not.toContain('Start verified run');
       expect(html).not.toContain('Ranked Infinity');
     }

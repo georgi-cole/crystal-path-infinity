@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { CAMPAIGN_MISSIONS, CHAPTERS, LANDMARK_CLEARS, STYLES } from './campaign-content';
 import type { BridgeSlot, StyleId } from './campaign-content';
 import {
@@ -18,9 +18,12 @@ import { CampaignClearCelebration } from './campaign-celebration';
 import { missionRewardItems } from './campaign-reward-presentation';
 import type { ThemeId } from './store-catalog';
 import type { PracticeLoad } from './practice-save';
-import archipelago from './assets/campaign/beacon-archipelago.png?url';
+import { CampaignMap } from './campaign-map';
+import { campaignTasks, campaignMissedObjective } from './campaign-objectives';
+import { CampaignObjectives } from './campaign-objectives-view';
 import './campaign-test-ui.css';
 import './expedition.css';
+import './campaign-map.css';
 
 const chapters = Object.keys(CHAPTERS);
 
@@ -34,10 +37,8 @@ export function CampaignMissionHub({
   onStartMission: (id: CampaignMissionId, approach?: CampaignApproach) => void;
 }) {
   const [approach, setApproach] = useState<CampaignApproach>('main');
+  const [mapExpanded, setMapExpanded] = useState(true);
   const [selectedId, setSelectedId] = useState<CampaignMissionId | null>(null);
-  const route = useRef<HTMLDivElement>(null);
-  const swiping = useRef(false);
-  const swipeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const current = nextCampaignMission(progress);
   const index = current ? CAMPAIGN_MISSIONS.indexOf(current) : CAMPAIGN_MISSIONS.length;
   const upcoming = current ? CAMPAIGN_MISSIONS[index + 1] : undefined;
@@ -46,7 +47,11 @@ export function CampaignMissionHub({
   const selectedIndex = selected ? CAMPAIGN_MISSIONS.indexOf(selected) : -1;
   const locked = selected?.id === upcoming?.id && !!upcoming;
   const replay = !!selected && progress.cleared.includes(selected.id);
-  const running = saved.status === 'ready' && saved.state.status === 'playing';
+  const running =
+    saved.status === 'ready' &&
+    saved.state.status === 'playing' &&
+    (!progress.activeMissionSnapshot ||
+      !campaignMissedObjective(progress.activeMissionSnapshot, progress, saved.state.currentRow));
   const pending =
     selected && saved.status === 'ready' && progress.activeMissionId === selected.id
       ? campaignMissionSnapshot(progress, selected.id)
@@ -56,7 +61,8 @@ export function CampaignMissionHub({
     saved.status === 'ready' &&
     campaignRunMatches(saved.state, pending) &&
     BigInt(saved.state.lastClearedRow) < BigInt(pending.targetRow) &&
-    running;
+    running &&
+    !campaignMissedObjective(pending, progress, saved.state.currentRow);
   const mission = selected ? (resume ? pending : newMissionSnapshot(selected.id, approach)) : null;
   const focused = selected ?? current ?? CAMPAIGN_MISSIONS[CAMPAIGN_MISSIONS.length - 1];
   const chapter = focused.chapter;
@@ -66,48 +72,32 @@ export function CampaignMissionHub({
   const chapterNumber = chapters.indexOf(chapter) + 1;
   const stops = CAMPAIGN_MISSIONS.slice(0, current ? index + 2 : CAMPAIGN_MISSIONS.length);
   const openBriefing = (id: CampaignMissionId) => {
-    swiping.current = false;
     setApproach('main');
+    setMapExpanded(false);
     setSelectedId(id);
   };
 
-  useLayoutEffect(() => {
-    const viewport = route.current;
-    if (!viewport) return;
-    const center = (animate = false) => {
-      const stop = viewport.querySelector<HTMLElement>('[data-focused="true"]');
-      if (!stop) return;
-      swiping.current = false;
-      viewport.scrollTo({
-        left: stop.offsetLeft + stop.offsetWidth / 2 - viewport.clientWidth / 2,
-        behavior:
-          animate &&
-          !viewport.closest('.cpi-reduced-motion') &&
-          !window.matchMedia('(prefers-reduced-motion: reduce)').matches
-            ? 'smooth'
-            : 'auto',
-      });
-    };
-    center(!!selectedId);
-    let width = viewport.clientWidth;
-    const resize = new ResizeObserver(() => {
-      if (viewport.clientWidth === width) return;
-      width = viewport.clientWidth;
-      center();
-    });
-    resize.observe(viewport);
-    return () => resize.disconnect();
-  }, [focused.id, selectedId]);
-  useEffect(() => () => clearTimeout(swipeTimer.current), []);
-
   return (
     <section
-      className={'cpi-expedition cpi-beacon-route' + (mission ? ' has-briefing' : '')}
+      className={
+        'cpi-expedition cpi-beacon-route' + (mission && !mapExpanded ? ' has-briefing' : '')
+      }
       aria-labelledby="cpi-campaign-hub-title"
     >
       <div className="cpi-expedition-map" data-complete={!current}>
-        <img className="cpi-expedition-map-art" src={archipelago} alt="" draggable={false} />
-        <div className="cpi-expedition-map-fog" aria-hidden="true" />
+        <CampaignMap
+          stops={stops}
+          focused={focused}
+          current={current}
+          upcoming={upcoming}
+          cleared={progress.cleared}
+          onSelect={openBriefing}
+          expanded={mapExpanded}
+          onToggleExpanded={() => {
+            if (!selectedId) setSelectedId(focused.id);
+            setMapExpanded((value) => !value);
+          }}
+        />
         <header className="cpi-map-heading">
           <p className="cpi-adventure-kicker">
             Campaign · Chapter {chapterNumber} of {chapters.length}
@@ -117,104 +107,17 @@ export function CampaignMissionHub({
           </h1>
           <p>{CHAPTERS[chapter].name}</p>
         </header>
-        <div
-          className="cpi-map-crossings"
-          ref={route}
-          role="region"
-          aria-label="Crossings. Swipe to explore or use the left and right arrow keys."
-          tabIndex={0}
-          onPointerDown={() => {
-            swiping.current = true;
-          }}
-          onWheel={() => {
-            swiping.current = true;
-          }}
-          onKeyDown={(event) => {
-            if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
-            event.preventDefault();
-            const offset = event.key === 'ArrowLeft' ? -1 : 1;
-            const stop = stops[CAMPAIGN_MISSIONS.indexOf(focused) + offset];
-            if (stop) openBriefing(stop.id);
-          }}
-          onScroll={(event) => {
-            if (!swiping.current) return;
-            const viewport = event.currentTarget;
-            clearTimeout(swipeTimer.current);
-            swipeTimer.current = setTimeout(() => {
-              if (!swiping.current) return;
-              const center = viewport.scrollLeft + viewport.clientWidth / 2;
-              const pins = [...viewport.querySelectorAll<HTMLElement>('.cpi-map-stop')];
-              const closest = pins.reduce(
-                (best, pin) =>
-                  Math.abs(pin.offsetLeft + pin.offsetWidth / 2 - center) <
-                  Math.abs(best.offsetLeft + best.offsetWidth / 2 - center)
-                    ? pin
-                    : best,
-                pins[0],
-              );
-              const stop = stops[pins.indexOf(closest)];
-              if (stop) openBriefing(stop.id);
-            }, 140);
-          }}
-        >
-          <div className="cpi-map-stops">
-            {stops.map((entry, i) => {
-              const completed = progress.cleared.includes(entry.id);
-              const active = current?.id === entry.id;
-              const next = upcoming?.id === entry.id;
-              return (
-                <div className="cpi-map-stop" key={entry.id} data-focused={focused.id === entry.id}>
-                  <button
-                    type="button"
-                    className={
-                      'cpi-map-pin ' +
-                      (completed
-                        ? 'is-cleared'
-                        : active
-                          ? 'is-next'
-                          : next
-                            ? 'is-upcoming'
-                            : 'is-unexplored')
-                    }
-                    aria-label={
-                      entry.name +
-                      (completed
-                        ? ' · Cleared'
-                        : active
-                          ? ' · Current crossing'
-                          : ' · Upcoming crossing')
-                    }
-                    aria-pressed={selectedId === entry.id}
-                    aria-current={active ? 'step' : undefined}
-                    onClick={() => openBriefing(entry.id)}
-                  >
-                    <AdventureIcon
-                      name={completed ? 'check' : active ? 'lantern' : next ? 'compass' : 'lock'}
-                    />
-                  </button>
-                  <span className="cpi-map-stop-label">
-                    {active
-                      ? 'Current'
-                      : next
-                        ? 'Up next'
-                        : 'Crossing ' + String(i + 1).padStart(2, '0')}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
         <footer className="cpi-map-legend">
           <span>
             <AdventureIcon name="lantern" /> {clearedCount} / {CAMPAIGN_MISSIONS.length} signals lit
           </span>
           <span className="cpi-map-uncharted">
-            {!current ? 'Every signal is lit' : 'Swipe to explore'}
+            {!current ? 'Every signal is lit' : 'Drag to explore · pinch to zoom'}
           </span>
         </footer>
       </div>
 
-      {mission && selected ? (
+      {mission && selected && !mapExpanded ? (
         <article className="cpi-crossing-brief" aria-labelledby="cpi-brief-title">
           <div className="cpi-brief-landscape">
             <RegionArt chapter={briefChapter} lit={lit} />
@@ -257,24 +160,26 @@ export function CampaignMissionHub({
                   </button>
                 </div>
               )}
-              <div className="cpi-brief-facts">
-                <div>
-                  <AdventureIcon name="compass" />
-                  <span>
-                    <small>Landing</small>
-                    <strong>Row {mission.targetRow}</strong>
-                  </span>
-                </div>
-                {mission.minimumStability > 0 && (
-                  <div>
-                    <AdventureIcon name="stability" />
-                    <span>
-                      <small>Finish with</small>
-                      <strong>{mission.minimumStability}+ Stability</strong>
-                    </span>
-                  </div>
+              <CampaignObjectives
+                targetRow={mission.targetRow}
+                minimumStability={mission.minimumStability}
+                tasks={campaignTasks(
+                  mission,
+                  resume
+                    ? progress
+                    : {
+                        ...progress,
+                        hintRows: [],
+                        mysteryRows: [],
+                        cleanRows: [],
+                        shieldRows: [],
+                        followedHint: false,
+                        soldHint: false,
+                        shieldWorked: false,
+                      },
+                  resume && saved.status === 'ready' ? saved.state.currentRow : '1',
                 )}
-              </div>
+              />
               <p className="cpi-brief-kit">
                 <AdventureIcon name="pack" />
                 <span>
@@ -416,6 +321,7 @@ export function CampaignMissionResult({
       ) : (
         <div
           className="cpi-crossing-result-card"
+          data-reduced-motion={reducedMotion}
           ref={result}
           role="dialog"
           aria-modal="true"

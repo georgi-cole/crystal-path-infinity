@@ -800,17 +800,6 @@ export function MainMenu({
           </MenuPanel>
         ) : view === 'rankings' ? (
           <MenuPanel title={t('general.rankings')}>
-            {!localInfinity && (
-              <MenuAction
-                label={t(rankedClient ? 'leaderboard.play' : 'leaderboard.connect')}
-                description={t(
-                  rankedClient ? 'leaderboard.playDescription' : 'leaderboard.connectDescription',
-                )}
-                icon="play"
-                variant="primary"
-                onClick={() => onOpen(rankedClient ? 'play' : 'profile')}
-              />
-            )}
             {leaderboardClient && (
               <LeaderboardView
                 client={leaderboardClient}
@@ -846,20 +835,6 @@ export function MainMenu({
                 )}
               </>
             )}
-            <MenuAction
-              label={
-                localInfinity
-                  ? t(
-                      canResumePractice(saved)
-                        ? 'leaderboard.resumeLocal'
-                        : 'leaderboard.playLocal',
-                    )
-                  : t('menu.practiceOffline')
-              }
-              icon="play"
-              variant={localInfinity ? 'primary' : 'secondary'}
-              onClick={canResumePractice(saved) ? onResume : onNew}
-            />
           </MenuPanel>
         ) : view === 'profile' ? (
           CAMPAIGN_TEST_BUILD ? (

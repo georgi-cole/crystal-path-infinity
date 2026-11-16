@@ -122,7 +122,7 @@ export function LeaderboardView({
   countryCode?: string | null;
   pendingScore?: string | null;
 }) {
-  const { t, locale } = useLanguage();
+  const { t, locale, number } = useLanguage();
   const [scope, setScope] = useState<LeaderboardQuery['scope']>('world');
   const [region, setRegion] = useState('');
   const [attempt, setAttempt] = useState(0);
@@ -252,27 +252,29 @@ export function LeaderboardView({
                       ? t(data ? 'leaderboard.refreshing' : 'leaderboard.loading')
                       : null}
               </div>
-              {online && (
-                <button
-                  className="cpi-ranking-refresh"
-                  type="button"
-                  aria-label={t('leaderboard.refresh')}
-                  disabled={current?.phase === 'loading'}
-                  onClick={() => setAttempt((value) => value + 1)}
-                >
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M19 8a8 8 0 1 0 1 7M19 3v6h-6" />
+              <div className="cpi-ranking-toolbar">
+                <div className="cpi-ranking-banner">
+                  <svg viewBox="0 0 48 48" aria-hidden="true">
+                    <path d="M14 7h20v12c0 9-20 9-20 0ZM14 12H7v6c0 6 7 7 10 7m17-13h7v6c0 6-7 7-10 7M24 28v9m-9 4h18" />
                   </svg>
-                </button>
-              )}
+                  <h2>{t('leaderboard.top10')}</h2>
+                </div>
+                {online && (
+                  <button
+                    className="cpi-ranking-refresh"
+                    type="button"
+                    aria-label={t('leaderboard.refresh')}
+                    disabled={current?.phase === 'loading'}
+                    onClick={() => setAttempt((value) => value + 1)}
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M19 8a8 8 0 1 0 1 7M19 3v6h-6" />
+                    </svg>
+                  </button>
+                )}
+              </div>
               {data && (
                 <>
-                  <div className="cpi-ranking-banner">
-                    <svg viewBox="0 0 48 48" aria-hidden="true">
-                      <path d="M14 7h20v12c0 9-20 9-20 0ZM14 12H7v6c0 6 7 7 10 7m17-13h7v6c0 6-7 7-10 7M24 28v9m-9 4h18" />
-                    </svg>
-                    <h2>{t('leaderboard.top10')}</h2>
-                  </div>
                   {data.top100.length === 0 ? (
                     <div className="cpi-ranking-first" role="status">
                       <span aria-hidden="true">✧</span>
@@ -288,6 +290,15 @@ export function LeaderboardView({
                     />
                   )}
                 </>
+              )}
+              {ownInTop && own && (
+                <div className="cpi-ranking-standing">
+                  <span>{t('leaderboard.own')}</span>
+                  <strong>#{number(own.rank)}</strong>
+                  <span>
+                    {number(own.lastClearedRow)} {t('leaderboard.rows')}
+                  </span>
+                </div>
               )}
               {!ownInTop && (data || pendingScore) && (
                 <div className="cpi-ranking-personal">

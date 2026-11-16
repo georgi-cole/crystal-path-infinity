@@ -43,3 +43,8 @@ Local required checks passed: 997 mobile, 315 core and 236 server tests (1,548 a
 
 The remaining acceptance is to sign in to App Store Connect, inspect build 78, finish any compliance metadata, assign the existing internal QA group if needed, save the test instructions and inspect the swipe/audio flow on an iPhone.
 
+
+
+## Follow-up candidate — 16 November 2026
+
+The horizontal map strip from build 78 is superseded in the [atlas/objective candidate](CAMPAIGN_ATLAS_20261116.md). The earlier delivery evidence above is historical and remains unchanged; it does not establish delivery of the new candidate.

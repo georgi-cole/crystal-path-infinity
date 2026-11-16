@@ -404,17 +404,9 @@ function BridgeWorkshop({
 }) {
   const checkout = useMarketCheckout();
   const [selected, setSelected] = useState<BridgeModel | null>(null);
-  const [breaking, setBreaking] = useState(false);
-  const [landing, setLanding] = useState(0);
-  useEffect(() => {
-    if (!breaking) return;
-    const timer = window.setTimeout(() => setBreaking(false), 1100);
-    return () => window.clearTimeout(timer);
-  }, [breaking]);
   const models = Object.keys(BRIDGE_MODELS) as BridgeModel[];
   const open = (model: BridgeModel | null) => {
     setSelected(model);
-    setBreaking(false);
     onDetail(model !== null);
   };
   if (!selected)
@@ -483,13 +475,12 @@ function BridgeWorkshop({
         <BackButton onBack={() => open(null)} label="All bridges" />
       </header>
       <div className="cpi-bridge-showcase">
-        <div className="cpi-bridge-demonstration" key={landing} data-landing={landing > 0}>
+        <div className="cpi-bridge-demonstration">
           <WorkshopScene
             world={progress.world}
             style={draft}
             reducedMotion={reducedMotion}
             title={info.name}
-            breaking={breaking}
           />
         </div>
         <div className="cpi-market-tray cpi-bridge-tray">
@@ -507,22 +498,6 @@ function BridgeWorkshop({
             )}
           </div>
           <div className="cpi-market-actions">
-            <button
-              type="button"
-              className="cpi-adventure-button is-quiet"
-              disabled={breaking}
-              onClick={() => setLanding((n) => n + 1)}
-            >
-              Try a step
-            </button>
-            <button
-              type="button"
-              className="cpi-adventure-button is-quiet"
-              disabled={breaking}
-              onClick={() => setBreaking(true)}
-            >
-              Try a break
-            </button>
             {owned ? (
               <button
                 type="button"

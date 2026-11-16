@@ -284,3 +284,114 @@
     font-size: 1rem;
   }
 }
+
+/* Rankings occupy the available phone screen, with a separate scrolling board. */
+.cpi-menu-view--rankings {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+.cpi-menu-view--rankings .cpi-menu-inner {
+  height: 100%;
+  min-height: 0;
+  padding: max(0.5rem, env(safe-area-inset-top, 0px)) max(0.8rem, env(safe-area-inset-right, 0px))
+    max(0.6rem, env(safe-area-inset-bottom, 0px)) max(0.8rem, env(safe-area-inset-left, 0px));
+}
+.cpi-menu-view--rankings .cpi-menu-header {
+  flex: none;
+}
+.cpi-menu-view--rankings .cpi-menu-panel {
+  flex: 1;
+  min-height: 0;
+  width: min(100%, 48rem);
+  margin: 0.65rem auto 0;
+  padding: 0.9rem;
+  gap: 0.6rem;
+  overflow-y: auto;
+  background: linear-gradient(160deg, #243342ed, #111b2bed 55%, #101720f5);
+  border-radius: 0.9rem;
+}
+.cpi-menu-view--rankings .cpi-menu-panel > h1 {
+  flex: none;
+  margin: 0 0 0.25rem;
+  font-size: clamp(1.65rem, 7vw, 2.4rem);
+}
+.cpi-menu-view--rankings .cpi-menu-footer {
+  display: none;
+}
+.cpi-menu-view--rankings .cpi-leaderboard {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 0.65rem;
+}
+.cpi-leaderboard > * {
+  flex-shrink: 0;
+}
+.cpi-leaderboard > [role='status']:empty {
+  display: none;
+}
+.cpi-ranking-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.cpi-leaderboard .cpi-ranking-toolbar .cpi-ranking-refresh {
+  position: static;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  border-radius: 50%;
+}
+.cpi-menu-view--rankings .cpi-ranking-list-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.1rem 0.1rem 0.6rem;
+  scrollbar-width: thin;
+}
+.cpi-menu-view--rankings .cpi-ranking-personal {
+  margin-top: auto;
+  flex: none;
+}
+.cpi-ranking-personal .cpi-ranking-list-wrap {
+  overflow: visible;
+  padding-bottom: 0;
+}
+.cpi-ranking-standing {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.8rem;
+  margin-top: auto;
+  padding: 0.75rem;
+  border: 1px solid #c7b57c66;
+  border-radius: 0.65rem;
+  background: linear-gradient(110deg, #755c2f33, #142636);
+  color: #dfc996;
+  font-size: 0.75rem;
+}
+.cpi-ranking-standing strong {
+  color: #fff1c2;
+  font-size: 1.3rem;
+}
+.cpi-ranking-standing span:last-child {
+  margin-left: auto;
+  color: #c3d1dc;
+}
+.cpi-leaderboard .cpi-ranking-first {
+  flex: 1;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+}
+@media (max-height: 580px) {
+  .cpi-menu-view--rankings .cpi-menu-panel {
+    overflow-y: auto;
+  }
+  .cpi-menu-view--rankings .cpi-ranking-list-wrap {
+    flex: none;
+    overflow: visible;
+  }
+}
