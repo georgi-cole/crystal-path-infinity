@@ -2,6 +2,7 @@ import type { MessageKey } from './messages';
 
 /** Community-preview localization; native-speaker review is a release gate. */
 export const es = {
+  'leaderboard.signInRequired': 'Inicia sesión para ver la clasificación y tu posición.',
   'general.back': 'Volver',
   'general.guest': 'Invitado',
   'general.offline': 'Sin conexión',

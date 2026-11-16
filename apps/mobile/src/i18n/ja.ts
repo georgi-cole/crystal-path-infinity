@@ -2,6 +2,7 @@ import type { MessageKey } from './messages';
 
 /** Preview localization; native speaker review required before release. */
 export const ja = {
+  'leaderboard.signInRequired': 'ログインしてランキングと自分の順位を確認しましょう。',
   'general.back': '戻る',
   'general.guest': 'ゲスト',
   'general.offline': 'オフライン',

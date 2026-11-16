@@ -11,6 +11,7 @@ import {
 } from '../src/leaderboard/leaderboard-client';
 import type {
   LeaderboardEntry,
+  LeaderboardClient,
   LeaderboardQuery,
   LeaderboardSnapshot,
 } from '../src/leaderboard/leaderboard-client';
@@ -58,6 +59,33 @@ function board(query = WORLD, count = 105): LeaderboardSnapshot {
 const signal = () => new AbortController().signal;
 
 describe('CPI-024 lossless public leaderboard projection', () => {
+  it('explains the sign-in requirement for a guest account client without showing a loading error', () => {
+    const guest = {
+      accountScope: () => null,
+      read: vi.fn<LeaderboardClient['read']>(),
+    };
+    const html = renderToStaticMarkup(
+      createElement(LeaderboardView, { client: guest, online: true, onSignIn: () => {} }),
+    );
+    expect(html).toContain('Sign in to view the rankings and your position.');
+    expect(html).toContain('Sign in');
+    expect(html).not.toContain('Refresh rankings');
+    expect(html).not.toContain('cpi-leaderboard-filters');
+    expect(guest.read).not.toHaveBeenCalled();
+    const signedIn = renderToStaticMarkup(
+      createElement(LeaderboardView, {
+        client: { ...guest, accountScope: () => guest },
+        online: true,
+      }),
+    );
+    expect(signedIn).not.toContain('Sign in to view the rankings');
+    expect(signedIn).toContain('cpi-leaderboard-filters');
+    const publicOnly = renderToStaticMarkup(
+      createElement(LeaderboardView, { client: { read: guest.read }, online: true }),
+    );
+    expect(publicOnly).not.toContain('Sign in to view the rankings');
+    expect(publicOnly).toContain('cpi-leaderboard-filters');
+  });
   it('renders at most ten compact scores with a single highlighted own entry', () => {
     const html = renderToStaticMarkup(
       createElement(LeaderboardTable, {

@@ -2,6 +2,7 @@ import type { MessageKey } from './messages';
 
 /** Community-preview localization. Linguistic review required before release. */
 export const ptBR = {
+  'leaderboard.signInRequired': 'Entre para ver a classificação e sua posição.',
   'general.back': 'Voltar',
   'general.guest': 'Visitante',
   'general.offline': 'Offline',
