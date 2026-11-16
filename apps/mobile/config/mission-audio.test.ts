@@ -1,3 +1,4 @@
+import { LANDING_HOLD_MS } from '../src/campaign-landing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CAMPAIGN_MUSIC_START_SECONDS, createMissionAudio } from '../src/mission-audio';
 
@@ -34,7 +35,7 @@ describe('Campaign mission audio lifecycle', () => {
     audio.update('landing', enabled);
     audio.update('landing', enabled);
     expect(tracks.get('landing')!.play).toHaveBeenCalledTimes(1);
-    vi.advanceTimersByTime(1250);
+    vi.advanceTimersByTime(LANDING_HOLD_MS);
     expect(complete).not.toHaveBeenCalled();
     expect(tracks.get('music')!.play).not.toHaveBeenCalled();
     tracks.get('landing')!.dispatchEvent(new Event('ended'));
@@ -51,6 +52,16 @@ describe('Campaign mission audio lifecycle', () => {
     audio.update(null, enabled);
     expect(tracks.get('music')!.pause).toHaveBeenCalled();
     expect(tracks.get('music')!.currentTime).toBe(0);
+    audio.dispose();
+  });
+  it('keeps the landing visible for the final jump and signature even if the cue ends immediately', () => {
+    const { audio, tracks, complete } = fixture();
+    audio.update('landing', enabled);
+    tracks.get('landing')!.dispatchEvent(new Event('ended'));
+    vi.advanceTimersByTime(LANDING_HOLD_MS - 1);
+    expect(complete).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(complete).toHaveBeenCalledTimes(1);
     audio.dispose();
   });
   it('plays failure once without starting success music, and resets for a fresh attempt', () => {
@@ -71,7 +82,7 @@ describe('Campaign mission audio lifecycle', () => {
   it('uses the short landing beat when effects are muted, without muting enabled campaign music', () => {
     const { audio, tracks, complete } = fixture();
     audio.update('landing', { ...enabled, soundEffects: false });
-    vi.advanceTimersByTime(899);
+    vi.advanceTimersByTime(LANDING_HOLD_MS - 1);
     expect(complete).not.toHaveBeenCalled();
     vi.advanceTimersByTime(1);
     expect(complete).toHaveBeenCalledTimes(1);
@@ -100,7 +111,7 @@ describe('Campaign mission audio lifecycle', () => {
     audio.setForeground(false);
     audio.setForeground(true);
     expect(tracks.get('landing')!.play).toHaveBeenCalledTimes(1);
-    vi.advanceTimersByTime(900);
+    vi.advanceTimersByTime(LANDING_HOLD_MS);
     audio.update('celebration', enabled);
     tracks.get('music')!.currentTime = 23;
     audio.setForeground(false);
@@ -134,7 +145,7 @@ describe('Campaign mission audio lifecycle', () => {
       emptyComplete,
     );
     empty.update('landing', enabled);
-    vi.advanceTimersByTime(900);
+    vi.advanceTimersByTime(LANDING_HOLD_MS);
     expect(emptyComplete).toHaveBeenCalledTimes(1);
     empty.dispose();
     const { audio, tracks, complete } = fixture();
@@ -142,7 +153,7 @@ describe('Campaign mission audio lifecycle', () => {
     audio.update('landing', enabled);
     await Promise.resolve();
     await Promise.resolve();
-    vi.advanceTimersByTime(900);
+    vi.advanceTimersByTime(LANDING_HOLD_MS);
     expect(complete).toHaveBeenCalledTimes(1);
     audio.update(null, enabled);
     audio.update('landing', enabled);

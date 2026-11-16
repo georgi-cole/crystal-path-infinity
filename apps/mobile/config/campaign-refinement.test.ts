@@ -11,12 +11,14 @@ import {
 } from '../src/campaign-test';
 import {
   ATLAS_SIZE,
-  ATLAS_ZOOM,
+  ATLAS_SCALE,
   CROSSING_LOCATIONS,
-  boundMapCamera,
+  crossingScrollTarget,
   crossingPath,
-  zoomMapAt,
 } from '../src/campaign-map-layout';
+import { PrismBridge } from '../src/prism-bridge';
+import { LanguageProvider } from '../src/language-provider';
+import type { PresentedRow } from '../src/infinity-presentation';
 import { CAMPAIGN_MISSIONS } from '../src/campaign-content';
 
 describe('Campaign objective recovery', () => {
@@ -128,22 +130,60 @@ describe('Campaign atlas geometry', () => {
       expect(crossingPath(index).endsWith(endX + ' ' + endY)).toBe(true);
     });
   });
-  it('bounds dragging and zoom so the viewport never escapes the scene', () => {
-    expect(boundMapCamera({ x: 5000, y: 5000, zoom: 4 }, 390, 350)).toEqual({
-      x: 0,
-      y: 0,
-      zoom: ATLAS_ZOOM.max,
-    });
-    expect(boundMapCamera({ x: -5000, y: -5000, zoom: 0.1 }, 390, 350)).toEqual({
-      x: 390 - ATLAS_SIZE.width * ATLAS_ZOOM.min,
-      y: 350 - ATLAS_SIZE.height * ATLAS_ZOOM.min,
-      zoom: ATLAS_ZOOM.min,
-    });
+  it('keeps selected crossings visible at the scene edges and after expanding', () => {
+    for (const [width, height] of [
+      [390, 240],
+      [390, 700],
+      [1400, 1800],
+    ]) {
+      CROSSING_LOCATIONS.forEach(([x, y], index) => {
+        const target = crossingScrollTarget(index, width, height);
+        expect(target.left).toBeGreaterThanOrEqual(0);
+        expect(target.top).toBeGreaterThanOrEqual(0);
+        expect(target.left).toBeLessThanOrEqual(
+          Math.max(0, ATLAS_SIZE.width * ATLAS_SCALE - width),
+        );
+        expect(target.top).toBeLessThanOrEqual(
+          Math.max(0, ATLAS_SIZE.height * ATLAS_SCALE - height),
+        );
+        expect(x * ATLAS_SCALE - target.left).toBeGreaterThanOrEqual(0);
+        expect(x * ATLAS_SCALE - target.left).toBeLessThanOrEqual(width);
+        expect(y * ATLAS_SCALE - target.top).toBeGreaterThanOrEqual(0);
+        expect(y * ATLAS_SCALE - target.top).toBeLessThanOrEqual(height);
+      });
+    }
   });
-  it('keeps the map point under a pinch stationary when zooming', () => {
-    const previous = { x: -300, y: -600, zoom: 0.9 };
-    const next = zoomMapAt(previous, 1.2, 170, 160);
-    expect((170 - next.x) / next.zoom).toBeCloseTo((170 - previous.x) / previous.zoom);
-    expect((160 - next.y) / next.zoom).toBeCloseTo((160 - previous.y) / previous.zoom);
+});
+
+describe('Campaign landing marker', () => {
+  const row: PresentedRow = {
+    index: '59',
+    label: '60',
+    distance: 0,
+    phase: 'current',
+    tone: 0,
+    hasMystery: false,
+    mysteryAvailable: false,
+    hint: null,
+    chosen: null,
+    wrong: false,
+  };
+  const render = (landingRow?: number) =>
+    renderToStaticMarkup(
+      createElement(
+        LanguageProvider,
+        null,
+        createElement(PrismBridge, { rows: [row], landingRow, reducedMotion: true }),
+      ),
+    );
+  it('marks both sides of the designated row without revealing an answer', () => {
+    const html = render(60);
+    expect(html.match(/class="cpi-landing-halo"/g)).toHaveLength(2);
+    expect(html).toContain('data-visual-row="59" data-landing-row="true"');
+    expect(html).not.toContain('is-hinted');
+  });
+  it('does not add a finish to Infinity or an unrelated visible row', () => {
+    expect(render()).not.toContain('cpi-landing-halo');
+    expect(render(100)).not.toContain('cpi-landing-halo');
   });
 });

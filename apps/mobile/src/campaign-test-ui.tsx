@@ -112,7 +112,7 @@ export function CampaignMissionHub({
             <AdventureIcon name="lantern" /> {clearedCount} / {CAMPAIGN_MISSIONS.length} signals lit
           </span>
           <span className="cpi-map-uncharted">
-            {!current ? 'Every signal is lit' : 'Drag to explore · pinch to zoom'}
+            {!current ? 'Every signal is lit' : 'Swipe to explore'}
           </span>
         </footer>
       </div>

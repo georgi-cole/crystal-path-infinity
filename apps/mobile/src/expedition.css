@@ -3481,3 +3481,171 @@
     font-size: 1.05rem;
   }
 }
+
+/* Intrinsic showroom rows reserve the entire pose and its motion before any copy.
+   Content grows vertically on small screens/large text instead of clipping the hero. */
+.cpi-market[data-department='worlds'] {
+  display: flex;
+  flex-direction: column;
+  height: auto;
+  min-height: 0;
+  gap: 0.65rem;
+}
+.cpi-worlds-view .cpi-world-gallery {
+  display: grid;
+  grid-template-rows: auto auto;
+  height: auto;
+  gap: 0.25rem;
+}
+.cpi-worlds-view .cpi-world-carousel {
+  height: auto;
+  align-items: stretch;
+}
+.cpi-worlds-view .cpi-world-carousel > .cpi-market-world-scene {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: auto;
+  min-height: 0;
+  min-width: 0;
+}
+.cpi-world-display {
+  --portrait-size: clamp(9.5rem, 24svh, 14rem);
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: calc(var(--portrait-size) * 1.34);
+  padding: calc(var(--portrait-size) * 0.22) 1.4rem calc(var(--portrait-size) * 0.12);
+}
+.cpi-worlds-view .cpi-gallery-character {
+  position: relative;
+  left: auto;
+  bottom: auto;
+  width: var(--portrait-size);
+  max-width: 78%;
+  transform: none;
+}
+.cpi-worlds-view .cpi-market-world-copy {
+  position: relative;
+  inset: auto;
+  justify-content: start;
+  gap: 0.4rem;
+  padding: 0.4rem 1rem 1rem;
+  background: linear-gradient(0deg, #080c14fa 60%, #080c14a6, transparent);
+}
+.cpi-worlds-view .cpi-market-world-copy > .cpi-adventure-kicker {
+  margin: 0;
+  font-size: 0.62rem;
+}
+.cpi-worlds-view .cpi-market-world-copy > h2 {
+  margin: 0;
+  font-size: clamp(1.75rem, 7vw, 2.6rem);
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+}
+.cpi-worlds-view .cpi-market-world-copy > p:not(.cpi-adventure-kicker) {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+.cpi-worlds-view .cpi-market-world-copy > .cpi-world-story {
+  font-size: 0.75rem;
+  color: #d6dce0;
+  max-width: 30rem;
+}
+.cpi-worlds-view .cpi-world-price {
+  margin-top: 0.2rem;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: #e4d2ae;
+}
+.cpi-worlds-view .cpi-market-world-copy > button {
+  margin-top: auto;
+  min-height: 46px;
+  padding: 0.65rem 0.8rem;
+}
+.cpi-worlds-view .cpi-world-dots {
+  position: static;
+  inset: auto;
+  transform: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0;
+  height: 40px;
+  padding: 0;
+  margin: 0;
+}
+.cpi-worlds-view .cpi-world-dots button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  min-width: 36px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.cpi-worlds-view .cpi-world-dots button::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #acb8c380;
+}
+.cpi-worlds-view .cpi-world-dots button[aria-current='true']::before {
+  width: 18px;
+  border-radius: 4px;
+  background: #f2d59d;
+}
+.cpi-market .cpi-market-heading {
+  gap: 0.65rem;
+  margin-bottom: 0;
+}
+.cpi-market .cpi-market-heading h1 {
+  font-size: clamp(1.55rem, 6vw, 2.2rem);
+  line-height: 1.15;
+}
+.cpi-market .cpi-market-seal {
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: none;
+}
+.cpi-market .cpi-market-departments button {
+  min-height: 52px;
+  padding: 0.4rem 0.25rem;
+  gap: 0.2rem;
+  font-size: 0.75rem;
+}
+.cpi-market-recovery {
+  align-items: center;
+  gap: 0.5rem;
+}
+.cpi-market-recovery > p {
+  flex-basis: 100%;
+  font-size: 0.76rem;
+  line-height: 1.4;
+  margin: 0;
+}
+.cpi-market-recovery > button {
+  min-height: 44px;
+  font-size: 0.8rem;
+  padding: 0.55rem 0.8rem;
+}
+.cpi-market > .cpi-adventure-footnote {
+  margin: 0;
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.cpi-worlds-view .cpi-market-world-scene > .cpi-world-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.cpi-worlds-view .cpi-world-dots button[aria-current='true'] {
+  background: transparent;
+  filter: none;
+}

@@ -97,6 +97,7 @@ export function WorldPathCompanion({
   gear,
   bridge,
   preview = false,
+  celebrateLanding = false,
   shieldCharges = 0,
 }: {
   theme: ThemeId;
@@ -112,6 +113,7 @@ export function WorldPathCompanion({
   gear?: GearId;
   bridge?: BridgeModel;
   preview?: boolean;
+  celebrateLanding?: boolean;
   shieldCharges?: number;
 }) {
   const id = useId().replace(/:/g, '');
@@ -210,56 +212,60 @@ export function WorldPathCompanion({
               data-surface={bridge}
               data-landing={cinematic?.phase === 'impact' && cinematic.feedback?.kind === 'safe'}
             >
-              <WorldAvatarAura theme={skin} effects={effects} />
-              <g transform={preview ? `translate(${registration.x} ${registration.y})` : undefined}>
-                {gear ? (
-                  <image
-                    className="cpi-equipped-character"
-                    href={worldAsset(equippedCompanionAsset(theme, gear))}
-                    x={-EQUIPPED_SPRITE.cell / 2 - frame * EQUIPPED_SPRITE.cell}
-                    y={-EQUIPPED_SPRITE.foot}
-                    width={EQUIPPED_SPRITE.cell * EQUIPPED_SPRITE.frames}
-                    height={EQUIPPED_SPRITE.cell}
-                    clipPath={`url(#${id}-equipped)`}
+              <g className="cpi-landing-signature" data-celebrating={celebrateLanding || undefined}>
+                <WorldAvatarAura theme={skin} effects={effects} />
+                <g
+                  transform={preview ? `translate(${registration.x} ${registration.y})` : undefined}
+                >
+                  {gear ? (
+                    <image
+                      className="cpi-equipped-character"
+                      href={worldAsset(equippedCompanionAsset(theme, gear))}
+                      x={-EQUIPPED_SPRITE.cell / 2 - frame * EQUIPPED_SPRITE.cell}
+                      y={-EQUIPPED_SPRITE.foot}
+                      width={EQUIPPED_SPRITE.cell * EQUIPPED_SPRITE.frames}
+                      height={EQUIPPED_SPRITE.cell}
+                      clipPath={`url(#${id}-equipped)`}
+                    />
+                  ) : theme === 'obsidian' ? (
+                    <image
+                      className="cpi-glass-traveller"
+                      href={blackMetalTraveller}
+                      x="-48"
+                      y="-97"
+                      width="96"
+                      height="100"
+                      preserveAspectRatio="xMidYMax meet"
+                    />
+                  ) : (
+                    <image
+                      href={worldAsset(WORLD_ASSETS[skin].companion)}
+                      x={-48 - frame * 96}
+                      y="-96"
+                      width="288"
+                      height="96"
+                      clipPath={`url(#${id})`}
+                    />
+                  )}
+                  {season && !gear && theme !== 'obsidian' && (
+                    <CompanionSeasonGear
+                      world={skin}
+                      season={season}
+                      weather={weather}
+                      frame={frame}
+                      gear={gear}
+                    />
+                  )}
+                  <GuardianShield
+                    charges={shieldCharges}
+                    temporary={effects.some((effect) => effect.kind === 'shield_5s')}
+                    impact={!!cinematic?.shielded && cinematic.phase === 'impact'}
+                    linger={
+                      !!cinematic?.shielded &&
+                      (cinematic.phase === 'contact' || cinematic.phase === 'impact')
+                    }
                   />
-                ) : theme === 'obsidian' ? (
-                  <image
-                    className="cpi-glass-traveller"
-                    href={blackMetalTraveller}
-                    x="-48"
-                    y="-97"
-                    width="96"
-                    height="100"
-                    preserveAspectRatio="xMidYMax meet"
-                  />
-                ) : (
-                  <image
-                    href={worldAsset(WORLD_ASSETS[skin].companion)}
-                    x={-48 - frame * 96}
-                    y="-96"
-                    width="288"
-                    height="96"
-                    clipPath={`url(#${id})`}
-                  />
-                )}
-                {season && !gear && theme !== 'obsidian' && (
-                  <CompanionSeasonGear
-                    world={skin}
-                    season={season}
-                    weather={weather}
-                    frame={frame}
-                    gear={gear}
-                  />
-                )}
-                <GuardianShield
-                  charges={shieldCharges}
-                  temporary={effects.some((effect) => effect.kind === 'shield_5s')}
-                  impact={!!cinematic?.shielded && cinematic.phase === 'impact'}
-                  linger={
-                    !!cinematic?.shielded &&
-                    (cinematic.phase === 'contact' || cinematic.phase === 'impact')
-                  }
-                />
+                </g>
               </g>
             </g>
           </g>

@@ -276,6 +276,7 @@ export function App({
       ? campaignMissionSnapshot(campaignProgress, game.campaignMissionId)
       : undefined;
   const campaignMissionPresentation = campaignMission && {
+    cleared: campaignOutcome?.cleared === true,
     name:
       CAMPAIGN_MISSIONS.find((entry) => entry.id === campaignMission.id)?.name ??
       campaignMission.name,
