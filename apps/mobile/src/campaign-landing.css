@@ -6,7 +6,8 @@
   transform-origin: center bottom;
 }
 .cpi-landing-signature[data-celebrating='true'] {
-  animation: var(--world-signature, cpi-signature-crank) 1250ms both;
+  animation: cpi-landing-jump 1800ms both;
+  transform-origin: 0 0;
 }
 .cpi-world-path-companion[data-still='true'] .cpi-landing-signature,
 .cpi-reduced-motion .cpi-landing-signature {
@@ -14,6 +15,69 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .cpi-landing-signature[data-celebrating='true'] {
+    animation: none;
+  }
+}
+
+/* SVG user-space distances: a visible half-body jump, rather than a tiny percentage sway. */
+@keyframes cpi-landing-jump {
+  0%,
+  100% {
+    transform: none;
+  }
+  12% {
+    transform: translateY(3px) scale(1.06, 0.9);
+  }
+  35% {
+    transform: translateY(-48px) rotate(-12deg) scale(0.98, 1.04);
+  }
+  53% {
+    transform: translateY(-38px) rotate(10deg);
+  }
+  72% {
+    transform: translateY(2px) scale(1.08, 0.88);
+  }
+  86% {
+    transform: translateY(-6px) scale(0.98, 1.03);
+  }
+}
+[data-world='league'] .cpi-landing-signature[data-celebrating='true'],
+[data-world='kitten'] .cpi-landing-signature[data-celebrating='true'] {
+  transform-origin: 0 -48px;
+  transform-box: view-box;
+  animation-name: cpi-landing-spin;
+}
+@keyframes cpi-landing-spin {
+  0%,
+  100% {
+    transform: none;
+  }
+  12% {
+    transform: translateY(3px) scale(1.04, 0.92);
+  }
+  32% {
+    transform: translateY(-42px) rotate(-35deg);
+  }
+  55% {
+    transform: translateY(-48px) rotate(230deg);
+  }
+  72% {
+    transform: rotate(360deg);
+  }
+  82% {
+    transform: rotate(360deg) scale(1.08, 0.9);
+  }
+  94% {
+    transform: rotate(360deg);
+  }
+}
+
+.cpi-world-path-companion[data-still='true'] .cpi-landing-signature[data-celebrating='true'],
+.cpi-reduced-motion .cpi-landing-signature[data-celebrating='true'] {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-world] .cpi-landing-signature[data-celebrating='true'] {
     animation: none;
   }
 }

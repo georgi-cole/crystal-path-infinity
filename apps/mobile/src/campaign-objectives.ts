@@ -123,7 +123,7 @@ export function campaignMissedObjective(
   currentRow: string,
 ): string | null {
   // Previously started attempts retain their original landing-only evaluation.
-  if (mission.contentRevision !== '0.5') return null;
+  if (!['0.5', '0.6'].includes(mission.contentRevision)) return null;
   const missed = campaignTasks(mission, progress, currentRow).find((task) => task.missed);
   if (!missed) return null;
   const row = missed.rows?.find((item) => item.missed)?.row;

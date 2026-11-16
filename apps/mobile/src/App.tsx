@@ -1,3 +1,5 @@
+import { RegionArt } from './expedition-art';
+import { LANDING_MORPH_MS } from './campaign-landing';
 import {
   CAMPAIGN_ENABLED,
   CAMPAIGN_TEST_BUILD,
@@ -68,7 +70,7 @@ import type {
 } from './campaign-test';
 import type { CampaignFailureReason } from './campaign-test';
 import { campaignTasks, campaignMissedObjective } from './campaign-objectives';
-import { CAMPAIGN_MISSIONS } from './campaign-content';
+import { CAMPAIGN_MISSIONS, LANDMARK_CLEARS } from './campaign-content';
 import type { BridgeSlot, BridgeStyle, StyleId } from './campaign-content';
 import { ThemeScope } from './store-provider';
 import { CampaignMissionResult } from './campaign-test-ui';
@@ -323,8 +325,11 @@ export function App({
     if (!campaignOutcome?.cleared || missionPhase !== 'transition') return;
     const reduced =
       settings.reducedMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    // The complete cue has finished; bridge the music into the vortex with a short fade.
-    const film = window.setTimeout(() => setMissionPhase('celebration'), reduced ? 100 : 350);
+    // The character has settled; open the destination artwork before the reward film.
+    const film = window.setTimeout(
+      () => setMissionPhase('celebration'),
+      reduced ? 100 : LANDING_MORPH_MS,
+    );
     return () => {
       window.clearTimeout(film);
     };
@@ -1203,7 +1208,13 @@ export function App({
             className="cpi-mission-departure"
             data-reduced-motion={settings.reducedMotion}
             aria-hidden="true"
-          />
+          >
+            <RegionArt
+              chapter={campaignOutcome.mission.chapter}
+              lit={LANDMARK_CLEARS[campaignOutcome.mission.chapter] === campaignOutcome.mission.id}
+            />
+            <span className="cpi-landing-bloom" />
+          </div>
         )}
         {storageWarning && (
           <div role="alert" className="cpi-storage-warning">

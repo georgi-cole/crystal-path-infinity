@@ -360,3 +360,10 @@ changed. See the dated
 complete. Build 1.0.2 (75) is assigned to Crystal Path Internal QA (one tester),
 with saved test notes. The owner can update through TestFlight. Phone acceptance
 and live-ad readiness remain pending; no public review was submitted.
+
+
+## Campaign solid landing - 16 November 2026, candidate revision 0.6
+
+New Campaign attempts use content revision `0.6`: both tiles on the designated landing row are intact. The final choice cannot break a tile or spend a shield. Reaching it still requires the existing Stability floor and mission objectives; this does not award an automatic clear. Earlier rows, route RNG consumption, supplies and rewards retain their existing behavior. Previously started attempts (revisions `0.1`-`0.5`) retain their saved route rules, including the old final-tile risk. Restarting creates a new `0.6` attempt. Ranked/server Infinity rules are unchanged.
+
+After a successful landing, the actual character makes an 1800ms leap (a full airborne turn for Flipzel and Purralune), then gold opens into the existing chapter background over 900ms before the reward/result sequence. Reduced motion skips these movements. Success audio still plays during the landing; blocked, muted or missing media cannot prevent completion. This is a source candidate following TestFlight 1.0.2 (81), not a distributed build. See [implementation and validation](operations/CAMPAIGN_SOLID_LANDING_20261116.md). No commerce or business assumptions change.

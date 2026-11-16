@@ -29,6 +29,8 @@ export interface JourneyRoute {
   readonly marks?: readonly JourneyMark[];
   readonly rotation?: { readonly offset: number; readonly rainbow: boolean };
   readonly reviveSp?: number;
+  /** Versioned Campaign destination; omitted from endless and historical routes. */
+  readonly landingRow?: number;
 }
 export type JourneyCue = { readonly kind: RouteCue; readonly side: TileSide | null };
 const alternate = (side: TileSide): TileSide => (side === 'left' ? 'right' : 'left');
@@ -68,6 +70,11 @@ export function assertJourneyRoute(route: JourneyRoute): void {
         route.rotation.offset < 0 ||
         route.rotation.offset > 5 ||
         typeof route.rotation.rainbow !== 'boolean')) ||
+    (route.landingRow !== undefined &&
+      (!Number.isSafeInteger(route.landingRow) ||
+        route.landingRow < 1 ||
+        route.landingRow > 10000 ||
+        !!route.rotation)) ||
     (route.reviveSp !== undefined &&
       (!Number.isSafeInteger(route.reviveSp) || route.reviveSp < 1 || route.reviveSp > 400))
   )
@@ -156,6 +163,9 @@ export function journeyRow(
               : (mark?.safe ?? safe),
       }
     : undefined;
+  if (route.landingRow !== undefined && row === BigInt(route.landingRow)) {
+    broken.left = broken.right = false;
+  }
   return { broken, cue, encounter: mark?.encounter };
 }
 

@@ -557,9 +557,9 @@ describe('Beacon Route playtest', () => {
     );
     const restored = readCampaignSave({ getItem: () => stored }).progress;
     expect(restored.activeMissionSnapshot).toEqual(attempt.activeMissionSnapshot);
-    expect(restored.activeMissionSnapshot?.contentRevision).toBe('0.5');
+    expect(restored.activeMissionSnapshot?.contentRevision).toBe('0.6');
     expect(restored.shieldRows).toEqual(['18']);
-    expect(newMissionSnapshot('light-the-far-gate').contentRevision).toBe('0.5');
+    expect(newMissionSnapshot('light-the-far-gate').contentRevision).toBe('0.6');
   });
 
   it('grants the new finale cosmetics and season charges only once', () => {
@@ -1092,4 +1092,88 @@ describe('Campaign completion reward integration', () => {
     expect(failed).not.toContain('Reward unsealed');
     expect(failed).toContain('Retry free');
   });
+});
+
+describe('revision 0.6 solid Campaign landing', () => {
+  it('makes either final tile intact on every main and alternate route without changing earlier draws', () => {
+    for (const definition of CAMPAIGN_MISSIONS) {
+      for (const approach of definition.alternate
+        ? (['main', 'ridge'] as const)
+        : (['main'] as const)) {
+        const mission = newMissionSnapshot(definition.id, approach);
+        for (const seed of [1n, 7n, 21n, 91n]) {
+          const fresh = createCampaignRun(mission, seed);
+          const old = createCampaignRun({ ...mission, contentRevision: '0.5' }, seed);
+          const generate = (state: RunState) =>
+            takeRows(state.stream, mission.targetRow, PRACTICE_RNG);
+          const a = generate(fresh),
+            b = generate(old);
+          const rowsA = [...fresh.rows, ...a.rows],
+            rowsB = [...old.rows, ...b.rows];
+          const goal = rowsA.find((row) => row.index === String(mission.targetRow - 1))!;
+          expect(goal.risk?.broken, mission.id).toEqual({ left: false, right: false });
+          expect(a.stream.rng).toEqual(b.stream.rng);
+          for (const row of rowsA.filter((row) => row.index !== goal.index))
+            expect(row, mission.id).toEqual(rowsB.find((other) => other.index === row.index));
+        }
+      }
+    }
+  });
+  it('keeps an old saved route and its hidden tile draws unchanged on resume', () => {
+    const mission = {
+      ...newMissionSnapshot('light-the-lighthouse'),
+      contentRevision: '0.5' as const,
+    };
+    const state = createCampaignRun(mission, 21n);
+    let saved = '';
+    writeCampaignSave(
+      {
+        setItem: (_, v) => {
+          saved = v;
+        },
+      },
+      { ...EMPTY_CAMPAIGN_PROGRESS, activeMissionId: mission.id, activeMissionSnapshot: mission },
+      state,
+    );
+    const loaded = readCampaignSave({ getItem: () => saved });
+    expect(loaded.checkpoint).toEqual(state);
+    expect(loaded.progress.activeMissionSnapshot?.contentRevision).toBe('0.5');
+    expect(state.stream.journey?.landingRow).toBeUndefined();
+  });
+});
+
+it('settles either final choice as safe without spending a shield', () => {
+  const mission = newMissionSnapshot(CAMPAIGN_MISSIONS[0].id);
+  let state = createCampaignRun(mission, 21n);
+  while (BigInt(state.currentRow) < BigInt(mission.targetRow)) {
+    const side = hintSafeSide(getCurrentRow(state)) ?? 'left';
+    const result = step(state, { type: 'choose', row: state.currentRow, life: 0, side }, 450);
+    expect(result.accepted).toBe(true);
+    state = result.state;
+    expect(state.status).toBe('playing');
+  }
+  for (const side of ['left', 'right'] as const) {
+    const result = step(state, { type: 'choose', row: state.currentRow, life: 0, side }, 450);
+    const choice = result.events.find((e) => e.type === 'choice-resolved');
+    expect(result.accepted).toBe(true);
+    expect(choice?.wrong).toBe(false);
+    expect(result.state.lastClearedRow).toBe(String(mission.targetRow));
+    expect(result.state.journeyShields).toBe(state.journeyShields);
+  }
+});
+
+it('rejects invalid or endless Campaign landing declarations', () => {
+  const make = (route: JourneyRoute) =>
+    takeRows(
+      createRowStream(createPracticeCursor('1'), PRACTICE_RNG, journeyRuleset('spring'), route),
+      1,
+      PRACTICE_RNG,
+    );
+  for (const landingRow of [0, -1, 1.5, 10001, Number.NaN])
+    expect(() => make({ version: 1, season: 'spring', landingRow })).toThrow(
+      'Invalid local Journey route',
+    );
+  expect(() =>
+    make({ version: 1, season: 'spring', landingRow: 36, rotation: { offset: 0, rainbow: true } }),
+  ).toThrow('Invalid local Journey route');
 });
