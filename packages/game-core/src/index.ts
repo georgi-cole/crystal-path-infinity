@@ -17,3 +17,4 @@ export * from './journey.ts';
 export * from './journey-gear.ts';
 export * from './business-economy.ts';
 export * from './submitted-score.ts';
+export type { MysterySponsorOffer, MysterySponsorship } from './mystery-sponsorship.ts';

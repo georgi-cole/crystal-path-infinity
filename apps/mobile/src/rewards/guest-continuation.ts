@@ -1,4 +1,5 @@
 import { MAX_REVIVES } from '@crystal-path-infinity/game-core';
+import { mysteryCadence } from './mystery-cadence';
 import type { RunState } from '@crystal-path-infinity/game-core';
 import type { PracticeRuntime } from '../practice-runtime';
 import { presentRunOutcome } from '../run-outcome';
@@ -51,6 +52,7 @@ export async function watchGuestContinuation(
       }
     })
     .catch(() => 'error' as const);
+  if (dismissed !== 'no_fill') mysteryCadence().adEnded();
   if (!(await recording)) {
     if (dismissed === 'no_fill') return 'no_fill';
     if (dismissed === 'error') return 'error';

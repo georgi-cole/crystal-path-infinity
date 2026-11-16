@@ -1,4 +1,7 @@
 import { nextPracticeRuleset } from './balance-tuning';
+import { MysterySponsor } from './rewards/mystery-sponsor';
+import { campaignAllowsSponsorship } from './rewards/mystery-sponsor-flow';
+import { mysteryCadence } from './rewards/mystery-cadence';
 import {
   CAMPAIGN_ENABLED,
   CAMPAIGN_RELEASE_BUILD,
@@ -37,6 +40,7 @@ import { GuardianShieldMarker } from './guardian-shield';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   createPracticeCursor,
+  getCurrentRow,
   createRun,
   getRuleset,
   parseTileExperiment,
@@ -141,6 +145,7 @@ const EMPTY_KIT_SELECTION: KitSelection = {
 };
 type InfinitySupplies = Readonly<Record<'sp' | 'hint' | 'shield' | 'continue', number>>;
 export interface InfinitySceneViewProps {
+  readonly sponsorBlocked?: boolean;
   readonly scoreStatus?: 'idle' | 'queued' | 'uploading' | 'synced' | 'error' | null;
   readonly weather?: 'clear' | 'rain';
   readonly campaignMission?: CampaignPresentation;
@@ -189,6 +194,7 @@ export interface InfinitySceneViewProps {
 }
 
 export function InfinitySceneView({
+  sponsorBlocked = false,
   scoreStatus = null,
   resourcePanel,
   guestContinuePanel,
@@ -461,6 +467,7 @@ export function InfinitySceneView({
 
   return (
     <main
+      inert={sponsorBlocked}
       className={`cps-shell ${INFINITY_SCENE_SKIN.shell} cpi-infinity-scene${catastrophic ? ' is-catastrophe' : ''}${emergency ? ' is-emergency' : ''}${paused || kitOpen ? ' is-paused' : ''}${pressure?.active || clockActive ? ' is-death-clock' : ''}${settings.reducedMotion ? ' cpi-reduced-motion' : ''}${legacyRain ? ' cpi-rain-mission' : ''}`}
       data-world={themeId}
       data-weather={activeWeather ?? (legacyRain ? 'rain' : 'clear')}
@@ -1181,7 +1188,8 @@ function InfinityRun({
     state.status === 'playing' ? 'run' : cinematic?.fatal ? null : 'ended',
     !suspended &&
       settings.music &&
-      (state.status !== 'playing' || (ready && !paused && !confirmEnd && !error)),
+      (state.status !== 'playing' ||
+        (ready && !paused && !confirmEnd && !error && !state.sponsorship?.offer)),
     settings.music && (!!cinematic?.fatal || confirmEnd || guestAdPhase === 'watching'),
   );
   const [personalBest, setPersonalBest] = useState<string | null>(null);
@@ -1238,6 +1246,15 @@ function InfinityRun({
       playback: audio,
       onTransition: (result: TimedSessionResult) => {
         if (!alive) return;
+        mysteryCadence().observe(result.state);
+        if (
+          !trial &&
+          !getCurrentRow(result.state).encounter &&
+          result.events.some((event) => event.type === 'mystery-resolved')
+        )
+          mysteryCadence().opened(
+            `${result.state.runId}:${result.state.currentRow}:${result.state.revivesApplied}`,
+          );
         director.receive(result);
         const hint = result.events.find((event) => event.type === 'hint-used');
         if (hint && hintCaptionGate.claim()) setHintCaptionRow(hint.row);
@@ -1329,6 +1346,7 @@ function InfinityRun({
       });
     return () => {
       alive = false;
+      mysteryCadence().save();
       guestAdRequest.current?.abort();
       if (runtimeRef.current === runtime) runtimeRef.current = null;
       if (audioRef.current === audio) audioRef.current = null;
@@ -1443,8 +1461,18 @@ function InfinityRun({
   );
   const openMystery = useCallback(() => {
     unlockAudio();
-    void issue({ type: 'mystery' });
-  }, [unlockAudio, issue]);
+    const current = runtimeRef.current?.getState();
+    void issue({
+      type: 'mystery',
+      sponsor:
+        !!current &&
+        !!guestRewardedAd &&
+        !trial &&
+        campaignAllowsSponsorship(current.currentRow, campaignMission) &&
+        !getCurrentRow(current).encounter &&
+        mysteryCadence().eligible(),
+    });
+  }, [unlockAudio, issue, guestRewardedAd, trial, campaignMission]);
 
   async function toggleKit() {
     const runtime = runtimeRef.current;
@@ -1750,274 +1778,286 @@ function InfinityRun({
     state.status === 'dead' &&
     state.revivesGranted < getMaxRevives(state.rulesetVersion);
   return (
-    <InfinitySceneView
-      trial={trial}
-      guestContinuePanel={
-        savedGuestGrant || adOffer || canSupplyContinue ? (
-          <div className="cpi-revive-offer cpi-overlay-actions">
-            {canSupplyContinue && (
-              <button
-                type="button"
-                disabled={!ready || busy}
-                onClick={() => {
-                  unlockAudio();
-                  void issue(
-                    { type: 'journey-resource', resource: 'continue' },
-                    (result, previous) =>
-                      onInfinitySupplyCommit(result.state, result.events, previous),
-                  );
-                }}
-              >
-                Use continue · {infinitySupplies!.continue} left
-              </button>
-            )}
-            {savedGuestGrant ? (
-              <button
-                type="button"
-                data-cpi-overlay-primary
-                disabled={!ready || busy}
-                onClick={() => {
-                  unlockAudio();
-                  void issue({
-                    type: 'apply-revive',
-                    deathId: savedGuestGrant.deathId,
-                    ordinal: savedGuestGrant.ordinal,
-                    grantId: savedGuestGrant.grantId,
-                  });
-                }}
-              >
-                {t('rewards.resumeRestore', { sp: number(savedGuestGrant.sp) })}
-              </button>
-            ) : adOffer ? (
-              <>
-                <span>{t('rewards.guestLeft', { count: number(adOffer.grantsRemaining) })}</span>
+    <>
+      <MysterySponsor
+        key={state.sponsorship?.offer?.id ?? 'no-sponsor'}
+        state={state}
+        runtimeRef={runtimeRef}
+        ad={guestRewardedAd}
+        campaign={isCampaign}
+        enabled={ready && !suspended}
+        visible={!cinematic}
+      />
+      <InfinitySceneView
+        sponsorBlocked={ready && !error && !!state.sponsorship?.offer}
+        trial={trial}
+        guestContinuePanel={
+          savedGuestGrant || adOffer || canSupplyContinue ? (
+            <div className="cpi-revive-offer cpi-overlay-actions">
+              {canSupplyContinue && (
+                <button
+                  type="button"
+                  disabled={!ready || busy}
+                  onClick={() => {
+                    unlockAudio();
+                    void issue(
+                      { type: 'journey-resource', resource: 'continue' },
+                      (result, previous) =>
+                        onInfinitySupplyCommit(result.state, result.events, previous),
+                    );
+                  }}
+                >
+                  Use continue · {infinitySupplies!.continue} left
+                </button>
+              )}
+              {savedGuestGrant ? (
                 <button
                   type="button"
                   data-cpi-overlay-primary
                   disabled={!ready || busy}
-                  onClick={() => void watchPracticeAd()}
+                  onClick={() => {
+                    unlockAudio();
+                    void issue({
+                      type: 'apply-revive',
+                      deathId: savedGuestGrant.deathId,
+                      ordinal: savedGuestGrant.ordinal,
+                      grantId: savedGuestGrant.grantId,
+                    });
+                  }}
                 >
-                  {guestAdPhase === 'watching'
-                    ? t('rewards.loading')
-                    : t('rewards.watchRestore', { sp: number(adOffer.restoreSp) })}
+                  {t('rewards.resumeRestore', { sp: number(savedGuestGrant.sp) })}
                 </button>
-                {['unavailable', 'offline', 'no_fill', 'error'].includes(guestAdPhase) && (
-                  <span role="status">
-                    {t(
-                      guestAdPhase === 'offline'
-                        ? 'rewards.guestOffline'
-                        : guestAdPhase === 'no_fill'
-                          ? 'rewards.noFill'
-                          : 'rewards.loadError',
-                    )}
-                  </span>
-                )}
-              </>
-            ) : null}
-          </div>
-        ) : undefined
-      }
-      resourcePanel={
-        store && state.storeTest && !trial ? (
-          <RunReserves
-            state={state}
-            busy={busy || suspended}
-            onUse={useResource}
-            message={resourceMessage}
-            onOpenStore={
-              onStore
-                ? () => {
-                    void exit('store');
-                  }
-                : undefined
-            }
-          />
-        ) : undefined
-      }
-      weather={weather}
-      campaignMission={campaignMission}
-      kitOpen={kitOpen}
-      kitGearWear={kitSelection.wear}
-      kitNotice={kitError ?? kitSelection.notice}
-      kitError={!!kitError}
-      onToggleKit={() => {
-        void toggleKit();
-      }}
-      reserveHints={suppliesAvailable ? infinitySupplies?.hint : 0}
-      bridgeStyle={bridgeStyle}
-      onToggleJourneyGear={(wear) => {
-        unlockAudio();
-        if (kitOpen) {
-          setKitError(null);
-          setKitSelection((previous) => ({
-            ...previous,
-            wear: wear === kitBase.gearWear ? undefined : wear,
-            revision: previous.revision + 1,
-            changed: 'gear',
-            direction: wear === kitBase.gearWear ? 'return' : 'load',
-            notice:
-              wear === kitBase.gearWear
-                ? 'Gear change undone'
-                : wear
-                  ? 'Gear ready to wear'
-                  : 'Gear ready to pack away',
-          }));
-        } else void issue({ type: 'journey-gear', wear });
-      }}
-      campaignSupplyPanel={
-        suppliesAvailable &&
-        infinitySupplies &&
-        onInfinitySupplyCommit &&
-        state.status === 'playing' &&
-        (infinitySupplies.sp >= 25 || infinitySupplies.shield > 0) ? (
-          <div className="cpi-journey-supplies" aria-label="Infinity supplies">
-            {(['sp', 'shield'] as const).map((item) => {
-              const stacking = !!parseTileExperiment(state.rulesetVersion)?.shieldStacks;
-              const quantity =
-                item === 'sp'
-                  ? kitSelection.stabilityDoses
-                  : kitBase.loaded + kitSelection.shieldDelta;
-              const available =
-                item === 'sp'
-                  ? kitBase.sp - kitSelection.stabilityDoses * 25
-                  : kitBase.shields - quantity;
-              const canAdd =
-                item === 'sp'
-                  ? available >= 25
-                  : available > 0 &&
-                    (stacking ||
-                      (quantity === 0 &&
-                        !state.effects.some((effect) => effect.kind === 'shield_5s')));
-              if ((item === 'sp' ? kitBase.sp < 25 : kitBase.shields === 0) && quantity === 0)
-                return null;
-              return (
-                <article
-                  className="cpi-kit-slot"
-                  key={item}
-                  data-change={kitSelection.changed === item ? kitSelection.direction : undefined}
-                >
+              ) : adOffer ? (
+                <>
+                  <span>{t('rewards.guestLeft', { count: number(adOffer.grantsRemaining) })}</span>
                   <button
                     type="button"
-                    className="cpi-kit-load"
-                    disabled={!ready || busy || !canAdd}
-                    aria-label={item === 'sp' ? 'Load 25 Stability' : 'Load one shield'}
-                    onClick={() => {
-                      unlockAudio();
-                      changeKitSupply(item, 1);
-                    }}
+                    data-cpi-overlay-primary
+                    disabled={!ready || busy}
+                    onClick={() => void watchPracticeAd()}
                   >
-                    <span className="cpi-kit-supply-art" data-item={item} aria-hidden="true" />
-                    <strong>{item === 'sp' ? '+25 Stability' : 'Shield'}</strong>
-                    <small>
-                      {available} {item === 'sp' ? 'SP in bag' : 'in bag'}
-                    </small>
-                    <span
-                      key={kitSelection.changed === item ? kitSelection.revision : 0}
-                      className="cpi-kit-ready"
-                      data-loaded={quantity > 0}
-                    >
-                      {quantity > 0
-                        ? item === 'sp'
-                          ? `+${quantity * 25} ready`
-                          : `${quantity} loaded`
-                        : 'Tap to load'}
+                    {guestAdPhase === 'watching'
+                      ? t('rewards.loading')
+                      : t('rewards.watchRestore', { sp: number(adOffer.restoreSp) })}
+                  </button>
+                  {['unavailable', 'offline', 'no_fill', 'error'].includes(guestAdPhase) && (
+                    <span role="status">
+                      {t(
+                        guestAdPhase === 'offline'
+                          ? 'rewards.guestOffline'
+                          : guestAdPhase === 'no_fill'
+                            ? 'rewards.noFill'
+                            : 'rewards.loadError',
+                      )}
                     </span>
-                  </button>
-                  <button
-                    type="button"
-                    className="cpi-kit-remove"
-                    disabled={!ready || busy || quantity === 0}
-                    aria-label={
-                      item === 'sp' ? 'Remove one Stability dose' : 'Remove one loaded shield'
-                    }
-                    onClick={() => changeKitSupply(item, -1)}
-                  >
-                    −
-                  </button>
-                </article>
-              );
-            })}
-          </div>
-        ) : undefined
-      }
-      state={state}
-      scoreStatus={scoreStatus}
-      feedback={feedback}
-      cinematic={cinematic}
-      mysteryFeedback={mysteryFeedback}
-      resourceCues={resourceCues}
-      onMysteryLab={
-        QA_TOOLS_ENABLED && import.meta.env.MODE !== 'production'
-          ? () => setLabOpen(true)
-          : undefined
-      }
-      onMysteryJournal={() => setJournalOpen(true)}
-      onPact={(option) => {
-        unlockAudio();
-        void issue({ type: 'pact', option });
-      }}
-      signals={signals}
-      hintCaptionRow={hintCaptionRow}
-      ready={ready}
-      busy={busy || suspended}
-      paused={paused}
-      error={error}
-      onChoose={chooseTile}
-      onHint={() => {
-        unlockAudio();
-        if (
-          state.hints === 0 &&
-          suppliesAvailable &&
-          (infinitySupplies?.hint ?? 0) > 0 &&
-          onInfinitySupplyCommit
-        ) {
-          void issue({ type: 'journey-hint' }, (result, previous) =>
-            onInfinitySupplyCommit(result.state, result.events, previous),
-          );
-        } else void issue({ type: 'hint' });
-      }}
-      onMystery={openMystery}
-      onPause={() => {
-        void togglePause();
-      }}
-      onRequestEnd={() => {
-        if (!ready || busy || commandLock.current || !presentRunOutcome(state).canEnd) return;
-        if (state.status === 'dead') {
-          setConfirmEnd(true);
-        } else {
-          void togglePause(true);
+                  )}
+                </>
+              ) : null}
+            </div>
+          ) : undefined
         }
-      }}
-      onCancelEnd={() => setConfirmEnd(false)}
-      confirmEnd={confirmEnd}
-      onEnd={() => {
-        if (!confirmEnd || !presentRunOutcome(state).canEnd) return;
-        // The explicit confirmation includes forfeiture of any unused grant.
-        // Core rejects unresolved pending rewards; no fake SSV success exists.
-        setConfirmEnd(false);
-        void issue({ type: 'end', forfeitGrantedReward: true });
-      }}
-      onViewRankings={() => {
-        if (state.status === 'finished' && state.result) onViewRankings();
-      }}
-      personalBest={personalBest}
-      newPersonalBest={newPersonalBest}
-      onExit={() => {
-        void exit();
-      }}
-      onRestart={() => {
-        if (runtimeRef.current?.getState().status === 'dead') {
-          void issue({ type: 'end', forfeitGrantedReward: false }).then(() => {
-            if (runtimeRef.current?.getState().status === 'finished') onRestart();
-          });
-        } else onRestart();
-      }}
-      onRetry={() => {
-        void retry();
-      }}
-      settings={settings}
-      onSettingsChange={onSettingsChange}
-    />
+        resourcePanel={
+          store && state.storeTest && !trial ? (
+            <RunReserves
+              state={state}
+              busy={busy || suspended}
+              onUse={useResource}
+              message={resourceMessage}
+              onOpenStore={
+                onStore
+                  ? () => {
+                      void exit('store');
+                    }
+                  : undefined
+              }
+            />
+          ) : undefined
+        }
+        weather={weather}
+        campaignMission={campaignMission}
+        kitOpen={kitOpen}
+        kitGearWear={kitSelection.wear}
+        kitNotice={kitError ?? kitSelection.notice}
+        kitError={!!kitError}
+        onToggleKit={() => {
+          void toggleKit();
+        }}
+        reserveHints={suppliesAvailable ? infinitySupplies?.hint : 0}
+        bridgeStyle={bridgeStyle}
+        onToggleJourneyGear={(wear) => {
+          unlockAudio();
+          if (kitOpen) {
+            setKitError(null);
+            setKitSelection((previous) => ({
+              ...previous,
+              wear: wear === kitBase.gearWear ? undefined : wear,
+              revision: previous.revision + 1,
+              changed: 'gear',
+              direction: wear === kitBase.gearWear ? 'return' : 'load',
+              notice:
+                wear === kitBase.gearWear
+                  ? 'Gear change undone'
+                  : wear
+                    ? 'Gear ready to wear'
+                    : 'Gear ready to pack away',
+            }));
+          } else void issue({ type: 'journey-gear', wear });
+        }}
+        campaignSupplyPanel={
+          suppliesAvailable &&
+          infinitySupplies &&
+          onInfinitySupplyCommit &&
+          state.status === 'playing' &&
+          (infinitySupplies.sp >= 25 || infinitySupplies.shield > 0) ? (
+            <div className="cpi-journey-supplies" aria-label="Infinity supplies">
+              {(['sp', 'shield'] as const).map((item) => {
+                const stacking = !!parseTileExperiment(state.rulesetVersion)?.shieldStacks;
+                const quantity =
+                  item === 'sp'
+                    ? kitSelection.stabilityDoses
+                    : kitBase.loaded + kitSelection.shieldDelta;
+                const available =
+                  item === 'sp'
+                    ? kitBase.sp - kitSelection.stabilityDoses * 25
+                    : kitBase.shields - quantity;
+                const canAdd =
+                  item === 'sp'
+                    ? available >= 25
+                    : available > 0 &&
+                      (stacking ||
+                        (quantity === 0 &&
+                          !state.effects.some((effect) => effect.kind === 'shield_5s')));
+                if ((item === 'sp' ? kitBase.sp < 25 : kitBase.shields === 0) && quantity === 0)
+                  return null;
+                return (
+                  <article
+                    className="cpi-kit-slot"
+                    key={item}
+                    data-change={kitSelection.changed === item ? kitSelection.direction : undefined}
+                  >
+                    <button
+                      type="button"
+                      className="cpi-kit-load"
+                      disabled={!ready || busy || !canAdd}
+                      aria-label={item === 'sp' ? 'Load 25 Stability' : 'Load one shield'}
+                      onClick={() => {
+                        unlockAudio();
+                        changeKitSupply(item, 1);
+                      }}
+                    >
+                      <span className="cpi-kit-supply-art" data-item={item} aria-hidden="true" />
+                      <strong>{item === 'sp' ? '+25 Stability' : 'Shield'}</strong>
+                      <small>
+                        {available} {item === 'sp' ? 'SP in bag' : 'in bag'}
+                      </small>
+                      <span
+                        key={kitSelection.changed === item ? kitSelection.revision : 0}
+                        className="cpi-kit-ready"
+                        data-loaded={quantity > 0}
+                      >
+                        {quantity > 0
+                          ? item === 'sp'
+                            ? `+${quantity * 25} ready`
+                            : `${quantity} loaded`
+                          : 'Tap to load'}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      className="cpi-kit-remove"
+                      disabled={!ready || busy || quantity === 0}
+                      aria-label={
+                        item === 'sp' ? 'Remove one Stability dose' : 'Remove one loaded shield'
+                      }
+                      onClick={() => changeKitSupply(item, -1)}
+                    >
+                      −
+                    </button>
+                  </article>
+                );
+              })}
+            </div>
+          ) : undefined
+        }
+        state={state}
+        scoreStatus={scoreStatus}
+        feedback={feedback}
+        cinematic={cinematic}
+        mysteryFeedback={mysteryFeedback}
+        resourceCues={resourceCues}
+        onMysteryLab={
+          QA_TOOLS_ENABLED && import.meta.env.MODE !== 'production'
+            ? () => setLabOpen(true)
+            : undefined
+        }
+        onMysteryJournal={() => setJournalOpen(true)}
+        onPact={(option) => {
+          unlockAudio();
+          void issue({ type: 'pact', option });
+        }}
+        signals={signals}
+        hintCaptionRow={hintCaptionRow}
+        ready={ready}
+        busy={busy || suspended || !!state.sponsorship?.offer}
+        paused={paused}
+        error={error}
+        onChoose={chooseTile}
+        onHint={() => {
+          unlockAudio();
+          if (
+            state.hints === 0 &&
+            suppliesAvailable &&
+            (infinitySupplies?.hint ?? 0) > 0 &&
+            onInfinitySupplyCommit
+          ) {
+            void issue({ type: 'journey-hint' }, (result, previous) =>
+              onInfinitySupplyCommit(result.state, result.events, previous),
+            );
+          } else void issue({ type: 'hint' });
+        }}
+        onMystery={openMystery}
+        onPause={() => {
+          void togglePause();
+        }}
+        onRequestEnd={() => {
+          if (!ready || busy || commandLock.current || !presentRunOutcome(state).canEnd) return;
+          if (state.status === 'dead') {
+            setConfirmEnd(true);
+          } else {
+            void togglePause(true);
+          }
+        }}
+        onCancelEnd={() => setConfirmEnd(false)}
+        confirmEnd={confirmEnd}
+        onEnd={() => {
+          if (!confirmEnd || !presentRunOutcome(state).canEnd) return;
+          // The explicit confirmation includes forfeiture of any unused grant.
+          // Core rejects unresolved pending rewards; no fake SSV success exists.
+          setConfirmEnd(false);
+          void issue({ type: 'end', forfeitGrantedReward: true });
+        }}
+        onViewRankings={() => {
+          if (state.status === 'finished' && state.result) onViewRankings();
+        }}
+        personalBest={personalBest}
+        newPersonalBest={newPersonalBest}
+        onExit={() => {
+          void exit();
+        }}
+        onRestart={() => {
+          if (runtimeRef.current?.getState().status === 'dead') {
+            void issue({ type: 'end', forfeitGrantedReward: false }).then(() => {
+              if (runtimeRef.current?.getState().status === 'finished') onRestart();
+            });
+          } else onRestart();
+        }}
+        onRetry={() => {
+          void retry();
+        }}
+        settings={settings}
+        onSettingsChange={onSettingsChange}
+      />
+    </>
   );
 }
 

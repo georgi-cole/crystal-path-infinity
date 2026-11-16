@@ -1,3 +1,4 @@
+import { assertSponsorship, sponsorMystery } from './mystery-sponsorship.ts';
 import {
   createRunPacing,
   nextSurvivalBonusAt,
@@ -160,6 +161,9 @@ export function createRun(options: CreateRunOptions, rng: RandomSource): RunStat
     rng,
   );
   const state: RunState = {
+    ...(options.sponsoredMysteries
+      ? { sponsorship: { version: 1 as const, claimed: 0, offer: null } }
+      : {}),
     ...(usesStoreTestRules(rulesetVersion)
       ? {
           storeTest: {
@@ -225,6 +229,7 @@ export function createRun(options: CreateRunOptions, rng: RandomSource): RunStat
 
 /** Validates trusted core checkpoints; network JSON validation/authentication belongs to the adapter. */
 export function assertRunState(state: RunState, rng?: RandomSource): void {
+  assertSponsorship(state);
   if (state.schemaVersion !== 1) throw new RangeError('Unsupported run schema.');
   getRuleset(state.rulesetVersion);
   assertNonEmpty(state.runId, 'Run ID');
@@ -979,6 +984,11 @@ export function transitionRun(
   }
   if (state.status === 'finished') return result(state, [], 'finished');
   if (
+    state.sponsorship?.offer &&
+    !['sponsor-claim', 'sponsor-dismiss', 'tick'].includes(command.type)
+  )
+    return result(state, [], 'sponsor-unavailable');
+  if (
     (command.type === 'journey-resource' ||
       command.type === 'journey-hint' ||
       command.type === 'journey-loadout') &&
@@ -1017,6 +1027,46 @@ export function transitionRun(
     return result(next, events, 'pact-decision-required');
   }
   switch (command.type) {
+    case 'sponsor-dismiss': {
+      if (!next.sponsorship?.offer || next.sponsorship.offer.id !== command.offerId)
+        return result(next, events, 'sponsor-unavailable');
+      return result({ ...next, sponsorship: { ...next.sponsorship, offer: null } }, [
+        ...events,
+        { ...eventTime(next), type: 'mystery-sponsorship', status: 'dismissed' },
+      ]);
+    }
+    case 'sponsor-claim': {
+      const sponsor = next.sponsorship;
+      const offer = sponsor?.offer;
+      if (
+        !sponsor ||
+        !offer ||
+        offer.id !== command.offerId ||
+        offer.status !== 'offered' ||
+        next.status !== 'playing'
+      )
+        return result(next, events, 'sponsor-unavailable');
+      const hintReward = offer.kind === 'hint-protection';
+      const spReward = ['market', 'healing', 'sp-protection'].includes(offer.kind);
+      next = {
+        ...next,
+        ...(spReward ? { sp: clampSp(next.sp + offer.amount, next.rulesetVersion) } : {}),
+        ...(hintReward ? { hints: addSafeInteger(next.hints, 1, 'Sponsored hint') } : {}),
+        ...(offer.kind === 'market' ? { pact: null } : {}),
+        ...(offer.kind === 'cleanse'
+          ? { effects: next.effects.filter((effect) => effect.kind !== 'bleed_3rows') }
+          : {}),
+        sponsorship: {
+          ...sponsor,
+          claimed: addSafeInteger(sponsor.claimed, 1, 'Sponsored rewards'),
+          offer: { ...offer, status: 'earned' },
+        },
+      };
+      return result(rebaseDeathPressure(next, state.sp), [
+        ...events,
+        { ...eventTime(next), type: 'mystery-sponsorship', status: 'earned' },
+      ]);
+    }
     case 'tick':
       return result(next, events);
     case 'test-resource':
@@ -1273,6 +1323,11 @@ export function transitionRun(
       if (directed)
         next = rebaseDeathPressure(recordMysteryOpen(next, kind, context.rng), beforeMysterySp);
       next = discoverMystery(refreshDecisionWindow(next), kind);
+      next = sponsorMystery(
+        next,
+        [...events].reverse().find((event) => event.type === 'mystery-resolved')!,
+        command.sponsor === true,
+      );
       return result(sp === 0 ? die(next, 'mystery', events) : next, events);
     }
     case 'pact': {

@@ -16,7 +16,7 @@ export type SessionCommand =
   | { readonly type: 'hint' }
   | { readonly type: 'journey-hint' }
   | { readonly type: 'journey-gear'; readonly wear: boolean }
-  | { readonly type: 'mystery' }
+  | { readonly type: 'mystery'; readonly sponsor?: boolean }
   | { readonly type: 'pact'; readonly option: PactOption }
   | Exclude<RunCommand, { readonly row: string }>;
 

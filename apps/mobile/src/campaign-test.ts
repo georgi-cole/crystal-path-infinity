@@ -930,6 +930,7 @@ export function grantCampaignClear(
 ): CampaignProgress {
   const first = !progress.cleared.includes(mission.id);
   const mastery =
+    (state.sponsorship?.claimed ?? 0) === 0 &&
     progress.used.length === 0 &&
     state.revivesApplied === 0 &&
     !state.journeyGear &&
@@ -974,6 +975,7 @@ export function createCampaignRun(mission: CampaignMissionSnapshot, seed?: bigin
       {
         runId: 'practice-campaign-' + mission.id + '-' + crypto.randomUUID().replaceAll('-', ''),
         rulesetVersion: mission.rulesetVersion,
+        sponsoredMysteries: true,
         routeRng: createPracticeCursor(route),
         mysteryRng: createPracticeCursor(route ^ 0x9e3779b97f4a7c15n),
         observedAt: Date.now(),
@@ -1011,6 +1013,7 @@ export function createCampaignInfinityRun(progress: CampaignProgress): RunState 
   return createRun(
     {
       runId: 'practice-campaign-infinity-' + crypto.randomUUID().replaceAll('-', ''),
+      sponsoredMysteries: true,
       rulesetVersion:
         journeyRuleset(mode, !!progress.gear, progress.clockFree) + '-supplies-shield-stack',
       routeRng: createPracticeCursor(route),

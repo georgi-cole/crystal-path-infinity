@@ -100,6 +100,7 @@ import type { AccountControlsClient } from './account/account-controls-model';
 import type { RewardFlow } from './rewards/reward-flow';
 import type { CampaignInterstitialAd, GuestRewardedAd } from './rewards/native-admob';
 import { createCampaignInterstitialCadence } from './rewards/campaign-interstitial-policy';
+import { mysteryCadence } from './rewards/mystery-cadence';
 import type { SavedPendingClient } from './ranked/saved-pending-client';
 import { SavedRuns } from './ranked/saved-pending-view';
 import type { AccountEntryBinding } from './account/account-entry';
@@ -1051,7 +1052,10 @@ export function App({
           outcome.mission.id !== 'bring-the-dawn-home' &&
           campaignInterstitialCadence.current.recordFirstClear();
         const ad = services?.campaignInterstitial;
-        if (showInterstitial && ad?.available) await ad.show(new AbortController().signal);
+        if (showInterstitial && ad?.available && mysteryCadence().cooledDown()) {
+          const result = await ad.show(new AbortController().signal);
+          if (result !== 'unavailable') mysteryCadence().adEnded();
+        }
       } catch {
         // An unavailable ad never holds back earned Campaign progress.
       } finally {

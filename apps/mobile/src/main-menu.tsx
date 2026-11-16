@@ -328,7 +328,6 @@ function MenuHeader({
 
 function MenuHome({
   saved,
-  best,
   onOpen,
   onResume,
   onNew,
@@ -344,7 +343,6 @@ function MenuHome({
 }: Pick<
   MainMenuProps,
   | 'saved'
-  | 'best'
   | 'onOpen'
   | 'onResume'
   | 'onNew'
@@ -376,14 +374,6 @@ function MenuHome({
         ) : (
           <WorldHomeIdentity theme={theme} />
         )}
-      </section>
-
-      <section className="cpi-menu-scoreboard" aria-label={t('menu.progress')}>
-        <div>
-          <span className="cpi-menu-eyebrow">{t('menu.personalBest')}</span>
-          <strong className="cpi-menu-score">{t('general.row', { row: number(best) })}</strong>
-        </div>
-        <span className="visually-hidden">{t('menu.notRanked')}</span>
       </section>
 
       <nav className="cpi-menu-actions" aria-label={t('menu.main')}>
@@ -642,7 +632,6 @@ export function MainMenu({
           <>
             <MenuHome
               saved={saved}
-              best={best}
               onOpen={onOpen}
               onResume={onResume}
               onNew={onNew}
