@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+import { LANDING_HOLD_MS } from './campaign-landing';
 import { getGameplayLifecycle } from './gameplay-lifecycle';
 import type { PracticeSettings } from './practice-save';
 
@@ -131,7 +132,7 @@ export function createMissionAudio(
                 landingReady = true;
                 deliverLanding();
               },
-              settings.reducedMotion ? 100 : 900,
+              settings.reducedMotion ? 100 : LANDING_HOLD_MS,
             );
           const media = tracks[next];
           const finish = () => {

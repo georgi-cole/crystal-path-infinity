@@ -7,10 +7,21 @@
 .cpi-atlas-viewport {
   width: 100%;
   height: 100%;
-  overflow: hidden;
-  touch-action: none;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-x pan-y;
+  scrollbar-width: none;
+  contain: layout paint;
   cursor: grab;
   outline-offset: -4px;
+}
+.cpi-atlas-viewport::-webkit-scrollbar {
+  display: none;
+}
+.cpi-atlas-scroll-space {
+  position: relative;
+  overflow: hidden;
 }
 .cpi-atlas-viewport[data-dragging='true'] {
   cursor: grabbing;
@@ -20,7 +31,6 @@
   top: 0;
   left: 0;
   transform-origin: 0 0;
-  will-change: transform;
   user-select: none;
 }
 .cpi-atlas-sea {
@@ -97,7 +107,7 @@
   min-height: 64px;
   padding: 10px;
   transform: translate(-50%, -50%);
-  touch-action: none;
+  touch-action: pan-x pan-y;
 }
 .cpi-atlas-stop .cpi-map-pin svg {
   width: 100%;
@@ -135,41 +145,38 @@
 .cpi-atlas-controls {
   position: absolute;
   z-index: 4;
-  bottom: 0.7rem;
-  left: 0.7rem;
-  right: 0.7rem;
+  bottom: 0.65rem;
+  right: 0.65rem;
   display: flex;
-  gap: 0.35rem;
+  gap: 0.2rem;
+  padding: 0.15rem;
+  border: 1px solid #dfc68a40;
+  border-radius: 2rem;
+  background: #102334e8;
   pointer-events: none;
 }
 .cpi-atlas-controls button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 2.75rem;
-  min-height: 2.75rem;
-  padding: 0.4rem;
-  color: #ffe9b2;
-  border: 1px solid #dfc68a80;
-  border-radius: 0.6rem;
-  background: #102334ed;
-  font: 650 1.25rem/1 var(--cpi-font-body);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 12px;
+  color: #f4dfb0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
   cursor: pointer;
   pointer-events: auto;
 }
-.cpi-atlas-controls button:disabled {
-  opacity: 0.4;
-  cursor: default;
+.cpi-atlas-controls button:hover,
+.cpi-atlas-controls button:focus-visible {
+  background: #e4c58a20;
 }
-.cpi-atlas-controls .cpi-atlas-locate {
-  margin-left: auto;
-  gap: 0.3rem;
-  padding-inline: 0.6rem;
-  font-size: 0.67rem;
-}
-.cpi-atlas-locate svg {
-  width: 1.2rem;
-  height: 1.2rem;
+.cpi-atlas-controls svg {
+  width: 20px;
+  height: 20px;
 }
 .cpi-beacon-route .cpi-map-heading {
   z-index: 3;

@@ -101,6 +101,7 @@ import './infinity-scene.css';
 import './infinity-hud-premium.css';
 import './run-outcome.css';
 import './scene-cinematics.css';
+import './campaign-landing.css';
 import './row-pressure.css';
 
 const DEFAULT_VISUAL_SKIN = {
@@ -114,6 +115,7 @@ export const INFINITY_SCENE_SKIN = DEFAULT_VISUAL_SKIN;
 
 export type { SceneFeedback } from './scene-cinematics';
 interface CampaignPresentation {
+  readonly cleared?: boolean;
   readonly name: string;
   readonly targetRow: number;
   readonly minimumStability: number;
@@ -666,6 +668,7 @@ export function InfinitySceneView({
             />
           )}
           <PrismBridge
+            landingRow={campaignMission?.targetRow}
             bridgeStyle={bridgeStyle}
             season={season}
             weather={activeWeather}
@@ -700,6 +703,7 @@ export function InfinitySceneView({
             <WorldPathCompanion
               theme={themeId}
               bridge={bridgeModel(bridgeStyle)}
+              celebrateLanding={!!campaignMission?.cleared && !cinematic}
               cinematic={cinematic}
               standingSide={companionStandingSide(cinematic?.rows ?? presented.rows)}
               sp={state.sp}
@@ -711,11 +715,16 @@ export function InfinitySceneView({
               weather={activeWeather}
               gear={gear?.worn ? gear.item : undefined}
               reaction={
-                emergency || catastrophic || hostileReveal || cinematic?.feedback?.kind === 'wrong'
-                  ? 'panic'
-                  : cinematic?.feedback?.kind === 'safe' || cinematic?.mystery
-                    ? 'happy'
-                    : 'calm'
+                campaignMission?.cleared
+                  ? 'happy'
+                  : emergency ||
+                      catastrophic ||
+                      hostileReveal ||
+                      cinematic?.feedback?.kind === 'wrong'
+                    ? 'panic'
+                    : cinematic?.feedback?.kind === 'safe' || cinematic?.mystery
+                      ? 'happy'
+                      : 'calm'
               }
             />
           )}

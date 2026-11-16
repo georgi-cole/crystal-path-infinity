@@ -1,0 +1,19 @@
+.cpi-crossing-landing {
+  pointer-events: none;
+}
+.cpi-landing-signature {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+}
+.cpi-landing-signature[data-celebrating='true'] {
+  animation: var(--world-signature, cpi-signature-crank) 1250ms both;
+}
+.cpi-world-path-companion[data-still='true'] .cpi-landing-signature,
+.cpi-reduced-motion .cpi-landing-signature {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cpi-landing-signature[data-celebrating='true'] {
+    animation: none;
+  }
+}

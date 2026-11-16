@@ -990,6 +990,7 @@ export const PrismBridge = memo(function PrismBridge({
   bridgeStyle,
   season,
   weather,
+  landingRow,
 }: {
   rows?: readonly PresentedRow[];
   feedback?: SceneFeedback | null;
@@ -1011,6 +1012,7 @@ export const PrismBridge = memo(function PrismBridge({
   bridgeStyle?: BridgeStyle;
   season?: Season;
   weather?: Weather;
+  landingRow?: number;
 }) {
   const id = useId().replace(/:/g, ''),
     { t, number, locale } = useLanguage();
@@ -1269,11 +1271,13 @@ export const PrismBridge = memo(function PrismBridge({
           const color = railLights[tone],
             rowPhase = row?.phase ?? 'future';
           const key = absolute.toString();
+          const isLanding = landingRow !== undefined && absolute + 1n === BigInt(landingRow);
           return (
             <g
               key={key}
               className={'cpi-bridge-row-art is-' + rowPhase}
               data-visual-row={key}
+              data-landing-row={isLanding || undefined}
               style={
                 {
                   '--pane-color': color,
@@ -1592,6 +1596,38 @@ export const PrismBridge = memo(function PrismBridge({
                         </>
                       )}
                     </g>
+                    {isLanding && !broken && (
+                      <g className="cpi-crossing-landing" aria-hidden="true">
+                        <MovingPolygon
+                          className="cpi-landing-halo"
+                          shape={deck}
+                          previous={priorDeck}
+                          step={camera.row}
+                          fill="none"
+                          stroke="#f9d98a"
+                          strokeWidth="12"
+                          strokeOpacity=".2"
+                        />
+                        <MovingPolygon
+                          shape={deck}
+                          previous={priorDeck}
+                          step={camera.row}
+                          fill="#ffe9aa"
+                          fillOpacity=".12"
+                          stroke="#ffe7a0"
+                          strokeWidth="2.5"
+                        />
+                        <MovingPolygon
+                          shape={inset(pts)}
+                          previous={old && inset(old)}
+                          step={camera.row}
+                          fill="none"
+                          stroke="#fff3c6"
+                          strokeWidth="1"
+                          strokeDasharray="5 5"
+                        />
+                      </g>
+                    )}
                     <MovingPolygon
                       className="cpi-pane-frame"
                       shape={deck}
@@ -1828,9 +1864,11 @@ export const PrismBridge = memo(function PrismBridge({
                 (omen === side && row.phase === 'current' ? ' has-omen' : '') +
                 paneState(row, side, phase === 'contact' ? null : feedback)
               }
-              aria-label={t(side === 'left' ? 'game.leftTile' : 'game.rightTile', {
-                row: number(row.label),
-              })}
+              aria-label={
+                t(side === 'left' ? 'game.leftTile' : 'game.rightTile', {
+                  row: number(row.label),
+                }) + (row.label === String(landingRow) ? ' · Crossing landing' : '')
+              }
               aria-description={
                 row.hint === side
                   ? t('game.hintedTile')

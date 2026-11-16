@@ -200,47 +200,46 @@ function WorldCollection({
                 data-season={season}
                 aria-hidden={!active}
               >
-                {id === 'obsidian' ? (
-                  <BlackMetalShowcase still={reducedMotion || !active} />
-                ) : (
-                  <ThemeArtwork theme={id} companion={false} />
-                )}
+                {id !== 'obsidian' && <ThemeArtwork theme={id} companion={false} />}
                 {season && <JourneyAtmosphere world={id} season={season} reduced={reducedMotion} />}
-                {id !== 'obsidian' && (
-                  <div
-                    className="cpi-gallery-character"
-                    aria-hidden="true"
-                    data-active={active}
-                    data-motion={active && !reducedMotion ? reaction : undefined}
-                  >
-                    <span className="cpi-gallery-ground" />
-                    <span className="cpi-gallery-cheer" aria-hidden="true">
-                      <i />
-                      <i />
-                      <i />
-                    </span>
+                <div className="cpi-world-display">
+                  {id === 'obsidian' && <BlackMetalShowcase still={reducedMotion || !active} />}
+                  {id !== 'obsidian' && (
                     <div
-                      className="cpi-gallery-character-motion"
-                      data-motion={
-                        active && !reducedMotion && reaction !== 'idle' ? reaction : undefined
-                      }
+                      className="cpi-gallery-character"
+                      aria-hidden="true"
+                      data-active={active}
+                      data-motion={active && !reducedMotion ? reaction : undefined}
                     >
-                      <CompanionSprite
-                        theme={id}
-                        reaction={active && brightPose && !reducedMotion ? 'happy' : 'calm'}
-                      />
-                      {season && (
-                        <svg viewBox="-48 -96 96 96">
-                          <CompanionSeasonGear
-                            world={id}
-                            season={season}
-                            frame={active && brightPose && !reducedMotion ? 1 : 0}
-                          />
-                        </svg>
-                      )}
+                      <span className="cpi-gallery-ground" />
+                      <span className="cpi-gallery-cheer" aria-hidden="true">
+                        <i />
+                        <i />
+                        <i />
+                      </span>
+                      <div
+                        className="cpi-gallery-character-motion"
+                        data-motion={
+                          active && !reducedMotion && reaction !== 'idle' ? reaction : undefined
+                        }
+                      >
+                        <CompanionSprite
+                          theme={id}
+                          reaction={active && brightPose && !reducedMotion ? 'happy' : 'calm'}
+                        />
+                        {season && (
+                          <svg viewBox="-48 -96 96 96">
+                            <CompanionSeasonGear
+                              world={id}
+                              season={season}
+                              frame={active && brightPose && !reducedMotion ? 1 : 0}
+                            />
+                          </svg>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
                 <div className="cpi-market-world-copy">
                   <p className="cpi-adventure-kicker">
                     {season ? INFINITY_WEATHER_NAMES[season] : 'Explore the Worlds'}
@@ -253,7 +252,12 @@ function WorldCollection({
                   <small className="cpi-world-price">
                     {id === 'obsidian'
                       ? 'Included'
-                      : checkout.price('theme.' + id, '€2.99') + ' · One-time World unlock'}
+                      : (
+                            checkout.snapshot.wallet?.owned ??
+                            progress.ownedWorlds ?? ['obsidian']
+                          ).includes(id)
+                        ? 'World unlocked · Yours to keep'
+                        : 'One-time unlock · Yours to keep'}
                   </small>
                   <button
                     className="cpi-adventure-button"
@@ -1128,7 +1132,7 @@ export function ExpeditionStore({
         />
       )}
       {checkout.live && !checkout.browser && (
-        <div className="cpi-market-actions" aria-live="polite">
+        <div className="cpi-market-actions cpi-market-recovery" aria-live="polite">
           {checkout.snapshot.phase === 'error' && (
             <p>The store could not connect. Please try again.</p>
           )}
