@@ -43,6 +43,7 @@ export const GUIDE_RULE_COVERAGE = {
   Intent
 >;
 export const GUIDE_EVENT_COVERAGE = {
+  'mystery-sponsorship': 'account',
   'choice-resolved': 'fracture',
   'row-cleared': 'footing',
   'hint-used': 'insight',

@@ -1,4 +1,5 @@
 import type { JourneyCue, JourneyRoute } from './journey.ts';
+import type { MysterySponsorship } from './mystery-sponsorship.ts';
 import type { GearId, JourneyGear } from './journey-gear.ts';
 
 /** Canonical non-negative decimal integer; never convert row indices to Number. */
@@ -225,6 +226,7 @@ export interface RunResult {
 
 /** PRIVATE authoritative/practice state. Never a ranked-client response. */
 export interface RunState {
+  readonly sponsorship?: MysterySponsorship;
   readonly storeTest?: StoreTestRun;
   readonly schemaVersion: 1;
   readonly rulesetVersion: string;
@@ -268,6 +270,7 @@ export interface RunState {
 }
 
 export interface CreateRunOptions {
+  readonly sponsoredMysteries?: boolean;
   /** Trusted practice/profile discoveries. Never accepted from a ranked action. */
   readonly discoveredMysteries?: readonly EffectKind[];
   readonly runId: string;
@@ -311,7 +314,13 @@ export type RunCommand =
       readonly shieldDelta: number;
       readonly wear?: boolean;
     }
-  | { readonly type: 'mystery'; readonly row: Decimal; readonly life: number }
+  | {
+      readonly type: 'mystery';
+      readonly row: Decimal;
+      readonly life: number;
+      readonly sponsor?: boolean;
+    }
+  | { readonly type: 'sponsor-claim' | 'sponsor-dismiss'; readonly offerId: string }
   | {
       readonly type: 'pact';
       readonly row: Decimal;
@@ -344,6 +353,7 @@ export type RunCommand =
     };
 
 export type RejectionReason =
+  | 'sponsor-unavailable'
   | 'journey-resource-unavailable'
   | 'finished'
   | 'not-playing'
@@ -379,6 +389,7 @@ interface EventTime {
 
 export type RunEvent = EventTime &
   (
+    | { readonly type: 'mystery-sponsorship'; readonly status: 'earned' | 'dismissed' }
     | {
         readonly type: 'effects-ticked';
         readonly delta: number;

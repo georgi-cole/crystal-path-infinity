@@ -1,0 +1,52 @@
+.cpi-sponsor-choice {
+  position: fixed;
+  z-index: 90;
+  left: 50%;
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: min(92%, 25rem);
+  max-height: 70dvh;
+  overflow: auto;
+  padding: 1.1rem;
+  border: 1px solid #dbbd77;
+  border-radius: 1.2rem;
+  color: #f8efd8;
+  background: #102034;
+  box-shadow: 0 12px 36px #0009;
+  text-align: center;
+}
+.cpi-sponsor-choice h2 {
+  font-size: 1.15rem;
+  margin: 0.7rem 0;
+}
+.cpi-sponsor-choice p,
+.cpi-sponsor-choice small {
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+.cpi-sponsor-choice small {
+  display: block;
+  margin-top: 0.7rem;
+}
+.cpi-sponsor-choice button {
+  width: 100%;
+  min-height: 48px;
+  padding: 0.6rem;
+  margin-top: 0.55rem;
+  border: 1px solid #c2ad79;
+  border-radius: 0.7rem;
+  font: inherit;
+  color: inherit;
+  background: #28364b;
+}
+.cpi-sponsor-choice button:first-of-type {
+  background: #eed29a;
+  color: #172333;
+}
+.cpi-sponsor-choice button:disabled {
+  opacity: 0.55;
+}
+.cpi-sponsor-choice button:focus-visible {
+  outline: 3px solid #a3e4ff;
+  outline-offset: 2px;
+}

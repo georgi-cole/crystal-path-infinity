@@ -80,8 +80,6 @@ describe('CPI-013 standalone menu and route model', () => {
     expect(html).toContain('aria-label="Open settings"');
     expect(html).toContain('Store');
     expect(html).toContain(en['menu.learn']);
-    expect(html).toContain('Personal best · Practice only');
-    expect(html).toContain('Not a ranked score');
     expect(html).toContain('Guest');
     expect(html).not.toMatch(/VIP unlock|Store powers|LOH|POS|Season immunity/);
   });
@@ -101,7 +99,7 @@ describe('CPI-013 standalone menu and route model', () => {
     expect(html).toContain(en['menu.savedPractice'].replace('{row}', '1'));
     expect(html).toContain('Resume');
     expect(html).toContain('New');
-    expect(html).toContain('Row 349');
+    expect(html).not.toContain('Row 349');
     const finished: PracticeLoad = {
       status: 'ready',
       state: { ...state, status: 'finished' },

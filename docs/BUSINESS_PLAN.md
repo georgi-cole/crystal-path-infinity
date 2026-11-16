@@ -130,3 +130,8 @@ Use the lower [adventure launch prices](decisions/CPI-043-adventure-store-catalo
 ## Performance follow-up · 11 November 2026
 
 The current local client branch reduces safe/wrong step presentation locks from 890/1,280 ms to 600/850 ms. This is a responsiveness change, not a measured increase in retention, session duration, revenue or ad delivery. Existing simulation results are preserved with their original assumptions; faster real-time stepping may affect timed-effect exposure and must be measured in a new dated playtest before revising projections. Server rules, economic parameters, purchase/reward verification and started attempts are unchanged. See [the performance report](analysis/PERFORMANCE-2026-11-11.md).
+
+
+## Optional mystery advertising candidate — 16 November 2026
+
+Recurring optional mystery rewards are implemented as a source candidate for Infinity and Campaign. A fifth-opened-cache opportunity, compatible outcomes, a 90-second gameplay cooldown and mission exclusions determine the real offer frequency; declines can create a five-minute quiet period. No predicted impressions or revenue uplift is added. Local gameplay rewards use the existing native SDK completion boundary and require physical-device test-ad acceptance before public publication. Record conversion, impressions per active minute, post-ad exit, mission completion, retention and shop purchases; preserve historical simulations. [Candidate scope and validation](operations/MYSTERY_SPONSORSHIP_20261116.md).
