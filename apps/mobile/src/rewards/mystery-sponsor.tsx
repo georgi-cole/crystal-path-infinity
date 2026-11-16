@@ -59,7 +59,7 @@ export function MysterySponsor({
   const offerId = offer?.id;
   const held = !!offerId && heldOffer === offerId;
   useEffect(() => {
-    if (!offerId) return;
+    if (!offerId || !enabled) return;
     let active = true;
     const runtime = runtimeRef.current;
     void runtime
@@ -81,7 +81,7 @@ export function MysterySponsor({
       void lease.current?.release().catch(() => {});
       lease.current = null;
     };
-  }, [offerId, runtimeRef]);
+  }, [offerId, runtimeRef, enabled]);
   if (!offer || !visible) return null;
   const earned = offer.status === 'earned';
   const waiting = phase === 'watching';

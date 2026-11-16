@@ -1,6 +1,6 @@
 .cpi-sponsor-choice {
   position: fixed;
-  z-index: 90;
+  z-index: 2000;
   left: 50%;
   bottom: max(1rem, env(safe-area-inset-bottom));
   transform: translateX(-50%);

@@ -1789,7 +1789,7 @@ function InfinityRun({
         visible={!cinematic}
       />
       <InfinitySceneView
-        sponsorBlocked={!!state.sponsorship?.offer}
+        sponsorBlocked={ready && !error && !!state.sponsorship?.offer}
         trial={trial}
         guestContinuePanel={
           savedGuestGrant || adOffer || canSupplyContinue ? (
