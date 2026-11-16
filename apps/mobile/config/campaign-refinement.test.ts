@@ -79,7 +79,7 @@ describe('Campaign objective recovery', () => {
       ).toBeNull();
   });
   it('round trips both new and previous saved snapshots without upgrading started attempts', () => {
-    for (const contentRevision of ['0.3', '0.4', '0.5'] as const) {
+    for (const contentRevision of ['0.3', '0.4', '0.5', '0.6'] as const) {
       const snapshot = { ...mission, contentRevision };
       const progress = {
         ...EMPTY_CAMPAIGN_PROGRESS,

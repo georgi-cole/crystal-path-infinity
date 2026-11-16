@@ -95,7 +95,7 @@ export interface CampaignMissionSnapshot extends Omit<
   MissionDefinition<CampaignMissionId>,
   'alternate'
 > {
-  readonly contentRevision: '0.1' | '0.2' | '0.3' | '0.4' | '0.5';
+  readonly contentRevision: '0.1' | '0.2' | '0.3' | '0.4' | '0.5' | '0.6';
   readonly weather: 'clear' | 'rain';
   readonly rulesetVersion: string;
   readonly approach: CampaignApproach;
@@ -238,7 +238,7 @@ export function newMissionSnapshot(
     ...mission,
     ...(ridge || {}),
     approach: ridge ? 'ridge' : 'main',
-    contentRevision: '0.5',
+    contentRevision: '0.6',
     weather: 'clear',
     assist: undefined,
     rulesetVersion: journeyRuleset((ridge || mission).season, false, false, true, true),
@@ -307,6 +307,8 @@ export function campaignMissionSnapshot(
 export function campaignRunMatches(state: RunState, mission: CampaignMissionSnapshot): boolean {
   return (
     state.rulesetVersion === mission.rulesetVersion &&
+    state.stream.journey?.landingRow ===
+      (mission.contentRevision === '0.6' ? mission.targetRow : undefined) &&
     state.journeyGear?.item === mission.gear &&
     state.runId.startsWith('practice-campaign-' + mission.id + '-')
   );
@@ -349,7 +351,7 @@ export function readCampaignSave(storage: Pick<PracticeStorage, 'getItem'>): {
       (activeMissionId && value.version === 3)
     ) {
       if (
-        (revision === '0.3' || revision === '0.4' || revision === '0.5') &&
+        (revision === '0.3' || revision === '0.4' || revision === '0.5' || revision === '0.6') &&
         candidate.id === activeMissionId &&
         value.version === 3
       ) {
@@ -954,6 +956,7 @@ function missionJourney(mission: CampaignMissionSnapshot): JourneyRoute {
     season: mission.season,
     windows: mission.windows,
     marks: mission.marks,
+    ...(mission.contentRevision === '0.6' ? { landingRow: mission.targetRow } : {}),
     reviveSp: Math.ceil(mission.startingSp / 2),
   };
 }
@@ -975,7 +978,7 @@ export function createCampaignRun(mission: CampaignMissionSnapshot, seed?: bigin
         mysteryRng: createPracticeCursor(route ^ 0x9e3779b97f4a7c15n),
         observedAt: Date.now(),
         buffer: { ahead: 8, history: 2 },
-        ...(['0.3', '0.4', '0.5'].includes(mission.contentRevision)
+        ...(['0.3', '0.4', '0.5', '0.6'].includes(mission.contentRevision)
           ? { journey: missionJourney(mission) }
           : {}),
         ...(mission.gear ? { journeyGear: mission.gear } : {}),

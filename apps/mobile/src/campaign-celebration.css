@@ -683,17 +683,10 @@
   z-index: 200;
   pointer-events: all;
   background: #0a1224;
-  animation: cpi-mission-fade-out 350ms ease-in both;
+  overflow: hidden;
+  animation: cpi-landing-reveal 900ms cubic-bezier(0.22, 0.65, 0.3, 1) both;
 }
 
-@keyframes cpi-mission-fade-out {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
 .cpi-mission-departure[data-reduced-motion='true'] {
   animation: none;
 }
@@ -841,5 +834,58 @@
   .cpi-crossing-result-card *::before,
   .cpi-crossing-result-card *::after {
     animation: none !important;
+  }
+}
+
+/* Open the destination artwork from the gold landing, then hand it to the result film. */
+.cpi-mission-departure > .cpi-region-art {
+  position: absolute;
+  inset: 0;
+}
+.cpi-mission-departure::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 35%, #142f4559, #050d17db 85%);
+}
+.cpi-landing-bloom {
+  position: absolute;
+  z-index: 1;
+  left: 8%;
+  bottom: 5%;
+  width: 84%;
+  height: 12%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, #fff1c5cc, #efcf7b55 45%, transparent 70%);
+  transform-origin: center;
+  animation: cpi-landing-bloom 900ms ease-out both;
+}
+@keyframes cpi-landing-reveal {
+  from {
+    clip-path: ellipse(35% 4% at 50% 88%);
+  }
+  to {
+    clip-path: ellipse(150% 150% at 50% 88%);
+  }
+}
+@keyframes cpi-landing-bloom {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  60% {
+    opacity: 0.35;
+  }
+  100% {
+    transform: scale(8);
+    opacity: 0;
+  }
+}
+.cpi-mission-departure[data-reduced-motion='true'] .cpi-landing-bloom {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cpi-landing-bloom {
+    display: none;
   }
 }
