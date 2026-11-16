@@ -123,12 +123,13 @@ describe('SDK completion and durable local grants', () => {
       monotonicMs: 0,
       observedAt: 1000,
     };
+    const sample = vi.fn(() => Promise.resolve(snapshot));
     const host = createPracticeRuntime({
       state: run,
       rng: PRACTICE_RNG,
       lifecycle: {
         ready: Promise.resolve(snapshot),
-        sample: () => Promise.resolve(snapshot),
+        sample,
         getSnapshot: () => snapshot,
         subscribe: () => () => {},
         dispose: () => {},
@@ -141,7 +142,7 @@ describe('SDK completion and durable local grants', () => {
     });
     await host.ready;
     const hold = await host.hold('ad');
-    return { host, hold, f, run };
+    return { host, hold, f, run, sample };
   }
   it('grants exactly once before fullscreen dismissal and restores the earned checkpoint', async () => {
     const { host, hold, f, run } = await runtime();
@@ -204,6 +205,39 @@ describe('SDK completion and durable local grants', () => {
     expect(watch).not.toHaveBeenCalled();
     await other.hold.release();
     other.host.dispose();
+  });
+  it('keeps an earned reward when the fullscreen ad makes native sampling unavailable', async () => {
+    const { host, hold, f, sample, run } = await runtime();
+    const result = await watchMysterySponsor(
+      host,
+      {
+        showPrivacyOptions: async () => {},
+        watch: async (_signal, earned) => {
+          sample.mockRejectedValue(new Error('Native game view covered'));
+          earned();
+          await vi.waitFor(() => expect(host.getState().sponsorship?.offer?.status).toBe('earned'));
+          return 'closed';
+        },
+      },
+      new AbortController().signal,
+    );
+    expect(result).toBe('earned');
+    expect(host.getState().sp).toBe(run.sp + 10);
+    const saved = readPracticeCheckpoint(f.storage);
+    expect(saved.status === 'ready' && saved.state.sponsorship?.offer?.status).toBe('earned');
+    sample.mockReset();
+    sample.mockImplementation(() =>
+      Promise.resolve({
+        pageId: 'test',
+        bridgeId: 'test',
+        sequence: 0,
+        active: true,
+        monotonicMs: 0,
+        observedAt: 1000,
+      }),
+    );
+    await hold.release();
+    host.dispose();
   });
   it.each(['closed', 'no_fill', 'error'] as const)(
     'does not grant on %s without an earned callback',

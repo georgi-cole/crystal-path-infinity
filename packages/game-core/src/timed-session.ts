@@ -165,7 +165,7 @@ export function createTimedRunSession(
     const bound = session.bind(command, beforeCommit);
     const epoch = pauseEpoch;
     const type = command.type;
-    const scopedToPause = !('deathId' in command);
+    const scopedToPause = !('deathId' in command) && command.type !== 'sponsor-claim';
     const gameplay =
       type === 'choose' ||
       type === 'hint' ||

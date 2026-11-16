@@ -195,7 +195,7 @@ export function createPracticeRuntime(options: PracticeRuntimeOptions): Practice
         'pact',
         'tick',
       ].includes(command.type);
-      const scoped = !('deathId' in command);
+      const scoped = !('deathId' in command) && command.type !== 'sponsor-claim';
       function blocked(): TimedSessionResult | undefined {
         if (disposed) return bound();
         if (scoped && epoch !== lifecycleEpoch)
@@ -210,7 +210,7 @@ export function createPracticeRuntime(options: PracticeRuntimeOptions): Practice
           if (ignored) return ignored;
           // Earning an ad while dead never advances the clock. Commit the grant
           // even if the ad temporarily covers the native game view.
-          if (command.type !== 'grant-revive') await read();
+          if (command.type !== 'grant-revive' && command.type !== 'sponsor-claim') await read();
           const result = emit(blocked() ?? bound());
           if (!disposed) syncResources();
           return result;
