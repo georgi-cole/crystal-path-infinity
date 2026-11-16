@@ -1,5 +1,8 @@
 # Текущи правила и икономика
 
+**16 November 2026 · Campaign atlas / objectives candidate (CPI-045).** The Campaign route uses asymmetric world locations with bounded drag/pinch zoom and coordinate-aligned paths. Briefing, gameplay and Pause expose individual mission objectives. New content-revision **0.5** attempts end promptly after a required target row is irrecoverably missed, or a hint allowance is exceeded, and offer a free retry. Existing 0.1–0.4 saved attempts retain their landing-only evaluation. Special bridge materials persist after safe steps; bridge demo buttons are hidden. Rankings fill the available screen and remove the redundant Infinity action. Success summaries have inexpensive reduced-motion-aware animation. This source candidate has not been distributed as a new TestFlight build. [Behavior, revision policy and verification](operations/CAMPAIGN_ATLAS_20261116.md).
+
+
 **15 November 2026 · 13:11 UTC · Campaign refinement uploaded.** [PR #144](https://github.com/georgi-cole/crystal-path-infinity/pull/144) merged as `ab4fdf91ec783120965ebdc5d749a7a3d4a90a3b`; all required checks and full native launch checks passed on that exact main source. TestFlight **1.0.2 (78)** was signed and uploaded successfully. The controlled App Store Connect session needs owner sign-in before Apple processing/compliance, tester assignment and test notes can be verified. Availability on TestFlight and physical-device acceptance are not yet claimed. [Release evidence and remaining acceptance](operations/CAMPAIGN_REFINEMENT_20261115.md#merged-source-and-signed-upload--15-november-2026-1311-utc).
 
 

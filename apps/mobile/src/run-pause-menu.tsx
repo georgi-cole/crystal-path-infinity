@@ -42,6 +42,7 @@ export function RunPauseMenu({
   clearedRows,
   maxContinues,
   resources,
+  objectives,
   settings,
   onSettingsChange,
   busy,
@@ -55,6 +56,7 @@ export function RunPauseMenu({
   clearedRows: string;
   maxContinues: number;
   resources?: ReactNode;
+  objectives?: ReactNode;
   settings: PracticeSettings;
   onSettingsChange: (next: PracticeSettings) => void;
   busy: boolean;
@@ -111,6 +113,7 @@ export function RunPauseMenu({
           {t('general.resume')}
         </button>
       </div>
+      {section === null && objectives}
       <div className="cpi-pause-menu" hidden={section !== null}>
         <div className="cpi-pause-list">
           {onDiscoveries && (

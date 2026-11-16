@@ -33,7 +33,6 @@ import type { MissionAudioPhase } from './mission-audio';
 import { BrandLaunchActive } from './brand-launch-state';
 import {
   campaignFailureReason,
-  campaignGoalProgress,
   campaignMissionSnapshot,
   campaignProgressFromEvents,
   campaignRunMatches,
@@ -68,6 +67,7 @@ import type {
   CampaignProgress,
 } from './campaign-test';
 import type { CampaignFailureReason } from './campaign-test';
+import { campaignTasks, campaignMissedObjective } from './campaign-objectives';
 import { CAMPAIGN_MISSIONS } from './campaign-content';
 import type { BridgeSlot, BridgeStyle, StyleId } from './campaign-content';
 import { ThemeScope } from './store-provider';
@@ -281,7 +281,11 @@ export function App({
       campaignMission.name,
     targetRow: campaignMission.targetRow,
     minimumStability: campaignMission.minimumStability,
-    objectiveProgress: campaignGoalProgress(campaignMission, campaignProgress),
+    tasks: campaignTasks(
+      campaignMission,
+      campaignProgress,
+      campaignSaved.status === 'ready' ? campaignSaved.state.currentRow : '1',
+    ),
   };
   const visibleSaved = selectTestPractice(testSnapshot, saved);
   const [best, setBest] = useState<string | null>(null);
@@ -779,8 +783,10 @@ export function App({
           return;
         let progress = campaignProgressFromEvents(previous, mission, events, state.currentRow);
         const landing = BigInt(state.lastClearedRow) >= BigInt(mission.targetRow);
-        if (landing || state.status === 'dead') {
-          const failureReason = landing ? campaignFailureReason(mission, progress, state.sp) : null;
+        const missed = campaignMissedObjective(mission, progress, state.currentRow);
+        if (landing || state.status === 'dead' || missed) {
+          const failureReason =
+            missed ?? (landing ? campaignFailureReason(mission, progress, state.sp) : null);
           const cleared = landing && !failureReason;
           const firstClear = cleared && !progress.cleared.includes(mission.id);
           const alreadyMastered = progress.mastered.includes(mission.id);
@@ -924,7 +930,8 @@ export function App({
       campaignRunMatches(previous, mission) &&
       (!approach || approach === mission.approach) &&
       BigInt(previous.lastClearedRow) < BigInt(mission.targetRow) &&
-      previous.status === 'playing'
+      previous.status === 'playing' &&
+      !campaignMissedObjective(mission, current, previous.currentRow)
     ) {
       startPractice(previous, 'campaign', missionId, mission.weather);
       return;

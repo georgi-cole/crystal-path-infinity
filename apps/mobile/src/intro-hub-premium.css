@@ -113,7 +113,7 @@
 }
 .cpi-glass-pane.is-hinted .cpi-pane-face,
 .cpi-glass-pane.is-cleared .cpi-pane-face {
-  fill: #55907d55;
+  fill: var(--cpi-surface-paint, #55907d55);
   stroke: #b4e9d1;
   stroke-width: 2;
 }
@@ -121,7 +121,7 @@
   color: #dcffee;
 }
 .cpi-glass-pane.is-safe .cpi-pane-face {
-  fill: #7fbea76b;
+  fill: var(--cpi-surface-paint, #7fbea76b);
   stroke: #daffeb;
   stroke-width: 2;
   animation: cpi-safe-light 0.55s ease-out;
@@ -271,10 +271,12 @@
 }
 @keyframes cpi-safe-light {
   from {
-    fill: #d7ffecb3;
+    stroke: #fff6cf;
+    stroke-width: 4;
   }
   to {
-    fill: #7fbea76b;
+    stroke: #daffeb;
+    stroke-width: 2;
   }
 }
 @media (max-width: 760px) {

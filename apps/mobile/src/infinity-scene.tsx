@@ -81,6 +81,8 @@ import {
 import { useLanguage } from './language-context';
 import type { PracticeSettings } from './practice-save';
 import { RunPauseMenu } from './run-pause-menu';
+import { CampaignObjectives } from './campaign-objectives-view';
+import type { CampaignTask } from './campaign-objectives';
 import { createPracticeRuntime, schedulePracticeTick } from './practice-runtime';
 import type { PracticePauseLease, PracticeRuntime } from './practice-runtime';
 import { presentInfinityScene } from './infinity-presentation';
@@ -116,6 +118,7 @@ interface CampaignPresentation {
   readonly targetRow: number;
   readonly minimumStability: number;
   readonly objectiveProgress?: string;
+  readonly tasks?: readonly CampaignTask[];
 }
 interface KitSelection {
   stabilityDoses: number;
@@ -482,14 +485,6 @@ export function InfinitySceneView({
           reduced={settings.reducedMotion || paused}
         />
       )}
-      {campaignMission && (
-        <p className="cpi-campaign-objective" role="status">
-          {campaignMission.name} · Row {campaignMission.targetRow}
-          {campaignMission.minimumStability > 0 &&
-            ` · ${campaignMission.minimumStability} Stability`}
-          {campaignMission.objectiveProgress && <small>{campaignMission.objectiveProgress}</small>}
-        </p>
-      )}
       <div className="cps-content" inert={overlayVisible}>
         <RunHud
           campaign={!!campaignMission}
@@ -537,6 +532,17 @@ export function InfinitySceneView({
             ) : undefined
           }
         />
+        {campaignMission && (
+          <CampaignObjectives
+            name={campaignMission.name}
+            targetRow={campaignMission.targetRow}
+            minimumStability={campaignMission.minimumStability}
+            tasks={campaignMission.tasks ?? []}
+            compact
+            row={state.lastClearedRow}
+            stability={state.sp}
+          />
+        )}
         {(season || legacyRain || cueText) && (
           <aside className="cpi-journey-forecast" data-active={!!currentSky} aria-live="polite">
             {currentSky ? (
@@ -999,6 +1005,18 @@ export function InfinitySceneView({
             ) : (
               <RunPauseMenu
                 outcome={outcome}
+                objectives={
+                  campaignMission ? (
+                    <CampaignObjectives
+                      name={campaignMission.name}
+                      targetRow={campaignMission.targetRow}
+                      minimumStability={campaignMission.minimumStability}
+                      tasks={campaignMission.tasks ?? []}
+                      row={state.lastClearedRow}
+                      stability={state.sp}
+                    />
+                  ) : undefined
+                }
                 clearedRows={clearedRows}
                 maxContinues={getMaxRevives(state.rulesetVersion)}
                 resources={resourcePanel}

@@ -557,9 +557,9 @@ describe('Beacon Route playtest', () => {
     );
     const restored = readCampaignSave({ getItem: () => stored }).progress;
     expect(restored.activeMissionSnapshot).toEqual(attempt.activeMissionSnapshot);
-    expect(restored.activeMissionSnapshot?.contentRevision).toBe('0.4');
+    expect(restored.activeMissionSnapshot?.contentRevision).toBe('0.5');
     expect(restored.shieldRows).toEqual(['18']);
-    expect(newMissionSnapshot('light-the-far-gate').contentRevision).toBe('0.3');
+    expect(newMissionSnapshot('light-the-far-gate').contentRevision).toBe('0.5');
   });
 
   it('grants the new finale cosmetics and season charges only once', () => {
