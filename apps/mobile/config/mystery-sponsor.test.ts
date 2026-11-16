@@ -1,10 +1,19 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createRun, createPracticeCursor, PRACTICE_RNG } from '@crystal-path-infinity/game-core';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { MysterySponsorHologram } from '../src/rewards/mystery-sponsor-hologram';
+import {
+  createRun,
+  createPracticeCursor,
+  PRACTICE_RNG,
+  READING_RULESET_VERSION,
+} from '@crystal-path-infinity/game-core';
 import type { RunState } from '@crystal-path-infinity/game-core';
 import { MysteryCadence } from '../src/rewards/mystery-cadence';
 import {
   campaignAllowsSponsorship,
   watchMysterySponsor,
+  chooseMysteryAlternative,
 } from '../src/rewards/mystery-sponsor-flow';
 import { createPracticeRuntime } from '../src/practice-runtime';
 import { readPracticeCheckpoint, writePracticeCheckpoint } from '../src/practice-save';
@@ -30,10 +39,11 @@ function fixture() {
   };
   return { saved, storage, cadence: new MysteryCadence(() => storage) };
 }
-const state = () =>
+const state = (market = false) =>
   createRun(
     {
       runId: 'practice-cadence',
+      rulesetVersion: market ? READING_RULESET_VERSION : undefined,
       observedAt: 1000,
       routeRng: createPracticeCursor(12),
       mysteryRng: createPracticeCursor(42),
@@ -43,13 +53,15 @@ const state = () =>
   );
 
 describe('recurring mystery cadence', () => {
-  it('offers every fifth box, deduplicates reopen, and survives mode/restart boundaries', () => {
+  it('offers after four openings, deduplicates reopen, and survives mode/restart boundaries', () => {
     const f = fixture();
     for (let i = 1; i <= 15; i++) {
       const c = new MysteryCadence(() => f.storage);
-      expect(c.eligible()).toBe(i % 5 === 0);
+      const offered = i % 4 === 0;
+      expect(c.eligible()).toBe(offered);
       c.opened('box-' + i);
       c.opened('box-' + i);
+      if (offered) c.offered('offer-' + i);
     }
   });
   it('enforces active-gameplay cooldown and decline fatigue', () => {
@@ -57,15 +69,36 @@ describe('recurring mystery cadence', () => {
     const c = f.cadence;
     c.observe(state());
     c.adEnded();
-    for (let i = 1; i < 5; i++) c.opened(String(i));
+    for (let i = 1; i < 4; i++) c.opened(String(i));
     expect(c.eligible()).toBe(false);
-    c.observe({ ...state(), activeTimeMs: 90_000 });
+    c.observe({ ...state(), activeTimeMs: 59_999 });
+    expect(c.eligible()).toBe(false);
+    c.observe({ ...state(), activeTimeMs: 60_000 });
     expect(c.eligible()).toBe(true);
+    expect(c.cooledDown()).toBe(false);
     c.decline();
     c.decline();
     expect(c.eligible()).toBe(false);
-    c.observe({ ...state(), activeTimeMs: 390_000 });
+    c.observe({ ...state(), activeTimeMs: 360_000 });
     expect(c.eligible()).toBe(true);
+  });
+  it('waits for a compatible box instead of discarding an opportunity and migrates old counters', () => {
+    const f = fixture();
+    for (let i = 1; i <= 6; i++) {
+      expect(f.cadence.eligible()).toBe(i >= 4);
+      f.cadence.opened(String(i));
+    }
+    f.cadence.offered('sixth');
+    f.cadence.offered('sixth');
+    const restored = new MysteryCadence(() => f.storage);
+    expect(restored.eligible()).toBe(false);
+    for (let i = 7; i < 10; i++) restored.opened(String(i));
+    expect(restored.eligible()).toBe(true);
+    const old = JSON.parse(f.saved.get('cpi.mystery-sponsor.v1')!) as Record<string, unknown>;
+    delete old.lastOffer;
+    delete old.lastOfferBox;
+    f.saved.set('cpi.mystery-sponsor.v1', JSON.stringify(old));
+    expect(new MysteryCadence(() => f.storage).eligible()).toBe(false);
   });
   it('fails closed for damaged storage', () => {
     const f = fixture();
@@ -98,18 +131,31 @@ describe('Campaign compatibility', () => {
 });
 
 describe('SDK completion and durable local grants', () => {
-  async function runtime() {
+  async function runtime(market = false) {
     const f = fixture();
-    const initial = state();
+    const initial = state(market);
     const run: RunState = {
       ...initial,
+      ...(market
+        ? {
+            current: { ...initial.current, mysteryOutcome: 'marketing' as const },
+            pact: {
+              kind: 'marketing' as const,
+              phase: 'offered' as const,
+              rowsLeft: 0,
+              bank: 0,
+              omen: null,
+              offeredAt: 0,
+            },
+          }
+        : {}),
       sponsorship: {
         version: 1,
         claimed: 0,
         offer: {
           id: `${initial.runId}:1:0`,
-          kind: 'healing',
-          amount: 10,
+          kind: market ? 'market' : 'healing',
+          amount: market ? 20 : 10,
           at: 0,
           status: 'offered',
         },
@@ -144,6 +190,73 @@ describe('SDK completion and durable local grants', () => {
     const hold = await host.hold('ad');
     return { host, hold, f, run, sample };
   }
+  it('keeps normal trade and leave choices in the same hologram as the optional ad', async () => {
+    const { host, hold, run } = await runtime(true);
+    const html = renderToStaticMarkup(
+      createElement(MysterySponsorHologram, {
+        state: run,
+        campaign: true,
+        waiting: false,
+        unavailable: false,
+        disabled: false,
+        onWatch: () => {},
+        onDismiss: () => {},
+        onChoose: () => {},
+      }),
+    );
+    expect(html).toContain('cpi-relic-choice');
+    expect(html).toContain('Watch ad');
+    expect(html).toContain('data-pact-option="sell_one"');
+    expect(html).toContain('Ad bonus: no Mastery');
+    expect(html).not.toContain('cpi-sponsor-choice');
+    expect(
+      await chooseMysteryAlternative(host, run.sponsorship!.offer!.id, 'sell_one', () =>
+        hold.release(),
+      ),
+    ).toBe(true);
+    expect(host.getState().sponsorship?.claimed).toBe(0);
+    expect(host.getState().sponsorship?.offer).toBeNull();
+    expect(host.getState().sp).toBe(run.sp + 20);
+    expect(host.getState().hints).toBe(run.hints - 1);
+    host.dispose();
+  });
+  it('keeps the free choice available when ads cannot load and never trades for a stale offer', async () => {
+    const plain = await runtime();
+    const html = renderToStaticMarkup(
+      createElement(MysterySponsorHologram, {
+        state: plain.run,
+        campaign: false,
+        waiting: false,
+        unavailable: true,
+        disabled: true,
+        onWatch: () => {},
+        onDismiss: () => {},
+        onChoose: () => {},
+      }),
+    );
+    expect(html).toContain('Keep result');
+    expect(html).toContain('Ad unavailable');
+    expect(html.match(/disabled=""/g)).toHaveLength(1);
+    await plain.hold.release();
+    plain.host.dispose();
+    const market = await runtime(true);
+    const release = vi.fn(() => market.hold.release());
+    expect(await chooseMysteryAlternative(market.host, 'stale', 'sell_one', release)).toBe(false);
+    expect(release).not.toHaveBeenCalled();
+    expect(market.host.getState().hints).toBe(market.run.hints);
+    expect(
+      await chooseMysteryAlternative(
+        market.host,
+        market.run.sponsorship!.offer!.id,
+        'decline',
+        release,
+      ),
+    ).toBe(true);
+    expect(market.host.getState().sp).toBe(market.run.sp);
+    expect(market.host.getState().hints).toBe(market.run.hints);
+    expect(market.host.getState().sponsorship?.claimed).toBe(0);
+    market.host.dispose();
+  });
   it('grants exactly once before fullscreen dismissal and restores the earned checkpoint', async () => {
     const { host, hold, f, run } = await runtime();
     const result = await watchMysterySponsor(

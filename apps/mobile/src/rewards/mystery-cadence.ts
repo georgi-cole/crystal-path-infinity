@@ -10,6 +10,8 @@ interface Cadence {
   declines: number;
   quietUntil: number;
   lastBox: string;
+  lastOfferBox: number;
+  lastOffer: string;
 }
 export class MysteryCadence {
   private value: Cadence = {
@@ -19,6 +21,8 @@ export class MysteryCadence {
     declines: 0,
     quietUntil: 0,
     lastBox: '',
+    lastOfferBox: 0,
+    lastOffer: '',
   };
   private anchor: { run: string; active: number } | null = null;
   private available = true;
@@ -36,7 +40,16 @@ export class MysteryCadence {
           typeof data.lastBox !== 'string'
         )
           throw Error('Invalid cadence');
-        this.value = data;
+        const lastOfferBox = data.lastOfferBox ?? data.boxes;
+        const lastOffer = data.lastOffer ?? '';
+        if (
+          !Number.isSafeInteger(lastOfferBox) ||
+          lastOfferBox < 0 ||
+          lastOfferBox > data.boxes ||
+          typeof lastOffer !== 'string'
+        )
+          throw Error('Invalid offer cadence');
+        this.value = { ...data, lastOfferBox, lastOffer };
       }
     } catch {
       this.available = false;
@@ -50,13 +63,13 @@ export class MysteryCadence {
   eligible(): boolean {
     return (
       this.available &&
-      (this.value.boxes + 1) % 5 === 0 &&
+      this.value.boxes + 1 - this.value.lastOfferBox >= 4 &&
       this.value.active >= this.value.quietUntil &&
-      this.cooledDown()
+      this.cooledDown(60_000)
     );
   }
-  cooledDown(): boolean {
-    return this.value.lastAd === null || this.value.active - this.value.lastAd >= 90_000;
+  cooledDown(minimum = 90_000): boolean {
+    return this.value.lastAd === null || this.value.active - this.value.lastAd >= minimum;
   }
   opened(id: string) {
     if (id === this.value.lastBox) return;
@@ -67,6 +80,12 @@ export class MysteryCadence {
   adEnded() {
     this.value.lastAd = this.value.active;
     this.value.declines = 0;
+    this.save();
+  }
+  offered(id: string) {
+    if (id === this.value.lastOffer) return;
+    this.value.lastOffer = id;
+    this.value.lastOfferBox = this.value.boxes;
     this.save();
   }
   decline() {

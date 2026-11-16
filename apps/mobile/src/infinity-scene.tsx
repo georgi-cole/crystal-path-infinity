@@ -145,6 +145,7 @@ const EMPTY_KIT_SELECTION: KitSelection = {
 };
 type InfinitySupplies = Readonly<Record<'sp' | 'hint' | 'shield' | 'continue', number>>;
 export interface InfinitySceneViewProps {
+  readonly sponsorPanel?: ReactNode;
   readonly sponsorBlocked?: boolean;
   readonly scoreStatus?: 'idle' | 'queued' | 'uploading' | 'synced' | 'error' | null;
   readonly weather?: 'clear' | 'rain';
@@ -194,6 +195,7 @@ export interface InfinitySceneViewProps {
 }
 
 export function InfinitySceneView({
+  sponsorPanel,
   sponsorBlocked = false,
   scoreStatus = null,
   resourcePanel,
@@ -467,7 +469,6 @@ export function InfinitySceneView({
 
   return (
     <main
-      inert={sponsorBlocked}
       className={`cps-shell ${INFINITY_SCENE_SKIN.shell} cpi-infinity-scene${catastrophic ? ' is-catastrophe' : ''}${emergency ? ' is-emergency' : ''}${paused || kitOpen ? ' is-paused' : ''}${pressure?.active || clockActive ? ' is-death-clock' : ''}${settings.reducedMotion ? ' cpi-reduced-motion' : ''}${legacyRain ? ' cpi-rain-mission' : ''}`}
       data-world={themeId}
       data-weather={activeWeather ?? (legacyRain ? 'rain' : 'clear')}
@@ -640,7 +641,7 @@ export function InfinitySceneView({
               <MysteryRhythmBadge rhythm={rhythm} activeTimeMs={state.activeTimeMs} />
             )}
           </div>
-          <div className="cpi-status-feedback-slot">
+          <div className="cpi-status-feedback-slot" hidden={sponsorBlocked}>
             <DiscoveryIntroduction
               discovery={state.discovery}
               activeTimeMs={state.activeTimeMs}
@@ -661,7 +662,8 @@ export function InfinitySceneView({
           </div>
         </aside>
         <section className="cps-board" aria-label={t('game.bridge')} dir="ltr">
-          {pactOffered && (
+          {sponsorPanel}
+          {pactOffered && !state.sponsorship?.offer && (
             <PactPanel
               pact={state.pact}
               hints={state.hints}
@@ -1256,6 +1258,8 @@ function InfinityRun({
             `${result.state.runId}:${result.state.currentRow}:${result.state.revivesApplied}`,
           );
         director.receive(result);
+        if (result.state.sponsorship?.offer)
+          mysteryCadence().offered(result.state.sponsorship.offer.id);
         const hint = result.events.find((event) => event.type === 'hint-used');
         if (hint && hintCaptionGate.claim()) setHintCaptionRow(hint.row);
         if (result.events.length) setSignals((previous) => collectRunSignals(previous, result));
@@ -1779,16 +1783,18 @@ function InfinityRun({
     state.revivesGranted < getMaxRevives(state.rulesetVersion);
   return (
     <>
-      <MysterySponsor
-        key={state.sponsorship?.offer?.id ?? 'no-sponsor'}
-        state={state}
-        runtimeRef={runtimeRef}
-        ad={guestRewardedAd}
-        campaign={isCampaign}
-        enabled={ready && !suspended}
-        visible={!cinematic}
-      />
       <InfinitySceneView
+        sponsorPanel={
+          <MysterySponsor
+            key={state.sponsorship?.offer?.id ?? 'no-sponsor'}
+            state={state}
+            runtimeRef={runtimeRef}
+            ad={guestRewardedAd}
+            campaign={isCampaign}
+            enabled={ready && !suspended}
+            visible={!cinematic}
+          />
+        }
         sponsorBlocked={ready && !error && !!state.sponsorship?.offer}
         trial={trial}
         guestContinuePanel={

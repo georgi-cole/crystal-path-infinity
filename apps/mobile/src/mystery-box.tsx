@@ -1,4 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { CHOICE_GRACE_MS, DEATH_COUNTDOWN_MS, mysteryTier } from '@crystal-path-infinity/game-core';
 import type {
   MysteryPact,
@@ -73,6 +74,8 @@ export function HolographicOffer({
   activeTimeMs,
   rulesetVersion,
   marketingHints = hints,
+  extraAction,
+  clockHidden = false,
 }: {
   pact: MysteryPact;
   sp: number;
@@ -83,6 +86,8 @@ export function HolographicOffer({
   activeTimeMs: number;
   rulesetVersion: string;
   marketingHints?: number;
+  extraAction?: ReactNode;
+  clockHidden?: boolean;
 }) {
   const { locale, t, number } = useLanguage();
   const theme = useThemeId();
@@ -130,6 +135,7 @@ export function HolographicOffer({
   return (
     <section
       className="cpi-relic-choice"
+      data-sponsored={extraAction ? true : undefined}
       data-tier={tier}
       data-pact={pact.kind}
       data-view={showDetails ? 'details' : undefined}
@@ -149,6 +155,7 @@ export function HolographicOffer({
         </h2>
       </header>
       <div className="cpi-relic-choice-actions" hidden={showDetails}>
+        {extraAction}
         <div className="cpi-relic-options">
           {primary.map((card, index) => (
             <button
@@ -288,6 +295,7 @@ export function HolographicOffer({
         </section>
       )}
       <span
+        hidden={clockHidden}
         className={'cpi-choice-clock' + (remaining === 0 ? ' is-active' : '')}
         role="timer"
         aria-label={
