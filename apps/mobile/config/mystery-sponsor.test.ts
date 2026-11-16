@@ -207,7 +207,7 @@ describe('SDK completion and durable local grants', () => {
     expect(html).toContain('cpi-relic-choice');
     expect(html).toContain('Watch ad');
     expect(html).toContain('data-pact-option="sell_one"');
-    expect(html).toContain('No Mastery this attempt');
+    expect(html).toContain('Ad bonus: no Mastery');
     expect(html).not.toContain('cpi-sponsor-choice');
     expect(
       await chooseMysteryAlternative(host, run.sponsorship!.offer!.id, 'sell_one', () =>

@@ -55,7 +55,7 @@ export function MysterySponsorHologram({
   const reward = sponsorRewardLabel(offer, bg);
   const note = !earned && campaign && (
     <small className="cpi-relic-sponsor-note">
-      {bg ? 'Без Mastery за този опит' : 'No Mastery this attempt'}
+      {bg ? 'Бонус от реклама: без Mastery' : 'Ad bonus: no Mastery'}
     </small>
   );
   const status = waiting

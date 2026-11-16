@@ -2,7 +2,7 @@
 
 ## Candidate after build 85
 
-Owner feedback: ad offers were too sparse and the separate popup interrupted the box presentation. This candidate reuses the existing box hologram and source artwork. Marketing keeps its ordinary sell/leave choices and adds a small Watch ad action with its exact reward. Other eligible outcomes show two short choices above the opened box: Watch ad and Keep result. Campaign assistance has a compact No Mastery this attempt disclosure. Loading/no-fill and earned states stay in that same projection. There is no fixed popup, new backdrop, asset pack or rendering dependency.
+Owner feedback: ad offers were too sparse and the separate popup interrupted the box presentation. This candidate reuses the existing box hologram and source artwork. Marketing keeps its ordinary sell/leave choices and adds a small Watch ad action with its exact reward. Other eligible outcomes show two short choices above the opened box: Watch ad and Keep result. Campaign assistance has a compact Ad bonus: no Mastery disclosure. Loading/no-fill and earned states stay in that same projection. There is no fixed popup, new backdrop, asset pack or rendering dependency.
 
 The device counter now becomes eligible after four ordinary openings since an actual offer. If the fourth result is incompatible, eligibility waits for a later compatible box rather than being discarded. An actual offer resets the counter; reloading it does not reset it twice. Previously stored counters migrate without rewriting saved rewards. Pending offers and earned receipts retain their original IDs and amounts.
 
