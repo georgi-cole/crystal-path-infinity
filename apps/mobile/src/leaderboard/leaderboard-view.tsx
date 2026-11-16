@@ -111,6 +111,7 @@ export function LeaderboardView({
   reportClient = null,
   countryCode = null,
   pendingScore = null,
+  onSignIn,
 }: {
   client: LeaderboardClient | null;
   online: boolean;
@@ -121,6 +122,7 @@ export function LeaderboardView({
   reportClient?: NameReportClient | null;
   countryCode?: string | null;
   pendingScore?: string | null;
+  onSignIn?: () => void;
 }) {
   const { t, locale, number } = useLanguage();
   const [scope, setScope] = useState<LeaderboardQuery['scope']>('world');
@@ -134,6 +136,7 @@ export function LeaderboardView({
     [client],
   );
   const accountScope = useSyncExternalStore(subscribeScope, readScope, readScope);
+  const signInRequired = Boolean(client?.accountScope && accountScope === null);
   const query = useMemo<LeaderboardQuery>(
     () => ({
       rulesetVersion,
@@ -147,7 +150,7 @@ export function LeaderboardView({
   const valid = validLeaderboardQuery(query);
   useEffect(() => () => cache?.clear(), [cache]);
   useEffect(() => {
-    if (!cache || !online || !valid) return;
+    if (!cache || !online || !valid || signInRequired) return;
     const controller = new AbortController();
     void Promise.resolve().then(async () => {
       if (controller.signal.aborted) return;
@@ -162,7 +165,18 @@ export function LeaderboardView({
       }
     });
     return () => controller.abort();
-  }, [cache, online, valid, key, query, attempt, accountScope, readScope, pendingScore]);
+  }, [
+    cache,
+    online,
+    valid,
+    key,
+    query,
+    attempt,
+    accountScope,
+    readScope,
+    pendingScore,
+    signInRequired,
+  ]);
 
   // Never display the previous filter or previous client's results while a
   // new effect is starting. Offline snapshots contain no own-account links.
@@ -184,6 +198,15 @@ export function LeaderboardView({
     <section className="cpi-leaderboard" aria-label={t('general.rankings')}>
       {!client ? (
         <p role="status">{t('leaderboard.unavailable')}</p>
+      ) : signInRequired ? (
+        <div className="cpi-menu-notice" role="status">
+          <strong>{t('leaderboard.signInRequired')}</strong>
+          {onSignIn && (
+            <button type="button" className="cpi-menu-text-action" onClick={onSignIn}>
+              {t('account.signIn')}
+            </button>
+          )}
+        </div>
       ) : (
         <>
           <fieldset className="cpi-leaderboard-filters">

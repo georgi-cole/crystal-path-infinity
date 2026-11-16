@@ -5,6 +5,7 @@ import { crystalGuideBg } from './crystal-guide-messages';
 
 /** Bulgarian preview copy — reviewed by the product owner before public release. */
 export const bg = {
+  'leaderboard.signInRequired': 'Влез в профила си, за да видиш класирането и позицията си.',
   'leaderboard.playLocal': 'Играй Infinity',
   'leaderboard.resumeLocal': 'Продължи Infinity',
   'leaderboard.localDescription': 'Следващият ти личен рекорд започва тук',

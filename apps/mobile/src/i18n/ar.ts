@@ -2,6 +2,7 @@ import type { MessageKey } from './messages';
 
 /** Arabic RTL preview; native-speaker and accessibility review required. */
 export const ar = {
+  'leaderboard.signInRequired': 'سجّل الدخول لعرض الترتيب ومركزك.',
   'general.back': 'رجوع',
   'general.guest': 'ضيف',
   'general.offline': 'غير متصل',

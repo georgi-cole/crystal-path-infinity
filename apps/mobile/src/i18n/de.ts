@@ -2,6 +2,7 @@ import type { MessageKey } from './messages';
 
 /** Community-preview localization. Linguistic review required before release. */
 export const de = {
+  'leaderboard.signInRequired': 'Melde dich an, um die Rangliste und deine Platzierung zu sehen.',
   'general.back': 'Zurück',
   'general.guest': 'Gast',
   'general.offline': 'Offline',

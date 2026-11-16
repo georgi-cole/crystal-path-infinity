@@ -14,6 +14,7 @@ import { storeEn } from './store-messages';
 import { supportEn } from './support-messages';
 
 export const en = {
+  'leaderboard.signInRequired': 'Sign in to view the rankings and your position.',
   'leaderboard.playLocal': 'Play Infinity',
   'leaderboard.resumeLocal': 'Resume Infinity',
   'leaderboard.localDescription': 'Your next personal best starts here',

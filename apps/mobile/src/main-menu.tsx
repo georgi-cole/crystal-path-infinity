@@ -798,6 +798,7 @@ export function MainMenu({
                 countryCode={leaderboardCountryCode}
                 pendingScore={pendingLocalScore}
                 pendingPersonalResult={pendingPersonalResult}
+                onSignIn={accountEntry ? () => onOpen('profile') : undefined}
                 reportClient={nameReportClient}
               />
             )}

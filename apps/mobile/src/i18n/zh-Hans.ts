@@ -2,6 +2,7 @@ import type { MessageKey } from './messages';
 
 /** Preview localization; native speaker review required before release. */
 export const zhHans = {
+  'leaderboard.signInRequired': '登录后即可查看排行榜和你的名次。',
   'general.back': '返回',
   'general.guest': '访客',
   'general.offline': '离线',
