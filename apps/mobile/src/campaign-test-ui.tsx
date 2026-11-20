@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { CAMPAIGN_MISSIONS, CHAPTERS, LANDMARK_CLEARS, STYLES } from './campaign-content';
+import {
+  CAMPAIGN_FINALE,
+  CAMPAIGN_MISSIONS,
+  CHAPTERS,
+  LANDMARK_CLEARS,
+  STYLES,
+} from './campaign-content';
 import type { BridgeSlot, StyleId } from './campaign-content';
 import {
   campaignMissionSnapshot,
   campaignRunMatches,
+  isMissionUnlocked,
   newMissionSnapshot,
   nextCampaignMission,
 } from './campaign-test';
@@ -45,7 +52,7 @@ export function CampaignMissionHub({
   const cleared = CAMPAIGN_MISSIONS.filter((entry) => progress.cleared.includes(entry.id));
   const selected = CAMPAIGN_MISSIONS.find((entry) => entry.id === selectedId);
   const selectedIndex = selected ? CAMPAIGN_MISSIONS.indexOf(selected) : -1;
-  const locked = selected?.id === upcoming?.id && !!upcoming;
+  const locked = !!selected && !isMissionUnlocked(progress, selected.id);
   const replay = !!selected && progress.cleared.includes(selected.id);
   const running =
     saved.status === 'ready' &&
@@ -64,7 +71,7 @@ export function CampaignMissionHub({
     running &&
     !campaignMissedObjective(pending, progress, saved.state.currentRow);
   const mission = selected ? (resume ? pending : newMissionSnapshot(selected.id, approach)) : null;
-  const focused = selected ?? current ?? CAMPAIGN_MISSIONS[CAMPAIGN_MISSIONS.length - 1];
+  const focused = selected ?? current ?? CAMPAIGN_FINALE;
   const chapter = focused.chapter;
   const briefChapter = mission?.chapter ?? chapter;
   const lit = progress.cleared.includes(LANDMARK_CLEARS[briefChapter]);
@@ -140,6 +147,19 @@ export function CampaignMissionHub({
                 {selected.name}
               </h2>
               <p className="cpi-brief-story">{mission.objective}</p>
+              {mission.bridgeAccents && (
+                <p className="cpi-brief-kit">
+                  <AdventureIcon name="lantern" />
+                  <span>
+                    Earlier rewards on this crossing{' '}
+                    <strong>
+                      {Object.values(mission.bridgeAccents)
+                        .map((id) => STYLES[id].name)
+                        .join(' · ')}
+                    </strong>
+                  </span>
+                </p>
+              )}
               {selected.alternate && !resume && !locked && (
                 <div className="cpi-field-chips" aria-label="Choose approach">
                   <button
@@ -227,10 +247,10 @@ export function CampaignMissionHub({
         </article>
       ) : !current ? (
         <article className="cpi-route-restored">
-          <RegionArt chapter="harbour" lit />
+          <RegionArt chapter={CAMPAIGN_FINALE.chapter} lit />
           <div>
-            <p className="cpi-adventure-kicker">Dawnkeeper</p>
-            <h2>The Harbour lights are home</h2>
+            <p className="cpi-adventure-kicker">Campaign complete</p>
+            <h2>{CHAPTERS[CAMPAIGN_FINALE.chapter].restored}</h2>
             <p>Every signal is lit. Revisit a crossing for Mastery.</p>
           </div>
         </article>
@@ -284,7 +304,7 @@ export function CampaignMissionResult({
       if (cleared) onCelebrationComplete?.();
     }
   }, [arrived, cleared, onCelebrationComplete]);
-  const routeComplete = mission.id === 'bring-the-dawn-home';
+  const routeComplete = mission.id === CAMPAIGN_FINALE.id;
   const landmark = LANDMARK_CLEARS[mission.chapter] === mission.id;
   const style = mission.grant.style;
   const rewardItems = cleared && firstClear ? missionRewardItems(mission) : [];
@@ -297,7 +317,9 @@ export function CampaignMissionResult({
         ? 'Every signal on the route is lit.'
         : mission.id === 'light-the-far-gate'
           ? 'The Far Gate is open. Follow the stars to the Observatory beyond.'
-          : 'Follow the next light on the map.'
+          : mission.id === 'bring-the-dawn-home'
+            ? 'The Harbour is lit. Follow the outer lights to the Beacon Crown.'
+            : 'Follow the next light on the map.'
       : 'You lit this signal again.'
     : (failureReason ??
       (onRevive

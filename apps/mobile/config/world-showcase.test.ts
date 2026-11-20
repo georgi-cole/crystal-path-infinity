@@ -26,8 +26,13 @@ describe('current store presentation and returning to Obsidian', () => {
     expect(createTestStore(storage).snapshot().equipped).toBe('obsidian');
     expect(store.snapshot().owned).toContain('jelly');
     const worlds = STORE_PRODUCTS.filter((p) => p.kind === 'theme');
-    expect(worlds).toHaveLength(6);
-    expect(worlds.every((p) => p.price === 2.99)).toBe(true);
+    expect(worlds).toHaveLength(8);
+    expect(worlds.find((product) => product.theme === 'candy')?.price).toBe(3.99);
+    expect(
+      worlds
+        .filter((product) => product.theme !== 'candy')
+        .every((product) => product.price === 2.99),
+    ).toBe(true);
   });
   it('previews the companion portrait without starting a playable run or auditioning music', () => {
     const html = renderToStaticMarkup(createElement(WorldShowcase, { theme: 'jelly' }));

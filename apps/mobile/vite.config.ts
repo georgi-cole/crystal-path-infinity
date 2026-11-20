@@ -13,6 +13,7 @@ import { assertCampaignRelease } from './config/campaign-release.ts';
 import { assertCampaignWeb } from './config/campaign-web.ts';
 import { resolveStoreBuild } from './config/store-build.ts';
 import { productionMobileSignIn } from './config/mobile-sign-in.ts';
+import { CAMPAIGN_MISSIONS } from './src/campaign-content';
 
 const appRoot = fileURLToPath(new URL('.', import.meta.url));
 const manifest = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as {
@@ -76,7 +77,7 @@ export default defineConfig(({ mode }) => {
                   audience: 'public-browser',
                   sourceCommit: campaignBase,
                   campaign: true,
-                  missions: 30,
+                  missions: CAMPAIGN_MISSIONS.length,
                   simulatedPurchases: false,
                   purchases: 'mobile-app-only',
                   ads: 'unavailable',

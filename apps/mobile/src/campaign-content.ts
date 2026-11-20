@@ -1,4 +1,5 @@
 import { adventurePrice } from './adventure-prices';
+import type { ThemeId } from './store-catalog';
 import type { JourneyMark, JourneyRoute, Season, TileSide } from '@crystal-path-infinity/game-core';
 
 export const CHAPTERS = {
@@ -43,6 +44,12 @@ export const CHAPTERS = {
     title: 'The Harbour',
     glyph: '⚓',
     restored: 'The Harbour lights are home',
+  },
+  crown: {
+    name: 'Beacon Crown',
+    title: 'The Beacon Crown',
+    glyph: '✷',
+    restored: 'The Beacon Crown is lit',
   },
 } as const;
 export type Chapter = keyof typeof CHAPTERS;
@@ -207,6 +214,11 @@ export const BRIDGE_MODELS = {
   },
 } as const satisfies Record<string, { name: string; note: string; style: BridgeStyle }>;
 export type BridgeModel = keyof typeof BRIDGE_MODELS;
+export type WorldBridgeModel = BridgeModel | 'chocolate';
+
+export function worldBridgeModel(theme: ThemeId, style?: BridgeStyle): WorldBridgeModel {
+  return theme === 'candy' ? 'chocolate' : bridgeModel(style);
+}
 export function bridgeModel(style?: BridgeStyle): BridgeModel {
   if (style?.tiles === 'cookie-tiles') return 'cookie';
   if (style?.tiles === 'jelly-cushions') return 'jelly';
@@ -258,6 +270,7 @@ export interface MissionDefinition<Id extends string = string> extends MissionRo
   readonly reward: string;
   readonly grant: MissionGrant;
   readonly assist?: true;
+  readonly bridgeAccents?: Readonly<Pick<BridgeStyle, 'lighting' | 'trail'>>;
   readonly alternate?: MissionRoute & { readonly objective: string };
   readonly revision?: '0.4';
 }
@@ -895,9 +908,105 @@ export const CAMPAIGN_MISSIONS = [
       ],
     },
   ),
+  mission(
+    'read-the-comets-wake',
+    'Read the Comet’s Wake',
+    'crown',
+    'spring',
+    64,
+    280,
+    70,
+    'Open the caches at rows 12 and 46, then follow the rainbow on rows 53–55. Save your only hint for row 33 and follow it.',
+    '+50 reserve SP and +1 hint',
+    { sp: 50, hints: 1 },
+    {
+      bridgeAccents: { trail: 'comet-trail' },
+      startingHints: 1,
+      goal: {
+        type: 'all',
+        goals: [
+          { type: 'mysteries', rows: [12, 46] },
+          { type: 'hint-follow', row: 33 },
+          { type: 'clean', rows: span(53) },
+        ],
+      },
+      windows: [windowAt(18, 'rain'), windowAt(47, 'rain'), windowAt(53, 'rainbow')],
+      marks: [
+        { row: 12, encounter: 'heal_10' },
+        { row: 33, safe: 'left' },
+        { row: 46, encounter: 'heal_10' },
+      ],
+    },
+  ),
+  mission(
+    'lanterns-in-the-squall',
+    'Lanterns in the Squall',
+    'crown',
+    'autumn',
+    72,
+    320,
+    75,
+    'Follow every Leaf Gust on rows 11–13. Open the shield caches at rows 26 and 58 and cross each cracked row while its shield is active.',
+    '+2 reserve shields',
+    { shields: 2 },
+    {
+      bridgeAccents: { lighting: 'harbour-lanterns' },
+      goal: {
+        type: 'all',
+        goals: [
+          { type: 'clean', rows: span(11) },
+          { type: 'shield-steps', rows: [26, 58] },
+        ],
+      },
+      windows: [windowAt(11, 'gust'), windowAt(23, 'squall'), windowAt(55, 'squall')],
+      marks: [
+        ...marked(11, 'gust'),
+        { row: 26, encounter: 'shield_5s', cue: 'crack', bothBroken: true },
+        { row: 58, encounter: 'shield_5s', cue: 'crack', bothBroken: true },
+      ],
+    },
+  ),
+  mission(
+    'light-the-beacon-crown',
+    'Light the Beacon Crown',
+    'crown',
+    'spring',
+    96,
+    360,
+    90,
+    'Sell one hint at row 12 and follow the other at row 33. Shield the crack at row 56, then land all three final beacon steps cleanly.',
+    'Beacon Crown restored, +1 continue and +2 Season Changes',
+    { continues: 1, seasonChanges: 2 },
+    {
+      bridgeAccents: { trail: 'comet-trail', lighting: 'harbour-lanterns' },
+      goal: {
+        type: 'all',
+        goals: [
+          { type: 'trade', row: 12 },
+          { type: 'hint-follow', row: 33 },
+          { type: 'shield', row: 56 },
+          { type: 'clean', rows: span(94) },
+        ],
+      },
+      windows: [
+        windowAt(18, 'rain'),
+        windowAt(26, 'rainbow'),
+        windowAt(54, 'rain'),
+        windowAt(74, 'rain'),
+        windowAt(82, 'rainbow'),
+      ],
+      marks: [
+        { row: 12, encounter: 'marketing' },
+        { row: 33, safe: 'right' },
+        { row: 56, encounter: 'shield_5s', cue: 'crack', bothBroken: true },
+        ...marked(94, 'beacon'),
+      ],
+    },
+  ),
 ] as const;
 export type CampaignMissionId = (typeof CAMPAIGN_MISSIONS)[number]['id'];
 export type CampaignMission = (typeof CAMPAIGN_MISSIONS)[number];
+export const CAMPAIGN_FINALE = CAMPAIGN_MISSIONS[CAMPAIGN_MISSIONS.length - 1];
 export const LANDMARK_CLEARS: Record<Chapter, CampaignMissionId> = {
   lighthouse: 'light-the-lighthouse',
   mill: 'turn-the-mill',
@@ -906,4 +1015,5 @@ export const LANDMARK_CLEARS: Record<Chapter, CampaignMissionId> = {
   gate: 'light-the-far-gate',
   observatory: 'wish-upon-a-bridge',
   harbour: 'bring-the-dawn-home',
+  crown: 'light-the-beacon-crown',
 };

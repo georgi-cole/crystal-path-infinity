@@ -7,6 +7,7 @@ import { WORLD_ORDER } from '../src/world-kits';
 import { ThemeArtwork } from '../src/theme-art';
 import { WorldStepEffect } from '../src/world-effects';
 import type { SceneCinematic } from '../src/scene-cinematics';
+import { worldMomentIndex, hasWorldSignature } from '../src/world-motion';
 
 function image(path: string) {
   const bytes = readFileSync(new URL('../public/' + path, import.meta.url));
@@ -38,7 +39,7 @@ describe('portable world assets', () => {
       expect(plate.size + companion.size).toBeLessThan(500_000);
     },
   );
-  it('keeps the six runtime art kits below three megabytes', () => {
+  it('keeps the runtime art kits below three megabytes', () => {
     const total = Object.values(WORLD_ASSETS).reduce(
       (sum, world) => sum + image(world.environment).size + image(world.companion).size,
       0,
@@ -61,9 +62,38 @@ describe('cosmetic feedback boundary', () => {
       createElement(WorldStepEffect, { theme, cinematic: beat, reduced: false }),
     );
     expect(html).toContain('aria-hidden="true"');
-    expect(html.match(/<circle /g)).toHaveLength(10);
+    expect(html.match(/class="cpi-world-step-mote"/g)).toHaveLength(
+      hasWorldSignature(theme) ? 8 : 10,
+    );
     expect(html).not.toContain('<button');
     expect(html).not.toContain('<animate');
+  });
+  it.each(['moonpatch', 'candy'] as const)('%s draws distinct safe and break effects', (theme) => {
+    const safe = renderToStaticMarkup(
+      createElement(WorldStepEffect, { theme, cinematic: beat, reduced: false }),
+    );
+    const broken = renderToStaticMarkup(
+      createElement(WorldStepEffect, {
+        theme,
+        cinematic: { ...beat, feedback: { row: '1', side: 'left', kind: 'wrong' } },
+        reduced: false,
+      }),
+    );
+    expect(safe).toContain('data-landing="safe"');
+    expect(broken).toContain('data-landing="break"');
+    expect(safe).not.toBe(broken);
+  });
+  it('advances scenery once per milestone and accepts endless row indices', () => {
+    expect(['12', '13', '36', '37', '61'].map((row) => worldMomentIndex('moonpatch', row))).toEqual(
+      [-1n, 0n, 0n, 1n, 2n],
+    );
+    expect(['16', '17', '40', '41'].map((row) => worldMomentIndex('candy', row))).toEqual([
+      -1n,
+      0n,
+      0n,
+      1n,
+    ]);
+    expect(worldMomentIndex('candy', '9007199254740993')).toBe((9007199254740993n - 17n) / 24n);
   });
   it('emits no extra effect before impact, on the original world, or with reduced motion', () => {
     for (const props of [

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-20",
+  "currency": "EUR",
+  "status": "proposed-not-created-in-stores",
+  "products": [
+    {
+      "key": "theme.moonpatch",
+      "proposedSku": "com.georgicole.crystalpath.infinity.theme.moonpatch",
+      "kind": "theme",
+      "quantity": 1,
+      "theme": "moonpatch",
+      "referenceEur": 2.99
+    },
+    {
+      "key": "theme.candy",
+      "proposedSku": "com.georgicole.crystalpath.infinity.theme.candy",
+      "kind": "theme",
+      "quantity": 1,
+      "theme": "candy",
+      "referenceEur": 3.99
+    }
+  ]
+}

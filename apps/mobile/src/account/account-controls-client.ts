@@ -2,6 +2,7 @@ import type { AccountSessionOwner } from './session-owner';
 import type { AccountControlsClient } from './account-controls-model';
 import { ReauthPrompt } from './reauth-prompt';
 import { CAMPAIGN_COMMERCE_ENABLED } from '../app-profile';
+import { EXPANDED_WORLD_ACCEPT } from '../store-catalog';
 type Purpose = 'export' | 'delete';
 function record(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
@@ -53,7 +54,7 @@ export function createAccountControlsClient(
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          accept: 'application/json',
+          accept: path === 'account/export' ? EXPANDED_WORLD_ACCEPT : 'application/json',
           ...(accessToken ? { authorization: 'Bearer ' + accessToken } : {}),
         },
         body: JSON.stringify({ schemaVersion: 1, ...payload }),

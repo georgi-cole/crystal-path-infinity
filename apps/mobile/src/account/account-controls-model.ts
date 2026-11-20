@@ -1,4 +1,6 @@
 import type { ReauthPrompt } from './reauth-prompt';
+import { THEME_IDS } from '../store-catalog';
+import type { ThemeId } from '../store-catalog';
 /** The approved host owns fresh OTP reauthentication and durable receipt recovery. */
 export interface AccountControlsClient {
   readonly reauth?: ReauthPrompt;
@@ -223,11 +225,9 @@ function formatCommerceExport(value: unknown) {
     if (
       !record(value.wallet) ||
       !Array.isArray(value.wallet.owned) ||
-      value.wallet.owned.length > 7 ||
+      value.wallet.owned.length > THEME_IDS.length ||
       value.wallet.owned.some(
-        (theme) =>
-          typeof theme !== 'string' ||
-          !['obsidian', 'chaos', 'jelly', 'wilds', 'league', 'puppy', 'kitten'].includes(theme),
+        (theme) => typeof theme !== 'string' || !THEME_IDS.includes(theme as ThemeId),
       )
     )
       throw new Error('Invalid wallet export');

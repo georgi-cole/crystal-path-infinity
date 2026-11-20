@@ -1,7 +1,8 @@
 import type { WorldId, ThemeId } from './store-catalog';
 import type { MessageKey } from './i18n/messages';
 
-export type WorldMaterial = 'copper' | 'opal' | 'jade' | 'enamel' | 'canvas' | 'moonstone';
+export type WorldMaterial =
+  'copper' | 'opal' | 'jade' | 'enamel' | 'canvas' | 'moonstone' | 'felt' | 'chocolate';
 
 interface WorldKit {
   title: MessageKey;
@@ -90,6 +91,30 @@ export const WORLD_KITS = {
     sound: 'vault.kittenSound',
     surface: 'vault.moonCrystal',
   },
+  moonpatch: {
+    title: 'vault.moonpatch',
+    mood: 'vault.moonpatchMood',
+    detail: 'vault.moonpatchDetail',
+    journal: 'vault.moonpatchJournal',
+    material: 'felt',
+    family: 'adventure',
+    safe: 'vault.patchSafe',
+    meet: 'vault.meetPatch',
+    sound: 'vault.moonpatchSound',
+    surface: 'vault.moonpatchSurface',
+  },
+  candy: {
+    title: 'vault.candy',
+    mood: 'vault.candyMood',
+    detail: 'vault.candyDetail',
+    journal: 'vault.candyJournal',
+    material: 'chocolate',
+    family: 'adventure',
+    safe: 'vault.nougatSafe',
+    meet: 'vault.meetNougat',
+    sound: 'vault.candySound',
+    surface: 'vault.candySurface',
+  },
 } as const satisfies Record<WorldId, WorldKit>;
 
 export const WORLD_COLORS = {
@@ -99,6 +124,8 @@ export const WORLD_COLORS = {
   league: ['#ffd2a3', '#c66e37', '#253548', '#8edeee'],
   puppy: ['#f3dcc4', '#ad755b', '#303746', '#afd3e2'],
   kitten: ['#eadff0', '#7d759c', '#292c48', '#efc584'],
+  moonpatch: ['#f0dcad', '#53776f', '#233741', '#bcefe3'],
+  candy: ['#ffdeb0', '#ae5c57', '#4f2b39', '#b5ebca'],
 } as const satisfies Record<WorldId, readonly [string, string, string, string]>;
 
 export const isPetWorld = (theme: ThemeId) => theme === 'puppy' || theme === 'kitten';
@@ -109,4 +136,6 @@ export const WORLD_ORDER: readonly WorldId[] = [
   'kitten',
   'chaos',
   'jelly',
+  'moonpatch',
+  'candy',
 ];

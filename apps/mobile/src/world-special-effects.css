@@ -1,0 +1,196 @@
+[data-world='moonpatch'] {
+  --world-accent: #b5e6d3;
+  --world-soft: #f0b87f;
+  --world-panel: #192e36;
+  --world-radius: 0.7rem;
+  --world-signature: cpi-moonpatch-swing;
+  --world-home-art-opacity: 0.92;
+}
+[data-world='candy'] {
+  --world-accent: #ffc2ce;
+  --world-soft: #f3c18f;
+  --world-panel: #42252e;
+  --world-radius: 0.85rem;
+  --world-signature: cpi-nougat-flutter;
+  --world-home-art-opacity: 0.9;
+}
+.cpi-world-art.world-moonpatch.is-backdrop .cpi-world-plate,
+.cpi-world-art.world-candy.is-backdrop .cpi-world-plate {
+  object-position: 50% 26%;
+  opacity: 0.76;
+}
+.world-moonpatch .cpi-world-mote {
+  color: #e8bc86;
+}
+.world-candy .cpi-world-mote {
+  color: #ffcfce;
+}
+.cpi-world-impact:is(.world-moonpatch, .world-candy) {
+  color: #ffd49e;
+}
+.cpi-world-impact.world-moonpatch.is-wrong {
+  color: #dfc3f3;
+}
+.cpi-world-impact.world-candy.is-wrong {
+  color: #f5a678;
+}
+.cpi-signature-step .cpi-world-step-mote {
+  opacity: 0;
+}
+.cpi-signature-step[data-landing='break'] .cpi-world-step-mote {
+  animation-duration: 410ms;
+}
+.cpi-world-moment {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.cpi-moonrise {
+  position: absolute;
+  inset: 32% auto auto 6%;
+  width: clamp(3rem, 15vw, 5.2rem);
+  filter: drop-shadow(0 0 0.9rem #abd6ed90);
+  animation: cpi-moonrise 5s ease-in-out both;
+}
+.cpi-sugar-sprinkle {
+  position: absolute;
+  width: 0.38rem;
+  height: 0.15rem;
+  border-radius: 1rem;
+  animation: cpi-sugar-shower 3.5s ease-in-out both;
+}
+.cpi-world-moment[data-still='true'] :is(.cpi-moonrise, .cpi-sugar-sprinkle) {
+  animation-play-state: paused;
+}
+@keyframes cpi-moonrise {
+  0% {
+    opacity: 0;
+    transform: translateY(2.2rem) rotate(-12deg);
+  }
+  34%,
+  67% {
+    opacity: 0.88;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-1.1rem) rotate(5deg);
+  }
+}
+@keyframes cpi-sugar-shower {
+  0% {
+    opacity: 0;
+    transform: translate(0, -1rem) rotate(-45deg);
+  }
+  22%,
+  63% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(0.8rem, 4rem) rotate(265deg);
+  }
+}
+.cpi-world-signature-glyph {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: cpi-signature-glyph 1.05s ease-out both;
+}
+.cpi-landing-signature[data-signature][data-celebrating='true'] {
+  animation-name: var(--world-signature);
+}
+.cpi-landing-signature[data-signature][data-short='true'] {
+  animation: var(--world-signature) 210ms ease-out both;
+}
+.cpi-landing-signature[data-short='true'] .cpi-world-signature-glyph {
+  animation-duration: 210ms;
+}
+@keyframes cpi-signature-glyph {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  22%,
+  60% {
+    opacity: 0.92;
+    transform: scale(1);
+  }
+}
+@keyframes cpi-moonpatch-swing {
+  0%,
+  100% {
+    transform: none;
+  }
+  12% {
+    transform: scale(1.06, 0.93);
+  }
+  39% {
+    transform: translate(-13px, -32px) rotate(-20deg);
+  }
+  62% {
+    transform: translate(14px, -22px) rotate(16deg);
+  }
+  83% {
+    transform: translate(3px, 0) rotate(-5deg);
+  }
+}
+@keyframes cpi-nougat-flutter {
+  0%,
+  100% {
+    transform: none;
+  }
+  14% {
+    transform: scale(1.09, 0.9);
+  }
+  38% {
+    transform: translateY(-30px) scale(0.95, 1.04) rotate(-7deg);
+  }
+  54% {
+    transform: translateY(-23px) scale(1.07, 0.96) rotate(8deg);
+  }
+  67% {
+    transform: translateY(-34px) scale(0.96, 1.05) rotate(-6deg);
+  }
+  85% {
+    transform: translateY(-3px) scale(1.05, 0.95);
+  }
+}
+.cpi-world-path-companion[data-still='true'] .cpi-landing-signature[data-signature],
+.cpi-reduced-motion .cpi-landing-signature[data-signature],
+.cpi-reduced-motion .cpi-world-signature-glyph {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cpi-landing-signature[data-signature],
+  .cpi-world-signature-glyph {
+    animation: none;
+  }
+}
+.cpi-prism-bridge[data-bridge-model='chocolate'] .cpi-pane-face {
+  filter: none;
+}
+.cpi-material-break[data-material='chocolate'] .cpi-cookie-half {
+  animation-duration: 520ms;
+}
+.cpi-material-break[data-material='chocolate'] .cpi-cookie-crumb {
+  animation-duration: 510ms;
+}
+.cpi-region-art[data-chapter='crown'] > img {
+  object-fit: cover;
+  filter: hue-rotate(14deg) saturate(0.92);
+}
+.cpi-world-gallery-bridge {
+  position: absolute;
+  inset: 44% 0 -6%;
+  overflow: hidden;
+  pointer-events: none;
+}
+.cpi-world-gallery-cache {
+  position: absolute;
+  bottom: 0.55rem;
+  right: 17%;
+  pointer-events: none;
+  width: clamp(2.55rem, 13vw, 3.7rem);
+}

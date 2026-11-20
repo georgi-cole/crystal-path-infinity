@@ -213,6 +213,66 @@
       "world": "jelly",
       "gear": "trail-scarf",
       "path": "assets/worlds/equipped/jelly/trail-scarf-v2.webp"
+    },
+    {
+      "world": "moonpatch",
+      "gear": "umbrella",
+      "path": "assets/worlds/equipped/moonpatch/umbrella-v2.webp"
+    },
+    {
+      "world": "moonpatch",
+      "gear": "sunshades",
+      "path": "assets/worlds/equipped/moonpatch/sunshades-v2.webp"
+    },
+    {
+      "world": "moonpatch",
+      "gear": "sun-balm",
+      "path": "assets/worlds/equipped/moonpatch/sun-balm-v2.webp"
+    },
+    {
+      "world": "moonpatch",
+      "gear": "frost-runners",
+      "path": "assets/worlds/equipped/moonpatch/frost-runners-v2.webp"
+    },
+    {
+      "world": "moonpatch",
+      "gear": "storm-boots",
+      "path": "assets/worlds/equipped/moonpatch/storm-boots-v2.webp"
+    },
+    {
+      "world": "moonpatch",
+      "gear": "trail-scarf",
+      "path": "assets/worlds/equipped/moonpatch/trail-scarf-v2.webp"
+    },
+    {
+      "world": "candy",
+      "gear": "umbrella",
+      "path": "assets/worlds/equipped/candy/umbrella-v2.webp"
+    },
+    {
+      "world": "candy",
+      "gear": "sunshades",
+      "path": "assets/worlds/equipped/candy/sunshades-v2.webp"
+    },
+    {
+      "world": "candy",
+      "gear": "sun-balm",
+      "path": "assets/worlds/equipped/candy/sun-balm-v2.webp"
+    },
+    {
+      "world": "candy",
+      "gear": "frost-runners",
+      "path": "assets/worlds/equipped/candy/frost-runners-v2.webp"
+    },
+    {
+      "world": "candy",
+      "gear": "storm-boots",
+      "path": "assets/worlds/equipped/candy/storm-boots-v2.webp"
+    },
+    {
+      "world": "candy",
+      "gear": "trail-scarf",
+      "path": "assets/worlds/equipped/candy/trail-scarf-v2.webp"
     }
   ]
 }

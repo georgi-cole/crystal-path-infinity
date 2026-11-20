@@ -1,6 +1,11 @@
 import { createMountedPath } from './server-route.ts';
 import { parsePurchaseProof } from './purchase-verification.ts';
 import type { createCommerceService } from './commerce-service.ts';
+import {
+  acceptsExpandedWorlds,
+  expansionWorldProduct,
+  legacyWorldWallet,
+} from './commerce-worlds.ts';
 
 export function createCommerceHandler(options: {
   basePath?: string;
@@ -17,17 +22,25 @@ export function createCommerceHandler(options: {
   const mount = createMountedPath(options.basePath);
   return async (request: Request): Promise<Response> => {
     let origin: string | null = null;
-    const reply = (data: unknown, status = 200) =>
-      new Response(JSON.stringify(data), {
-        status,
-        headers: {
-          'content-type': 'application/json',
-          'cache-control': 'no-store',
-          'x-content-type-options': 'nosniff',
-          vary: 'Origin',
-          ...(origin ? { 'access-control-allow-origin': origin } : {}),
+    const expandedWorlds = acceptsExpandedWorlds(request);
+    const reply = (data: Record<string, unknown>, status = 200) =>
+      new Response(
+        JSON.stringify(
+          !expandedWorlds && 'wallet' in data
+            ? { ...data, wallet: legacyWorldWallet(data.wallet) }
+            : data,
+        ),
+        {
+          status,
+          headers: {
+            'content-type': 'application/json',
+            'cache-control': 'no-store',
+            'x-content-type-options': 'nosniff',
+            vary: 'Origin, Accept',
+            ...(origin ? { 'access-control-allow-origin': origin } : {}),
+          },
         },
-      });
+      );
     try {
       const url = new URL(request.url);
       const route =
@@ -127,12 +140,16 @@ export function createCommerceHandler(options: {
         !(await options.checkoutReady(value.platform, reviewChoice))
       )
         return reply({ code: 'commerce_unavailable' }, 503);
-      if (route === 'catalog')
+      if (route === 'catalog') {
+        const catalog = options.service.catalog(actor.subject, value.platform);
         return reply({
           schemaVersion: 1,
           platform: value.platform,
-          products: options.service.catalog(actor.subject, value.platform),
+          products: expandedWorlds
+            ? catalog
+            : catalog.filter(({ key }) => !expansionWorldProduct(key)),
         });
+      }
       if (route === 'wallet')
         return reply({
           schemaVersion: 1,
@@ -162,7 +179,11 @@ export function createCommerceHandler(options: {
             reviewChoice,
           )),
         });
-      if (route === 'begin' && typeof value.key === 'string')
+      if (
+        route === 'begin' &&
+        typeof value.key === 'string' &&
+        (expandedWorlds || !expansionWorldProduct(value.key))
+      )
         return reply({
           schemaVersion: 1,
           ...(await options.service.begin(actor.subject, value.platform, value.key, reviewChoice)),

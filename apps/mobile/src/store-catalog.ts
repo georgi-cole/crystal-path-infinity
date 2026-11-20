@@ -1,8 +1,6 @@
 import type { MessageKey } from './i18n/messages';
 
-export type ThemeId = 'obsidian' | 'chaos' | 'jelly' | 'wilds' | 'league' | 'puppy' | 'kitten';
-export type WorldId = Exclude<ThemeId, 'obsidian'>;
-export const THEME_IDS: readonly ThemeId[] = [
+export const THEME_IDS = [
   'obsidian',
   'chaos',
   'jelly',
@@ -10,7 +8,11 @@ export const THEME_IDS: readonly ThemeId[] = [
   'league',
   'puppy',
   'kitten',
-];
+  'moonpatch',
+  'candy',
+] as const;
+export type ThemeId = (typeof THEME_IDS)[number];
+export type WorldId = Exclude<ThemeId, 'obsidian'>;
 // The glass and its rail lights have their own material palette beside the menu accents.
 export const THEMES = {
   obsidian: {
@@ -62,7 +64,24 @@ export const THEMES = {
     surface: { highlight: '#f3efdf', shadow: '#211e2f', edge: '#e5dece', frame: '#9f94a4' },
     tempo: 90,
   },
+  moonpatch: {
+    title: 'Moonpatch Grove',
+    railLights: ['#acd8d0', '#eab276', '#bcb8f1'],
+    glass: '#aad8cd',
+    surface: { highlight: '#e6f8ec', shadow: '#142733', edge: '#c5f1e4', frame: '#5b827e' },
+    tempo: 96,
+  },
+  candy: {
+    title: 'Candy World',
+    railLights: ['#fbb0bb', '#ffd498', '#a9dfbb'],
+    glass: '#c58662',
+    surface: { highlight: '#e5a879', shadow: '#341624', edge: '#f3c397', frame: '#825039' },
+    tempo: 106,
+  },
 } as const;
+
+export const EXPANDED_WORLD_ACCEPT = 'application/json; cpi-world-catalog=2';
+export const WORLD_REFERENCE_PRICES = { moonpatch: 2.99, candy: 3.99 } as const;
 
 export interface StoreProduct {
   readonly id: string;
@@ -113,14 +132,22 @@ export const STORE_PRODUCTS: readonly StoreProduct[] = [
     name: 'vault.jelly',
     price: 2.99,
   },
-  ...(['wilds', 'league', 'puppy', 'kitten'] as const).map((theme) => ({
+  ...(['wilds', 'league', 'puppy', 'kitten', 'moonpatch'] as const).map((theme) => ({
     id: 'test.theme.' + theme,
     kind: 'theme' as const,
     quantity: 1,
     theme,
     name: ('vault.' + theme) as MessageKey,
-    price: 2.99,
+    price: theme === 'moonpatch' ? WORLD_REFERENCE_PRICES.moonpatch : 2.99,
   })),
+  {
+    id: 'test.theme.candy',
+    kind: 'theme',
+    quantity: 1,
+    theme: 'candy',
+    name: 'vault.candy',
+    price: WORLD_REFERENCE_PRICES.candy,
+  },
 ];
 export const STORE_PAYMENT_MODE = 'test' as const;
 export const STORE_KEY = 'cpi.store.test.v1';

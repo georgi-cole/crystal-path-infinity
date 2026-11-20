@@ -11,6 +11,7 @@ export function BridgeFlight({ reduced }: { reduced: boolean }) {
   useEffect(() => {
     const material = THEMES[themeId];
     const { railLights } = material;
+    const chocolate = themeId === 'candy';
     const surface = canvas.current;
     const ctx = surface?.getContext('2d');
     if (!surface || !ctx) return;
@@ -78,13 +79,13 @@ export function BridgeFlight({ reduced }: { reduced: boolean }) {
             project(left, z),
           ];
           const gradient = ctx!.createLinearGradient(pts[0].x, pts[0].y, pts[2].x, pts[2].y);
-          gradient.addColorStop(0, material.surface.highlight + '46');
-          gradient.addColorStop(0.38, '#6d8b9417');
-          gradient.addColorStop(0.6, material.glass + '2e');
-          gradient.addColorStop(1, material.surface.shadow + '8c');
+          gradient.addColorStop(0, chocolate ? '#b87753' : material.surface.highlight + '46');
+          gradient.addColorStop(0.38, chocolate ? '#955637' : '#6d8b9417');
+          gradient.addColorStop(0.6, chocolate ? '#794030' : material.glass + '2e');
+          gradient.addColorStop(1, chocolate ? '#4c2928' : material.surface.shadow + '8c');
           polygon(
             [pts[3], pts[2], { ...pts[2], y: pts[2].y + 4 }, { ...pts[3], y: pts[3].y + 4 }],
-            color + '45',
+            chocolate ? '#522b2b' : color + '45',
           );
           polygon(pts, gradient, material.surface.edge + '8a');
           polygon(pts, color + '0b', color + '51');
@@ -92,6 +93,18 @@ export function BridgeFlight({ reduced }: { reduced: boolean }) {
             x: a.x + (b.x - a.x) * p,
             y: a.y + (b.y - a.y) * p,
           });
+          const face = (u: number, v: number) =>
+            mix(mix(pts[0], pts[1], u), mix(pts[3], pts[2], u), v);
+          if (chocolate) {
+            polygon([face(0, 0.47), face(1, 0.47), face(1, 0.53), face(0, 0.53)], '#3d2224');
+            for (const u of [0.25, 0.5, 0.75]) {
+              polygon(
+                [face(u - 0.012, 0), face(u + 0.012, 0), face(u + 0.012, 1), face(u - 0.012, 1)],
+                '#3d2224',
+              );
+            }
+            continue;
+          }
           polygon(
             [
               mix(pts[0], pts[1], 0.18),
@@ -101,8 +114,6 @@ export function BridgeFlight({ reduced }: { reduced: boolean }) {
             ],
             '#f2f6ff24',
           );
-          const face = (u: number, v: number) =>
-            mix(mix(pts[0], pts[1], u), mix(pts[3], pts[2], u), v);
           polygon(
             [face(0.03, 0.16), face(0.97, 0.16), face(0.97, 0.19), face(0.03, 0.19)],
             '#e4fcff24',

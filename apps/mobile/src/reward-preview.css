@@ -59,7 +59,8 @@
 }
 .cpi-screening-room .cpi-screening-chapters {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
   width: min(100%, 58rem);
   margin: auto;
   gap: 0.25rem;

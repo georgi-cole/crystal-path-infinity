@@ -266,7 +266,7 @@ export function RegionArt({ chapter, lit = false }: { chapter: Chapter; lit?: bo
         src={
           chapter === 'observatory'
             ? observatoryArt
-            : chapter === 'harbour'
+            : chapter === 'harbour' || chapter === 'crown'
               ? harbourArt
               : chapter === 'lighthouse'
                 ? import.meta.env.BASE_URL + 'assets/campaign/lighthouse-coast.png'

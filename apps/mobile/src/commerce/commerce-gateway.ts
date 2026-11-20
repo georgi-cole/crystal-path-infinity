@@ -1,5 +1,5 @@
 import type { AccountSessionOwner } from '../account/session-owner';
-import { THEME_IDS } from '../store-catalog';
+import { EXPANDED_WORLD_ACCEPT, THEME_IDS } from '../store-catalog';
 import { COMMERCE_PRODUCTS as catalog, ADVENTURE_COMMERCE_UNLOCKS } from './adventure-products';
 import type { ThemeId } from '../store-catalog';
 import { CommerceUnavailable } from './commerce-types';
@@ -223,7 +223,7 @@ export function createCommerceGateway(options: {
           await fetcher(endpoint + route, {
             method: 'POST',
             headers: {
-              accept: 'application/json',
+              accept: EXPANDED_WORLD_ACCEPT,
               'content-type': 'application/json',
               authorization: 'Bearer ' + lease.accessToken,
             },

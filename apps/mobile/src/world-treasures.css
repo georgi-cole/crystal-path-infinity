@@ -80,6 +80,18 @@
   --relic-lens: #272b48;
   --relic-core: #efd0a2;
 }
+.world-moonpatch {
+  --relic-rim: #f2d5a7;
+  --relic-shell: #53776f;
+  --relic-lens: #213943;
+  --relic-core: #c2eddf;
+}
+.world-candy {
+  --relic-rim: #ffceba;
+  --relic-shell: #98545b;
+  --relic-lens: #593442;
+  --relic-core: #b9f0d1;
+}
 .cpi-power-setting {
   fill: var(--relic-shell, #4c3530);
   stroke: var(--relic-rim, #e1b27c);

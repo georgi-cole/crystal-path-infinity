@@ -12,6 +12,11 @@ import puppyCompanion from './assets/world-previews/puppy-companion.webp?inline'
 import kittenPlate from './assets/world-previews/kitten-plate.webp?inline';
 import kittenCompanion from './assets/world-previews/kitten-companion.webp?inline';
 
+import moonpatchPlate from './assets/world-previews/moonpatch-plate.webp?inline';
+import moonpatchCompanion from './assets/world-previews/moonpatch-companion.webp?inline';
+import candyPlate from './assets/world-previews/candy-plate.webp?inline';
+import candyCompanion from './assets/world-previews/candy-companion.webp?inline';
+
 // The card and its calm pose arrive in the same bundle, including on a cold store link.
 export const WORLD_PREVIEWS = {
   chaos: { plate: chaosPlate, companion: chaosCompanion },
@@ -20,4 +25,6 @@ export const WORLD_PREVIEWS = {
   league: { plate: leaguePlate, companion: leagueCompanion },
   puppy: { plate: puppyPlate, companion: puppyCompanion },
   kitten: { plate: kittenPlate, companion: kittenCompanion },
+  moonpatch: { plate: moonpatchPlate, companion: moonpatchCompanion },
+  candy: { plate: candyPlate, companion: candyCompanion },
 } satisfies Record<WorldId, { plate: string; companion: string }>;

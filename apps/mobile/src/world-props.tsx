@@ -4,6 +4,24 @@ import { WORLD_COLORS } from './world-kits';
 type NewWorld = Exclude<WorldId, 'chaos' | 'jelly'>;
 
 export function WorldRelicFrame({ theme }: { theme: NewWorld }) {
+  if (theme === 'moonpatch' || theme === 'candy')
+    return (
+      <>
+        {theme === 'candy' ? (
+          <path
+            className="cpi-power-setting"
+            d="M12 19 5 14l1 13-3 9 10 5 7 14h24l9-14 9-4-4-10 1-13-11 7-9-12H24Z"
+          />
+        ) : (
+          <path
+            className="cpi-power-setting"
+            d="M32 3c17 3 27 13 28 25 0 15-12 27-28 33C16 55 4 43 4 28 5 16 15 6 32 3Z"
+          />
+        )}
+        <circle className="cpi-power-lens" cx="32" cy="32" r="18" />
+        <path className="cpi-power-trim" d="M17 15l3-4m24 0 3 4M24 53l3 2m10 0 3-2" />
+      </>
+    );
   const outer =
     theme === 'wilds'
       ? 'm31 4 22 10 7 23-15 23-27-6L4 33 13 12 31 4Z'
@@ -58,6 +76,29 @@ export function WorldRescueRig({ theme }: { theme: WorldId }) {
           />
           <path d="m0-103-19 34m19-34 19 34M-69-85l50 16m38 0 50-16" stroke={core} />
           <path d="M9-109c-18-4-24 17-9 22-8-9-4-16 9-22Z" fill={light} />
+        </>
+      ) : theme === 'moonpatch' ? (
+        <>
+          <path
+            className="cpi-rescue-canopy"
+            d="M14-151c-43 3-56 56-20 73 19 9 37 0 46-11-36 10-61-37-26-62Z"
+            fill={mid}
+            stroke={core}
+          />
+          <path d="M-23-92-10-65m34-17-14 17m31-77 3 5 6 2-6 2-3 5-2-5-6-2 6-2Z" stroke={light} />
+        </>
+      ) : theme === 'candy' ? (
+        <>
+          <path
+            className="cpi-rescue-canopy"
+            d="M-57-127q46-45 92-10 12 8 22 10l-30 19-27-7-27 7Z"
+            fill={mid}
+            stroke={core}
+          />
+          <path
+            d="M-53-125-14-60M53-125 14-60m-49-74 14 22m12-31 18 28m8-22 12 26"
+            stroke={light}
+          />
         </>
       ) : theme === 'chaos' ? (
         <>

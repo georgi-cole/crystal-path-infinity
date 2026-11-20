@@ -139,6 +139,12 @@ describe('commerce wire contract', () => {
   });
   it('does not accept unsafe balances, unowned worlds or test products as live entitlements', () => {
     expect(parseCommerceWallet({ ...wallet, secret: 'must-drop' })).toEqual(wallet);
+    const expanded = {
+      ...wallet,
+      owned: [...wallet.owned, 'moonpatch', 'candy'],
+      equipped: 'candy',
+    };
+    expect(parseCommerceWallet(expanded)).toEqual(expanded);
     for (const bad of [
       { ...wallet, sp: Number.MAX_SAFE_INTEGER + 1 },
       { ...wallet, credits: -1 },
@@ -176,7 +182,10 @@ describe('commerce wire contract', () => {
       redirect: 'error',
       referrerPolicy: 'no-referrer',
       cache: 'no-store',
-      headers: { authorization: 'Bearer private-access-token-012345' },
+      headers: {
+        authorization: 'Bearer private-access-token-012345',
+        accept: 'application/json; cpi-world-catalog=2',
+      },
     });
     expect(options?.body).toBe(JSON.stringify({ schemaVersion: 1, platform: 'android' }));
     for (const baseUrl of [

@@ -293,7 +293,7 @@ describe('versioned local resource rules', () => {
 });
 
 describe('test-store presentation and assets', () => {
-  it('provides every requested resource denomination and six original complete worlds', () => {
+  it('provides the requested resource denominations and each complete world', () => {
     expect(STORE_PRODUCTS.filter((p) => p.kind === 'sp').map((p) => p.quantity)).toEqual([
       100, 500, 1000, 2500, 5000, 10000,
     ]);
@@ -308,7 +308,11 @@ describe('test-store presentation and assets', () => {
     for (const theme of WORLD_ORDER) {
       const html = renderToStaticMarkup(createElement(ThemeArtwork, { theme }));
       expect(html).toContain('world-' + theme);
-      for (const cue of ['step', 'record', 'rescue']) {
+      const cues =
+        theme === 'moonpatch' || theme === 'candy'
+          ? ['step', 'break']
+          : ['step', 'record', 'rescue'];
+      for (const cue of cues) {
         const asset = new URL(`../public/assets/themes/${theme}-${cue}.wav`, import.meta.url);
         expect(statSync(asset).size).toBeGreaterThan(1000);
         expect(readFileSync(asset).subarray(0, 4).toString()).toBe('RIFF');
