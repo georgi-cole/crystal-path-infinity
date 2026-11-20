@@ -1,10 +1,10 @@
 # Gear, seasons, and rewards connection map
 
-**Status:** design proposal for Campaign and Infinity. The current source behavior is recorded below the proposal.
+**Status:** implemented for new outfitted runs in this branch. The earlier values below serve as a reference for existing checkpoints.
 
-## Proposed weather and gear rebalance (20 November 2026)
+## Weather and gear rebalance (20 November 2026)
 
-The forecast tells you what to pack. An upcoming weather change tells you when to stow it. Each item has a reason to take the single gear slot, and familiar conditions behave the same across worlds. The numbers below are starting values for a playtest.
+The forecast tells you what to pack. An upcoming weather change tells you when to stow it. Each item has a reason to take the single gear slot, and familiar conditions behave the same across worlds. The numbers below are the initial balance for the outfitted rules.
 
 **Save 1/2/3** means 1/2/3 less Stability (SP) lost on a damaging wrong landing. **Extra 1/2/3** means 1/2/3 more SP lost. **Neutral** means the equipped item has no effect under that condition.
 
@@ -34,14 +34,14 @@ The forecast tells you what to pack. An upcoming weather change tells you when t
 - Use the active weather episode when there is one. Otherwise use the clear condition for the selected season. Resolve one table cell per row.
 - Decide whether the chosen tile holds using the route's existing odds and marks. Resolve shields and effects that prevent or convert a hit, then adjust any remaining tile damage with gear. Clamp relief at zero damage. The values are before any general SP gain/loss multipliers. A wrong landing stays wrong for mission objectives.
 - Heat Sunshades use the existing direct cue on a row with a valid mirror clue. If neither tile holds, the crack cue still applies.
-- Only clean landings while wearing Sun Balm count toward its pair. The two landings need not be consecutive. Award at most **3 SP per continuous clear Summer stretch** and **4 SP per Heat Surge**, after other landing modifiers. Packing and re-equipping pauses progress and preserves the count and cap for that stretch. On a condition change, start a new count. This replaces the current +1 on every clean clear Summer row, which can give 10 SP across ten clean landings.
+- Only clean landings while wearing Sun Balm count toward its pair. The two landings need not be consecutive. Award at most **3 SP per continuous clear Summer stretch** and **4 SP per Heat Surge**, after other landing modifiers. A standard three-row Heat Surge allows one pair, for 2 SP. Packing and re-equipping pauses progress and preserves the count and cap for that stretch. On a condition change, start a new count. This replaces the current +1 on every clean clear Summer row, which can give 10 SP across ten clean landings.
 - Pack one item before crossing. During a run, bring it out or stow it for the next row after clearing the current row. Forecast copy should call out the tradeoff two or three rows ahead, for example, “Squall in 2 rows. Umbrella will cost 3 extra SP on a bad landing.” Store previews should show the same effects.
 
-### Suggested ways to earn the gear
+### Earning gear in Campaign
 
-Use a first clear of the mission that teaches the relevant condition. Add an earn path to the same item shown in the shop, with the same effects for owners. Keep existing ownership and grant the item once to anyone who already cleared the relevant mission if this earn path ships. The rewards below are additions to the current first-clear grants.
+A first clear unlocks the same item offered in the shop. Ownership follows the saved clear, so players who already completed the mission can equip it immediately. Gear earned through Campaign remains available independently of the paid entitlement.
 
-| Gear | Proposed Campaign unlock | What the crossing teaches |
+| Gear | Campaign unlock | What the crossing teaches |
 | --- | --- | --- |
 | Glasswing Umbrella | Mission 5 (`rain-on-glass`) | Repeated Spring Rain |
 | Sunshades | Mission 9 (`sun-on-the-cliffs`) | Read the reflected Heat cue |
@@ -50,15 +50,15 @@ Use a first clear of the mission that teaches the relevant condition. Add an ear
 | Frost Runners | Mission 15 (`the-long-crossing`) | Multiple Snow windows |
 | Storm Boots | Mission 19 (`two-ways-to-the-gate`) | Cross the Squall road or the ridge during Leaf Gusts |
 
-Try the rebalance in an optional gear-enabled playtest with its own records. Where Campaign offers it, an outfitted replay can use earned gear, while the mission's supplied kit remains the route to Mastery. Version the values for new attempts so resumed attempts keep what they started with.
+Pack an owned item to use these effects in Infinity. Completed Infinity runs use a shared public leaderboard for signed-in players, regardless of their gear, supplies, or how they obtained them. Campaign offers a distinct replay button when gear is packed and the crossing is cleared. The original mission kit remains the route to Mastery. Resumed attempts keep their original rules.
 
 ### Ambience and bridge assets
 
-Give each bridge or world a visible response to the same conditions. Keeper’s Torches can steady after a gust, Frosted Glass can collect powder in Snow and drip in Thaw, and a future chocolate deck can get glossy in Heat and frosted in Snow. Apply the treatment equally to safe and cracked tiles and keep clue shapes and contrast consistent across styles. The mechanical effects in the matrix come from the item in the gear slot.
+Keeper’s Torches flutter during wind, Frosted Glass gains a powder highlight in Snow and drips in Thaw, and Cookie Crossing gets a stronger sheen in Heat. Weather decor uses public conditions, and clue shapes stay consistent across styles. A future chocolate deck can reuse the heat treatment.
 
-## Current source reference
+## Previous gear balance
 
-Main already defines all six wearables. The comparison below uses the same Save and Extra notation as the proposal.
+Older equipped attempts keep the balance below. The table uses the same Save and Extra notation.
 
 | Gear | Current helpful effects | Current drawbacks |
 | --- | --- | --- |
@@ -69,7 +69,7 @@ Main already defines all six wearables. The comparison below uses the same Save 
 | Storm Boots | Save 2 in Rain, Shower or Squall. Save 1 in Leaf Gust or clear Autumn. | Extra 2 in Snow |
 | Trail Scarf | Save 2 in clear Winter or Snow. Save 1 in Thaw. | Extra 2 in Rain, Shower or Squall |
 
-Infinity can take the packed wearable. A new Campaign attempt uses the fixed mission kit. Gear ownership comes from shop offers, including local test grants where enabled. Campaign first clears already grant season access, supplies and bridge cosmetics according to the mission. The wearable rewards in the proposal would add to those grants. See the [current gear implementation](../packages/game-core/src/journey-gear.ts), [Campaign progression](../apps/mobile/src/campaign-test.ts) and [mission catalog](../apps/mobile/src/campaign-content.ts).
+Infinity uses the packed wearable. First clears and ordinary Campaign replays use the fixed mission kit. Other Campaign first-clear grants include seasons, supplies and bridge cosmetics. See the [current gear implementation](../packages/game-core/src/journey-gear.ts), [Campaign progression](../apps/mobile/src/campaign-test.ts) and [mission catalog](../apps/mobile/src/campaign-content.ts).
 
 The current Heat renderer already replaces a valid mirror cue with a lens cue on the indicated safe tile when Sunshades are worn. An ordinary mirror cue points to the opposite side. See the [crossing renderer](../apps/mobile/src/infinity-presentation.ts).
 

@@ -1,6 +1,6 @@
 # Crystal Path Campaign and Infinity proposal
 
-**20 November 2026 · CPI-039 design proposal.** The [weather and gear connection map](../GEAR-SEASON-CONNECTION-MAP.md#proposed-weather-and-gear-rebalance-20-november-2026) proposes graded effects for all six wearables, first-clear rewards and weather reactions for bridge styles. It also records the current behavior for comparison.
+**20 November 2026 · CPI-039.** The [weather and gear connection map](../GEAR-SEASON-CONNECTION-MAP.md#weather-and-gear-rebalance-20-november-2026) records the implemented rules for new outfitted runs, Campaign gear rewards, and weather reactions for bridge styles. Fixed mission kits apply to first clears and Mastery.
 
 ## Current offline build — 0.7.4
 

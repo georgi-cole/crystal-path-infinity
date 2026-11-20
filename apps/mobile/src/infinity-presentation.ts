@@ -9,6 +9,7 @@ import {
   activeJourneyWeather,
   journeyExpectedSide,
   journeyGearEffect,
+  parseTileExperiment,
 } from '@crystal-path-infinity/game-core';
 
 /** Renderer-safe shape. In particular, future tiles never contain safeSide. */
@@ -87,6 +88,7 @@ export function presentInfinityScene(state: RunState): PresentedScene {
       gear.item,
       route.season,
       activeJourneyWeather(route, BigInt(state.currentRow)),
+      !!parseTileExperiment(state.rulesetVersion)?.gearV2,
     ).clearGlint
   );
   for (const row of state.rows) {

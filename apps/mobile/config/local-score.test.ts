@@ -10,6 +10,13 @@ import type { AccountSessionOwner, SessionPhase } from '../src/account/session-o
 import { createLocalScoreClient, parseInfinityScore } from '../src/leaderboard/local-score-client';
 import type { LocalScoreClient } from '../src/leaderboard/local-score-client';
 import { createPracticeRuntime } from '../src/practice-runtime';
+import {
+  claimTestOffer,
+  createCampaignInfinityRun,
+  EMPTY_CAMPAIGN_PROGRESS,
+  equipCampaignGear,
+  gearOffer,
+} from '../src/campaign-test';
 import type { GameplayLifecycle } from '../src/gameplay-lifecycle';
 
 const A = '11000000-0000-4000-8000-000000000001';
@@ -164,6 +171,36 @@ describe('local gameplay and end-of-run score queue', () => {
     ]);
     expect(f.client.snapshot().phase).toBe('synced');
   });
+  it.each(['earned', 'purchased'] as const)(
+    'submits Infinity runs with %s gear to the public board',
+    async (ownership) => {
+      const f = fixture();
+      const progress =
+        ownership === 'earned'
+          ? { ...EMPTY_CAMPAIGN_PROGRESS, cleared: ['rain-on-glass'] as const }
+          : claimTestOffer(EMPTY_CAMPAIGN_PROGRESS, gearOffer('umbrella'));
+      const initial = createCampaignInfinityRun(equipCampaignGear(progress, 'umbrella'));
+      expect(initial.journeyGear?.item).toBe('umbrella');
+      expect(initial.rulesetVersion).toContain('-gear-v2');
+      f.client.record(fresh(), A, true);
+      f.client.record(finished(), A, false);
+      f.client.record(initial, A, true);
+      f.client.record(
+        { ...finished('120', initial.runId), rulesetVersion: initial.rulesetVersion },
+        A,
+        false,
+      );
+      expect(f.client.snapshot().pending?.rows).toBe('120');
+      f.fetcher.mockResolvedValue(ack());
+      f.client.setOnline(true);
+      await f.client.flush();
+      expect(f.fetcher).toHaveBeenCalledTimes(1);
+      expect(f.fetcher.mock.calls[0]?.[0]).toBe(
+        'https://scores.example.invalid/cpi/infinity/score',
+      );
+      expect(f.client.snapshot().phase).toBe('synced');
+    },
+  );
   it('keeps an interrupted upload across reload and sends the same run ID once acknowledged', async () => {
     const f = fixture();
     f.client.record(fresh(), A, true);

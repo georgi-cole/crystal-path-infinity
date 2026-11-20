@@ -1537,6 +1537,18 @@ export const PrismBridge = memo(function PrismBridge({
                         fill="#ececf5"
                         opacity=".13"
                       />
+                      {bridgeStyle?.tiles === 'frost' &&
+                        distance >= 0 &&
+                        distance < 6 &&
+                        weather === 'thaw' && (
+                          <path
+                            className="cpi-weather-deck-drip"
+                            d={`M${corner.x} ${corner.y}v${4 / (1 + distance * 0.6)}`}
+                            stroke="#bce6fa"
+                            strokeWidth="1.25"
+                            strokeLinecap="round"
+                          />
+                        )}
                       {finish && distance <= 6 && (
                         <MovingPolygon
                           className="cpi-finish-inlay"

@@ -50,6 +50,7 @@ import {
   equipBridgeStyle,
   equipBridgeDesign,
   equipCampaignGear,
+  ownsCampaignGear,
   EMPTY_CAMPAIGN_PROGRESS,
   grantCampaignClear,
   isMissionUnlocked,
@@ -911,8 +912,17 @@ export function App({
     startPractice(CAMPAIGN_ENABLED ? newInfinityRun() : null);
   };
 
-  const newCampaignRun = (missionId: CampaignMissionId, approach?: CampaignApproach) => {
-    const progress = startCampaignAttempt(campaignProgressRef.current, missionId, approach);
+  const newCampaignRun = (
+    missionId: CampaignMissionId,
+    approach?: CampaignApproach,
+    gear?: GearId,
+  ) => {
+    const current = campaignProgressRef.current;
+    const ownedGear =
+      gear && current.cleared.includes(missionId) && ownsCampaignGear(current, gear)
+        ? gear
+        : undefined;
+    const progress = startCampaignAttempt(current, missionId, approach, ownedGear);
     const snapshot = progress.activeMissionSnapshot!;
     const initial = createCampaignRun(snapshot);
     commitCampaignProgress(progress, initial);
@@ -923,6 +933,7 @@ export function App({
   const startCampaignMission = (
     missionId: CampaignMissionId,
     approach?: CampaignApproach,
+    gear?: GearId,
     retry = false,
   ) => {
     if (!CAMPAIGN_ENABLED || gameRef.current) return;
@@ -932,6 +943,7 @@ export function App({
     const previous = campaignCheckpointRef.current;
     if (
       !retry &&
+      !gear &&
       current.activeMissionId === missionId &&
       previous &&
       campaignRunMatches(previous, mission) &&
@@ -943,7 +955,7 @@ export function App({
       startPractice(previous, 'campaign', missionId, mission.weather);
       return;
     }
-    const { initial, snapshot } = newCampaignRun(missionId, approach);
+    const { initial, snapshot } = newCampaignRun(missionId, approach, gear);
     startPractice(initial, 'campaign', missionId, snapshot.weather);
   };
 
@@ -1146,7 +1158,12 @@ export function App({
             setGame(null);
             setCampaignOutcome(null);
             campaignOutcomeRef.current = false;
-            startCampaignMission(missionId, campaignOutcome.mission.approach, true);
+            startCampaignMission(
+              missionId,
+              campaignOutcome.mission.approach,
+              campaignOutcome.mission.gear,
+              true,
+            );
           }}
         />
       );
@@ -1179,7 +1196,12 @@ export function App({
               game.mode === 'infinity' && CAMPAIGN_ENABLED && !game.trialTheme
                 ? newInfinityRun
                 : game.mode === 'campaign' && campaignMission
-                  ? () => newCampaignRun(campaignMission.id, campaignMission.approach).initial
+                  ? () =>
+                      newCampaignRun(
+                        campaignMission.id,
+                        campaignMission.approach,
+                        campaignMission.gear,
+                      ).initial
                   : undefined
             }
             weather={

@@ -910,7 +910,9 @@ describe('actual campaign reward presentation', () => {
               ? 'keeper-torches-reward'
               : reward.art.type === 'style'
                 ? 'cpi-reward-cosmetic-art'
-                : 'cpi-reward-season-art',
+                : reward.art.type === 'gear'
+                  ? 'cpi-gear-display'
+                  : 'cpi-reward-season-art',
         );
       }
     },

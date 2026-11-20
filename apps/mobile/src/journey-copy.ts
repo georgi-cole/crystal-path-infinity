@@ -1,5 +1,5 @@
 import { adventurePrice } from './adventure-prices';
-import type { GearId, Season, Weather } from '@crystal-path-infinity/game-core';
+import type { GearId, journeyGearEffect, Season, Weather } from '@crystal-path-infinity/game-core';
 
 export const INFINITY_WEATHER_NAMES: Record<Season | 'plain', string> = {
   plain: 'Clear Sky',
@@ -122,3 +122,21 @@ export const GEAR_COPY = {
     ready: string;
   }
 >;
+
+export function describeGearEffect(
+  effect: ReturnType<typeof journeyGearEffect>,
+): string {
+  const { clearGlint, hitRelief, cleanGain, recovery } = effect;
+  return [
+    clearGlint ? 'Follow the light to the safe tile.' : '',
+    hitRelief
+      ? `A bad landing costs ${Math.abs(hitRelief)} ${hitRelief > 0 ? 'fewer' : 'extra'} SP.`
+      : '',
+    cleanGain ? `Safe landings restore ${cleanGain} SP.` : '',
+    recovery
+      ? `Restore ${recovery.sp} SP every two safe landings, up to ${recovery.cap} SP in this stretch.`
+      : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+}

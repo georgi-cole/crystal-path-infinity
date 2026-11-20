@@ -552,3 +552,46 @@
   animation: none !important;
   transition: none !important;
 }
+
+/* Weather coats the bridge material uniformly, independent of hidden tile integrity. */
+.cpi-prism-bridge[data-tile-finish='frost'][data-episode='snow'] .cpi-finish-inlay {
+  fill: #d6eeff;
+  fill-opacity: 0.28;
+  stroke: #eff9ff;
+}
+
+.cpi-prism-bridge[data-tile-finish='frost'][data-episode='thaw'] .cpi-weather-deck-drip {
+  opacity: 0.65;
+}
+
+.cpi-prism-bridge[data-tile-finish='cookie-tiles'][data-episode='heat'] .cpi-pane-shine {
+  opacity: 0.29;
+}
+
+.cpi-prism-bridge[data-episode='gust'] .cpi-rail-flame,
+.cpi-prism-bridge[data-episode='squall'] .cpi-rail-flame {
+  transform: skewX(9deg);
+}
+
+.cpi-prism-bridge:is([data-episode='gust'], [data-episode='squall']):not([data-static-art='true'])
+  .cpi-rail-flame
+  > path:not(:first-child) {
+  animation: cpi-windy-flame 1.3s ease-in-out var(--lamp-delay, 0s) infinite alternate;
+}
+
+@keyframes cpi-windy-flame {
+  from {
+    opacity: 0.67;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cpi-prism-bridge:is([data-episode='gust'], [data-episode='squall'])
+    .cpi-rail-flame
+    > path:not(:first-child) {
+    animation: none;
+  }
+}

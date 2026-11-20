@@ -48,6 +48,7 @@ export const journeyRuleset = (
   clockless = false,
   safeHints = true,
   missionKit = false,
+  gearV2 = false,
 ) =>
   CAMPAIGN_INFINITY_RULESET +
   '-journey1-' +
@@ -55,7 +56,8 @@ export const journeyRuleset = (
   (geared ? '-gear' : '') +
   (clockless ? '-clockless' : '') +
   (safeHints ? '-safe-hints' : '') +
-  (missionKit ? '-mission-kit' : '');
+  (missionKit ? '-mission-kit' : '') +
+  (gearV2 ? '-gear-v2' : '');
 const SEASON_ORDER = ['spring', 'summer', 'autumn', 'winter'] as const satisfies readonly Season[];
 const SEASON_UNLOCK_MISSIONS: Record<Season, CampaignMissionId> = {
   spring: 'rain-on-glass',
@@ -75,6 +77,18 @@ type ExtraSupplyOffer = keyof typeof EXTRA_SUPPLY_OFFERS;
 export type CampaignOffer =
   StyleOffer | ExtraSupplyOffer | 'sp-pack' | 'hint-pack' | 'continue-pack' | `gear:${GearId}`;
 export const gearOffer = (gear: GearId): CampaignOffer => `gear:${gear}`;
+export const GEAR_REWARD_MISSION: Readonly<Record<GearId, CampaignMissionId>> = {
+  umbrella: 'rain-on-glass',
+  sunshades: 'sun-on-the-cliffs',
+  'sun-balm': 'ring-the-tower',
+  'trail-scarf': 'first-snow',
+  'frost-runners': 'the-long-crossing',
+  'storm-boots': 'two-ways-to-the-gate',
+};
+
+export function gearRewardForMission(id: CampaignMissionId): GearId | undefined {
+  return GEAR_IDS.find((item) => GEAR_REWARD_MISSION[item] === id);
+}
 const SUPPLY_PACKS = {
   'sp-pack': ['reserveSp', 500],
   'hint-pack': ['reserveHints', 10],
@@ -201,10 +215,13 @@ function isGearId(value: unknown): value is GearId {
   return GEAR_IDS.some((id) => id === value);
 }
 export function ownsCampaignGear(
-  progress: Pick<CampaignProgress, 'offers'>,
+  progress: Pick<CampaignProgress, 'offers' | 'cleared'>,
   gear: GearId,
 ): boolean {
-  return progress.offers.includes(gearOffer(gear));
+  return (
+    progress.offers.includes(gearOffer(gear)) ||
+    progress.cleared.includes(GEAR_REWARD_MISSION[gear])
+  );
 }
 export function equipCampaignGear(
   progress: CampaignProgress,
@@ -356,16 +373,20 @@ export function readCampaignSave(storage: Pick<PracticeStorage, 'getItem'>): {
         value.version === 3
       ) {
         const snapshot = candidate as unknown as CampaignMissionSnapshot;
+        const experiment = parseTileExperiment(snapshot.rulesetVersion);
         if (
           snapshot.rulesetVersion ===
             journeyRuleset(
               snapshot.season,
               !!snapshot.gear,
-              !!parseTileExperiment(snapshot.rulesetVersion)?.clockless,
-              !!parseTileExperiment(snapshot.rulesetVersion)?.safeHints,
-              !!parseTileExperiment(snapshot.rulesetVersion)?.missionKit,
+              !!experiment?.clockless,
+              !!experiment?.safeHints,
+              !!experiment?.missionKit,
+              !!experiment?.gearV2,
             ) &&
-          (snapshot.gear === undefined || (snapshot.assist && isGearId(snapshot.gear))) &&
+          (snapshot.gear === undefined ||
+            (isGearId(snapshot.gear) &&
+              (experiment?.gearV2 ? cleared.includes(activeMissionId) : snapshot.assist))) &&
           isBalance(snapshot.targetRow) &&
           snapshot.targetRow > 0 &&
           isBalance(snapshot.minimumStability) &&
@@ -433,7 +454,10 @@ export function readCampaignSave(storage: Pick<PracticeStorage, 'getItem'>): {
       cleared,
       style,
       offers,
-      gear: isGearId(value.gear) && ownsCampaignGear({ offers }, value.gear) ? value.gear : null,
+      gear:
+        isGearId(value.gear) && ownsCampaignGear({ offers, cleared }, value.gear)
+          ? value.gear
+          : null,
       world: THEME_IDS.includes(value.world as ThemeId) ? (value.world as ThemeId) : 'obsidian',
       mastered: Array.isArray(value.mastered)
         ? [...new Set(value.mastered.filter(isMissionId))].filter((id) => cleared.includes(id))
@@ -617,14 +641,24 @@ export function startCampaignAttempt(
   progress: CampaignProgress,
   id: CampaignMissionId,
   approach: CampaignApproach = 'main',
+  gear?: GearId,
 ): CampaignProgress {
   if (!isMissionUnlocked(progress, id)) throw new RangeError('This crossing is sealed.');
+  if (gear && (!progress.cleared.includes(id) || !ownsCampaignGear(progress, gear))) {
+    throw new RangeError('Outfitted replays require a cleared crossing and owned gear.');
+  }
   const mission = newMissionSnapshot(id, approach);
   return {
     ...progress,
     ...EMPTY_ATTEMPT,
     activeMissionId: id,
-    activeMissionSnapshot: mission,
+    activeMissionSnapshot: gear
+      ? {
+          ...mission,
+          gear,
+          rulesetVersion: journeyRuleset(mission.season, true, false, true, true, true),
+        }
+      : mission,
   };
 }
 
@@ -1015,7 +1049,9 @@ export function createCampaignInfinityRun(progress: CampaignProgress): RunState 
       runId: 'practice-campaign-infinity-' + crypto.randomUUID().replaceAll('-', ''),
       sponsoredMysteries: true,
       rulesetVersion:
-        journeyRuleset(mode, !!progress.gear, progress.clockFree) + '-supplies-shield-stack',
+        journeyRuleset(mode, !!progress.gear, progress.clockFree) +
+        '-supplies-shield-stack' +
+        (progress.gear ? '-gear-v2' : ''),
       routeRng: createPracticeCursor(route),
       mysteryRng: createPracticeCursor(route ^ 0x9e3779b97f4a7c15n),
       observedAt: Date.now(),

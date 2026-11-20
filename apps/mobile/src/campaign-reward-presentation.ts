@@ -1,9 +1,10 @@
 import { STYLES, CHAPTERS, LANDMARK_CLEARS } from './campaign-content';
-import { seasonUnlockedByMission } from './campaign-test';
+import { gearRewardForMission, seasonUnlockedByMission } from './campaign-test';
+import { GEAR_COPY } from './journey-copy';
 import type { CampaignMissionSnapshot } from './campaign-test';
 import type { ExpeditionIcon } from './expedition-art';
 import type { StyleId, Chapter } from './campaign-content';
-import type { Season } from '@crystal-path-infinity/game-core';
+import type { GearId, Season } from '@crystal-path-infinity/game-core';
 
 export type RewardArtwork =
   | {
@@ -13,7 +14,8 @@ export type RewardArtwork =
   | { type: 'style'; id: StyleId }
   | { type: 'season'; season: Season }
   | { type: 'weather'; weather: 'rainbow' }
-  | { type: 'landmark'; chapter: Chapter };
+  | { type: 'landmark'; chapter: Chapter }
+  | { type: 'gear'; item: GearId };
 export interface MissionRewardItem {
   label: string;
   icon: ExpeditionIcon;
@@ -85,5 +87,7 @@ export function missionRewardItems(mission: CampaignMissionSnapshot): MissionRew
       type: 'landmark',
       chapter: mission.chapter,
     });
+  const gear = gearRewardForMission(mission.id);
+  if (gear) add(GEAR_COPY[gear].name, 'pack', { type: 'gear', item: gear });
   return items;
 }

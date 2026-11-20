@@ -6,6 +6,7 @@ import {
   campaignRunMatches,
   newMissionSnapshot,
   nextCampaignMission,
+  gearRewardForMission,
 } from './campaign-test';
 import type {
   CampaignApproach,
@@ -21,6 +22,8 @@ import type { PracticeLoad } from './practice-save';
 import { CampaignMap } from './campaign-map';
 import { campaignTasks, campaignMissedObjective } from './campaign-objectives';
 import { CampaignObjectives } from './campaign-objectives-view';
+import { GEAR_COPY } from './journey-copy';
+import type { GearId } from '@crystal-path-infinity/game-core';
 import './campaign-test-ui.css';
 import './expedition.css';
 import './campaign-map.css';
@@ -34,7 +37,7 @@ export function CampaignMissionHub({
 }: {
   progress: CampaignProgress;
   saved: PracticeLoad;
-  onStartMission: (id: CampaignMissionId, approach?: CampaignApproach) => void;
+  onStartMission: (id: CampaignMissionId, approach?: CampaignApproach, gear?: GearId) => void;
 }) {
   const [approach, setApproach] = useState<CampaignApproach>('main');
   const [mapExpanded, setMapExpanded] = useState(true);
@@ -64,6 +67,7 @@ export function CampaignMissionHub({
     running &&
     !campaignMissedObjective(pending, progress, saved.state.currentRow);
   const mission = selected ? (resume ? pending : newMissionSnapshot(selected.id, approach)) : null;
+  const rewardedGear = mission ? gearRewardForMission(mission.id) : undefined;
   const focused = selected ?? current ?? CAMPAIGN_MISSIONS[CAMPAIGN_MISSIONS.length - 1];
   const chapter = focused.chapter;
   const briefChapter = mission?.chapter ?? chapter;
@@ -193,7 +197,10 @@ export function CampaignMissionHub({
                 <AdventureIcon name="hint" />
                 <span>
                   <small>{replay ? 'First clear reward · collected' : 'First clear reward'}</small>
-                  <strong>{mission.reward}</strong>
+                  <strong>
+                    {mission.reward}
+                    {rewardedGear ? ' · ' + GEAR_COPY[rewardedGear].name : ''}
+                  </strong>
                 </span>
               </div>
             </div>
@@ -202,7 +209,13 @@ export function CampaignMissionHub({
                 className="cpi-adventure-button"
                 type="button"
                 disabled={locked || (running && progress.activeMissionId !== mission.id)}
-                onClick={() => onStartMission(mission.id, resume ? undefined : mission.approach)}
+                onClick={() =>
+                  onStartMission(
+                    mission.id,
+                    resume ? undefined : mission.approach,
+                    resume ? undefined : pending?.gear,
+                  )
+                }
               >
                 {locked
                   ? 'Clear the current crossing first'
@@ -217,6 +230,17 @@ export function CampaignMissionHub({
                         : 'Begin crossing'}{' '}
                 <span aria-hidden="true">›</span>
               </button>
+              {replay && !running && !pending && progress.gear && (
+                <button
+                  className="cpi-adventure-button is-quiet"
+                  type="button"
+                  onClick={() =>
+                    onStartMission(mission.id, mission.approach, progress.gear ?? undefined)
+                  }
+                >
+                  Replay with {GEAR_COPY[progress.gear].name}
+                </button>
+              )}
             </div>
             <small className="cpi-adventure-footnote">
               {replay
