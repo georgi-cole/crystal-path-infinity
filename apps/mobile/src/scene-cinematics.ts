@@ -28,8 +28,8 @@ export interface SceneCinematic {
 }
 export const STEP_TIMING = Object.freeze({
   contact: 80,
-  safe: 300,
-  wrong: 550,
+  safe: 220,
+  wrong: 470,
   travel: 300,
   death: 1800,
   mystery: 1450,
@@ -77,7 +77,7 @@ export function createSceneDirector(
       busy = !!choice || fatal;
       const beat: SceneCinematic = {
         id,
-        phase: choice ? 'contact' : fatal ? 'collapse' : 'reveal',
+        phase: fatal ? (choice ? 'contact' : 'collapse') : choice ? 'impact' : 'reveal',
         rows: choice || fatal ? presentInfinityScene(before).rows : null,
         feedback: choice
           ? {
@@ -102,14 +102,15 @@ export function createSceneDirector(
           }, delay),
         );
       }
-      if (choice)
-        at(STEP_TIMING.contact, () => publish({ ...beat, phase: fatal ? 'collapse' : 'impact' }));
       if (fatal) {
+        if (choice) at(STEP_TIMING.contact, () => publish({ ...beat, phase: 'collapse' }));
         at(STEP_TIMING.death, finish);
       } else if (choice) {
         const settle = choice.wrong ? STEP_TIMING.wrong : STEP_TIMING.safe;
-        at(settle, () => publish({ ...beat, phase: 'travel', rows: null }));
-        at(settle + STEP_TIMING.travel, finish);
+        at(settle, () => {
+          publish({ ...beat, phase: 'travel', rows: null });
+          at(STEP_TIMING.travel, finish);
+        });
       } else {
         at(STEP_TIMING.mystery, finish);
       }

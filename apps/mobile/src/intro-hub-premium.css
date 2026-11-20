@@ -67,11 +67,11 @@
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   transition:
-    left 0.42s cubic-bezier(0.22, 0.65, 0.3, 1),
-    top 0.42s cubic-bezier(0.22, 0.65, 0.3, 1),
-    width 0.42s cubic-bezier(0.22, 0.65, 0.3, 1),
-    height 0.42s cubic-bezier(0.22, 0.65, 0.3, 1),
-    clip-path 0.42s cubic-bezier(0.22, 0.65, 0.3, 1),
+    left var(--cpi-bridge-travel, 280ms) cubic-bezier(0.22, 0.65, 0.3, 1),
+    top var(--cpi-bridge-travel, 280ms) cubic-bezier(0.22, 0.65, 0.3, 1),
+    width var(--cpi-bridge-travel, 280ms) cubic-bezier(0.22, 0.65, 0.3, 1),
+    height var(--cpi-bridge-travel, 280ms) cubic-bezier(0.22, 0.65, 0.3, 1),
+    clip-path var(--cpi-bridge-travel, 280ms) cubic-bezier(0.22, 0.65, 0.3, 1),
     background 0.18s;
 }
 .cpi-bridge-pane:disabled {
@@ -80,8 +80,10 @@
 .cpi-bridge-pane:not(:disabled):hover {
   background: #dfb6e51a;
 }
-.cpi-bridge-pane:not(:disabled):active {
-  background: #f8d9ff2b;
+.cpi-bridge-pane:not(:disabled):active,
+.cpi-bridge-pane.is-pending-choice {
+  background: #f8d9ff36;
+  transition: none;
 }
 .cpi-bridge-pane:focus-visible {
   outline: none;
@@ -147,7 +149,7 @@
   font: 500 1.2rem var(--cpi-font-display);
   cursor: pointer;
   touch-action: manipulation;
-  transition: top 0.28s cubic-bezier(0.22, 0.65, 0.3, 1);
+  transition: top var(--cpi-bridge-travel, 280ms) cubic-bezier(0.22, 0.65, 0.3, 1);
 }
 .cpi-holo-mystery {
   position: absolute;

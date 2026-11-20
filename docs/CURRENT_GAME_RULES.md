@@ -296,6 +296,10 @@ PR branch `codex/gameplay-performance`: Android and iPhone share a shorter step 
 
 This is a client presentation revision, not a new server ruleset: SP, RNG, rewards, route generation, active clocks and checkpoint durability retain their contracts, including for resumed attempts. Faster intentional choices can change real-time play behavior; older playthroughs and business simulations retain their original dates and assumptions. This is local source, not evidence of a deployed Android/iOS build. See [implementation and validation](analysis/PERFORMANCE-2026-11-11.md#implementation-follow-up--11-november-2026).
 
+### Bridge responsiveness follow-up · 20 November 2026
+
+Local Infinity and Campaign show an immediate neutral tile press while the native lifecycle sample is pending. Nonfatal choices play the resolved step or break immediately, then travel after 220 ms (safe) or 470 ms (wrong). The nominal next-choice windows are 520 ms and 770 ms, including 300 ms of camera travel. Break debris can finish after input opens. Fatal collapse, mystery-only timing, active clocks, rulesets, RNG and checkpoint durability retain their existing behavior. These are configured client timings. See the [validation and device checklist](analysis/PERFORMANCE-2026-11-11.md#android-bridge-follow-up--20-november-2026).
+
 ## Проверка на staging входа и рекламите · 12 ноември 2026
 
 Собственикът съобщава, че rewarded рекламите работят на телефон; платформата и номерът на сборката не са уточнени. Google входът не е приет: staging заявката `identity/mobile/begin` е върнала 200 в 13:35:12 (София), а Google callback — 503 пет секунди по-късно. Потвърдени са staging миграцията `20261111000100` и колоната `response_encrypted`; точната причина за 503 остава неустановена. OAuth кодът и state не се записват в този документ.

@@ -179,3 +179,7 @@ Safe/wrong step input locks are now 600/850 ms, down from 890/1,280 ms. Camera p
 Regression tests cover clock-only bridge equality, every projected row field, cue changes, handlers, controls, hint recovery, exact unlock boundaries, consecutive steps and disposal. Existing companion tests verify landing before travel.
 
 This source update requires a new native build and device validation before calling the Android/iOS issue resolved. [Dated report and limitations](../analysis/PERFORMANCE-2026-11-11.md).
+
+## Android bridge follow-up · 20 November 2026
+
+Compare the same Infinity and Campaign fixtures before and after the patch on the affected Android model and a lower-end Android. Include safe steps, material-specific wrong steps, rapid consecutive taps, reduced motion, and a background/resume around a pending choice. Record the app build, OS and Android System WebView version. Capture tap-to-highlight, tap-to-impact or crack, and frame intervals during travel and the break separately. Target a p95 under 50 ms to first visible feedback and frame times near the device's refresh budget (16.7 ms at 60 Hz). [Full performance investigation](../analysis/PERFORMANCE-2026-11-11.md#android-bridge-follow-up--20-november-2026).
