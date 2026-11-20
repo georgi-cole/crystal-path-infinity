@@ -2,7 +2,7 @@ import type { CampaignProgress } from '../campaign-test';
 import type { CommerceWallet, OfflineAllocation, OfflineSupplyAmounts } from './commerce-types';
 import { ADVENTURE_COMMERCE_PRODUCTS } from './adventure-products';
 import type { CampaignOffer } from '../campaign-test';
-import { ownsStyle } from '../campaign-test';
+import { ownsCampaignGear, ownsStyle } from '../campaign-test';
 import type { BridgeStyle } from '../campaign-content';
 
 export function offlineSupplyCapacity(
@@ -54,7 +54,7 @@ export function applyPaidEntitlements(
       .map((p) => p.offerId as CampaignOffer),
   ];
   const gear =
-    progress.gear && offers.includes(('gear:' + progress.gear) as CampaignOffer)
+    progress.gear && ownsCampaignGear({ cleared: progress.cleared, offers }, progress.gear)
       ? progress.gear
       : null;
   const style = Object.fromEntries(

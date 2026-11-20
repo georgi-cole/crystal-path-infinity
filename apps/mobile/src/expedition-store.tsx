@@ -4,11 +4,18 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { GEAR_IDS, journeyGearEffect } from '@crystal-path-infinity/game-core';
 import type { GearId, Season, Weather } from '@crystal-path-infinity/game-core';
-import { BRIDGE_MODELS, bridgeModel, STYLES, STYLE_OFFERS } from './campaign-content';
+import {
+  BRIDGE_MODELS,
+  bridgeModel,
+  CAMPAIGN_MISSIONS,
+  STYLES,
+  STYLE_OFFERS,
+} from './campaign-content';
 import type { BridgeModel, BridgeStyle, StyleOffer } from './campaign-content';
 import {
   EXTRA_SUPPLY_OFFERS,
   gearOffer,
+  GEAR_REWARD_MISSION,
   ownsCampaignGear,
   ownsStyle,
   selectedInfinitySeason,
@@ -19,7 +26,7 @@ import {
 import type { CampaignOffer, CampaignProgress } from './campaign-test';
 import { AdventureIcon, BridgeInsignia } from './expedition-art';
 import type { ExpeditionIcon } from './expedition-art';
-import { GEAR_COPY, WEATHER_COPY } from './journey-copy';
+import { describeGearEffect, GEAR_COPY, WEATHER_COPY } from './journey-copy';
 import { CompanionSeasonGear, JourneyAtmosphere } from './journey-atmosphere';
 import { INFINITY_WEATHER_NAMES } from './journey-copy';
 import { BackButton } from './back-button';
@@ -674,18 +681,11 @@ function Outfitters({
     );
   const copy = GEAR_COPY[item];
   const owned = ownsCampaignGear(progress, item);
-  const fit = journeyGearEffect(item, season, weather);
-  const helpful = (fit.hitRelief ?? 0) > 0 || !!fit.cleanGain || !!fit.clearGlint;
+  const fit = journeyGearEffect(item, season, weather, true);
+  const helpful = (fit.hitRelief ?? 0) > 0 || !!fit.recovery || !!fit.clearGlint;
   const harmful = (fit.hitRelief ?? 0) < 0;
-  const benefit = [
-    fit.clearGlint ? 'The light now shows the correct tile.' : '',
-    fit.hitRelief
-      ? `A broken tile costs ${Math.abs(fit.hitRelief)} ${fit.hitRelief > 0 ? 'fewer' : 'extra'} SP.`
-      : '',
-    fit.cleanGain ? `Safe steps give ${fit.cleanGain} SP.` : '',
-  ]
-    .filter(Boolean)
-    .join(' ');
+  const benefit = describeGearEffect(fit);
+  const earnMission = CAMPAIGN_MISSIONS.find((mission) => mission.id === GEAR_REWARD_MISSION[item]);
   return (
     <section
       className="cpi-market-department cpi-store-detail cpi-gear-view"
@@ -737,8 +737,14 @@ function Outfitters({
       </p>
       <div className="cpi-market-tray cpi-outfit-details">
         <div>
-          <strong className="cpi-gear-price">{checkout.price(gearOffer(item), copy.price)}</strong>
-          <small>Keep forever · Wear one item in Infinity</small>
+          {!owned && (
+            <strong className="cpi-gear-price">
+              {checkout.price(gearOffer(item), copy.price)}
+            </strong>
+          )}
+          <small>Wear one item in Infinity or a Campaign replay</small>
+          <small>Outfitted Infinity runs count on the public leaderboard.</small>
+          {!owned && earnMission && <small>Earn by clearing {earnMission.name} in Campaign.</small>}
         </div>
         <div className="cpi-market-actions">
           {owned ? (

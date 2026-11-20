@@ -122,3 +122,9 @@
     min-height: max(17rem, calc(100dvh - 7.3rem));
   }
 }
+
+.cpi-forecast-gear-warning {
+  color: #ffd8a4;
+  display: block;
+  overflow-wrap: anywhere;
+}

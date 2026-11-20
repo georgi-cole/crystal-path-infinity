@@ -255,7 +255,11 @@ export interface MainMenuProps {
   onNew: () => void;
   campaignProgress?: CampaignProgress;
   campaignSaved?: PracticeLoad;
-  onStartCampaignMission?: (id: CampaignMissionId, approach?: CampaignApproach) => void;
+  onStartCampaignMission?: (
+    id: CampaignMissionId,
+    approach?: CampaignApproach,
+    gear?: NonNullable<CampaignProgress['gear']>,
+  ) => void;
   onEquipBridgeDesign?: (style: BridgeStyle) => void;
   onChangeCampaignWorld?: (world: ThemeId) => void;
   onUseSeasonChange?: () => void;

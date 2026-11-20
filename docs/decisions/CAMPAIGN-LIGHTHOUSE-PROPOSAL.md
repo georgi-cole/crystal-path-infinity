@@ -1,5 +1,7 @@
 # Crystal Path Campaign and Infinity proposal
 
+**20 November 2026 · CPI-039.** The [weather and gear connection map](../GEAR-SEASON-CONNECTION-MAP.md#weather-and-gear-rebalance-20-november-2026) records the implemented rules for new outfitted runs, Campaign gear rewards, and weather reactions for bridge styles. Fixed mission kits apply to first clears and Mastery.
+
 ## Current offline build — 0.7.4
 
 11 November 2026 · CPI-039. Compact icon-only Hint, Kit and Pause controls retain 44px touch targets. The Kit stays open while choosing. Animated ready counts and a short live confirmation identify each load or return; minus removes one dose/charge. Gear changes can be undone before closing. X, Escape and outside dismissal apply the entire staged selection once and resume. There is no duplicate Back to crossing action. A failed save preserves the selection in the paused dialog, with a retry message and no inventory debit. Kit uses its own pause lease; other lifecycle holds remain independent. This supersedes the auto-close interaction described for 0.7.3 below.

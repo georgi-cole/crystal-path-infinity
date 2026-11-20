@@ -7,6 +7,7 @@ import torches from './assets/campaign/keeper-torches-reward-v1.webp';
 const SEASON_CELLS = { spring: '0% 0%', summer: '100% 0%', autumn: '0% 100%', winter: '100% 100%' };
 
 export function CampaignRewardArt({ art }: { art: RewardArtwork }) {
+  if (art.type === 'gear') return <span className="cpi-gear-display" data-item={art.item} />;
   if (art.type === 'supply') return <span className="cpi-supply-artwork" data-offer={art.offer} />;
   if (art.type === 'style' && art.id === 'torches') return <img src={torches} alt="" />;
   if (art.type === 'style') {

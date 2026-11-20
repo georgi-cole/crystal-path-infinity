@@ -100,7 +100,7 @@ import { createHintCaptionGate } from './hint-caption';
 import { bridgeModel } from './campaign-content';
 import type { BridgeStyle } from './campaign-content';
 import { JourneyAtmosphere } from './journey-atmosphere';
-import { CLEAR_SKY, GEAR_COPY, WEATHER_COPY } from './journey-copy';
+import { CLEAR_SKY, describeGearEffect, GEAR_COPY, WEATHER_COPY } from './journey-copy';
 import './infinity-scene.css';
 import './infinity-hud-premium.css';
 import './run-outcome.css';
@@ -338,8 +338,7 @@ export function InfinitySceneView({
     !confirmEnd &&
     !error &&
     outcome.phase === 'playing';
-  const experiment =
-    import.meta.env.MODE !== 'production' ? parseTileExperiment(state.rulesetVersion) : null;
+  const experiment = parseTileExperiment(state.rulesetVersion);
   const route = state.stream.journey;
   const season = experiment?.journey === 'plain' ? undefined : route?.season;
   const forecast = route && season ? journeyForecast(route, BigInt(state.currentRow)) : null;
@@ -367,30 +366,37 @@ export function InfinitySceneView({
                   : null;
   const gear = state.journeyGear;
   const gearCopy = gear ? GEAR_COPY[gear.item] : undefined;
+  const gearV2 = !!experiment?.gearV2;
   const here =
-    gear && route ? journeyGearEffect(gear.item, route.season, activeWeather) : undefined;
-  const ahead =
-    gear && route && approaching
-      ? journeyGearEffect(gear.item, route.season, approaching)
+    gear && route ? journeyGearEffect(gear.item, route.season, activeWeather, gearV2) : undefined;
+  const upcomingDownside =
+    gear && route && season && (gear.queued ?? gear.worn)
+      ? [1, 2, 3]
+          .map((steps) => {
+            const f = journeyForecast(route, BigInt(state.currentRow) + BigInt(steps));
+            const conditions = f?.startsIn === 0n ? f.weather : undefined;
+            return {
+              steps,
+              conditions,
+              extra: -(journeyGearEffect(gear.item, season, conditions, gearV2).hitRelief ?? 0),
+            };
+          })
+          .find(({ conditions, extra }) => conditions !== activeWeather && extra > 0)
       : undefined;
-  const hasGearDownside = gear?.worn && ((here?.hitRelief ?? 0) < 0 || (ahead?.hitRelief ?? 0) < 0);
+  const currentDownside = gear?.worn && gear.queued !== false && (here?.hitRelief ?? 0) < 0;
+  const gearWarning =
+    currentDownside && gearCopy && here
+      ? `${gearCopy.name} costs ${Math.abs(here.hitRelief!)} extra SP on a bad landing. Pack it away.`
+      : upcomingDownside && gearCopy
+        ? `${upcomingDownside.conditions ? WEATHER_COPY[upcomingDownside.conditions].title : 'Clear skies'} in ${upcomingDownside.steps} ${upcomingDownside.steps === 1 ? 'row' : 'rows'}. ${gearCopy.name} will cost ${upcomingDownside.extra} extra SP on a bad landing.`
+        : null;
+  const hasGearDownside = !!gearWarning;
   const gearTip =
-    gear && gearCopy
-      ? gear.queued !== null
-        ? gear.queued
-          ? 'Ready after this step.'
-          : 'Packed away after this step.'
-        : gear.worn && (here?.hitRelief ?? 0) < 0
-          ? gearCopy.warning
-          : gear.worn && (ahead?.hitRelief ?? 0) < 0
-            ? 'Pack it away before ' + WEATHER_COPY[approaching!].title.toLowerCase() + '.'
-            : gear.worn && ((here?.hitRelief ?? 0) > 0 || here?.cleanGain)
-              ? gearCopy.ready
-              : !gear.worn &&
-                  ((ahead?.hitRelief ?? 0) > 0 || (here?.hitRelief ?? 0) > 0 || here?.cleanGain)
-                ? 'A good time to bring it out.'
-                : null
-      : null;
+    gear?.queued === true
+      ? 'Ready after this step.'
+      : gear?.queued === false
+        ? 'Packed away after this step.'
+        : (gearWarning ?? (gear?.worn && here ? describeGearEffect(here) : null));
   const hasKit = !!(
     onToggleKit &&
     ((gear && gearCopy && onToggleJourneyGear) || campaignSupplyPanel)
@@ -571,6 +577,7 @@ export function InfinitySceneView({
               <span>{CLEAR_SKY[season]}</span>
             ) : null}
             {cueText && <strong>{cueText}</strong>}
+            {gearWarning && <small className="cpi-forecast-gear-warning">{gearWarning}</small>}
           </aside>
         )}
         {hasKit && onToggleKit && kitOpen && !error && state.status === 'playing' && (

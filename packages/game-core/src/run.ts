@@ -10,7 +10,12 @@ import {
 } from './pacing.ts';
 import { parseTileExperiment } from './tile-experiments.ts';
 import { activeJourneyWeather, isJourneyEncounter } from './journey.ts';
-import { GEAR_IDS, journeyGearEffect } from './journey-gear.ts';
+import {
+  GEAR_IDS,
+  isGearRecoveryValid,
+  journeyGearEffect,
+  resolveGearRecovery,
+} from './journey-gear.ts';
 import { changeHintBalance } from './business-economy.ts';
 import {
   assertDiscovery,
@@ -377,7 +382,12 @@ export function assertRunState(state: RunState, rng?: RandomSource): void {
       (!state.stream.journey ||
         !GEAR_IDS.includes(state.journeyGear.item) ||
         typeof state.journeyGear.worn !== 'boolean' ||
-        (state.journeyGear.queued !== null && typeof state.journeyGear.queued !== 'boolean')))
+        (state.journeyGear.queued !== null && typeof state.journeyGear.queued !== 'boolean') ||
+        !isGearRecoveryValid(
+          state.journeyGear,
+          !!parseTileExperiment(state.rulesetVersion)?.gearV2,
+          state.currentRow,
+        )))
   )
     throw new RangeError('Invalid saved Journey gear.');
   if (
@@ -1418,19 +1428,25 @@ export function transitionRun(
         : drawnResolution;
       const pactChange = resolvePactStep(next, wrong, resolution.delta);
       const route = next.stream.journey;
+      const gearV2 = !!next.journeyGear && !!parseTileExperiment(next.rulesetVersion)?.gearV2;
+      const recovery =
+        gearV2 && next.journeyGear && route
+          ? resolveGearRecovery(next.journeyGear, route, BigInt(next.currentRow), !wrong)
+          : undefined;
       const gear =
         next.journeyGear?.worn && route
           ? journeyGearEffect(
               next.journeyGear.item,
               route.season,
               activeJourneyWeather(route, BigInt(next.currentRow)),
+              gearV2,
             )
           : undefined;
       const landingDelta =
         resolution.delta < 0
           ? Math.min(0, resolution.delta + (gear?.hitRelief ?? 0))
           : resolution.delta + (wrong ? 0 : (gear?.cleanGain ?? 0));
-      const tileDelta = scaleSpDelta(next, landingDelta);
+      const tileDelta = scaleSpDelta(next, landingDelta) + (recovery?.sp ?? 0);
       const pactDelta = pactChange
         ? next.pact?.kind === 'blood_oath' ||
           next.pact?.kind === 'false_oracle' ||
@@ -1485,6 +1501,7 @@ export function transitionRun(
         ...next,
         sp,
         effects: rowTick.effects,
+        ...(recovery ? { journeyGear: recovery.gear } : {}),
         ...(shieldChargeUsed ? { journeyShields: next.journeyShields! - 1 } : {}),
         ...(pactChange ? { pact: pactChange.pact } : {}),
         current: {

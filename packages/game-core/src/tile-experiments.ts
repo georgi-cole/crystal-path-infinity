@@ -15,9 +15,10 @@ export interface TileExperiment {
   readonly missionKit?: true;
   readonly infinitySupplies?: true;
   readonly shieldStacks?: true;
+  readonly gearV2?: true;
 }
 const identity =
-  /^infinity-v(10|12|13)-tiles-(0|[1-9]\d?|100)-(0|[1-9]\d?|100)-(plain|store)(?:-journey1-(plain|spring|summer|winter|autumn)(-gear)?(-clockless)?(-safe-hints)?(-mission-kit|-supplies)?(-shield-stack)?)?$/;
+  /^infinity-v(10|12|13)-tiles-(0|[1-9]\d?|100)-(0|[1-9]\d?|100)-(plain|store)(?:-journey1-(plain|spring|summer|winter|autumn)(-gear)?(-clockless)?(-safe-hints)?(-mission-kit|-supplies)?(-shield-stack)?(-gear-v2)?)?$/;
 
 export function parseTileExperiment(version: string): TileExperiment | null {
   if (typeof version !== 'string') return null;
@@ -32,7 +33,9 @@ export function parseTileExperiment(version: string): TileExperiment | null {
     (match[1] !== '12' || match[4] !== 'plain' || highBreakPercent !== 50 || lowBreakPercent !== 50)
   )
     return null;
-  if (match[9] === '-mission-kit' && (match[6] || match[7] || !match[8])) return null;
+  const gearV2 = match[11] === '-gear-v2';
+  if (gearV2 && (!match[6] || !match[8] || !match[9])) return null;
+  if (match[9] === '-mission-kit' && ((match[6] && !gearV2) || match[7] || !match[8])) return null;
   if (match[10] && (match[9] !== '-supplies' || !match[8])) return null;
   return {
     highBreakPercent,
@@ -47,6 +50,7 @@ export function parseTileExperiment(version: string): TileExperiment | null {
     ...(match[9] === '-mission-kit' ? { missionKit: true as const } : {}),
     ...(match[9] === '-supplies' ? { infinitySupplies: true as const } : {}),
     ...(match[10] ? { shieldStacks: true as const } : {}),
+    ...(gearV2 ? { gearV2: true as const } : {}),
   };
 }
 export function tileExperimentVersion(
