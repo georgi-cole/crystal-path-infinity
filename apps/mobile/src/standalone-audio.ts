@@ -30,6 +30,8 @@ export const CRYSTAL_AUDIO = Object.freeze({
   alarm: import.meta.env.BASE_URL + 'assets/sounds/crystal-emergency.wav',
 });
 
+const worldCue = (name: string) => import.meta.env.BASE_URL + `assets/themes/${name}.wav`;
+
 export type HapticKind = 'step' | 'damage' | 'end';
 export interface AudioMedia {
   loop: boolean;
@@ -67,7 +69,15 @@ export function createStandaloneAudio(
   settings: PracticeSettings,
   theme: ThemeId = 'obsidian',
   surface:
-    'glass' | 'lily' | 'jelly' | 'wood' | 'ice' | 'cookie' | 'trampoline' | 'cosmic' = 'glass',
+    | 'glass'
+    | 'lily'
+    | 'jelly'
+    | 'wood'
+    | 'ice'
+    | 'cookie'
+    | 'trampoline'
+    | 'cosmic'
+    | 'chocolate' = 'glass',
 ): StandaloneAudio {
   const journeyAudio = ports.createAmbientContext && createJourneyAudio(ports.createAmbientContext);
   let journeyMix: Season | Weather | null = null;
@@ -75,28 +85,31 @@ export function createStandaloneAudio(
   music.loop = true;
   music.volume = 0.28;
   music.preload = 'auto';
+  const specialWorld = theme === 'moonpatch' || theme === 'candy';
   const sfx = {
-    safe: ports.createMedia(CRYSTAL_AUDIO.safe),
+    safe: ports.createMedia(specialWorld ? worldCue(theme + '-step') : CRYSTAL_AUDIO.safe),
     death: ports.createMedia(CRYSTAL_AUDIO.death),
     record: ports.createMedia(
-      theme === 'obsidian'
-        ? CRYSTAL_AUDIO.record
-        : import.meta.env.BASE_URL + `assets/themes/${theme}-record.wav`,
+      theme === 'obsidian' || specialWorld ? CRYSTAL_AUDIO.record : worldCue(theme + '-record'),
     ),
     newTurn: ports.createMedia(CRYSTAL_AUDIO.newTurn),
     box: ports.createMedia(CRYSTAL_AUDIO.box),
     impact: ports.createMedia(
-      surface === 'lily'
-        ? CRYSTAL_AUDIO.lilySplash
-        : surface === 'jelly'
-          ? CRYSTAL_AUDIO.jellyBreak
-          : surface === 'wood' || surface === 'cookie'
-            ? CRYSTAL_AUDIO.woodBreak
-            : surface === 'trampoline'
-              ? CRYSTAL_AUDIO.trampolineTear
-              : surface === 'cosmic'
-                ? CRYSTAL_AUDIO.cosmicBreak
-                : CRYSTAL_AUDIO.glass,
+      surface === 'chocolate'
+        ? worldCue('candy-break')
+        : surface === 'glass' && theme === 'moonpatch'
+          ? worldCue('moonpatch-break')
+          : surface === 'lily'
+            ? CRYSTAL_AUDIO.lilySplash
+            : surface === 'jelly'
+              ? CRYSTAL_AUDIO.jellyBreak
+              : surface === 'wood' || surface === 'cookie'
+                ? CRYSTAL_AUDIO.woodBreak
+                : surface === 'trampoline'
+                  ? CRYSTAL_AUDIO.trampolineTear
+                  : surface === 'cosmic'
+                    ? CRYSTAL_AUDIO.cosmicBreak
+                    : CRYSTAL_AUDIO.glass,
     ),
   };
   const alarm = ports.createMedia(CRYSTAL_AUDIO.alarm);

@@ -1,6 +1,6 @@
 import { useId } from 'react';
 import { projectBridgePoint } from './bridge-geometry';
-import type { BridgeModel } from './campaign-content';
+import type { WorldBridgeModel } from './campaign-content';
 
 const point = (x: number, z: number, y = 0) => {
   const p = projectBridgePoint(x, z, y);
@@ -10,12 +10,13 @@ const positions = [15, 11.4, 8.3, 5.5, 3.15, 1.3];
 const sides = [-1, 1] as const;
 
 /** Scenic structures share the perspective of the deck and sit behind the tile artwork. */
-export function BridgeArchitecture({ model }: { model: BridgeModel }) {
+export function BridgeArchitecture({ model }: { model: WorldBridgeModel }) {
   const pond = useId();
   if (
     model === 'original' ||
     model === 'jelly' ||
     model === 'cookie' ||
+    model === 'chocolate' ||
     model === 'aurora' ||
     model === 'prism'
   )

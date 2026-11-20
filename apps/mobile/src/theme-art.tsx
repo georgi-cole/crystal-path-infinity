@@ -94,9 +94,9 @@ export function ThemeArtwork({
               </g>
             ))}
           </g>
-        ) : (
+        ) : theme !== 'moonpatch' && theme !== 'candy' ? (
           <WorldEdgeDetails theme={theme} />
-        )}
+        ) : null}
       </svg>
       <div className="cpi-world-haze" />
       {MOTES.map((mote, i) => (

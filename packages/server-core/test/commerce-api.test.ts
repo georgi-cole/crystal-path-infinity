@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createCommerceHandler } from '../src/commerce-api.ts';
+import type { CommerceWallet, createCommerceService } from '../src/commerce-service.ts';
 import { createMvpServer } from '../src/server-app.ts';
 const user = 'fa000000-0000-4000-8000-000000000001';
 function fixture(
@@ -13,8 +14,10 @@ function fixture(
     allocate: vi.fn(() => Promise.reject(new Error('private-allocation-error'))),
     pendingAllocations: vi.fn(() => Promise.reject(new Error('private-allocation-error'))),
     acknowledgeAllocation: vi.fn(() => Promise.reject(new Error('private-allocation-error'))),
-    catalog: vi.fn(() => []),
-    wallet: vi.fn(() => Promise.reject(new Error('private-db-credential'))),
+    catalog: vi.fn<ReturnType<typeof createCommerceService>['catalog']>(() => []),
+    wallet: vi.fn<ReturnType<typeof createCommerceService>['wallet']>(() =>
+      Promise.reject(new Error('private-db-credential')),
+    ),
     begin: vi.fn(() => Promise.resolve({ accountToken: user, sku: 'com.example.credits3' })),
     verify: vi.fn(() => Promise.resolve({ status: 'pending' as const })),
     equip: vi.fn(() => Promise.reject(new Error('private-provider-receipt'))),
@@ -37,12 +40,14 @@ function fixture(
     route: string,
     payload: object = { schemaVersion: 1, platform: 'android' },
     token = 'valid-account-token-012345',
+    accept = 'application/json',
   ) =>
     server(
       new Request('https://api.example.invalid/cpi/commerce/' + route, {
         method: 'POST',
         headers: {
           origin: 'capacitor://localhost',
+          accept,
           'content-type': 'application/json',
           authorization: 'Bearer ' + token,
         },
@@ -52,6 +57,47 @@ function fixture(
   return { service, request };
 }
 describe('authenticated commerce routes', () => {
+  it('projects the expanded catalog and wallet according to the app version', async () => {
+    const f = fixture();
+    const owned: CommerceWallet = {
+      revision: 5,
+      accountToken: user,
+      sp: 90,
+      hints: 2,
+      credits: 1,
+      shields: 0,
+      seasonChanges: 0,
+      unlocks: [],
+      owned: ['obsidian', 'puppy', 'moonpatch', 'candy'],
+      equipped: 'candy',
+    };
+    const products = [
+      { key: 'theme.puppy', sku: 'com.example.puppy', consumable: false },
+      { key: 'theme.candy', sku: 'com.example.candy', consumable: false },
+    ];
+    f.service.wallet.mockResolvedValue(owned);
+    f.service.catalog.mockReturnValue(products);
+    expect(await (await f.request('wallet')).json()).toEqual({
+      schemaVersion: 1,
+      wallet: { ...owned, owned: ['obsidian', 'puppy'], equipped: 'obsidian' },
+    });
+    expect(await (await f.request('catalog')).json()).toMatchObject({ products: [products[0]] });
+    const body = { schemaVersion: 1, platform: 'android' };
+    const v2 = (route: string, payload = body) =>
+      f.request(
+        route,
+        payload,
+        'valid-account-token-012345',
+        'application/json; cpi-world-catalog=2',
+      );
+    expect(await (await v2('wallet')).json()).toEqual({ schemaVersion: 1, wallet: owned });
+    expect(await (await v2('catalog')).json()).toMatchObject({ products });
+    const purchase = { ...body, key: 'theme.candy' };
+    expect((await f.request('begin', purchase)).status).toBe(400);
+    expect(f.service.begin).not.toHaveBeenCalled();
+    expect((await v2('begin', purchase)).status).toBe(200);
+    expect(f.service.begin).toHaveBeenCalledWith(user, 'android', purchase.key, undefined);
+  });
   it('checks review reconciliation independently while live checkout remains closed', async () => {
     const readiness = vi.fn((_platform: 'android' | 'ios', reviewWallet?: boolean) =>
       Promise.resolve(reviewWallet === true),

@@ -4,6 +4,12 @@ Six original cosmetic worlds form the CPI-013 collection. The
 crystal path is always the focal point. Artwork is judged in the playable scene,
 with hints, SP warnings, fractures and controls visible.
 
+## Moonpatch Grove and Candy World — 2026-11-20
+
+Moonpatch Grove uses a felt miniature woodland in deep teal with apricot lanterns and a stitched fox-bat named Patch. Keep the crescent swing, stitched acorn satchels, moon chime and occasional moonrise in the same visual language. Candy World uses confectionery miniatures, cocoa ravines and a marshmallow dragon named Nougat. The candy bags use a mint tie and translucent rose wrapping. Chocolate bars use a single beveled pattern across both sides and matching cocoa shards after a break.
+
+The original transparent character and cache art is assembled into the existing three-pose and two-state runtime sheets. Both worlds use the shared music and add short local step and break sounds. [Gameplay and shop details](../../docs/operations/WORLDS_AND_BEACON_CROWN_20261120.md).
+
 ## Current owner-approved presentation — 2026-11-06
 
 Design-only synchronization from `codex/store-test-mode` at `29774c6ac3311c8ba1a0cf979bfaff8bab914f62` keeps existing artwork/technical IDs and applies the current names, centered catalogue portraits and compact touch-reactive showcase. All six worlds have the approved EUR 2.99 reference price; resource prices are unchanged. The free Black Obsidian is always reachable through Unequip, without losing owned worlds.

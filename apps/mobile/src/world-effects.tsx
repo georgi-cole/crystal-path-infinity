@@ -3,7 +3,7 @@ import blackMetalTraveller from './assets/world-previews/black-metal-traveller-v
 import type { CSSProperties } from 'react';
 import type { GearId, Season, TileSide, Weather } from '@crystal-path-infinity/game-core';
 import type { SceneCinematic } from './scene-cinematics';
-import type { BridgeModel } from './campaign-content';
+import type { WorldBridgeModel } from './campaign-content';
 import type { ThemeId } from './store-catalog';
 import {
   companionLanding,
@@ -13,13 +13,14 @@ import {
   planCompanionMotion,
 } from './world-companion';
 import type { PresentedEffect } from './infinity-presentation';
-import { useWorldMotion } from './world-motion';
+import { hasWorldSignature, useWorldMotion } from './world-motion';
 import { WorldAvatarAura } from './world-treasures';
 import { GuardianShield } from './guardian-shield';
 import { WORLD_ASSETS, worldAsset } from './world-assets';
 import { WorldRescueRig } from './world-props';
 import { CompanionSeasonGear } from './journey-atmosphere';
 import { equippedCompanionAsset, EQUIPPED_SPRITE } from './equipped-companions';
+import { SignatureStepEffect, WorldSignatureGlyph } from './world-special-effects';
 
 /** Brief material feedback uses only a choice that has already resolved. */
 export function WorldStepEffect({
@@ -42,7 +43,9 @@ export function WorldStepEffect({
       aria-hidden="true"
     >
       <g transform={`translate(${center.x} ${center.y})`}>
-        {theme === 'chaos' ? (
+        {hasWorldSignature(theme) ? (
+          <SignatureStepEffect world={theme} wrong={cinematic.feedback.kind === 'wrong'} />
+        ) : theme === 'chaos' ? (
           <path className="cpi-world-circuit" d="M-73 16h22V-7h31v-12h42v12h31v23h22" />
         ) : theme === 'jelly' ? (
           <>
@@ -63,20 +66,21 @@ export function WorldStepEffect({
             }
           />
         )}
-        {Array.from({ length: 10 }, (_, i) => (
-          <circle
-            className="cpi-world-step-mote"
-            key={i}
-            r={theme === 'chaos' ? 1.4 : 2.8}
-            style={
-              {
-                '--dx': `${Math.cos(i * 2.4) * (45 + i * 4)}px`,
-                '--dy': `${-14 - i * 4}px`,
-                '--delay': `${(i % 3) * 20}ms`,
-              } as CSSProperties
-            }
-          />
-        ))}
+        {!hasWorldSignature(theme) &&
+          Array.from({ length: 10 }, (_, i) => (
+            <circle
+              className="cpi-world-step-mote"
+              key={i}
+              r={theme === 'chaos' ? 1.4 : 2.8}
+              style={
+                {
+                  '--dx': `${Math.cos(i * 2.4) * (45 + i * 4)}px`,
+                  '--dy': `${-14 - i * 4}px`,
+                  '--delay': `${(i % 3) * 20}ms`,
+                } as CSSProperties
+              }
+            />
+          ))}
       </g>
     </svg>
   );
@@ -111,7 +115,7 @@ export function WorldPathCompanion({
   season?: Season;
   weather?: Weather;
   gear?: GearId;
-  bridge?: BridgeModel;
+  bridge?: WorldBridgeModel;
   preview?: boolean;
   celebrateLanding?: boolean;
   shieldCharges?: number;
@@ -136,7 +140,15 @@ export function WorldPathCompanion({
     resize();
     return () => observer.disconnect();
   }, [motion.visible]);
+  const still = reduced || paused || motionPreferences.reduced || motionPreferences.suspended;
   const animated = !reduced && !motionPreferences.reduced && !!motion.path;
+  const shortSignature =
+    !still &&
+    cinematic?.phase === 'impact' &&
+    cinematic.feedback?.kind === 'safe' &&
+    BigInt(cinematic.feedback.row) % 12n === 0n;
+  const signature =
+    hasWorldSignature(theme) && !still && (celebrateLanding || shortSignature) ? theme : undefined;
   useLayoutEffect(() => {
     ref.current?.setCurrentTime(0);
   }, [cinematic?.id, cinematic?.phase]);
@@ -163,7 +175,7 @@ export function WorldPathCompanion({
       aria-hidden="true"
       data-companion-action={motion.action}
       data-companion-side={motion.side}
-      data-still={reduced || paused || motionPreferences.reduced || motionPreferences.suspended}
+      data-still={still}
       data-gear={gear}
       data-companion-preview={preview || undefined}
     >
@@ -212,7 +224,13 @@ export function WorldPathCompanion({
               data-surface={bridge}
               data-landing={cinematic?.phase === 'impact' && cinematic.feedback?.kind === 'safe'}
             >
-              <g className="cpi-landing-signature" data-celebrating={celebrateLanding || undefined}>
+              <g
+                className="cpi-landing-signature"
+                data-celebrating={celebrateLanding || undefined}
+                data-signature={signature}
+                data-short={signature && shortSignature ? true : undefined}
+              >
+                {signature && <WorldSignatureGlyph world={signature} />}
                 <WorldAvatarAura theme={skin} effects={effects} />
                 <g
                   transform={preview ? `translate(${registration.x} ${registration.y})` : undefined}

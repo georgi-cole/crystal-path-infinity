@@ -4,7 +4,13 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { GEAR_IDS, journeyGearEffect } from '@crystal-path-infinity/game-core';
 import type { GearId, Season, Weather } from '@crystal-path-infinity/game-core';
-import { BRIDGE_MODELS, bridgeModel, STYLES, STYLE_OFFERS } from './campaign-content';
+import {
+  BRIDGE_MODELS,
+  bridgeModel,
+  worldBridgeModel,
+  STYLES,
+  STYLE_OFFERS,
+} from './campaign-content';
 import type { BridgeModel, BridgeStyle, StyleOffer } from './campaign-content';
 import {
   EXTRA_SUPPLY_OFFERS,
@@ -28,11 +34,15 @@ import { PrismBridge } from './prism-bridge';
 import { BlackMetalShowcase } from './black-metal-showcase';
 import type { PresentedRow } from './infinity-presentation';
 import { StageAtmosphere } from './stage-atmosphere';
+import { WORLD_REFERENCE_PRICES } from './store-catalog';
 import type { ThemeId } from './store-catalog';
 import { ThemeScope } from './store-provider';
 import { CompanionSprite, ThemeArtwork } from './theme-art';
 import { WorldPathCompanion } from './world-effects';
 import { WORLD_KITS, WORLD_ORDER } from './world-kits';
+import { WorldSignatureGlyph } from './world-special-effects';
+import { hasWorldSignature } from './world-motion';
+import { MysteryCache } from './world-treasures';
 import './expedition.css';
 
 export type ExpeditionDepartment = 'worlds' | 'bridges' | 'gear' | 'supplies';
@@ -91,6 +101,8 @@ const worldStories: Record<ThemeId, string> = {
   kitten: 'Walks quietly. Plans dramatically. Always lands with style.',
   chaos: 'Repairs tiny things with enormous confidence. Usually has a spare bolt.',
   jelly: 'Hums when happy. Wobbles when very happy. Impossible to stay grumpy around.',
+  moonpatch: 'Patch keeps a moonlit grove of acorn lanterns and stitched hideouts.',
+  candy: 'Nougat toasts his marshmallow toes and flutters on little wafer wings.',
 };
 
 function Portrait({ world }: { world: ThemeId }) {
@@ -192,6 +204,12 @@ function WorldCollection({
           {worlds.map((id, index) => {
             const entry = id === 'obsidian' ? undefined : WORLD_KITS[id];
             const active = index === selected;
+            const owned = (
+              checkout.snapshot.wallet?.owned ??
+              progress.ownedWorlds ?? ['obsidian']
+            ).includes(id);
+            const signatureWorld = hasWorldSignature(id);
+            const reference = signatureWorld ? '€' + WORLD_REFERENCE_PRICES[id].toFixed(2) : null;
             return (
               <div
                 key={id}
@@ -203,6 +221,21 @@ function WorldCollection({
                 {id !== 'obsidian' && <ThemeArtwork theme={id} companion={false} />}
                 {season && <JourneyAtmosphere world={id} season={season} reduced={reducedMotion} />}
                 <div className="cpi-world-display">
+                  {active && id === 'candy' && (
+                    <ThemeScope theme={id}>
+                      <div className="cpi-world-gallery-bridge" aria-hidden="true" inert>
+                        <PrismBridge
+                          rows={previewRows}
+                          allowChoices={false}
+                          showStepCaptions={false}
+                          reducedMotion
+                        />
+                      </div>
+                      <div className="cpi-world-gallery-cache">
+                        <MysteryCache theme={id} />
+                      </div>
+                    </ThemeScope>
+                  )}
                   {id === 'obsidian' && <BlackMetalShowcase still={reducedMotion || !active} />}
                   {id !== 'obsidian' && (
                     <div
@@ -223,6 +256,11 @@ function WorldCollection({
                           active && !reducedMotion && reaction !== 'idle' ? reaction : undefined
                         }
                       >
+                        {signatureWorld && active && reaction !== 'idle' && !reducedMotion && (
+                          <svg viewBox="-60 -100 120 120" aria-hidden="true">
+                            <WorldSignatureGlyph world={id} />
+                          </svg>
+                        )}
                         <CompanionSprite
                           theme={id}
                           reaction={active && brightPose && !reducedMotion ? 'happy' : 'calm'}
@@ -252,12 +290,11 @@ function WorldCollection({
                   <small className="cpi-world-price">
                     {id === 'obsidian'
                       ? 'Included'
-                      : (
-                            checkout.snapshot.wallet?.owned ??
-                            progress.ownedWorlds ?? ['obsidian']
-                          ).includes(id)
+                      : owned
                         ? 'World unlocked · Yours to keep'
-                        : 'One-time unlock · Yours to keep'}
+                        : reference && (!checkout.live || checkout.browser)
+                          ? reference + ' · One-time unlock'
+                          : 'One-time unlock · Yours to keep'}
                   </small>
                   <button
                     className="cpi-adventure-button"
@@ -265,22 +302,11 @@ function WorldCollection({
                     tabIndex={active ? 0 : -1}
                     disabled={
                       progress.world === id ||
-                      (checkout.live &&
-                        !(
-                          checkout.snapshot.wallet?.owned ??
-                          progress.ownedWorlds ?? ['obsidian']
-                        ).includes(id) &&
-                        checkout.disabled('theme.' + id))
+                      (checkout.live && !owned && checkout.disabled('theme.' + id))
                     }
                     onClick={() => {
                       onWorld(id);
-                      if (
-                        !checkout.live ||
-                        (
-                          checkout.snapshot.wallet?.owned ??
-                          progress.ownedWorlds ?? ['obsidian']
-                        ).includes(id)
-                      ) {
+                      if (!checkout.live || owned) {
                         setBrightPose(true);
                         setReaction('joy');
                       }
@@ -288,11 +314,7 @@ function WorldCollection({
                   >
                     {progress.world === id
                       ? 'Current World'
-                      : checkout.live &&
-                          !(
-                            checkout.snapshot.wallet?.owned ??
-                            progress.ownedWorlds ?? ['obsidian']
-                          ).includes(id)
+                      : checkout.live && !owned
                         ? checkout.label('theme.' + id)
                         : 'Use this World'}
                   </button>
@@ -338,12 +360,15 @@ function WorkshopScene({
   breaking?: boolean;
   children?: ReactNode;
 }) {
+  const bridge = bridgeModel(style);
+  const previewModel = bridge === 'original' ? undefined : bridge;
+  const model = previewModel ?? worldBridgeModel(world, style);
   return (
     <ThemeScope theme={world}>
       <div
         className="cpi-workshop-scene"
         data-world={world}
-        data-model={bridgeModel(style)}
+        data-model={model}
         data-gear-preview={!!gear}
         data-season={season}
       >
@@ -360,6 +385,7 @@ function WorkshopScene({
           <PrismBridge
             rows={previewRows}
             bridgeStyle={style}
+            previewModel={previewModel}
             season={season}
             weather={weather}
             feedback={breaking ? { row: '1', side: 'left', kind: 'wrong' } : null}
@@ -369,7 +395,7 @@ function WorkshopScene({
           {(world !== 'obsidian' || gear) && (
             <WorldPathCompanion
               theme={world}
-              bridge={bridgeModel(style)}
+              bridge={model}
               season={season}
               weather={weather}
               gear={gear}

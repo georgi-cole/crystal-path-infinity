@@ -26,6 +26,8 @@ import { RunReserves } from './run-reserves';
 import { useTestStore, useThemeId } from './store-context';
 import { ThemeScope } from './store-provider';
 import { WorldPathCompanion, WorldStepEffect } from './world-effects';
+import { WorldMoments } from './world-special-effects';
+import { hasWorldSignature } from './world-motion';
 import { companionStandingSide } from './world-companion';
 import { MysteryCache, WorldOutcomeHero } from './world-treasures';
 import type { ThemeId } from './store-catalog';
@@ -97,7 +99,7 @@ import { DeathClock } from './scene-instruments';
 import { collectRunSignals, EMPTY_RUN_SIGNALS, liveSignal } from './run-signals';
 import type { RunSignals } from './run-signals';
 import { createHintCaptionGate } from './hint-caption';
-import { bridgeModel } from './campaign-content';
+import { worldBridgeModel } from './campaign-content';
 import type { BridgeStyle } from './campaign-content';
 import { JourneyAtmosphere } from './journey-atmosphere';
 import { CLEAR_SKY, GEAR_COPY, WEATHER_COPY } from './journey-copy';
@@ -488,6 +490,15 @@ export function InfinitySceneView({
         {gear && !campaignMission && ' · Outfitted'}
       </p>
       <StageAtmosphere emergency={emergency || catastrophic} />
+      {hasWorldSignature(themeId) && !catastrophic && (
+        <WorldMoments
+          key={state.runId + ':' + themeId}
+          world={themeId}
+          row={state.lastClearedRow}
+          paused={paused || kitOpen}
+          reduced={settings.reducedMotion}
+        />
+      )}
       {legacyRain && <div className="cpi-rain-curtain" aria-hidden="true" />}
       {season && (
         <JourneyAtmosphere
@@ -698,7 +709,11 @@ export function InfinitySceneView({
             showHintCaption={hintCaptionRow === state.currentRow}
             mysteryReveal={!!state.discovery?.introduction}
           />
-          <WorldStepEffect theme={themeId} cinematic={cinematic} reduced={settings.reducedMotion} />
+          <WorldStepEffect
+            theme={themeId}
+            cinematic={cinematic}
+            reduced={settings.reducedMotion || paused || kitOpen}
+          />
           {themeId === 'obsidian' && !gear?.worn && outcome.phase !== 'finished' && (
             <GuardianShieldMarker
               side={companionStandingSide(cinematic?.rows ?? presented.rows)}
@@ -714,7 +729,7 @@ export function InfinitySceneView({
           {(themeId !== 'obsidian' || gear?.worn) && outcome.phase !== 'finished' && (
             <WorldPathCompanion
               theme={themeId}
-              bridge={bridgeModel(bridgeStyle)}
+              bridge={worldBridgeModel(themeId, bridgeStyle)}
               celebrateLanding={!!campaignMission?.cleared && !cinematic}
               cinematic={cinematic}
               standingSide={companionStandingSide(cinematic?.rows ?? presented.rows)}
@@ -769,7 +784,9 @@ export function InfinitySceneView({
                     ? 'vault.safeCompanions'
                     : 'game.collapse'
                   : cinematic.feedback.kind === 'wrong'
-                    ? 'game.impactWrong'
+                    ? themeId === 'candy'
+                      ? 'game.candyImpactWrong'
+                      : 'game.impactWrong'
                     : 'game.impactSafe',
               )}
             </div>
@@ -1140,7 +1157,7 @@ function InfinityRun({
     !trial &&
     !isCampaign &&
     !!parseTileExperiment(initialState?.rulesetVersion ?? '')?.infinitySupplies;
-  const model = bridgeModel(bridgeStyle);
+  const model = worldBridgeModel(runTheme, bridgeStyle);
   const bridgeSurface =
     model === 'trestle'
       ? 'wood'
@@ -1150,7 +1167,7 @@ function InfinityRun({
           ? 'trampoline'
           : model === 'prism'
             ? 'cosmic'
-            : model === 'jelly' || model === 'lily' || model === 'cookie'
+            : model === 'jelly' || model === 'lily' || model === 'cookie' || model === 'chocolate'
               ? model
               : 'glass';
   const [resourceMessage, setResourceMessage] = useState('');

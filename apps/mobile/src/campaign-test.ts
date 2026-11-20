@@ -528,7 +528,11 @@ export function writeCampaignSave(
 
 export function isMissionUnlocked(progress: CampaignProgress, id: CampaignMissionId): boolean {
   const index = CAMPAIGN_MISSIONS.findIndex((mission) => mission.id === id);
-  return index === 0 || (index > 0 && progress.cleared.includes(CAMPAIGN_MISSIONS[index - 1].id));
+  if (index < 0 || (index > 0 && !progress.cleared.includes(CAMPAIGN_MISSIONS[index - 1].id)))
+    return false;
+  return Object.values(CAMPAIGN_MISSIONS[index].bridgeAccents ?? {}).every((style) =>
+    ownsStyle(progress, style),
+  );
 }
 export function nextCampaignMission(progress: CampaignProgress): CampaignMission | null {
   return CAMPAIGN_MISSIONS.find((mission) => !progress.cleared.includes(mission.id)) ?? null;

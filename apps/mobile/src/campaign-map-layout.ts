@@ -33,6 +33,9 @@ export const CROSSING_LOCATIONS = [
   [820, 260],
   [955, 165],
   [790, 100],
+  [635, 156],
+  [473, 113],
+  [306, 178],
 ] as const;
 
 /** Only used on selection/resize, never while the native viewport scrolls. */

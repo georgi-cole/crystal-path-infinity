@@ -11,7 +11,17 @@ import {
   isAdventureUnlock,
   isConsumableProduct,
 } from './adventure-products.ts';
-const themes = ['obsidian', 'chaos', 'jelly', 'wilds', 'league', 'puppy', 'kitten'];
+import { EXPANSION_WORLDS } from './commerce-worlds.ts';
+const themes = [
+  'obsidian',
+  'chaos',
+  'jelly',
+  'wilds',
+  'league',
+  'puppy',
+  'kitten',
+  ...EXPANSION_WORLDS,
+];
 export interface CommerceProduct {
   readonly key: string;
   readonly sku: string;

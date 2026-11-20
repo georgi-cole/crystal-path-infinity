@@ -45,6 +45,7 @@ import {
   equipBridgeDesign,
   gearOffer,
   grantCampaignClear,
+  isMissionUnlocked,
   journeyRuleset,
   newMissionSnapshot,
   nextCampaignMission,
@@ -123,6 +124,30 @@ function demonstrateClear(mission: CampaignMissionSnapshot) {
 }
 
 describe('Beacon Route playtest', () => {
+  it('unlocks missions 31–33 in order with earlier earned bridge accents and reopens old finales', () => {
+    const completed = CAMPAIGN_MISSIONS.slice(0, 30).map(({ id }) => id);
+    const oldClear = { ...EMPTY_CAMPAIGN_PROGRESS, cleared: completed };
+    const [comet, lanterns, crown] = CAMPAIGN_MISSIONS.slice(30);
+    expect(CAMPAIGN_MISSIONS).toHaveLength(33);
+    expect(nextCampaignMission(oldClear)?.id).toBe(comet.id);
+    expect(isMissionUnlocked(oldClear, comet.id)).toBe(true);
+    expect(isMissionUnlocked(oldClear, lanterns.id)).toBe(false);
+    expect(
+      isMissionUnlocked(
+        { ...oldClear, cleared: completed.filter((id) => id !== 'wish-upon-a-bridge') },
+        comet.id,
+      ),
+    ).toBe(false);
+    const afterComet = { ...oldClear, cleared: [...completed, comet.id] };
+    const afterLanterns = { ...afterComet, cleared: [...afterComet.cleared, lanterns.id] };
+    expect(isMissionUnlocked(afterComet, lanterns.id)).toBe(true);
+    expect(isMissionUnlocked(afterComet, crown.id)).toBe(false);
+    expect(isMissionUnlocked(afterLanterns, crown.id)).toBe(true);
+    expect(
+      startCampaignAttempt(afterLanterns, crown.id).activeMissionSnapshot?.bridgeAccents,
+    ).toEqual({ trail: 'comet-trail', lighting: 'harbour-lanterns' });
+    expect(afterLanterns.style).toEqual({});
+  });
   it.each([
     ['sp-pack', 'reserveSp', 500],
     ['hint-pack', 'reserveHints', 10],
@@ -608,7 +633,7 @@ describe('Beacon Route playtest', () => {
     expect(hub).toContain('A Letter from the Stars · Current crossing');
     expect(hub).toContain('Pack Light, Shine Bright · Upcoming crossing');
     expect(hub).not.toContain('Handle with Scare');
-    const result = (id: 'light-the-far-gate' | 'bring-the-dawn-home') =>
+    const result = (id: 'light-the-far-gate' | 'bring-the-dawn-home' | 'light-the-beacon-crown') =>
       renderToStaticMarkup(
         createElement(CampaignMissionResult, {
           mission: newMissionSnapshot(id),
@@ -626,7 +651,8 @@ describe('Beacon Route playtest', () => {
       );
     expect(result('light-the-far-gate')).toContain('Follow the stars to the Observatory');
     expect(result('light-the-far-gate')).not.toContain('Every signal on the route is lit');
-    expect(result('bring-the-dawn-home')).toContain('Every signal on the route is lit');
+    expect(result('bring-the-dawn-home')).toContain('Follow the outer lights to the Beacon Crown');
+    expect(result('light-the-beacon-crown')).toContain('Every signal on the route is lit');
   });
 
   it('lets the longer ridge route complete the same mission', () => {

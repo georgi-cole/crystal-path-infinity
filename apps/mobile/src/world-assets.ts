@@ -38,6 +38,18 @@ export const WORLD_ASSETS = {
     companionName: 'Purralune',
     material: 'moonstone',
   },
+  moonpatch: {
+    environment: 'assets/worlds/moonpatch/environment-v1.webp',
+    companion: 'assets/worlds/moonpatch/companion-reactions-v1.webp',
+    companionName: 'Patch',
+    material: 'felt',
+  },
+  candy: {
+    environment: 'assets/worlds/candy/environment-v1.webp',
+    companion: 'assets/worlds/candy/companion-reactions-v1.webp',
+    companionName: 'Nougat',
+    material: 'chocolate',
+  },
 } as const satisfies Record<Exclude<ThemeId, 'obsidian'>, object>;
 
 export function worldAsset(path: string): string {

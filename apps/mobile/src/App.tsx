@@ -70,7 +70,7 @@ import type {
 } from './campaign-test';
 import type { CampaignFailureReason } from './campaign-test';
 import { campaignTasks, campaignMissedObjective } from './campaign-objectives';
-import { CAMPAIGN_MISSIONS, LANDMARK_CLEARS } from './campaign-content';
+import { CAMPAIGN_FINALE, CAMPAIGN_MISSIONS, LANDMARK_CLEARS } from './campaign-content';
 import type { BridgeSlot, BridgeStyle, StyleId } from './campaign-content';
 import { ThemeScope } from './store-provider';
 import { CampaignMissionResult } from './campaign-test-ui';
@@ -1050,6 +1050,7 @@ export function App({
           outcome?.cleared === true &&
           outcome.firstClear &&
           outcome.mission.id !== 'bring-the-dawn-home' &&
+          outcome.mission.id !== CAMPAIGN_FINALE.id &&
           campaignInterstitialCadence.current.recordFirstClear();
         const ad = services?.campaignInterstitial;
         if (showInterstitial && ad?.available && mysteryCadence().cooledDown()) {
@@ -1188,7 +1189,13 @@ export function App({
                 : (game.weather ?? 'clear')
             }
             campaignMission={campaignMissionPresentation}
-            bridgeStyle={CAMPAIGN_ENABLED ? campaignProgress.style : undefined}
+            bridgeStyle={
+              CAMPAIGN_ENABLED
+                ? campaignMission?.bridgeAccents
+                  ? { ...campaignProgress.style, ...campaignMission.bridgeAccents }
+                  : campaignProgress.style
+                : undefined
+            }
             worldTheme={CAMPAIGN_ENABLED ? campaignProgress.world : undefined}
             infinitySupplies={
               game.mode === 'infinity' && CAMPAIGN_ENABLED && !game.trialTheme

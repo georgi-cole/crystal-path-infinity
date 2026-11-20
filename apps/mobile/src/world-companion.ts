@@ -37,6 +37,8 @@ const PREVIEW_FEET = {
   league: [-0.5, 6],
   puppy: [-5, 5.8],
   kitten: [2.5, 5.8],
+  moonpatch: [0, 2],
+  candy: [3, 2],
 } as const satisfies Record<WorldId, readonly [number, number]>;
 
 /** Measured calm-pose foot padding; footwear registers its sole instead. */

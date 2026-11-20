@@ -30,7 +30,16 @@ export function ScreeningRoom() {
   }, [index, take]);
   const mission = newMissionSnapshot(CAMPAIGN_MISSIONS[index].id);
   const chapterEntries = Object.entries(CHAPTERS);
-  const chapterNames = ['Coast', 'Mill', 'Cliffs', 'Frostbank', 'Gate', 'Stars', 'Harbour'];
+  const chapterNames = [
+    'Coast',
+    'Mill',
+    'Cliffs',
+    'Frostbank',
+    'Gate',
+    'Stars',
+    'Harbour',
+    'Crown',
+  ];
   const replay = () => {
     setSeek(null);
     setPaused(false);
@@ -45,7 +54,7 @@ export function ScreeningRoom() {
       <header>
         <span>CRYSTAL PATH · SCREENING ROOM</span>
         <p>
-          30 missions · No progress saved ·{' '}
+          {CAMPAIGN_MISSIONS.length} missions · No progress saved ·{' '}
           <button
             className="cpi-screening-character"
             onClick={() => {

@@ -260,6 +260,16 @@ const eyeAnchor: Record<ThemeId, readonly (readonly [number, number, number, num
     [-10, -63, -12, 1.06],
     [-17, -46, -17, 1.06],
   ],
+  moonpatch: [
+    [11, -60, -11, 0.78],
+    [11, -60, -11, 0.78],
+    [11, -60, -11, 0.78],
+  ],
+  candy: [
+    [19, -58, -13, 0.84],
+    [19, -58, -13, 0.84],
+    [19, -58, -13, 0.84],
+  ],
 };
 const neckAnchor: Record<ThemeId, readonly (readonly [number, number])[]> = {
   obsidian: [
@@ -296,6 +306,16 @@ const neckAnchor: Record<ThemeId, readonly (readonly [number, number])[]> = {
     [-11, -38],
     [-7, -45],
     [-12, -34],
+  ],
+  moonpatch: [
+    [4, -44],
+    [4, -44],
+    [4, -44],
+  ],
+  candy: [
+    [10, -39],
+    [10, -39],
+    [10, -39],
   ],
 };
 

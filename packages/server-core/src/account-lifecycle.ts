@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { SqlConnection, SqlPool } from './database.ts';
 import { ownAdAuthorizationExport, ownRewardExport } from './reward-export.ts';
+import { acceptsExpandedWorlds, legacyWorldWallet } from './commerce-worlds.ts';
 
 export interface ReauthenticationEvidence {
   readonly subject: string;
@@ -515,7 +516,9 @@ export function createAccountLifecycleHandler(options: AccountLifecycleOptions) 
             ...(commerce
               ? {
                   commerce: {
-                    wallet: commerce.wallet,
+                    wallet: acceptsExpandedWorlds(request)
+                      ? commerce.wallet
+                      : legacyWorldWallet(commerce.wallet),
                     purchases: commerce.purchases,
                     spends: commerce.spends,
                     sessions: commerce.sessions,

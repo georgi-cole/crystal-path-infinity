@@ -40,7 +40,7 @@ assertBuiltEnvironment(built, 'production', manifest.version);
 const campaign = JSON.parse(readFileSync(join(output, 'campaign-web-info.json'), 'utf8'));
 assert.equal(campaign.audience, 'public-browser');
 assert.equal(campaign.campaign, true);
-assert.equal(campaign.missions, 30);
+assert.equal(campaign.missions, 33);
 assert.equal(campaign.simulatedPurchases, false);
 assert.equal(campaign.purchases, 'mobile-app-only');
 assert.equal(campaign.ads, 'unavailable');

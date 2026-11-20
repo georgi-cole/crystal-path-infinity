@@ -72,7 +72,7 @@ const death = (id: string): RunEvent => ({
 });
 
 describe('CPI-010 standalone audio ownership', () => {
-  it.each(THEME_IDS)(
+  it.each(THEME_IDS.filter((theme) => theme !== 'moonpatch' && theme !== 'candy'))(
     'uses the original Crystal Path step and collapse cues in %s',
     async (theme) => {
       const f = fixture();
@@ -93,6 +93,27 @@ describe('CPI-010 standalone audio ownership', () => {
       audio.dispose();
     },
   );
+  it.each([
+    ['moonpatch', 'glass'],
+    ['candy', 'chocolate'],
+  ] as const)('plays the %s step and break with the same collapse cue', async (theme, surface) => {
+    const f = fixture();
+    const audio = createStandaloneAudio(
+      f.ports,
+      { ...DEFAULT_PRACTICE_SETTINGS, music: false },
+      theme,
+      surface,
+    );
+    audio.setActive(true);
+    await audio.unlock();
+    const options = { foreground: true, personalBest: false };
+    audio.playEvents([choose('1', false), choose('2', true)], state, options);
+    expect(f.media.get('/assets/themes/' + theme + '-step.wav')?.played).toBe(1);
+    expect(f.media.get('/assets/themes/' + theme + '-break.wav')?.played).toBe(1);
+    audio.playEvents([death('collapse')], state, options);
+    expect(f.media.get(CRYSTAL_AUDIO.death)?.played).toBe(1);
+    audio.dispose();
+  });
   it.each([
     ['lily', CRYSTAL_AUDIO.lilySplash],
     ['wood', CRYSTAL_AUDIO.woodBreak],

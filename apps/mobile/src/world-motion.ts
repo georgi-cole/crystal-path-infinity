@@ -1,5 +1,18 @@
 import { useSyncExternalStore } from 'react';
 import { getGameplayLifecycle } from './gameplay-lifecycle';
+import type { ThemeId } from './store-catalog';
+
+export type SignatureWorld = 'moonpatch' | 'candy';
+
+export const hasWorldSignature = (world: ThemeId): world is SignatureWorld =>
+  world === 'moonpatch' || world === 'candy';
+
+/** Resolved-row milestones pick scenery independently of the tile outcome and route RNG. */
+export function worldMomentIndex(world: SignatureWorld, lastClearedRow: string): bigint {
+  const row = BigInt(lastClearedRow);
+  const first = world === 'moonpatch' ? 13n : 17n;
+  return row < first ? -1n : (row - first) / 24n;
+}
 
 const query = '(prefers-reduced-motion: reduce)';
 function subscribe(listener: () => void) {
