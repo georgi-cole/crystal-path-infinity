@@ -123,9 +123,7 @@ export const GEAR_COPY = {
   }
 >;
 
-export function describeGearEffect(
-  effect: ReturnType<typeof journeyGearEffect>,
-): string {
+export function describeGearEffect(effect: ReturnType<typeof journeyGearEffect>): string {
   const { clearGlint, hitRelief, cleanGain, recovery } = effect;
   return [
     clearGlint ? 'Follow the light to the safe tile.' : '',
