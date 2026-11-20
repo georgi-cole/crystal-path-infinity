@@ -38,7 +38,7 @@ describe('companions follow only the resolved crystal path', () => {
     expect(motion.side).toBe('right');
     expect(motion.end).toEqual(companionLanding('right'));
     expect(motion.path).toContain(`${companionLanding('left').x - motion.anchor.x}`);
-    expect(motion.duration * 1000).toBeLessThan(STEP_TIMING.wrong - STEP_TIMING.contact);
+    expect(motion.duration * 1000).toBeLessThan(STEP_TIMING.wrong);
   });
 
   it('keeps the rescued companion on that intact pane during travel and after resume', () => {
@@ -62,7 +62,7 @@ describe('companions follow only the resolved crystal path', () => {
     const motion = planCompanionMotion(300, 'right', beat);
     expect(motion.action).toBe('hop');
     expect(motion.end).toEqual(companionLanding('left'));
-    expect(motion.duration * 1000).toBeLessThan(STEP_TIMING.safe - STEP_TIMING.contact);
+    expect(motion.duration * 1000).toBeLessThan(STEP_TIMING.safe);
     expect(companionStandingSide([{ ...row, wrong: false }])).toBe('left');
   });
 

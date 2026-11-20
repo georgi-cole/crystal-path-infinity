@@ -169,6 +169,7 @@ export interface InfinitySceneViewProps {
   readonly paused: boolean;
   readonly error: string | null;
   readonly onChoose: (side: TileSide) => void;
+  readonly pendingChoice?: TileSide | null;
   readonly onHint: () => void;
   readonly onMystery: () => void;
   readonly onPact?: (option: PactOption) => void;
@@ -208,6 +209,7 @@ export function InfinitySceneView({
   paused,
   error,
   onChoose,
+  pendingChoice,
   onHint,
   onMystery,
   onPact,
@@ -685,6 +687,7 @@ export function InfinitySceneView({
             feedback={cinematic?.feedback ?? feedback}
             interactive={interactive}
             onChoose={onChoose}
+            pendingChoice={pendingChoice}
             omen={oracleActive ? state.pact?.omen : null}
             onMystery={onMystery}
             reducedMotion={settings.reducedMotion}
@@ -1161,6 +1164,7 @@ function InfinityRun({
   const [state, setState] = useState<RunState>(initial);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [pendingChoice, setPendingChoice] = useState<TileSide | null>(null);
   const [paused, setPaused] = useState(false);
   const [kitOpen, setKitOpen] = useState(false);
   const [kitSelection, setKitSelection] = useState<KitSelection>(EMPTY_KIT_SELECTION);
@@ -1424,6 +1428,7 @@ function InfinityRun({
         return;
       if (kitPauseRef.current) return;
       commandLock.current = true;
+      if (command.type === 'choose') setPendingChoice(command.side);
       setBusy(true);
       try {
         const commit =
@@ -1450,6 +1455,7 @@ function InfinityRun({
         setError(reason instanceof Error ? reason.message : 'Gameplay command failed.');
       } finally {
         commandLock.current = false;
+        if (command.type === 'choose') setPendingChoice(null);
         setBusy(false);
       }
     },
@@ -2008,6 +2014,7 @@ function InfinityRun({
         paused={paused}
         error={error}
         onChoose={chooseTile}
+        pendingChoice={pendingChoice}
         onHint={() => {
           unlockAudio();
           if (

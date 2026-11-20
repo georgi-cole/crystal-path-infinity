@@ -68,6 +68,15 @@ function markup(modifiers: Record<string, unknown> = {}, theme: ThemeId = 'obsid
   );
 }
 describe('CPI-008 standalone scene', () => {
+  it('highlights only the pending tile and keeps the result hidden until the command resolves', () => {
+    const html = markup({ busy: true, pendingChoice: 'left' });
+    const pendingPane = html.match(/<button[^>]*class="cpi-bridge-pane is-pending-choice"[^>]*>/g);
+    expect(pendingPane).toHaveLength(1);
+    expect(pendingPane?.[0]).toContain('Row 1 left tile');
+    expect(pendingPane?.[0]).toContain('disabled=""');
+    expect(html).not.toContain('cpi-glass-shard');
+    expect(markup()).not.toContain('is-pending-choice');
+  });
   it('uses a translucent glass shield for Black Metal and a material prop for characters', () => {
     const state = { ...createCampaignInfinityRun(EMPTY_CAMPAIGN_PROGRESS), journeyShields: 5 };
     const glass = markup({ state });

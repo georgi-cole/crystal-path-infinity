@@ -26,6 +26,7 @@ import { glassPattern, glassSeed, projectGlassPattern } from './glass-fracture';
 import type { HintScan } from './run-signals';
 import { BridgeFlight } from './bridge-flight';
 import { MysteryCache } from './world-treasures';
+import { STEP_TIMING } from './scene-cinematics';
 import type { SceneCinematic } from './scene-cinematics';
 
 const WIDTH = 900,
@@ -39,6 +40,8 @@ import { BridgeArchitecture } from './bridge-architecture';
 import playfulMaterials from './assets/campaign/playful-material-atlas.webp?url';
 import bridgeMaterials from './assets/campaign/bridge-material-atlas.webp?url';
 import cosmicMaterial from './assets/campaign/cosmic-material-v2.webp?url';
+
+const CAMERA_DURATION = `${STEP_TIMING.travel - 20}ms`;
 
 const TILE_FINISHES = {
   frost: ['#deefff', '#7fb5df', '#355e86', '#c6edff'],
@@ -759,7 +762,7 @@ function MovingPolygon({
           attributeName="points"
           from={coordinates(previous)}
           to={coordinates(shape)}
-          dur=".28s"
+          dur={CAMERA_DURATION}
           calcMode="spline"
           keyTimes="0;1"
           keySplines=".22 .65 .3 1"
@@ -803,7 +806,7 @@ function MovingLamp({
           type="translate"
           from={`${old.x} ${old.y - 4 * oldScale}`}
           to={`${p.x} ${p.y - 4 * scale}`}
-          dur=".28s"
+          dur={CAMERA_DURATION}
           fill="freeze"
           calcMode="spline"
           keyTimes="0;1"
@@ -818,7 +821,7 @@ function MovingLamp({
             type="scale"
             from={oldScale}
             to={scale}
-            dur=".28s"
+            dur={CAMERA_DURATION}
             fill="freeze"
             calcMode="spline"
             keyTimes="0;1"
@@ -864,6 +867,7 @@ function MovingLamp({
 }
 function PaneFragments({
   points,
+  fallingPoints,
   seed,
   delay = 0,
   detail = 3,
@@ -873,6 +877,7 @@ function PaneFragments({
   falling,
 }: {
   points: Point[];
+  fallingPoints: Point[];
   seed: number;
   delay?: number;
   detail?: 1 | 3;
@@ -885,7 +890,9 @@ function PaneFragments({
   const pattern = useMemo(() => glassPattern(seed, detail), [seed, detail]);
   const shards = projectGlassPattern(pattern, points);
   const old = previous ? projectGlassPattern(pattern, previous) : null;
-  const impact = onFace(points, 0.5, 0.5);
+  const airborne =
+    falling && fallingPoints !== points ? projectGlassPattern(pattern, fallingPoints) : shards;
+  const impact = onFace(fallingPoints, 0.5, 0.5);
   return (
     <g className="cpi-pane-fragments">
       {falling &&
@@ -920,7 +927,7 @@ function PaneFragments({
           <polygon
             key={i}
             className="cpi-glass-shard"
-            points={coordinates([...shard.points])}
+            points={coordinates([...airborne[i].points])}
             fill={material.glass + (shard.glint > 0.65 ? '47' : shard.glint > 0.3 ? '36' : '22')}
             stroke={material.surface.edge + (i % 4 === 0 ? 'bb' : '7a')}
             strokeWidth={i % 3 === 0 ? 0.9 : 0.5}
@@ -974,6 +981,7 @@ export const PrismBridge = memo(function PrismBridge({
   feedback,
   interactive = false,
   onChoose,
+  pendingChoice,
   onMystery,
   preview = false,
   reducedMotion = false,
@@ -996,6 +1004,7 @@ export const PrismBridge = memo(function PrismBridge({
   feedback?: SceneFeedback | null;
   interactive?: boolean;
   onChoose?: (side: TileSide) => void;
+  pendingChoice?: TileSide | null;
   onMystery?: () => void;
   preview?: boolean;
   reducedMotion?: boolean;
@@ -1039,9 +1048,22 @@ export const PrismBridge = memo(function PrismBridge({
   const osReduced = useSyncExternalStore(subscribeMotion, motionSnapshot, serverMotionSnapshot);
   const reduced = reducedMotion || osReduced;
   const currentIndex = rows?.find((r) => r.phase === 'current')?.index ?? '0';
-  const [camera, setCamera] = useState({ row: currentIndex, moving: false });
-  if (camera.row !== currentIndex)
-    setCamera({ row: currentIndex, moving: !reduced && advancesOneRow(camera.row, currentIndex) });
+  const [camera, setCamera] = useState({ row: currentIndex, moving: false, directed: false });
+  if (camera.row !== currentIndex) {
+    setCamera({
+      row: currentIndex,
+      moving: !reduced && advancesOneRow(camera.row, currentIndex),
+      directed: phase === 'travel',
+    });
+  } else if (camera.moving && camera.directed && phase !== 'travel') {
+    setCamera({ ...camera, moving: false });
+  }
+  const [lastBreak, setLastBreak] = useState<SceneFeedback | null>(null);
+  if (reduced || collapsed) {
+    if (lastBreak) setLastBreak(null);
+  } else if (phase === 'impact' && feedback?.kind === 'wrong' && lastBreak !== feedback) {
+    setLastBreak(feedback);
+  }
   const moving = camera.moving && !reduced;
   const artwork = useRef<SVGSVGElement>(null);
   useLayoutEffect(() => {
@@ -1050,16 +1072,17 @@ export const PrismBridge = memo(function PrismBridge({
     if (moving) artwork.current?.setCurrentTime(0);
   }, [camera.row, moving]);
   useEffect(() => {
-    if (!camera.moving) return;
+    // The scene director releases local play. Standalone boards still own their camera timing.
+    if (!camera.moving || camera.directed) return;
     const timer = window.setTimeout(
       () =>
         setCamera((previous) =>
           previous.row === camera.row ? { ...previous, moving: false } : previous,
         ),
-      300,
+      STEP_TIMING.travel,
     );
     return () => window.clearTimeout(timer);
-  }, [camera.row, camera.moving]);
+  }, [camera.row, camera.moving, camera.directed]);
   if (preview)
     return (
       <div className="cpi-prism-bridge is-preview">
@@ -1077,6 +1100,7 @@ export const PrismBridge = memo(function PrismBridge({
         (hintScan ? ' is-scanning' : '')
       }
       data-camera-moving={moving ? 'true' : 'false'}
+      style={{ '--cpi-bridge-travel': CAMERA_DURATION } as CSSProperties}
       data-static-art={reduced ? 'true' : undefined}
       data-step-phase={phase ?? 'idle'}
       data-tile-finish={bridgeStyle?.tiles}
@@ -1266,6 +1290,7 @@ export const PrismBridge = memo(function PrismBridge({
           })}
         {distances.map((distance) => {
           const row = rows?.find((r) => r.distance === distance);
+          const animateRow = moving && distance <= 7;
           const absolute = BigInt(currentIndex) + BigInt(distance);
           const tone = row?.tone ?? Number(((absolute % 3n) + 3n) % 3n);
           const color = railLights[tone],
@@ -1294,7 +1319,7 @@ export const PrismBridge = memo(function PrismBridge({
             >
               {(['left', 'right'] as const).map((side) => {
                 const pts = bridgePane(distance, side),
-                  old = moving ? bridgePane(distance + 1, side) : undefined;
+                  old = animateRow ? bridgePane(distance + 1, side) : undefined;
                 const deck = deckFace(pts, model);
                 const priorDeck = old && deckFace(old, model);
                 const block =
@@ -1311,15 +1336,14 @@ export const PrismBridge = memo(function PrismBridge({
                   (block
                     ? blockFront(priorDeck!, distance + 1, thickness)
                     : front(old, distance + 1, thickness));
-                const isBreakingNow =
-                  feedback?.kind === 'wrong' &&
-                  feedback.row === row?.index &&
-                  feedback.side === side;
                 const status = paneState(row, side, phase === 'contact' ? null : feedback);
                 const broken = collapsed || status.includes('wrong') || status.includes('cracked');
                 const falling =
                   !reduced &&
-                  (collapsed || (isBreakingNow && (phase === 'impact' || phase === 'travel')));
+                  (collapsed || (lastBreak?.row === row?.index && lastBreak?.side === side));
+                // Airborne pieces keep their launch position when the camera advances.
+                const breakPane =
+                  falling && !collapsed && distance !== 0 ? bridgePane(0, side) : pts;
                 const corner = pts[side === 'left' ? 0 : 1];
                 const nearCorner = pts[side === 'left' ? 3 : 2];
                 const decal =
@@ -1649,10 +1673,10 @@ export const PrismBridge = memo(function PrismBridge({
                       ? falling && (
                           <MaterialBreak
                             model={model}
-                            face={deck}
-                            pane={pts}
+                            face={breakPane === pts ? deck : deckFace(breakPane, model)}
+                            pane={breakPane}
                             paint={surfacePaint}
-                            distance={distance}
+                            distance={collapsed ? distance : 0}
                             tint={
                               model === 'jelly'
                                 ? [0, 70, 140, 235, 300][
@@ -1666,6 +1690,7 @@ export const PrismBridge = memo(function PrismBridge({
                           <PaneFragments
                             key={`${absolute}:${side}`}
                             points={pts}
+                            fallingPoints={breakPane}
                             previous={old}
                             step={camera.row}
                             collapsed={collapsed}
@@ -1751,7 +1776,7 @@ export const PrismBridge = memo(function PrismBridge({
                       }
                       flame={lighting === 'torches' && distance <= 6}
                       pearl={lighting === 'harbour-lanterns'}
-                      previous={moving}
+                      previous={animateRow}
                       step={camera.row}
                     />
                   )),
@@ -1862,6 +1887,7 @@ export const PrismBridge = memo(function PrismBridge({
               className={
                 'cpi-bridge-pane' +
                 (omen === side && row.phase === 'current' ? ' has-omen' : '') +
+                (pendingChoice === side && row.phase === 'current' ? ' is-pending-choice' : '') +
                 paneState(row, side, phase === 'contact' ? null : feedback)
               }
               aria-label={

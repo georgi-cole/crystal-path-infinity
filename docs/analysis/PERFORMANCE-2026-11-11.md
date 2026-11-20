@@ -84,3 +84,9 @@ Revalidation uses Node **v24.11.1**, within the declared range, via `npx --yes -
 No claim of physical-device FPS, native launch, backend deployment or a merge is made. Those remain distinct from source checks and PR creation.
 
 Final PR build matrix: development, staging, production and campaign-QA all passed on Node v24.11.1.
+
+## Android bridge follow-up · 20 November 2026
+
+A new Android report described delayed and uneven bridge steps and tile breaks. This follow-up adds outcome-neutral press feedback during native confirmation. Nonfatal impact starts on the resolved command, alongside its existing sound cue. A single travel window controls camera and next-choice timing for local play. Pane and cache hit regions follow the 280 ms camera easing within that 300 ms window. Distant rows and lamps skip individual SVG interpolation. Glass shards use static paint, and the most recent nonfatal fracture can finish while the next row accepts input.
+
+The nominal locks are 520 ms for a safe step and 770 ms after a survivable break, down from 600/850 ms. They start after local command resolution. Native lifecycle checks and checkpoint writes retain their authority. These figures are configuration and test expectations. Physical Android input latency, frame pacing, visual acceptance, and store distribution require separate verification.
