@@ -58,7 +58,7 @@ describe('readable step and death presentation', () => {
     const f = fixture();
     f.choose(wrong);
     const duration = (wrong ? STEP_TIMING.wrong : STEP_TIMING.safe) + STEP_TIMING.travel;
-    expect(duration).toBe(wrong ? 850 : 600);
+    expect(duration).toBe(wrong ? 770 : 520);
     vi.advanceTimersByTime(duration - 1);
     expect(f.director.isBusy()).toBe(true);
     vi.advanceTimersByTime(1);
@@ -76,7 +76,6 @@ describe('readable step and death presentation', () => {
     f.director.receive(next);
     expect(next.accepted).toBe(true);
     expect(f.director.isBusy()).toBe(true);
-    vi.advanceTimersByTime(STEP_TIMING.contact);
     expect(f.updates.at(-1)?.phase).toBe('impact');
     f.director.dispose();
     const count = f.updates.length;
@@ -84,19 +83,37 @@ describe('readable step and death presentation', () => {
     expect(f.updates).toHaveLength(count);
   });
 
-  it('commits gameplay immediately but holds the chosen row through contact and impact before travel', () => {
+  it('starts impact when gameplay commits and holds the chosen row until travel', () => {
     const f = fixture();
     expect(f.choose(false).state.currentRow).toBe('2');
-    expect(f.updates.at(-1)?.phase).toBe('contact');
-    expect(f.updates.at(-1)?.rows?.find((row) => row.phase === 'current')?.index).toBe('0');
-    vi.advanceTimersByTime(STEP_TIMING.contact);
     expect(f.updates.at(-1)?.phase).toBe('impact');
-    vi.advanceTimersByTime(STEP_TIMING.safe - STEP_TIMING.contact);
+    expect(f.updates.at(-1)?.rows?.find((row) => row.phase === 'current')?.index).toBe('0');
+    vi.advanceTimersByTime(STEP_TIMING.safe);
     expect(f.updates.at(-1)?.phase).toBe('travel');
     expect(f.updates.at(-1)?.rows).toBe(null);
     vi.advanceTimersByTime(STEP_TIMING.travel);
     expect(f.updates.at(-1)).toBe(null);
     expect(f.director.isBusy()).toBe(false);
+  });
+  it('starts the full travel window when a delayed impact callback runs', () => {
+    const f = fixture();
+    const scheduled = new Map<number, () => void>();
+    const director = createSceneDirector(
+      f.state,
+      vi.fn(),
+      (callback, delay) => {
+        scheduled.set(delay, callback);
+        return () => scheduled.delete(delay);
+      },
+      () => false,
+    );
+    director.receive(f.choose(false));
+    expect([...scheduled.keys()]).toEqual([STEP_TIMING.safe]);
+    scheduled.get(STEP_TIMING.safe)!();
+    expect(director.isBusy()).toBe(true);
+    expect([...scheduled.keys()]).toEqual([STEP_TIMING.safe, STEP_TIMING.travel]);
+    scheduled.get(STEP_TIMING.travel)!();
+    expect(director.isBusy()).toBe(false);
   });
   it('lets wrong glass fall before moving on, while keeping the surviving row credited', () => {
     const f = fixture();
@@ -129,7 +146,7 @@ describe('readable step and death presentation', () => {
     })();
     f.director.receive(step);
     expect(step.accepted).toBe(true);
-    expect(f.updates.at(-1)?.phase).toBe('contact');
+    expect(f.updates.at(-1)?.phase).toBe('impact');
     f.director.dispose();
   });
   it('collapses the whole bridge on fatal SP loss and reveals the dialog only after the death beat', () => {

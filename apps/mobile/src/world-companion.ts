@@ -120,7 +120,7 @@ export function planCompanionMotion(
       ...base,
       action: 'escape',
       end: destination,
-      duration: (STEP_TIMING.wrong - STEP_TIMING.contact - 30) / 1000,
+      duration: (STEP_TIMING.wrong - 30) / 1000,
       side,
       path: `M0 0Q${hx * 0.5} ${hy - 42} ${hx} ${hy}Q${(hx + dx) / 2} ${dy - 48} ${dx} ${dy}`,
     };
@@ -128,7 +128,7 @@ export function planCompanionMotion(
     ...base,
     action: 'hop',
     end: destination,
-    duration: (STEP_TIMING.safe - STEP_TIMING.contact - 20) / 1000,
+    duration: (STEP_TIMING.safe - 20) / 1000,
     side,
     path: `M0 0Q${dx * 0.5} ${dy - 42} ${dx} ${dy}`,
   };

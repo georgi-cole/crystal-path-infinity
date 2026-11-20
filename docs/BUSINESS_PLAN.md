@@ -141,3 +141,7 @@ Recurring optional mystery rewards are implemented as a source candidate for Inf
 Owner testing reported sparse offers and an intrusive separate popup. The candidate places compact optional choices in the existing mystery hologram and becomes eligible after four ordinary openings, waiting for a compatible box. Mystery cooldown becomes 60 active seconds; two declines still quiet offers for five active minutes, and forced Campaign interstitial spacing stays 90 seconds. No forced mystery ad, price change or larger reward is introduced. Campaign task/Mastery safeguards and existing earned receipts remain intact.
 
 The expected effect is more visible, less disruptive opportunities; no impression, revenue or retention uplift has been measured. Compare actual offers, acceptance, ads per active minute, post-ad exits, completion, retention and purchases before increasing density further. Prior simulations and build-85 policy/results remain historical. Details: [mystery hologram candidate](operations/MYSTERY_HOLOGRAM_20261116.md).
+
+## Bridge pacing follow-up · 20 November 2026
+
+The local client presentation now targets 520/770 ms safe/wrong step windows. Existing simulations retain their recorded assumptions. Measure changes in the number of choices per minute, time under active effects and session length using dated device playtests before revising any projection.
