@@ -37,14 +37,9 @@ import type { WorldId } from './store-catalog';
 import { worldBridgeModel } from './campaign-content';
 import type { BridgeModel, BridgeStyle, WorldBridgeModel } from './campaign-content';
 import { BridgeArchitecture } from './bridge-architecture';
-import {
-  ChocolateIngredients,
-  ChocolatePaint,
-  chocolateForRow,
-  chocolateSide,
-  chocolateSurface,
-} from './chocolate-bridge';
-import type { Chocolate } from './chocolate-bridge';
+import { ChocolateIngredients, ChocolatePaint } from './chocolate-bridge';
+import { chocolateForRow, chocolateSide, chocolateSurface } from './chocolate-recipes';
+import type { Chocolate } from './chocolate-recipes';
 import playfulMaterials from './assets/campaign/playful-material-atlas.webp?url';
 import bridgeMaterials from './assets/campaign/bridge-material-atlas.webp?url';
 import cosmicMaterial from './assets/campaign/cosmic-material-v2.webp?url';
