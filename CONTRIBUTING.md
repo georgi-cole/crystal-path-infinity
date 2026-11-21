@@ -50,3 +50,14 @@ Done означава изпълнени критерии и демо или в�
 ## Вътрешен TestFlight след merge
 
 След успешните **Mobile app checks** и **Planning manifest and bootstrap** за текущия commit в `main` се качва вътрешният офлайн Campaign beta. За промени в приложението проверката след merge включва пълно стартиране в iOS Simulator, дори когато PR проверката е била само компилация. Промени само в документацията не задействат качване. Ръчният workflow остава за изричен избор на друг профил и изисква текущия SHA. [Подробности](docs/operations/WORLDS_AND_BEACON_CROWN_20261120.md).
+
+## Подписано iOS качване за App Store
+
+В [Crystal Path iOS TestFlight](https://github.com/georgi-cole/crystal-path-infinity/actions/workflows/ios-testflight.yml) избери **Run workflow**, остави `main` и включи само **Sign and upload the current checked main build to App Store Connect for production**. Workflow-ът взема текущата ревизия автоматично. Версията идва от `apps/mobile/package.json`, а номерът на билда от новото изпълнение на workflow-а.
+
+- Изчакай успешните **App required checks**, **Planning manifest and bootstrap** и **Development iOS build and simulator launch** за същата ревизия. Ако iOS има само компилация, стартирай **Mobile app checks** ръчно на `main` и изчакай пълната проверка.
+- Преди подписано качване с реклами провери **AdMob → Settings → Test apps** за точната iOS версия на Crystal Path. Задай същата версия в `CPI_IOS_ADMOB_TEST_VERSION` в средата `cpi-ios-testflight`. Изключи Test mode преди публичното пускане.
+- Workflow-ът подписва с наличните Apple Distribution сертификат и App Store профил и изпраща билда към Apple за обработка. След обработката в **App Store Connect → Distribution → iOS версия → Build** избери новия номер и запази. Изпращането за App Review е отделна стъпка.
+- Ако качването спре, отстрани причината и стартирай **Run workflow** отново, за да получиш нов номер. **Re-run jobs** ползва същия номер и upload проверката го спира.
+
+Ръчните TestFlight профили продължават да използват `upload_to_testflight` и `source_sha`. За проверка на production архива без подписване и качване избери само `public_release`.
