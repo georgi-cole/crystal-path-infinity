@@ -26,3 +26,7 @@ A completed mission 30 save continues at crossing 31 with its previous progress 
 ## Commerce
 
 The two offers are permanent world entitlements. Their proposed identifiers and reference prices are in [the 20 November catalog](../../backend/commerce-products.worlds-20261120.proposed.json). The native shop uses platform-localized quotes for checkout after the new offers are registered and verified. The database migration expands the wallet constraint before either SKU can deliver its entitlement. Builds with the expanded catalog receive both new offers and their full wallet state. Older builds receive their supported catalog and equipped-world fallback. Their purchase records and the underlying entitlements remain intact. This candidate does not change live platform configuration or activate checkout for either offer. Campaign progress is available independently of these offers.
+
+## iPhone TestFlight · 21 November 2026
+
+[Run 89](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/44898127804) built and signed the offline Campaign beta from PR #155. App Store Connect rejected the upload because the 1.0.2 release train was closed. The mobile version advances to 1.0.3 for the next internal TestFlight upload. The offline Campaign profile uses simulated shop claims to let testers try the two Worlds. Successful upload and tester availability are pending.
