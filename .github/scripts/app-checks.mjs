@@ -121,6 +121,13 @@ export function selectNativeChecks({ eventName, event, repository = '.' }) {
         priority[classifyFile(path)] > priority[result] ? classifyFile(path) : result,
       'none',
     );
+    if (mode === 'smoke' && eventName === 'push' && event?.ref === 'refs/heads/main') {
+      return {
+        mode: 'full',
+        reason: 'Main app changes need a full iOS simulator launch for internal TestFlight.',
+        changedFiles: paths.length,
+      };
+    }
     const reasons = {
       none: 'Only documentation, planning, isolated spikes, or quality configuration changed.',
       smoke:

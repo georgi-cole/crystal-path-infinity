@@ -21,12 +21,32 @@ require_current_source() {
   if [[ "${CPI_IOS_REVIEW_SOURCE:-false}" == true ]] && review_source_allowed; then
     source=${GITHUB_REF#refs/heads/}
   fi
+  case "$GITHUB_EVENT_NAME" in
+    workflow_dispatch) ;;
+    workflow_run)
+      if [[ "$source" != main || "${CPI_CAMPAIGN_BETA:-false}" != true ||
+            "${CPI_IOS_REVIEW_SOURCE:-false}" == true || "${CPI_EXTERNAL_BETA:-false}" == true ]]; then
+        echo 'Automatic uploads require the internal offline Campaign profile on main.' >&2
+        exit 1
+      fi
+      jq -e --arg repo "$GITHUB_REPOSITORY" --arg sha "$GITHUB_SHA" '
+        .workflow_run |
+        .name == "Mobile app checks" and
+        .event == "push" and
+        .conclusion == "success" and
+        .head_branch == "main" and
+        .head_repository.full_name == $repo and
+        .head_sha == $sha
+      ' "$GITHUB_EVENT_PATH" >/dev/null
+      ;;
+    *) echo 'Upload requires a manual dispatch or successful main mobile checks.' >&2; exit 1 ;;
+  esac
   if [[ "$GITHUB_REPOSITORY" != georgi-cole/crystal-path-infinity ||
-        "$GITHUB_EVENT_NAME" != workflow_dispatch || "$GITHUB_REF" != "refs/heads/$source" ||
+        "$GITHUB_REF" != "refs/heads/$source" ||
         "$GITHUB_RUN_ATTEMPT" != 1 || "$CPI_EXPECTED_SOURCE_SHA" != "$GITHUB_SHA" ||
         "$(git rev-parse HEAD)" != "$GITHUB_SHA" ||
         "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$source" --jq .object.sha)" != "$GITHUB_SHA" ]]; then
-    echo 'Upload requires a new manual run on the supplied, current approved source commit.' >&2
+    echo 'Upload requires a new run on the current approved source commit.' >&2
     exit 1
   fi
 }

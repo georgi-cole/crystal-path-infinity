@@ -36,3 +36,7 @@ The two offers are permanent world entitlements. Their proposed identifiers and 
 The bridge uses one illustrated texture atlas for four chocolates: milk, dark with cocoa nibs, hazelnut praline and white chocolate with caramel. The finish cycles by absolute row, with matching tiles on the left and right. It stays consistent as the camera moves and does not change safe sides or the random number generator.
 
 A nearby break reveals the matching cross section. Milk chocolate splashes and throws droplets, dark chocolate throws cocoa nibs, hazelnut praline scatters nut pieces and white chocolate scatters caramel chips. Distant collapses retain textured chocolate fragments with fewer effects. Reduced motion suppresses animated breaks.
+
+## Automatic internal TestFlight · 21 November 2026
+
+[Run 92](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/44900727718) successfully uploaded the signed offline Campaign build 1.0.3 (92). The automatic workflow uses that same profile after a main push passes the mobile, iOS simulator launch and Planning checks on the exact current commit. Changes that only need documentation checks do not upload. The automatic build uses simulated shop claims and internal distribution. Apple processing and tester group availability are separate from the upload step. Rankings require a build with the relevant backend enabled.

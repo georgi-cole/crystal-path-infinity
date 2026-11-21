@@ -130,6 +130,23 @@ test('unknown code and dependency changes fail closed to full', (t) => {
   );
 });
 
+test('main app pushes run full native checks while docs and PR routing stay scoped', (t) => {
+  const f = fixture(t);
+  f.put('docs/guide.md', 'guide\n');
+  const docs = f.commit();
+  const push = (before, after) =>
+    selectNativeChecks({
+      eventName: 'push',
+      event: { ref: 'refs/heads/main', before, after },
+      repository: f.repository,
+    });
+  assert.equal(push(f.before, docs).mode, 'none');
+  f.put('apps/mobile/src/menu.tsx', 'export const title = "TestFlight";\n');
+  const app = f.commit();
+  assert.equal(f.select(app).mode, 'smoke');
+  assert.equal(push(docs, app).mode, 'full');
+});
+
 test('combined docs and UI are smoke; combined UI and native are full', (t) => {
   const f = fixture(t);
   f.put('docs/guide.md', 'guide\n');

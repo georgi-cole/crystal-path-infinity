@@ -5,6 +5,10 @@ on:
     paths:
       - .github/workflows/ios-testflight.yml
       - .github/scripts/ios-testflight.sh
+  workflow_run:
+    workflows: [Mobile app checks]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       upload_to_testflight:
@@ -36,7 +40,7 @@ on:
         type: boolean
         default: false
       source_sha:
-        description: Full source commit SHA to upload after its required checks pass
+        description: Full source commit SHA for a manual upload after its required checks pass
         type: string
         default: ''
 
@@ -45,38 +49,92 @@ permissions:
   checks: read
 
 concurrency:
-  group: cpi-ios-testflight-${{ inputs.upload_to_testflight && 'upload' || github.ref }}
+  group: cpi-ios-testflight-${{ (github.event_name == 'workflow_run' || inputs.upload_to_testflight) && 'upload' || github.ref }}
   cancel-in-progress: false
 
 jobs:
+  automatic-source:
+    name: Wait for the checked main commit
+    if: >-
+      github.repository == 'georgi-cole/crystal-path-infinity' &&
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_sha == github.sha
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    outputs:
+      upload: ${{ steps.ready.outputs.upload }}
+    steps:
+      - name: Confirm the iOS launch and Planning checks
+        id: ready
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in {1..12}; do
+            current=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
+            if [[ "$current" != "$GITHUB_SHA" ]]; then
+              echo 'A newer commit is on main. Waiting for its own mobile checks.'
+              exit 0
+            fi
+
+            checks=$(gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs")
+            latest() {
+              jq -r --arg name "$1" --arg sha "$GITHUB_SHA" '
+                [.[].check_runs[] | select(.name == $name and .head_sha == $sha and .app.slug == "github-actions")]
+                | sort_by(.id) | last | .conclusion // ""
+              ' <<< "$checks"
+            }
+            if [[ "$(latest 'Development iOS build and simulator launch')" != success ]]; then
+              echo 'This main commit did not pass a full iOS launch. No automatic upload.'
+              exit 0
+            fi
+            planning=$(latest 'Planning manifest and bootstrap')
+            if [[ "$planning" == success ]]; then
+              echo 'upload=true' >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            if [[ -n "$planning" ]]; then
+              echo "Planning checks ended with: $planning" >&2
+              exit 1
+            fi
+            sleep 25
+          done
+          echo 'Timed out waiting for Planning checks on this commit.' >&2
+          exit 1
+
   archive:
     name: Build the Crystal Path iOS archive
-    if: github.repository == 'georgi-cole/crystal-path-infinity'
+    needs: automatic-source
+    if: >-
+      !cancelled() && github.repository == 'georgi-cole/crystal-path-infinity' &&
+      (github.event_name != 'workflow_run' || needs.automatic-source.outputs.upload == 'true')
     runs-on: macos-26
     timeout-minutes: 40
-    environment: ${{ inputs.upload_to_testflight && (inputs.review_source && 'cpi-ios-staging-review' || 'cpi-ios-testflight') || 'cpi-ios-compile' }}
+    environment: ${{ (github.event_name == 'workflow_run' || inputs.upload_to_testflight) && (inputs.review_source && 'cpi-ios-staging-review' || 'cpi-ios-testflight') || 'cpi-ios-compile' }}
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
-      CPI_IOS_UPLOAD: ${{ inputs.upload_to_testflight || false }}
-      CPI_EXPECTED_SOURCE_SHA: ${{ inputs.source_sha }}
+      CPI_IOS_UPLOAD: ${{ (github.event_name == 'workflow_run' || inputs.upload_to_testflight) || false }}
+      CPI_EXPECTED_SOURCE_SHA: ${{ github.event.workflow_run.head_sha || inputs.source_sha }}
       CPI_IOS_REVIEW_SOURCE: ${{ inputs.review_source || false }}
-      CPI_CAMPAIGN_BETA: ${{ inputs.campaign_beta || false }}
+      CPI_CAMPAIGN_BETA: ${{ (github.event_name == 'workflow_run' || inputs.campaign_beta) || false }}
       CPI_CAMPAIGN_SERVICES: ${{ inputs.campaign_services || false }}
       CPI_PUBLIC_RELEASE: ${{ inputs.public_release || false }}
       CPI_EXTERNAL_BETA: ${{ inputs.external_beta || false }}
       CPI_IOS_GOOGLE_CLIENT_ID: ${{ vars.CPI_IOS_GOOGLE_CLIENT_ID }}
       VITE_IOS_PROVIDER_SIGN_IN: ${{ inputs.review_source && 'true' || 'false' }}
       CPI_APP_ENV: production
-      CPI_NATIVE_PURCHASES: ${{ inputs.campaign_beta && 'false' || 'true' }}
-      CPI_NATIVE_ADS: ${{ (inputs.rewarded_ads_test || inputs.campaign_services || inputs.public_release) && !inputs.campaign_beta && 'true' || 'false' }}
+      CPI_NATIVE_PURCHASES: ${{ (github.event_name == 'workflow_run' || inputs.campaign_beta) && 'false' || 'true' }}
+      CPI_NATIVE_ADS: ${{ (inputs.rewarded_ads_test || inputs.campaign_services || inputs.public_release) && !(github.event_name == 'workflow_run' || inputs.campaign_beta) && 'true' || 'false' }}
       VITE_NATIVE_PROVIDER_SIGN_IN: ${{ (inputs.campaign_services || inputs.public_release) && 'true' || 'false' }}
       CPI_IOS_ADMOB_TEST_VERSION: ${{ vars.CPI_IOS_ADMOB_TEST_VERSION }}
       VITE_ACCOUNT_API_BASE_URL: ${{ inputs.public_release && 'https://crystalpath-api.kolequant.xyz/cpi' || 'https://crystal-path-staging-api.kolequant.workers.dev/cpi' }}
-      VITE_ACCOUNT_SERVICES_ENABLED: ${{ inputs.campaign_beta && 'false' || 'true' }}
-      VITE_PURCHASES_ENABLED: ${{ inputs.campaign_beta && 'false' || 'true' }}
+      VITE_ACCOUNT_SERVICES_ENABLED: ${{ (github.event_name == 'workflow_run' || inputs.campaign_beta) && 'false' || 'true' }}
+      VITE_PURCHASES_ENABLED: ${{ (github.event_name == 'workflow_run' || inputs.campaign_beta) && 'false' || 'true' }}
       VITE_GUEST_REWARDED_ADS_TEST: ${{ (inputs.rewarded_ads_test || inputs.campaign_services) && 'true' || 'false' }}
       VITE_GUEST_REWARDED_ADS_LIVE: ${{ inputs.public_release && 'true' || 'false' }}
-      VITE_CAMPAIGN_INTERSTITIALS_ENABLED: ${{ (inputs.campaign_services || inputs.public_release) && !inputs.campaign_beta && 'true' || 'false' }}
+      VITE_CAMPAIGN_INTERSTITIALS_ENABLED: ${{ (inputs.campaign_services || inputs.public_release) && !(github.event_name == 'workflow_run' || inputs.campaign_beta) && 'true' || 'false' }}
       VITE_RANKED_SERVICES_ENABLED: ${{ inputs.public_release && 'true' || 'false' }}
       VITE_REWARDED_ADS_ENABLED: ${{ (inputs.rewarded_ads_test || inputs.campaign_services || inputs.public_release) && 'true' || 'false' }}
       VITE_CLIENT_BUILD: ${{ github.run_number }}
@@ -84,13 +142,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          ref: ${{ github.sha }}
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22.23.4'
           cache: npm
           cache-dependency-path: package-lock.json
       - name: Select offline Campaign gateway isolation
-        if: inputs.campaign_beta
+        if: (github.event_name == 'workflow_run' || inputs.campaign_beta)
         run: echo 'VITE_ACCOUNT_API_BASE_URL=' >> "$GITHUB_ENV"
       - name: Check the source and Xcode distribution option
         env:
@@ -122,7 +181,7 @@ jobs:
           -project apps/mobile/ios/App/App.xcodeproj -scheme App
           -disableAutomaticPackageResolution -onlyUsePackageVersionsFromResolvedFile
       - name: Install Apple signing material for this run
-        if: inputs.upload_to_testflight
+        if: (github.event_name == 'workflow_run' || inputs.upload_to_testflight)
         env:
           CPI_IOS_DISTRIBUTION_P12_BASE64: ${{ secrets.CPI_IOS_DISTRIBUTION_P12_BASE64 }}
           CPI_IOS_DISTRIBUTION_P12_PASSWORD: ${{ secrets.CPI_IOS_DISTRIBUTION_P12_PASSWORD }}
@@ -131,7 +190,7 @@ jobs:
       - name: Compile and verify the iPhone archive
         run: bash .github/scripts/ios-testflight.sh archive
       - name: Upload to internal TestFlight
-        if: inputs.upload_to_testflight
+        if: (github.event_name == 'workflow_run' || inputs.upload_to_testflight)
         env:
           GH_TOKEN: ${{ github.token }}
           CPI_ASC_UPLOAD_KEY_BASE64: ${{ secrets.CPI_ASC_UPLOAD_KEY_BASE64 }}
@@ -139,5 +198,5 @@ jobs:
           CPI_ASC_UPLOAD_ISSUER_ID: ${{ secrets.CPI_ASC_UPLOAD_ISSUER_ID }}
         run: bash .github/scripts/ios-testflight.sh upload
       - name: Remove signing material from the runner
-        if: always() && inputs.upload_to_testflight
+        if: always() && (github.event_name == 'workflow_run' || inputs.upload_to_testflight)
         run: bash .github/scripts/ios-testflight.sh cleanup
