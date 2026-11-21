@@ -1,5 +1,7 @@
 # Текущи правила и икономика
 
+**21 November 2026 · Candy World tile finish.** Chocolate tiles use a solid bar silhouette without glass trim. The Death Clock warning tints the chocolate surface and front edge, keeping the timer and row danger cue visible. [World presentation](operations/WORLDS_AND_BEACON_CROWN_20261120.md).
+
 **21 November 2026 · Candy World bridge art.** Candy World cycles through illustrated milk, dark, hazelnut praline and white chocolate rows. Both tiles use the same finish. Close range breaks use matching chocolate pieces and ingredient effects. [World presentation and accessibility details](operations/WORLDS_AND_BEACON_CROWN_20261120.md).
 
 **20 November 2026 · World and Campaign candidate.** Moonpatch Grove and Candy World add original companions, signature moves, custom landing and break effects, and occasional scenery events. Candy World includes the chocolate bridge and candy goodie bags. The Beacon Crown chapter adds crossings 31–33 after Cloudrest Harbour. It reuses earned Comet Footsteps and Pearl Lanterns and combines earlier Mystery, hint, weather and shield objectives. Existing mission saves retain their route snapshots. [World details, mission requirements and proposed store entries](operations/WORLDS_AND_BEACON_CROWN_20261120.md).

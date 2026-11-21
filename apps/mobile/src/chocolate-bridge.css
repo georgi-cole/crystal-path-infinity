@@ -43,3 +43,13 @@
     transform: translateY(29px) scale(1.14, 0.42);
   }
 }
+
+/* Cast a warning tint onto the chocolate face and depth, using their exact silhouettes. */
+.cpi-chocolate-danger {
+  display: none;
+  pointer-events: none;
+}
+
+.is-emergency .cpi-chocolate-danger {
+  display: inline;
+}

@@ -703,7 +703,10 @@ function reflectedLight(points: Point[], kind: 'rail' | 'strip') {
   ).map(([u, v]) => onFace(points, u, v));
 }
 function inset(points: Point[]) {
-  const center = points.reduce((a, p) => ({ x: a.x + p.x / 4, y: a.y + p.y / 4 }), { x: 0, y: 0 });
+  const center = points.reduce(
+    (sum, point) => ({ x: sum.x + point.x / points.length, y: sum.y + point.y / points.length }),
+    { x: 0, y: 0 },
+  );
   return points.map((p) => blend(p, center, 0.045));
 }
 function worldInlay(points: Point[], theme: WorldId) {
@@ -1384,8 +1387,12 @@ export const PrismBridge = memo(function PrismBridge({
                 // Airborne pieces keep their launch position when the camera advances.
                 const breakPane =
                   falling && !collapsed && distance !== 0 ? bridgePane(0, side) : pts;
-                const corner = pts[side === 'left' ? 0 : 1];
-                const nearCorner = pts[side === 'left' ? 3 : 2];
+                const corner = chocolate
+                  ? deck[side === 'left' ? 7 : 2]
+                  : pts[side === 'left' ? 0 : 1];
+                const nearCorner = chocolate
+                  ? deck[side === 'left' ? 6 : 3]
+                  : pts[side === 'left' ? 3 : 2];
                 const decal =
                   distance >= 0 && distance < 5 && (tone + (side === 'left' ? 0 : 1)) % 3 === 0;
                 return (
@@ -1440,14 +1447,16 @@ export const PrismBridge = memo(function PrismBridge({
                         strokeOpacity=".35"
                         strokeWidth=".7"
                       />
-                      <MovingPolygon
-                        className="cpi-pane-underglow"
-                        shape={front(pts, distance, thickness)}
-                        previous={old && front(old, distance + 1, thickness)}
-                        step={camera.row}
-                        fill={color}
-                        opacity=".23"
-                      />
+                      {!chocolate && (
+                        <MovingPolygon
+                          className="cpi-pane-underglow"
+                          shape={front(pts, distance, thickness)}
+                          previous={old && front(old, distance + 1, thickness)}
+                          step={camera.row}
+                          fill={color}
+                          opacity=".23"
+                        />
+                      )}
                       <MovingPolygon
                         className="cpi-pane-face"
                         shape={deck}
@@ -1559,24 +1568,45 @@ export const PrismBridge = memo(function PrismBridge({
                           })}
                         </g>
                       )}
-                      <MovingPolygon
-                        className="cpi-pane-tint"
-                        shape={deck}
-                        previous={priorDeck}
-                        step={camera.row}
-                        fill={color}
-                        opacity={rowPhase === 'current' ? 0.065 : 0.035}
-                      />
-                      <MovingPolygon
-                        className="cpi-pane-inner-frame"
-                        shape={inset(pts)}
-                        previous={old && inset(old)}
-                        step={camera.row}
-                        fill="none"
-                        stroke={color}
-                        strokeWidth=".8"
-                        strokeOpacity={rowPhase === 'current' ? 0.43 : 0.25}
-                      />
+                      {chocolate ? (
+                        <g className="cpi-chocolate-danger">
+                          <MovingPolygon
+                            shape={fascia}
+                            previous={priorFascia}
+                            step={camera.row}
+                            fill="#ee4547"
+                            fillOpacity=".27"
+                          />
+                          <MovingPolygon
+                            shape={deck}
+                            previous={priorDeck}
+                            step={camera.row}
+                            fill="#ea4247"
+                            fillOpacity={rowPhase === 'current' ? '.23' : '.16'}
+                          />
+                        </g>
+                      ) : (
+                        <>
+                          <MovingPolygon
+                            className="cpi-pane-tint"
+                            shape={deck}
+                            previous={priorDeck}
+                            step={camera.row}
+                            fill={color}
+                            opacity={rowPhase === 'current' ? 0.065 : 0.035}
+                          />
+                          <MovingPolygon
+                            className="cpi-pane-inner-frame"
+                            shape={inset(pts)}
+                            previous={old && inset(old)}
+                            step={camera.row}
+                            fill="none"
+                            stroke={color}
+                            strokeWidth=".8"
+                            strokeOpacity={rowPhase === 'current' ? 0.43 : 0.25}
+                          />
+                        </>
+                      )}
                       {!chocolate && (
                         <MovingPolygon
                           className="cpi-pane-shine"
@@ -1649,7 +1679,7 @@ export const PrismBridge = memo(function PrismBridge({
                           strokeWidth=".6"
                         />
                       )}
-                      {distance <= 6 && (
+                      {!chocolate && distance <= 6 && (
                         <>
                           <MovingPolygon
                             className="cpi-glass-reflection"
@@ -1692,8 +1722,8 @@ export const PrismBridge = memo(function PrismBridge({
                           strokeWidth="2.5"
                         />
                         <MovingPolygon
-                          shape={inset(pts)}
-                          previous={old && inset(old)}
+                          shape={inset(chocolate ? deck : pts)}
+                          previous={old && inset(chocolate ? priorDeck! : old)}
                           step={camera.row}
                           fill="none"
                           stroke="#fff3c6"
@@ -1702,16 +1732,18 @@ export const PrismBridge = memo(function PrismBridge({
                         />
                       </g>
                     )}
-                    <MovingPolygon
-                      className="cpi-pane-frame"
-                      shape={deck}
-                      previous={priorDeck}
-                      step={camera.row}
-                      fill="none"
-                      stroke="#a7a9ae"
-                      strokeOpacity={broken ? '.45' : '.22'}
-                      strokeWidth={broken ? '1.2' : '.6'}
-                    />
+                    {!chocolate && (
+                      <MovingPolygon
+                        className="cpi-pane-frame"
+                        shape={deck}
+                        previous={priorDeck}
+                        step={camera.row}
+                        fill="none"
+                        stroke="#a7a9ae"
+                        strokeOpacity={broken ? '.45' : '.22'}
+                        strokeWidth={broken ? '1.2' : '.6'}
+                      />
+                    )}
                     {broken &&
                     (model === 'lily' ||
                       model === 'trestle' ||
