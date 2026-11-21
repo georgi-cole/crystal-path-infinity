@@ -40,3 +40,7 @@ A nearby break reveals the matching cross section. Milk chocolate splashes and t
 ## Automatic internal TestFlight · 21 November 2026
 
 [Run 92](https://github.com/georgi-cole/crystal-path-infinity/actions/runs/44900727718) successfully uploaded the signed offline Campaign build 1.0.3 (92). The automatic workflow uses that same profile after a main push passes the mobile, iOS simulator launch and Planning checks on the exact current commit. Changes that only need documentation checks do not upload. The automatic build uses simulated shop claims and internal distribution. Apple processing and tester group availability are separate from the upload step. Rankings require a build with the relevant backend enabled.
+
+### Solid chocolate and Death Clock lighting
+
+The chocolate deck and its molded front edge form one bar. Standard glass highlights, frames and the rectangular underglow are omitted. Death Clock applies a translucent red tint fitted to the bar, preserving the texture and warning. The seasonal edge detail and landing marker follow the chocolate outline.
