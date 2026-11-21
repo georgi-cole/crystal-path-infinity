@@ -46,3 +46,7 @@ Aggregate проверява успешен iOS job и изричен output `bu
 Агрегираният App required checks се изпълнява и след грешка. Той отхвърля неуспешен App quality, липсващо решение за native обхвата и неочаквано пропуснат/неуспешен native job. Native builds остават development debug/unsigned Simulator; CI не използва production credentials или платено подписване. Required-check настройките и реалната демонстрация с първо неуспешен, после поправен PR се документират отделно след проверка в GitHub.
 
 Done означава изпълнени критерии и демо или възпроизводима проверка. Emulator/Simulator резултатите не заместват проверки на физически устройства, реклами или backend. За всяко native доказателство записваме конкретния build, реалния launch резултат и проверения screenshot.
+
+## Вътрешен TestFlight след merge
+
+След успешните **Mobile app checks** и **Planning manifest and bootstrap** за текущия commit в `main` се качва вътрешният офлайн Campaign beta. За промени в приложението проверката след merge включва пълно стартиране в iOS Simulator, дори когато PR проверката е била само компилация. Промени само в документацията не задействат качване. Ръчният workflow остава за изричен избор на друг профил и изисква текущия SHA. [Подробности](docs/operations/WORLDS_AND_BEACON_CROWN_20261120.md).

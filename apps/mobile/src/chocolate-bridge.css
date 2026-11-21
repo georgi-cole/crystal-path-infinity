@@ -1,0 +1,45 @@
+.cpi-chocolate-ingredient {
+  animation: cpi-chocolate-ingredient-flight 580ms var(--ingredient-delay) both;
+  pointer-events: none;
+}
+
+.cpi-chocolate-milk-splash {
+  animation: cpi-chocolate-milk-splash 420ms ease-out both;
+  pointer-events: none;
+}
+
+@keyframes cpi-chocolate-ingredient-flight {
+  0% {
+    opacity: 0;
+    transform: scale(0.45);
+  }
+  13% {
+    opacity: 1;
+  }
+  48% {
+    transform: translate(var(--ingredient-mid-x), var(--ingredient-peak)) rotate(35deg);
+    animation-timing-function: ease-in;
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--ingredient-end-x), 83px) rotate(var(--ingredient-turn)) scale(0.7);
+  }
+}
+
+@keyframes cpi-chocolate-milk-splash {
+  0% {
+    opacity: 0;
+    transform: translateY(3px) scale(0.42, 0.15);
+  }
+  32% {
+    opacity: 0.94;
+    transform: translateY(-4px) scale(1, 1.12);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(29px) scale(1.14, 0.42);
+  }
+}

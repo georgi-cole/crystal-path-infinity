@@ -37,6 +37,9 @@ import type { WorldId } from './store-catalog';
 import { worldBridgeModel } from './campaign-content';
 import type { BridgeModel, BridgeStyle, WorldBridgeModel } from './campaign-content';
 import { BridgeArchitecture } from './bridge-architecture';
+import { ChocolateIngredients, ChocolatePaint } from './chocolate-bridge';
+import { chocolateForRow, chocolateSide, chocolateSurface } from './chocolate-recipes';
+import type { Chocolate } from './chocolate-recipes';
 import playfulMaterials from './assets/campaign/playful-material-atlas.webp?url';
 import bridgeMaterials from './assets/campaign/bridge-material-atlas.webp?url';
 import cosmicMaterial from './assets/campaign/cosmic-material-v2.webp?url';
@@ -287,6 +290,7 @@ function MaterialBreak({
   paint,
   distance,
   tint,
+  recipe,
 }: {
   model: PaintedModel | 'jelly' | 'cookie' | 'chocolate' | 'aurora' | 'prism';
   face: Point[];
@@ -294,6 +298,7 @@ function MaterialBreak({
   paint: string;
   distance: number;
   tint?: number;
+  recipe?: Chocolate;
 }) {
   const middle = onFace(pane, 0.5, 0.5);
   const depth = (value: number) => value / (1 + Math.max(0, distance) * 0.4);
@@ -484,9 +489,8 @@ function MaterialBreak({
       </g>
     );
   if (model === 'cookie' || model === 'chocolate') {
-    const chocolate = model === 'chocolate';
     return (
-      <g className="cpi-material-break" data-material={model}>
+      <g className="cpi-material-break" data-material={model} data-chocolate={recipe?.id}>
         {[0, 0.48].map((u, i) => {
           const piece = (
             i
@@ -538,43 +542,43 @@ function MaterialBreak({
               key={u}
               style={
                 {
-                  '--break-x': `${(i ? 1 : -1) * (chocolate ? 44 : 28)}px`,
+                  '--break-x': `${(i ? 1 : -1) * (recipe ? 44 : 28)}px`,
                   '--break-direction': `${i ? 15 : -18}deg`,
                 } as CSSProperties
               }
             >
               <polygon
                 points={coordinates(edge)}
-                fill={chocolate ? '#482020' : '#9d582b'}
-                stroke={chocolate ? '#a96143' : '#d18d47'}
+                fill={recipe?.shade ?? '#9d582b'}
+                stroke={recipe?.body ?? '#d18d47'}
                 strokeWidth="1.4"
               />
               <polygon
                 points={coordinates(filling)}
-                fill={chocolate ? '#632d24' : '#ad642f'}
-                stroke={chocolate ? '#c17852' : '#d79b5d'}
+                fill={recipe?.body ?? '#ad642f'}
+                stroke={recipe?.edge ?? '#d79b5d'}
                 strokeWidth="1"
               />
               <polyline
                 points={coordinates(
                   fracture.map((p) => ({ x: p.x, y: p.y + depth(thickness * 0.5) })),
                 )}
-                stroke={chocolate ? '#925136' : '#ffe7b8'}
-                strokeWidth={depth(thickness * (chocolate ? 0.14 : 0.28))}
+                stroke={recipe?.cut ?? '#ffe7b8'}
+                strokeWidth={depth(thickness * (recipe ? 0.14 : 0.28))}
                 fill="none"
                 strokeLinejoin="round"
               />
               <polyline
                 points={coordinates(lip.map((p) => ({ x: p.x, y: p.y + depth(thickness * 0.5) })))}
-                stroke={chocolate ? '#794131' : '#ffe5aa'}
-                strokeWidth={depth(thickness * (chocolate ? 0.15 : 0.26))}
+                stroke={recipe?.body ?? '#ffe5aa'}
+                strokeWidth={depth(thickness * (recipe ? 0.15 : 0.26))}
                 fill="none"
               />
               <CutSurface piece={piece} face={face} paint={paint} />
               <polygon
                 points={coordinates(piece)}
                 fill="none"
-                stroke={chocolate ? '#cb8860' : '#efc47b'}
+                stroke={recipe?.edge ?? '#efc47b'}
                 strokeWidth="1.7"
               />
             </g>
@@ -587,7 +591,7 @@ function MaterialBreak({
             cx={middle.x + ((i % 3) - 1) * 9}
             cy={middle.y + (i % 3) * 3}
             r={2 + (i % 3)}
-            fill={chocolate ? (i % 2 ? '#ba7860' : '#502620') : i % 2 ? '#ecc178' : '#704024'}
+            fill={i % 2 ? (recipe?.edge ?? '#ecc178') : (recipe?.shade ?? '#704024')}
             style={
               {
                 '--dust-x': `${((i % 3) - 1) * 43}px`,
@@ -597,6 +601,9 @@ function MaterialBreak({
             }
           />
         ))}
+        {recipe && distance <= 1 && (
+          <ChocolateIngredients chocolate={recipe} x={middle.x} y={middle.y} />
+        )}
       </g>
     );
   }
@@ -1067,15 +1074,7 @@ export const PrismBridge = memo(function PrismBridge({
   const surfacePaint =
     'url(#' +
     id +
-    (chocolate
-      ? 'chocolate'
-      : model === 'prism'
-        ? 'cosmic'
-        : playful
-          ? 'playful'
-          : material
-            ? 'material'
-            : 'glass') +
+    (model === 'prism' ? 'cosmic' : playful ? 'playful' : material ? 'material' : 'glass') +
     ')';
 
   const thickness = bridgeTileThickness(model);
@@ -1151,57 +1150,7 @@ export const PrismBridge = memo(function PrismBridge({
         aria-hidden="true"
       >
         <defs>
-          {chocolate && (
-            <>
-              <linearGradient id={id + 'chocolate-top'} x2=".25" y2="1">
-                <stop stopColor="#a66046" />
-                <stop offset=".38" stopColor="#80432d" />
-                <stop offset="1" stopColor="#482523" />
-              </linearGradient>
-              <linearGradient id={id + 'chocolate-side'} x2="0" y2="1">
-                <stop stopColor="#90513c" />
-                <stop offset=".25" stopColor="#663621" />
-                <stop offset="1" stopColor="#301b20" />
-              </linearGradient>
-              <pattern
-                id={id + 'chocolate'}
-                width="1"
-                height="1"
-                viewBox="0 0 120 64"
-                preserveAspectRatio="none"
-              >
-                <rect width="120" height="64" fill="#3e201d" />
-                {[2, 32, 62, 92].flatMap((x) =>
-                  [2, 33].map((y) => (
-                    <g key={x + ':' + y}>
-                      <rect
-                        x={x}
-                        y={y}
-                        width="26"
-                        height="27"
-                        rx="3"
-                        fill={'url(#' + id + 'chocolate-top)'}
-                        stroke="#b77754"
-                        strokeWidth=".6"
-                      />
-                      <path
-                        d={`M${x + 3} ${y + 7}l4-3h13`}
-                        stroke="#f4c29a"
-                        strokeOpacity=".45"
-                        strokeWidth=".95"
-                      />
-                      <path
-                        d={`M${x + 9} ${y + 15}q4-5 8 0-4 4-8 0Z`}
-                        stroke="#d19470"
-                        strokeOpacity=".38"
-                        strokeWidth=".7"
-                      />
-                    </g>
-                  )),
-                )}
-              </pattern>
-            </>
-          )}
+          {chocolate && <ChocolatePaint id={id} />}
           <pattern
             id={id + 'cosmic'}
             width="1"
@@ -1378,6 +1327,8 @@ export const PrismBridge = memo(function PrismBridge({
           const row = rows?.find((r) => r.distance === distance);
           const animateRow = moving && distance <= 7;
           const absolute = BigInt(currentIndex) + BigInt(distance);
+          const recipe = chocolate ? chocolateForRow(absolute) : undefined;
+          const tilePaint = recipe ? chocolateSurface(id, recipe) : surfacePaint;
           const tone = row?.tone ?? Number(((absolute % 3n) + 3n) % 3n);
           const color = railLights[tone],
             rowPhase = row?.phase ?? 'future';
@@ -1440,6 +1391,7 @@ export const PrismBridge = memo(function PrismBridge({
                 return (
                   <g
                     key={side}
+                    data-chocolate={recipe?.id}
                     className={
                       'cpi-glass-pane' +
                       status +
@@ -1478,13 +1430,13 @@ export const PrismBridge = memo(function PrismBridge({
                         previous={priorFascia}
                         step={camera.row}
                         fill={
-                          chocolate
-                            ? 'url(#' + id + 'chocolate-side)'
+                          recipe
+                            ? chocolateSide(id, recipe)
                             : block
                               ? 'url(#' + id + 'block-side)'
                               : '#1a191f'
                         }
-                        stroke="#8c8799"
+                        stroke={recipe?.edge ?? '#8c8799'}
                         strokeOpacity=".35"
                         strokeWidth=".7"
                       />
@@ -1501,18 +1453,17 @@ export const PrismBridge = memo(function PrismBridge({
                         shape={deck}
                         previous={priorDeck}
                         step={camera.row}
-                        fill={model === 'aurora' ? '#233248' : surfacePaint}
+                        fill={model === 'aurora' ? '#233248' : tilePaint}
                         style={
                           {
-                            '--cpi-surface-paint': model === 'aurora' ? '#233248' : surfacePaint,
+                            '--cpi-surface-paint': model === 'aurora' ? '#233248' : tilePaint,
                           } as CSSProperties
                         }
                         stroke={
                           model === 'lily'
                             ? '#a2b970'
-                            : chocolate
-                              ? '#d0956a'
-                              : 'url(#' + id + (model === 'prism' ? 'cosmic-edge)' : 'edge)')
+                            : (recipe?.edge ??
+                              'url(#' + id + (model === 'prism' ? 'cosmic-edge)' : 'edge)'))
                         }
                         strokeWidth={
                           model === 'prism'
@@ -1775,7 +1726,8 @@ export const PrismBridge = memo(function PrismBridge({
                             model={model}
                             face={breakPane === pts ? deck : deckFace(breakPane, model)}
                             pane={breakPane}
-                            paint={surfacePaint}
+                            paint={tilePaint}
+                            recipe={recipe}
                             distance={collapsed ? distance : 0}
                             tint={
                               model === 'jelly'
